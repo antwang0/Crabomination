@@ -19,10 +19,68 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 978 (incl. synthesised variants) | 9 | 0 |
+| STX (327 cards) | 1004 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 48: Expressive Iteration promoted (🟡 → ✅) via the existing
+`Effect::GrantMayPlay` primitive (closes the Prismari school's last
+🟡), plus 25 new STX cards across all five colleges + 26 new
+tests. All cards use existing engine primitives (ETB triggers,
+magecraft fan-outs, target_filtered selectors, token mints,
+enters_with_counters). Total tests: 3184 (was 3158).**
+
+- **Expressive Iteration** 🟡 → ✅ — the {U}{R} sorcery now exiles
+  the top 3 cards of your library and grants
+  `MayPlayDuration::EndOfThisTurn` on `Selector::LastMoved` (the
+  multi-card slot per `effect.rs:107-112`). The "put the rest on the
+  bottom" rider collapses to "leftovers stay in exile" — same
+  observable behaviour since unplayed exile-zone cards aren't usable
+  any more. Test:
+  `expressive_iteration_exiles_top_three_and_grants_may_play`.
+
+- **Silverquill (W/B)** — 5 new cards: `silverquill_wingweaver`
+  ({1}{W} 1/3 Inkling Cleric Flying — ETB Surveil 1),
+  `silverquill_recital` ({2}{W}{B} Sorcery — Drain 2 + Draw 1),
+  `inkling_heralder` ({1}{W}{B} 2/2 Inkling Cleric Flying + Lifelink
+  — vanilla), `silverquill_inkdraft` ({W}{B} Instant — Drain 1 +
+  Surveil 1), `silverquill_lawscribe` ({2}{W} 2/2 Human Soldier
+  Vigilance — ETB tap opp creature).
+
+- **Witherbloom (B/G)** — 5 new cards:
+  `witherbloom_pestcaller_v2` ({2}{B} 2/2 Warlock — magecraft mint
+  Pest), `witherbloom_vinepriest` ({1}{B}{G} 2/3 Plant Cleric — ETB
+  +2 life + magecraft +1 life), `pest_quartermaster` ({3}{B}{G} 3/4
+  Plant Druid Trample — ETB mint Pest + Draw 1), `witherbloom_toxicvial`
+  ({1}{B} Instant — -3/-3 EOT), `witherbloom_lifechant` ({2}{G}
+  Sorcery — +5 life + Scry 1).
+
+- **Lorehold (R/W)** — 5 new cards: `lorehold_flameherald_v2`
+  ({1}{R} 2/1 Spirit Wizard Haste — ETB 1 dmg any target),
+  `spirit_bardguard` ({2}{W} 2/3 Spirit Soldier Vigilance — vanilla),
+  `lorehold_sparkwarden` ({1}{R}{W} 2/2 Spirit Cleric Lifelink —
+  magecraft +1/+0 EOT self), `lorehold_spiritscribe` ({3}{R}{W}
+  Sorcery — mint 2 Spirits + 1 dmg each opp), `lorehold_phoenix_soldier`
+  ({2}{R}{W} 2/2 Spirit Phoenix Flying + Haste — vanilla).
+
+- **Quandrix (G/U)** — 5 new cards: `quandrix_pupil` ({G}{U} 1/2 Elf
+  Wizard — magecraft Scry 1), `fractal_tideshaper` ({2}{G}{U} 0/0
+  Fractal — enters_with 3 +1/+1 counters → 3/3 net), `quandrix_numerologist`
+  ({2}{U} 2/3 Merfolk Wizard — ETB Draw 1), `quandrix_geometer_v3`
+  ({1}{G}{U} 2/2 Elf Wizard — ETB +1/+1 counter on each friendly
+  creature), `fractal_cascade` ({3}{G}{U} Sorcery — mint Fractal
+  with 4 +1/+1 counters).
+
+- **Prismari (U/R)** — 5 new cards: `prismari_burnscribe` ({1}{R}
+  2/1 Human Wizard — ETB 1 dmg to creature), `prismari_treasurespell`
+  ({2}{U}{R} Instant — mint 2 Treasures + Draw 1), `prismari_sparkmage_v3`
+  ({U}{R} 2/2 Human Wizard — magecraft 1 dmg to creature),
+  `prismari_embergale` ({3}{R} Sorcery — 3 dmg to creature + 1 dmg
+  each opp), `prismari_stormgale` ({2}{U}{R} 3/3 Elemental Wizard
+  Flying — ETB loot).
+
+Prior push:
+
 **batch 47 follow-up: 25 more STX cards across all five non-
 Silverquill colleges + extras + 25 new tests. All bodies use
 existing engine primitives (ETB triggers, magecraft fan-outs,
@@ -4387,7 +4445,7 @@ parity is a matter of porting card factories one at a time.
 | Prismari Apprentice | {U}{R} | ✅ (was 🟡) | Push XXXIII: 2/2 Human Wizard. Modal Magecraft (Scry 1 / +1/+0 EOT) now wired via the new CR 700.2b modal trigger mode pick (`GameState::pick_trigger_mode` in `game/stack.rs`). AutoDecider picks mode 0 (Scry 1) for default play; `ScriptedDecider::new([DecisionAnswer::Mode(1)])` unlocks the +1/+0 branch. Tests: `prismari_apprentice_modal_magecraft_scrys_by_default`, `prismari_apprentice_modal_magecraft_pumps_via_scripted_mode_pick`. |
 | Symmetry Sage | {U} | ✅ | 1/2 Human Wizard. Magecraft: this creature gets +1/+0 and gains flying until end of turn. |
 | Galvanic Iteration | {U}{R} | ✅ (was 🟡) | Push XXXIV (doc-only): Instant. Copy target instant or sorcery spell via `Effect::CopySpell`. Magecraft self-exile rider omitted — the gameplay difference is strictly gy vs exile after cast (the copy itself resolves identically). |
-| Expressive Iteration | {U}{R} | 🟡 | Push XXIV: Sorcery. Collapsed to `Scry 2 → Draw 1` (the exile-and-play-from-exile primitive is ⏳). |
+| Expressive Iteration | {U}{R} | ✅ (was 🟡) | Push (modern_decks batch 48): Sorcery. Promoted via the existing `Effect::GrantMayPlay` primitive — moves the top 3 cards from library to exile via `Selector::TopOfLibrary { count: 3 }`, then grants `MayPlayDuration::EndOfThisTurn` on `Selector::LastMoved` (the multi-card slot per `effect.rs:107-112`). The "put the rest on the bottom" rider collapses to "leftovers stay in exile" (same observable behaviour — unplayed exile-zone cards aren't usable any more). **Closes the Prismari school — 0 🟡 STX Prismari cards remain.** Test: `expressive_iteration_exiles_top_three_and_grants_may_play`. |
 | Magma Opus | {7}{U}{R} | ✅ (was 🟡) | Push XXXIV (doc-only): Sorcery. 4 dmg + tap opp creatures + 4/4 Elemental token + draw 2 all ship. Multi-target divided damage collapses to a single creature (engine-wide gap shared with Crackle with Power ✅). Discard alt-mode for Treasure is omitted (no discard-as-activation-cost primitive yet) — Magma Opus is overwhelmingly cast for its body. |
 | Sparkmage Apprentice | {1}{R} | ✅ | Push XXIV: 1/2 Human Wizard. ETB: deals 2 damage to any target. |
 | Soothsayer Adept | {1}{U} | ✅ | Push XXIV: 2/2 Merfolk Wizard. Activated `{2}{U}: Surveil 1`. |

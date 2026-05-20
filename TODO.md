@@ -673,6 +673,48 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
+- ⏳ **CR 705 — Flipping a Coin** (push modern_decks batch 48 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`): The coin-
+  flip randomization primitive — how a flipped coin generates a binary
+  outcome, what "winning a flip" means, and how scripted-outcome effects
+  override the natural result. Audit:
+  (a) **705.1** "A coin must have two sides + equal-likelihood outcomes;
+  designate one side heads, the other tails" — ⏳ (no `Effect::FlipCoin`
+  primitive; no `Player.last_coin_flip_result` field; the engine's RNG
+  layer (`game::rng::Rng`) supports deterministic test seeding but isn't
+  threaded into any coin-flip site since no card uses it).
+  (b) **705.2** "Some effects that flip a coin care only about heads/tails
+  with no winner. For others, the flipping player calls heads/tails and
+  wins if the call matches the result" — ⏳ (no
+  `Effect::FlipCoinChoiceMatches { call }` two-outcome primitive; no
+  no-winner variant for "this turn's coin flip" referenced by Karplusan
+  Minotaur etc.).
+  (c) **705.3** "An effect may state that a flip has a certain result
+  or that a certain player wins — ignore the natural result" — ⏳ (no
+  scripted-flip override primitive; no `Krark's Thumb` reroll primitive;
+  test fixtures would need a `ScriptedDecider::CoinFlip(Heads)` variant
+  in `Decision`).
+  Affected cards (none in catalog today):
+  - **Ral Zarek, Guest Lecturer** -7: "Flip five coins. Target opponent
+    skips their next X turns where X is heads count." Currently the body
+    omits the ult entirely (no coin-flip + no skip-turn primitive).
+  - **Karplusan Minotaur**, **Mana Clash**, **Goblin Pulse** — all
+    out-of-set; doc-tracked.
+  - **Krark's Thumb** — reroll primitive; doc-tracked.
+  Tests: no test coverage; gates on `Effect::FlipCoin` landing.
+  Suggested wiring:
+  ```rust
+  Effect::FlipCoin {
+      count: Value,
+      on_heads: Box<Effect>,
+      on_tails: Box<Effect>,
+  }
+  ```
+  paired with `Decision::CoinFlip(CoinFace)` for scripted test
+  fixtures and an `RNG`-backed default for live play. Promote to 🟡
+  when the primitive lands; promote to ✅ when Ral Zarek's -7 ships
+  end-to-end alongside a `Decision::CoinFlip` scripted-result test.
+
 - 🟡 **CR 707 — Copying Objects** (push modern_decks batch 41 audit,
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
   copy-effect framework — what gets copied when an object becomes a

@@ -2162,11 +2162,15 @@ pub fn galvanic_iteration() -> CardDefinition {
 /// a land from among them this turn. Put the rest on the bottom of
 /// your library in a random order."
 ///
-/// 🟡 Collapsed to `Scry 2 → Draw 1` (push the worst card on bottom +
-/// keep one in hand). The full "exile + play one from exile" pattern
-/// needs an exile-and-play-from-exile-this-turn primitive, which is
-/// out of scope for this push. The collapse still mirrors the printed
-/// card-advantage shape (look at 3, pick the best).
+/// Push (modern_decks, claude/modern_decks): promoted via the existing
+/// `Effect::GrantMayPlay` primitive — moves the top 3 cards from the
+/// library to exile, then grants the caster `MayPlay::EndOfThisTurn`
+/// on `Selector::LastMoved` (each exiled card individually — `LastMoved`
+/// is the multi-card slot per `effect.rs:107-112`). The "put the rest
+/// on the bottom" rider collapses to "leftovers stay in exile" since
+/// the engine doesn't auto-bottom unplayed exile-zone cards (no
+/// functional difference — they're not playable any more). Closes the
+/// Prismari school's last 🟡.
 pub fn expressive_iteration() -> CardDefinition {
     CardDefinition {
         name: "Expressive Iteration",
@@ -2178,13 +2182,18 @@ pub fn expressive_iteration() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
+            Effect::Move {
+                what: Selector::TopOfLibrary {
+                    who: PlayerRef::You,
+                    count: Value::Const(3),
+                },
+                to: ZoneDest::Exile,
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            Effect::GrantMayPlay {
+                what: Selector::LastMoved,
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
             },
         ]),
         activated_abilities: no_abilities(),

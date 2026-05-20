@@ -6398,3 +6398,190 @@ pub fn witherbloom_vinetwister() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+
+// ── Batch 48 (modern_decks) — Witherbloom expansion ─────────────────────────
+
+/// Witherbloom Pestcaller II — {2}{B}, 2/2 Human Warlock. Synthesised
+/// Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, create a 1/1 B/G Pest token with 'When this
+/// creature dies, you gain 1 life.'" 3-mana mid-curve Pest engine.
+pub fn witherbloom_pestcaller_v2() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_token;
+    CardDefinition {
+        name: "Witherbloom Pestcaller II",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinepriest — {1}{B}{G}, 2/3 Plant Cleric. Synthesised
+/// Oracle: "When this creature enters, you gain 2 life. Magecraft —
+/// Whenever you cast or copy an instant or sorcery spell, you gain
+/// 1 life." 3-mana defensive lifegain scaler.
+pub fn witherbloom_vinepriest() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinepriest",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb_gain_life(2),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Quartermaster — {3}{B}{G}, 3/4 Plant Druid Trample.
+/// Synthesised Oracle: "Trample. When this creature enters, create
+/// a 1/1 B/G Pest token with 'When this creature dies, you gain 1
+/// life,' then draw a card." 5-mana grindy top-end + Pest engine.
+pub fn pest_quartermaster() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Quartermaster",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: stx_pest_token(),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxicvial — {1}{B} Instant. Synthesised Oracle:
+/// "Target creature gets -3/-3 until end of turn." 2-mana efficient
+/// shrink-removal — kills any creature with toughness ≤ 3 instantly.
+pub fn witherbloom_toxicvial() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxicvial",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifechant — {2}{G} Sorcery. Synthesised Oracle:
+/// "You gain 5 life. Scry 1." 3-mana lifegain + smoothing. Pairs
+/// with Honor Troll's lifegain gate and Light of Promise's
+/// dynamic-life payoff.
+pub fn witherbloom_lifechant() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifechant",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

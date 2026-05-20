@@ -5601,3 +5601,186 @@ pub fn quandrix_augurer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 (modern_decks) — Quandrix expansion ────────────────────────────
+
+/// Quandrix Pupil — {G}{U}, 1/2 Elf Wizard. Synthesised Oracle:
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// scry 1." 2-mana cheap card-selection magecraft body.
+pub fn quandrix_pupil() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Pupil",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Tideshaper — {2}{G}{U}, 0/0 Fractal that enters with three
+/// +1/+1 counters (CR 614.12 replacement). Synthesised Oracle:
+/// "This creature enters with three +1/+1 counters on it." Net 3/3
+/// scaling Fractal body.
+pub fn fractal_tideshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Tideshaper",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Numerologist — {2}{U}, 2/3 Merfolk Wizard. Synthesised
+/// Oracle: "When this creature enters, draw a card." 3-mana cantrip
+/// body.
+pub fn quandrix_numerologist() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Numerologist",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geometer III — {1}{G}{U}, 2/2 Elf Wizard. Synthesised Oracle:
+/// "When this creature enters, put a +1/+1 counter on each creature
+/// you control." 3-mana fan-out anthem via counters.
+pub fn quandrix_geometer_v3() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Geometer III",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Cascade — {3}{G}{U} Sorcery. Synthesised Oracle: "Create
+/// a 0/0 green and blue Fractal creature token. Put four +1/+1
+/// counters on it." Mints a net 4/4 Fractal token for 5 mana.
+pub fn fractal_cascade() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Cascade",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: create_token_with_counter(
+            PlayerRef::You,
+            1,
+            quandrix_fractal_token(),
+            CounterType::PlusOnePlusOne,
+            4,
+        ),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

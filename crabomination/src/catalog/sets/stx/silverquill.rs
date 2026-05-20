@@ -8120,6 +8120,195 @@ pub fn silverquill_refrain() -> CardDefinition {
     }
 }
 
+// ── Batch 48 (modern_decks) — Silverquill expansion ─────────────────────────
+
+/// Silverquill Wingweaver — {1}{W}, 1/3 Inkling Cleric Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, surveil 1."
+/// 2-mana evasive defensive body + graveyard-fill / draw smoothing.
+pub fn silverquill_wingweaver() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Wingweaver",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Recital — {2}{W}{B} Sorcery. Synthesised Oracle:
+/// "Each opponent loses 2 life and you gain 2 life. Draw a card."
+/// 4-mana drain + cantrip. Stronger than Silverquill Witnessing's
+/// same shape since the draw is unconditional.
+pub fn silverquill_recital() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Recital",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Heralder — {1}{W}{B}, 2/2 Inkling Cleric Flying + Lifelink.
+/// Vanilla 3-mana evasive lifelinker — stacks with Tenured Inkcaster's
+/// +2/+2 anthem (→ 4/4 lifelink flier) and Inkling Verselord's lifelink
+/// grant (already has lifelink — strict no-op stack).
+pub fn inkling_heralder() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Heralder",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkdraft — {W}{B} Instant. Synthesised Oracle:
+/// "Each opponent loses 1 life and you gain 1 life. Surveil 1."
+/// 2-mana cheap drain + selection — same shape as Silverquill
+/// Inkletter at the 2-mana slot. Test fodder for Light of Promise +
+/// Witherbloom Apprentice payoff stacks.
+pub fn silverquill_inkdraft() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkdraft",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lawscribe — {2}{W}, 2/2 Human Soldier Vigilance.
+/// Synthesised Oracle: "Vigilance. When this creature enters, tap
+/// target creature an opponent controls."
+/// 3-mana defensive tempo body — same shape as Silverquill Lawkeeper.
+pub fn silverquill_lawscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lawscribe",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Inkling Ascendancy — {2}{W}{B} Sorcery. Synthesised Oracle:
 /// "Create two 1/1 W/B Inkling creature tokens with flying. Each
 /// creature you control gets +1/+0 until end of turn."

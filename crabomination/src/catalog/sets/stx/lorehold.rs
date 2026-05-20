@@ -7053,3 +7053,179 @@ pub fn lorehold_scrollwarden() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 (modern_decks) — Lorehold expansion ────────────────────────────
+
+/// Lorehold Flameherald II — {1}{R}, 2/1 Spirit Wizard Haste.
+/// Synthesised Oracle: "Haste. When this creature enters, it deals
+/// 1 damage to any target." 2-mana hasty ETB-ping body.
+pub fn lorehold_flameherald_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Flameherald II",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit Bardguard — {2}{W}, 2/3 Spirit Soldier Vigilance.
+/// Synthesised Oracle: "Vigilance." Vanilla 3-mana defensive Spirit
+/// — stacks with Lorehold Anthemist / Spirit Cantor anthems and
+/// Quintorius Field Historian's body of work.
+pub fn spirit_bardguard() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Bardguard",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkwarden — {1}{R}{W}, 2/2 Spirit Cleric Lifelink.
+/// Synthesised Oracle: "Lifelink. Magecraft — Whenever you cast or
+/// copy an instant or sorcery spell, this creature gets +1/+0 until
+/// end of turn." 3-mana lifelink scaler.
+pub fn lorehold_sparkwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkwarden",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritscribe — {3}{R}{W} Sorcery. Synthesised Oracle:
+/// "Create two 2/2 R/W Spirit creature tokens. Lorehold Spiritscribe
+/// deals 1 damage to each opponent." 5-mana go-wide + drain finisher.
+pub fn lorehold_spiritscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritscribe",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Phoenix-Soldier — {2}{R}{W}, 2/2 Spirit Phoenix Flying
+/// + Haste. Synthesised Oracle: "Flying, haste." 4-mana double-keyword
+///   evasive aggressive body — slots into Lorehold Spirit tribal shells.
+pub fn lorehold_phoenix_soldier() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Phoenix-Soldier",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

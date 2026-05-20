@@ -5131,3 +5131,186 @@ pub fn prismari_treasurespark() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 48 (modern_decks) — Prismari expansion ────────────────────────────
+
+/// Prismari Burnscribe — {1}{R}, 2/1 Human Wizard. Synthesised Oracle:
+/// "When this creature enters, it deals 1 damage to target creature."
+/// 2-mana ETB-ping body. Mirror of Lorehold Sparkflinger but at the
+/// red-only slot.
+pub fn prismari_burnscribe() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Burnscribe",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Treasurespell — {2}{U}{R} Instant. Synthesised Oracle:
+/// "Create two Treasure tokens. Draw a card." 4-mana instant ramp +
+/// cantrip. Galazeth Prismari engine fuel.
+pub fn prismari_treasurespell() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Treasurespell",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: treasure_token(),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkmage III — {U}{R}, 2/2 Human Wizard. Synthesised
+/// Oracle: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, Prismari Sparkmage III deals 1 damage to target
+/// creature." 2-mana magecraft creature-ping engine.
+pub fn prismari_sparkmage_v3() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkmage III",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Embergale — {3}{R} Sorcery. Synthesised Oracle: "Prismari
+/// Embergale deals 3 damage to target creature. Prismari Embergale
+/// deals 1 damage to each opponent." 4-mana headline burn + drain
+/// tail. Same shape as Lorehold Ember-Forge in the mono-red slot.
+pub fn prismari_embergale() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Embergale",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormgale — {2}{U}{R}, 3/3 Elemental Wizard Flying.
+/// Synthesised Oracle: "Flying. When this creature enters, draw a
+/// card, then discard a card." 4-mana evasive looter top-end.
+pub fn prismari_stormgale() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormgale",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
