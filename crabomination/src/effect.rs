@@ -2126,6 +2126,17 @@ pub mod shortcut {
     pub fn gain_life(amount: i32) -> Effect {
         Effect::GainLife { who: you(), amount: Value::Const(amount) }
     }
+    /// Canonical Witherbloom / Silverquill drain shape: "each opponent
+    /// loses N life, you gain N life." Returns the raw `Effect::Drain`
+    /// value so it can compose with `Seq`, `MayDo`, or be used as the
+    /// body of a spell directly.
+    pub fn drain(amount: i32) -> Effect {
+        Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: you(),
+            amount: Value::Const(amount),
+        }
+    }
     pub fn lose_life(amount: i32, who: Selector) -> Effect {
         Effect::LoseLife { who, amount: Value::Const(amount) }
     }

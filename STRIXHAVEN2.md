@@ -19,10 +19,60 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 227 | 29 | 0 |
-| STX (327 cards) | 1192 (incl. synthesised variants) | 8 | 0 |
+| STX (327 cards) | 1220 (incl. synthesised variants) | 8 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 54: 28 more synthesised STX cards across all 5 colleges
+(12 Silverquill + 6 Witherbloom + 4 Lorehold + 3 Quandrix + 3 Prismari).
+28 new tests covering ETB, magecraft, sorceries, instant drains, anthem
+statics, and combat-relevant shapes. The batch focuses on completing the W/B Silverquill drain shell
+and adding Pest-tribal + Spirit-tribal payoffs (Pest Lord +1/+1 anthem
+for Pests, Lorehold Relicwarden ETB +1/+1 counter on each other Spirit,
+Inkling Evangel ETB target Inkling pump). All cards use existing engine
+primitives — `etb_drain`, `etb_scry`, `magecraft_drain_each_opp`,
+`magecraft_self_pump`, `magecraft_ping_each_opp`, `target_filtered`,
+and the standard `StaticAbility { PumpPT { applies_to:
+EachPermanent(filter & OtherThanSource) } }` anthem shape. Engine
+addition: CR 109 (Objects) audit row promoted to ✅ in TODO.md. Cards
+added: `silverquill_inkblot` ({W}{B} 2/2 Inkling Wizard Flying on-attack
++1/+0 EOT), `inkling_chaplain` ({1}{W} 1/3 Inkling Cleric Vigilance +
+Lifelink), `silverquill_warden` ({2}{W} 2/4 Human Cleric Vigilance ETB
+Drain 1), `inkling_acolyte_v2` ({1}{B} 1/2 Inkling Cleric magecraft
+Drain 1), `silverquill_reflect` ({2}{W} Instant Drain 2 + Surveil 2),
+`inkling_evangel` ({3}{W}{B} 3/3 Inkling Bard Flying + Lifelink ETB
++1/+1 counter on target Inkling), `silverquill_invocation` ({3}{W}{B}
+Sorcery mint 3 Inkling tokens), `inkling_ghostwriter` ({2}{B} 2/3
+Inkling Rogue magecraft Drain 1), `silverquill_doom` ({2}{B} Instant
+Drain 4), `inkling_attendant` ({W}{B} 1/2 Inkling Cleric Flying +
+Lifelink ETB Scry 1), `silverquill_psalm` ({1}{W}{B} Instant Drain 2 +
+Draw 1), `inkling_pageant` ({2}{W}{B} Sorcery mint 2 Inklings + Gain
+2 life), `witherbloom_creeper` ({1}{B}{G} 3/2 Plant Insect Deathtouch
+magecraft +1/+0 EOT), `pest_lord` ({3}{B}{G} 3/3 Pest Warlock Pest-
+tribal +1/+1 anthem), `witherbloom_drainer` ({2}{B}{G} 2/3 Plant
+Warlock ETB Drain 2 + GainLife 1), `witherbloom_mossback` ({2}{G} 2/4
+Plant Beast Reach), `pest_curse` ({1}{B} Sorcery mint 2 Pests +
+Discard 1), `witherbloom_hexvine` ({3}{B}{G} Sorcery Destroy creature
++ GainLife 2), `lorehold_invoker` ({2}{R} 3/2 Spirit Cleric Haste
+magecraft ping each opp 1), `spirit_sparkmage` ({R}{W} 2/2 Spirit
+Cleric ETB Lightning Helix template), `lorehold_chronicler_v2`
+({1}{R}{W} 2/2 Spirit Wizard Flying magecraft +1/+1 EOT),
+`lorehold_relicwarden` ({3}{R}{W} 3/4 Spirit Soldier Vigilance ETB
++1/+1 counter on each other Spirit), `quandrix_tideturner` ({1}{G}{U}
+2/2 Merfolk Wizard ETB Scry 1 + magecraft +1/+1 counter on self),
+`fractal_overgrowth` ({2}{G}{U} Sorcery doubles +1/+1 counters via
+ForEach + AddCounter Value::CountersOn), `quandrix_ectomancer` ({2}{U}
+1/3 Merfolk Wizard magecraft Draw 1), `prismari_cinderpath` ({2}{U}{R}
+3/3 Elemental Wizard magecraft loot), `prismari_searstorm` ({3}{R}
+Sorcery DealDamage 3 creature + 2 each opp), `prismari_embertide`
+({1}{R} 2/1 Elemental Haste ETB 1 damage any target). Engine cleanup:
+new `effect::shortcut::drain(amount)` helper for the canonical
+each-opp-loses-N / you-gain-N drain shape; refactored 3 new SQ cards
+to use it (Silverquill Reflect, Silverquill Doom, Silverquill Psalm).
+Total tests: 3404 (was 3376).**
+
+Prior push (batch 53):
+
 **batch 53: 26 more synthesised STX cards across all 5 colleges
 (8 Silverquill + 4 Witherbloom + 5 Lorehold + 4 Quandrix + 5 Prismari).
 26 new tests covering ETB, magecraft, and combat-relevant behaviors.

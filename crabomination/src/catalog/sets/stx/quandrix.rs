@@ -6781,6 +6781,120 @@ pub fn quandrix_threadbinder() -> CardDefinition {
     }
 }
 
+// ── batch 54: more Quandrix cards ───────────────────────────────────────────
+
+/// Quandrix Tideturner — {1}{G}{U}, 2/2 Merfolk Wizard. ETB Scry 1 +
+/// magecraft +1/+1 counter on self.
+pub fn quandrix_tideturner() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry;
+    CardDefinition {
+        name: "Quandrix Tideturner",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_scry(1),
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Overgrowth — {2}{G}{U}, Sorcery. Doubles +1/+1 counters on
+/// each creature you control via ForEach + AddCounter equal to current
+/// counter count. (Common Quandrix snowball payoff.)
+pub fn fractal_overgrowth() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Overgrowth",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountersOn {
+                    what: Box::new(Selector::TriggerSource),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Ectomancer — {2}{U}, 1/3 Merfolk Wizard. Magecraft draw a
+/// card on a Spirit-tribal frog frame.
+pub fn quandrix_ectomancer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Ectomancer",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Fractal Resonance II — {3}{G}{U}, 0/0 Fractal. Enters with +1/+1
 /// counters equal to your hand size. CR 614.12. Disambiguated from the
 /// earlier `fractal_resonance` factory.

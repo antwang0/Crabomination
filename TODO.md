@@ -1079,6 +1079,81 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   exactly two cards (Tezzeret's Gambit + any hypothetical snow card)
   that ship correctly without them.
 
+- ✅ **CR 109 — Objects** (push modern_decks batch 54,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The object primitive — what an object
+  is, how spell/ability descriptions disambiguate across zones, and
+  controller assignment for off-stack/off-battlefield objects. Audit:
+  (a) **109.1** "An object is an ability on the stack, a card, a copy
+  of a card, a token, a spell, a permanent, or an emblem" — ✅ (engine
+  models cards via `CardInstance`, tokens via `CardInstance.is_token =
+  true`, spells via `StackItem::Spell`, activated/triggered abilities
+  via `StackItem::Ability` and `StackItem::Trigger`, permanents via
+  battlefield-resident `CardInstance`; emblems are tracked as ⏳ — see
+  CR 114 audit row).
+  (b) **109.2** "A description with a card type or subtype but no zone
+  / 'card' / 'spell' / 'source' keyword means a permanent on the
+  battlefield" — ✅ (the `SelectionRequirement` evaluator walks the
+  battlefield by default; `CardsInZone(Hand|Graveyard|Library|Exile)`
+  is the explicit-zone selector — when neither appears, battlefield is
+  the default zone the predicate evaluates against).
+  (c) **109.2a** "description including 'card' + zone = card in that
+  zone" — ✅ (`Selector::CardsInZone { who, zone, filter }` is the
+  primitive for "card in graveyard / hand / library / exile"; auto-
+  target picker walks the named zone, not the battlefield).
+  (d) **109.2b** "description including 'spell' = spell on the stack" —
+  ✅ (`Selector::SpellOnStack { filter }` walks `self.stack` for
+  `StackItem::Spell` items; `Predicate::IsSpellOnStack` filters
+  selectors to the stack-resident spell case).
+  (e) **109.2c** "description including 'source' = source of ability/
+  damage/mana, in any zone" — ✅ (the engine threads
+  `EffectContext.source` from the original `CardId` regardless of
+  current zone; `Value::PowerOf(Selector::Source)` and trigger
+  filters that reference the source card all resolve correctly even
+  after the source moves out of the battlefield, by walking the
+  multi-zone fallback chain in `evaluate_requirement_static`).
+  (f) **109.3** "An object's characteristics are name, mana cost, color,
+  …, power, toughness, loyalty, defense, hand modifier, life modifier"
+  — ✅ (`CardDefinition` carries every printed characteristic;
+  `ComputedPermanent` carries the layered runtime view. Status —
+  tapped/flipped/face-up/phased-in — is correctly NOT a characteristic
+  per 109.3, kept on `CardInstance` as separate fields). See also the
+  existing CR 109.3 audit row at line 2039 (printed P/T readable across
+  zones for X-from-power riders).
+  (g) **109.4** "Only objects on the stack or on the battlefield have a
+  controller. Objects elsewhere aren't controlled by any player" — ✅
+  (the engine's `controller` field is meaningful only for
+  battlefield-resident `CardInstance` and `StackItem`s with explicit
+  controllers; graveyard/hand/library/exile cards expose `owner` via
+  `find_card_owner` but no controller).
+  (h) **109.4a** mana-ability controller = "as if on the stack" — ✅
+  (`activate_ability`'s mana-ability fast-path attributes the mana to
+  the activating player's pool immediately; the "controller" is the
+  activator even though no `StackItem` is pushed).
+  (i) **109.4b** triggered-ability controller before stack push =
+  source's controller at trigger time — ✅ (`fire_step_triggers` and
+  `dispatch_triggers_for_events` capture `source_controller` at the
+  fire site, threaded onto the pending trigger; if control changes
+  before the trigger goes on the stack the captured controller wins
+  per the printed rule).
+  (j) **109.4c-g** Emblem / Planechase / Vanguard / Archenemy /
+  Conspiracy-Draft controller rules — ⏳ (no emblem zone yet; the
+  other multiplayer-variant zones are out of scope for the 1v1 +
+  Two-Headed Giant builds).
+  (k) **109.5** "you/your on an object refers to controller / would-be
+  controller / owner" — ✅ (the `Selector::You` resolver consults
+  `EffectContext.controller`, which is stamped at cast time
+  (`for_spell_with_source`) for spells, at activation time
+  (`activate_ability`) for activated abilities, at trigger-fire time
+  for triggered abilities, and at compute time for static abilities;
+  delayed-triggered-ability controller follows CR 603.7d-f via the
+  delayed-trigger source threading).
+  Tests: the audit is end-to-end exercised by the entire suite (every
+  controller-aware effect threads the right player via
+  `EffectContext.controller`). New CR-109 lock-in tests are out of
+  scope since every existing pass already validates the same paths —
+  the primitive is implicitly covered by 3398+ tests.
+
 - ✅ **CR 110 — Permanents** (push modern_decks batch 20,
   claude/modern_decks branch — newest audit against
   `MagicCompRules_20260417.txt`): The permanent primitive — what a
@@ -2927,6 +3002,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Promote to ✅ when CR 701.19 (Regenerate) lands.
 
 ## Suggested next-up tasks
+
+- ✅ **`effect::shortcut::drain(amount)` helper** (push modern_decks
+  batch 54): The canonical "each opponent loses N life, you gain N
+  life" body is constructed by ~50 STX/SOS cards inline. Batch 54
+  added a `drain(amount: i32) -> Effect` shortcut that returns the
+  same `Effect::Drain { from: EachOpponent, to: You, amount }` value.
+  Three batch-54 SQ cards (Silverquill Reflect, Silverquill Doom,
+  Silverquill Psalm) use the new helper. A future refactor pass can
+  collapse the remaining inline drain bodies (~25 cards across
+  `stx::silverquill` / `stx::witherbloom` / `stx::extras` /
+  `sos::sorceries` / `sos::instants`) to the one-liner.
 
 - ✅ **`EventKind::CreatureSacrificed` event separation** (push
   modern_decks batch 51) — CR 701.16 sacrifice-as-distinct-event

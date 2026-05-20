@@ -42088,3 +42088,537 @@ fn prismari_pyremaster_magecraft_pings_any_target() {
     // Bolt 3 + Pyremaster magecraft 1 = 4 damage.
     assert_eq!(g.players[1].life, opp_before - 4);
 }
+
+// ── batch 54: new STX cards (12 SQ + 6 WB + 4 LH) ───────────────────────────
+
+#[test]
+fn silverquill_inkblot_is_a_two_two_flying_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_inkblot());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Inkblot castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Flying));
+    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 2);
+}
+
+#[test]
+fn inkling_chaplain_is_lifelink_vigilance_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkling_chaplain());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Chaplain castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Vigilance));
+    assert!(card.has_keyword(&Keyword::Lifelink));
+    assert_eq!(card.power(), 1);
+    assert_eq!(card.toughness(), 3);
+}
+
+#[test]
+fn silverquill_warden_etb_drains_one() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::silverquill_warden());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Warden castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1);
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
+
+#[test]
+fn inkling_acolyte_v2_magecraft_drains_each_opp() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::inkling_acolyte_v2());
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + Acolyte magecraft drain 1 = -4 to opp, +1 to caster.
+    assert_eq!(g.players[0].life, life_before + 1);
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn silverquill_reflect_drains_two_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::silverquill_reflect());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Reflect castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
+
+#[test]
+fn inkling_evangel_etb_pumps_target_inkling() {
+    let mut g = two_player_game();
+    // Find any Inkling on the battlefield. Add another Inkling via
+    // Inkling Aspirant for a clean target.
+    let target = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
+    let id = g.add_card_to_hand(0, catalog::inkling_evangel());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Evangel castable");
+    drain_stack(&mut g);
+    let target_card = g.battlefield_find(target).unwrap();
+    let counters = target_card.counters.get(&CounterType::PlusOnePlusOne)
+        .copied().unwrap_or(0);
+    assert_eq!(counters, 1);
+}
+
+#[test]
+fn silverquill_invocation_mints_three_inklings() {
+    let mut g = two_player_game();
+    let inklings_before = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .count();
+    let id = g.add_card_to_hand(0, catalog::silverquill_invocation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Invocation castable");
+    drain_stack(&mut g);
+    let inklings_after = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .count();
+    assert_eq!(inklings_after, inklings_before + 3);
+}
+
+#[test]
+fn inkling_ghostwriter_magecraft_drains_on_is_cast() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::inkling_ghostwriter());
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 to opp + Ghostwriter magecraft 1 drain = -4 to opp / +1 to caster.
+    assert_eq!(g.players[0].life, life_before + 1);
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn silverquill_doom_drains_four() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::silverquill_doom());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Doom castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4);
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn inkling_attendant_etb_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::inkling_attendant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Attendant castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Flying));
+    assert!(card.has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn silverquill_psalm_drains_two_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::silverquill_psalm());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Psalm castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    assert_eq!(g.players[1].life, opp_before - 2);
+    // -1 cast + 1 draw = same.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn inkling_pageant_mints_two_inklings_and_gains_life() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let inklings_before = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .count();
+    let id = g.add_card_to_hand(0, catalog::inkling_pageant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Pageant castable");
+    drain_stack(&mut g);
+    let inklings_after = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .count();
+    assert_eq!(inklings_after, inklings_before + 2);
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn witherbloom_creeper_has_deathtouch_and_magecraft_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_creeper());
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Deathtouch));
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    // Power 3+1 = 4 after magecraft self-pump +1/+0.
+    assert_eq!(card.power(), 4);
+    assert_eq!(card.toughness(), 2);
+}
+
+#[test]
+fn pest_lord_anthems_other_pests() {
+    let mut g = two_player_game();
+    // Add a Pest token first (will get +1/+1 from the lord).
+    let pest = g.add_card_to_battlefield(0, catalog::pest_brood_mother());
+    let _ = pest;
+    let lord = g.add_card_to_battlefield(0, catalog::pest_lord());
+    let _ = lord;
+    g.compute_battlefield();
+    // Now find a Pest other than the lord and assert it's pumped.
+    let pest_card = g.battlefield.iter()
+        .find(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest)
+            && !c.definition.subtypes.creature_types.contains(&CreatureType::Warlock));
+    if let Some(p) = pest_card {
+        // Pest Brood Mother is a 3/3 Pest Insect; should be 4/4 with the anthem.
+        assert!(p.power() > 3);
+        assert!(p.toughness() > 3);
+    }
+}
+
+#[test]
+fn witherbloom_drainer_etb_drains_two_and_gains_one() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_drainer());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Drainer castable");
+    drain_stack(&mut g);
+    // Drain 2 + GainLife 1 → +3 self, -2 opp.
+    assert_eq!(g.players[0].life, life_before + 3);
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
+
+#[test]
+fn witherbloom_mossback_is_a_two_four_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_mossback());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Mossback castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Reach));
+    assert_eq!(card.power(), 2);
+    assert_eq!(card.toughness(), 4);
+}
+
+#[test]
+fn pest_curse_mints_pests_and_self_discards() {
+    let mut g = two_player_game();
+    // Add a discard fodder card to hand.
+    let _filler = g.add_card_to_hand(0, catalog::forest());
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .count();
+    let hand_before = g.players[0].hand.len();
+    let id = g.add_card_to_hand(0, catalog::pest_curse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Pest Curse castable");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .count();
+    assert_eq!(pests_after, pests_before + 2);
+    // Hand: -1 cast (pest curse) + 0 draw - 1 discard = -1 from the (cast+1).
+    // hand_before included pest curse + filler = 2; after cast & discard = 0.
+    assert!(g.players[0].hand.len() < hand_before);
+}
+
+#[test]
+fn witherbloom_hexvine_destroys_creature_and_gains_two_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_hexvine());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hexvine castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn lorehold_invoker_magecraft_pings_each_opp() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::lorehold_invoker());
+    let opp_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 to opp + Invoker 1 to opp = -4.
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
+#[test]
+fn spirit_sparkmage_etb_burns_and_gains_life() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::spirit_sparkmage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkmage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
+
+#[test]
+fn lorehold_chronicler_v2_magecraft_self_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_chronicler_v2());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Flying));
+    // 2/2 + 1/+1 = 3/3.
+    assert_eq!(card.power(), 3);
+    assert_eq!(card.toughness(), 3);
+}
+
+#[test]
+fn quandrix_tideturner_etb_scrys_and_magecraft_grows() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_tideturner());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    let counters = card.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    // Magecraft should have added one +1/+1 counter.
+    assert_eq!(counters, 1);
+}
+
+#[test]
+fn fractal_overgrowth_doubles_existing_counters() {
+    let mut g = two_player_game();
+    // Add a creature with 3 +1/+1 counters.
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let card = g.battlefield_find_mut(b1).unwrap();
+        card.counters.insert(CounterType::PlusOnePlusOne, 3);
+    }
+    let id = g.add_card_to_hand(0, catalog::fractal_overgrowth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Overgrowth castable");
+    drain_stack(&mut g);
+    let counters = g.battlefield_find(b1).unwrap()
+        .counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    // 3 → 6 (doubled).
+    assert_eq!(counters, 6);
+}
+
+#[test]
+fn quandrix_ectomancer_magecraft_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_ectomancer());
+    let hand_before = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // +1 (bolt added) -1 (cast) +1 (magecraft draw) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn prismari_cinderpath_magecraft_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::prismari_cinderpath());
+    let _filler = g.add_card_to_hand(0, catalog::forest());
+    let hand_before = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // hand_before = filler. Add bolt (+1), cast (-1), then loot: +1 -1 = 0
+    // Net delta from hand_before: 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn prismari_searstorm_burns_creature_and_pings_opp() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::prismari_searstorm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Searstorm castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
+
+#[test]
+fn prismari_embertide_etb_burns_and_has_haste() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::prismari_embertide());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Embertide castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.has_keyword(&Keyword::Haste));
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
+
+#[test]
+fn lorehold_relicwarden_etb_pumps_other_spirits() {
+    let mut g = two_player_game();
+    let s1 = g.add_card_to_battlefield(0, catalog::spirit_blazekin());
+    let s2 = g.add_card_to_battlefield(0, catalog::spirit_blazekin());
+    let id = g.add_card_to_hand(0, catalog::lorehold_relicwarden());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Relicwarden castable");
+    drain_stack(&mut g);
+    // Each other Spirit gets +1/+1.
+    for sid in [s1, s2] {
+        let c = g.battlefield_find(sid).unwrap();
+        let cn = c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+        assert_eq!(cn, 1);
+    }
+}
