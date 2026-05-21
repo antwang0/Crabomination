@@ -337,6 +337,27 @@ pub struct GameState {
     /// don't need to preserve mid-SBA state.
     #[serde(skip)]
     pub(crate) died_card_snapshots: HashMap<CardId, CardInstance>,
+    /// Set of permanent CardIds that gained one or more counters during
+    /// the current turn. Bumped in `Effect::AddCounter`'s resolver
+    /// whenever a permanent gains counters; reset to empty in
+    /// `do_cleanup`. Powers Fractal Tender's end-step "if you put a
+    /// counter on this creature this turn, mint a Fractal" rider via
+    /// the new `Predicate::SourceGainedCounterThisTurn` predicate.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) permanents_gained_counter_this_turn: std::collections::HashSet<CardId>,
+    /// Per-permanent transient triggered abilities granted by spells /
+    /// continuous effects (Rabid Attack, Root Manipulation: "creatures
+    /// you control gain '…trigger…' until end of turn"). The dispatcher
+    /// walks this map alongside each permanent's printed
+    /// `triggered_abilities` and fires matching events. Cleared in
+    /// `do_cleanup` (the "until end of turn" expiry). Other durations
+    /// (Permanent) would need a separate map; only EOT grants are
+    /// modeled today since that's what the printed catalog needs.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) granted_triggers_eot:
+        std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -384,6 +405,8 @@ impl Clone for GameState {
             commander_cast_count: self.commander_cast_count.clone(),
             commander_damage: self.commander_damage.clone(),
             died_card_snapshots: self.died_card_snapshots.clone(),
+            permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
+            granted_triggers_eot: self.granted_triggers_eot.clone(),
         }
     }
 }
@@ -444,6 +467,8 @@ impl GameState {
             commander_cast_count: HashMap::new(),
             commander_damage: HashMap::new(),
             died_card_snapshots: HashMap::new(),
+            permanents_gained_counter_this_turn: std::collections::HashSet::new(),
+            granted_triggers_eot: std::collections::HashMap::new(),
         }
     }
 
@@ -1495,6 +1520,14 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastFlashbackTap {
+                card_id,
+                tap_creatures,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_flashback_tap(card_id, &tap_creatures, target, additional_targets, mode, x_value),
             GameAction::CastFromZoneWithoutPaying {
                 card_id,
                 target,
@@ -1580,7 +1613,20 @@ impl GameState {
             if stripped {
                 continue;
             }
-            for ta in &card.definition.triggered_abilities {
+            // Walk printed triggered abilities AND any transient
+            // granted_triggers_eot for this permanent (Root Manipulation,
+            // Rabid Attack-style "creatures gain '…trigger…' EOT").
+            let granted_for_card = self
+                .granted_triggers_eot
+                .get(&card.id)
+                .cloned()
+                .unwrap_or_default();
+            let all_triggers = card
+                .definition
+                .triggered_abilities
+                .iter()
+                .chain(granted_for_card.iter());
+            for ta in all_triggers {
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
@@ -1627,6 +1673,37 @@ impl GameState {
                             break;
                         }
                     }
+                }
+            }
+        }
+        // Player-level emblems (CR 114). Professor Dellian Fel's -6 ult
+        // grants the controller an emblem "Whenever you gain life,
+        // target opponent loses that much life." Modeled as a per-
+        // player bool flag (`Player.dellian_fel_emblem`) rather than a
+        // proper emblem zone — when set, every LifeGained event for
+        // that player fires a drain trigger against an auto-targeted
+        // opponent. event_amount carries the gained-life amount through
+        // to the trigger body via `Value::TriggerEventAmount`.
+        for (seat_idx, player) in self.players.iter().enumerate() {
+            if !player.dellian_fel_emblem {
+                continue;
+            }
+            for ev in events {
+                if let GameEvent::LifeGained { player: gained_p, .. } = ev
+                    && *gained_p == seat_idx
+                {
+                    candidates.push(TriggerCandidate {
+                        source: CardId(0),
+                        effect: Effect::LoseLife {
+                            who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachOpponent),
+                            amount: crate::effect::Value::TriggerEventAmount,
+                        },
+                        controller: seat_idx,
+                        filter: None,
+                        subject: None,
+                        event_amount: event_amount(ev),
+                        triggered_by_etb: false,
+                    });
                 }
             }
         }

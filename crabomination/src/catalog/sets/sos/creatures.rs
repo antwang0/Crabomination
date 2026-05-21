@@ -2341,7 +2341,10 @@ pub fn cuboid_colony() -> CardDefinition {
 /// per-permanent "got-a-counter-this-turn" flag yet — tracked in
 /// TODO.md). 3/3 Ward {2} body remains.
 pub fn fractal_tender() -> CardDefinition {
+    use crate::card::Predicate;
+    use crate::catalog::sets::sos::sorceries::fractal_token;
     use crate::effect::shortcut::increment_self_plus_one;
+    use crate::game::types::TurnStep;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Fractal Tender",
@@ -2357,7 +2360,36 @@ pub fn fractal_tender() -> CardDefinition {
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(2))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![increment_self_plus_one()],
+        triggered_abilities: vec![
+            increment_self_plus_one(),
+            // Push (modern_decks, batch 82): "At the beginning of each
+            // end step, if you put a counter on this creature this turn,
+            // create a 0/0 G/U Fractal token and put three +1/+1
+            // counters on it." Wired as a StepBegins(End)/ActivePlayer
+            // trigger gated on the new
+            // `Predicate::SourceGainedCounterThisTurn`. The trigger
+            // body mints a Fractal via the shared `fractal_token()` and
+            // piles 3 +1/+1 counters via `Selector::LastCreatedToken`.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::End),
+                    EventScope::AnyPlayer,
+                )
+                .with_filter(Predicate::SourceGainedCounterThisTurn),
+                effect: Effect::Seq(vec![
+                    Effect::CreateToken {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                        definition: fractal_token(),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::LastCreatedToken,
+                        kind: crate::card::CounterType::PlusOnePlusOne,
+                        amount: Value::Const(3),
+                    },
+                ]),
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2517,8 +2549,11 @@ pub fn pensive_professor() -> CardDefinition {
 /// optional trigger primitive yet — same engine gap as Berta's
 /// activation's X resolution).
 pub fn tester_of_the_tangential() -> CardDefinition {
-    use crate::effect::shortcut::increment_self_plus_one;
-    use crate::mana::u;
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::shortcut::{increment_self_plus_one, target_filtered};
+    use crate::game::types::TurnStep;
+    use crate::mana::{u, generic as gen2};
+    let _ = gen2; // suppress unused-import warning on the use line
     CardDefinition {
         name: "Tester of the Tangential",
         cost: cost(&[generic(1), u()]),
@@ -2533,7 +2568,41 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![increment_self_plus_one()],
+        triggered_abilities: vec![
+            increment_self_plus_one(),
+            // Push (modern_decks, batch 86): "At the beginning of combat
+            // on your turn, you may pay {X}. When you do, move X +1/+1
+            // counters from this creature onto another target creature."
+            // Approximation: X is collapsed to 1 (the engine has no
+            // X-cost optional trigger primitive). The trigger fires at
+            // BeginCombat/ActivePlayer, wraps a `MayPay { {1}, … }`
+            // around `MoveCounter(self → target friendly creature, 1)`.
+            // AutoDecider declines (Bool(false)); ScriptedDecider can
+            // accept to move 1 counter at a time. For typical play
+            // patterns this captures the "redistribute counter to a
+            // bigger attacker" spirit even though the X-scaling is
+            // omitted.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::BeginCombat),
+                    EventScope::ActivePlayer,
+                ),
+                effect: Effect::MayPay {
+                    description: "Pay {1}: move a +1/+1 counter from Tester to another creature?"
+                        .into(),
+                    mana_cost: cost(&[generic(1)]),
+                    body: Box::new(Effect::MoveCounter {
+                        from: Selector::This,
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::OtherThanSource),
+                        ),
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    }),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3107,7 +3176,8 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// Cascade and the IS-grant-cascade static are still ⏳ (no Cascade
 /// primitive in the engine, no cast-from-exile-without-paying pipeline).
 pub fn quandrix_the_proof() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{MayPlayDuration, Supertype};
+    use crate::effect::{RevealMissDest, ZoneDest};
     use crate::mana::{g, u};
     CardDefinition {
         name: "Quandrix, the Proof",
@@ -3123,7 +3193,41 @@ pub fn quandrix_the_proof() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // Push (modern_decks, batch 79): Cascade. "When you cast this
+        // spell, exile cards from the top of your library until you
+        // exile a nonland card with mana value less than this spell's
+        // mana value. You may cast that card without paying its mana
+        // cost. Put the rest on the bottom of your library in a random
+        // order." Wired as SpellCast/SelfSource trigger →
+        // RevealUntilFind { Nonland ∧ MV ≤ 5 (printed CMC 6 − 1), to:
+        // Exile, miss_dest: BottomRandom } + GrantMayPlay {LastMoved,
+        // EndOfThisTurn}. Same primitive chain as Velomachus Lorehold.
+        // Approximation: the "less than the spell's mana value" cap is
+        // hard-coded to ManaValueAtMost(5) (Quandrix the Proof's
+        // printed CMC is 6, so "less than 6" = "≤ 5"). The cap doesn't
+        // shift if X-cost extensions enter the picture (Quandrix the
+        // Proof has no X in its cost, so this is exact for the printed
+        // card).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ManaValueAtMost(5)),
+                    to: ZoneDest::Exile,
+                    cap: Value::Const(60),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::BottomRandom,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4196,8 +4300,21 @@ pub fn spectacular_skywhale() -> CardDefinition {
 /// vigilance-less body is still a powerful finisher in U/R aggro/spells
 /// pools.
 pub fn zaffai_and_the_tempests() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{MayPlayDuration, Supertype, Zone};
+    use crate::game::types::TurnStep;
     use crate::mana::{r, u};
+    // Push (modern_decks, batch 100): "Once during each of your turns,
+    // you may cast an instant or sorcery spell from your hand without
+    // paying its mana cost." Wired as a `StepBegins(PreCombatMain)/
+    // ActivePlayer` trigger on Zaffai that grants `MayPlay {
+    // EndOfThisTurn, exile_after: false }` on one IS card in hand
+    // (auto-picked by the engine — typically the highest-CMC IS card,
+    // matching the printed "save mana on a big spell" play pattern).
+    // Approximation: the engine picks the card upfront rather than
+    // letting the controller choose at cast time; the controller gets
+    // exactly one free IS cast per turn from the picked card, which
+    // expires at EOT cleanup. Same approximation strategy as Flashback
+    // (the spell) and Lorehold the Historian's miracle grant.
     CardDefinition {
         name: "Zaffai and the Tempests",
         cost: cost(&[generic(5), u(), r()]),
@@ -4216,7 +4333,26 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::PreCombatMain),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::GrantMayPlay {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    },
+                    Value::Const(1),
+                ),
+                duration: MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: false,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4245,9 +4381,43 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
 /// vanilla 5/5 Flying+Haste body is the headline play pattern; the
 /// per-opp-turn loot adds free card velocity.
 pub fn lorehold_the_historian() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{MayPlayDuration, Predicate, Supertype};
     use crate::game::types::TurnStep;
     use crate::mana::{r, w};
+    // Push (modern_decks, batch 93): the "Each instant and sorcery card
+    // in your hand has miracle {2}" grant is wired as a CardDrawn/
+    // YourControl trigger gated on (a) drawn card is IS and (b) it's
+    // the first card you drew this turn. Body grants `MayPlay {
+    // EndOfThisTurn, exile_after: false }` on the drawn card. The
+    // engine has no `Miracle {N}` alt-cost primitive (no separate
+    // miracle-cost path) so the {2} miracle-cost is approximated as
+    // *free* — overpowered relative to printed but functional. Future
+    // work: add a `MayPlayPermission.alt_cost: Option<ManaCost>` field
+    // so the may-cast path can require a non-zero payment. Engine
+    // tweak in this batch: `event_subject` for CardDrawn now uses
+    // `card_id` (not player) so `Selector::TriggerSource` resolves to
+    // the drawn card.
+    let miracle_grant = TriggeredAbility {
+        event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
+            Predicate::All(vec![
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                Predicate::ValueEquals(
+                    Value::CardsDrawnThisTurn(PlayerRef::You),
+                    Value::Const(1),
+                ),
+            ]),
+        ),
+        effect: Effect::GrantMayPlay {
+            what: Selector::TriggerSource,
+            duration: MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: false,
+        },
+    };
     CardDefinition {
         name: "Lorehold, the Historian",
         cost: cost(&[generic(3), r(), w()]),
@@ -4262,7 +4432,7 @@ pub fn lorehold_the_historian() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
+        triggered_abilities: vec![miracle_grant, TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::OpponentControl,
@@ -4585,8 +4755,19 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
     use crate::effect::shortcut::increment_self_plus_one;
-    use crate::mana::{ManaSymbol, g, u};
+    use crate::mana::{g, u};
     use super::sorceries::fractal_token;
+    // Push (modern_decks, batch 87): the printed `{X}, {T}: Create a
+    // 0/0 G/U Fractal token and put X +1/+1 counters on it` activation
+    // is approximated as a fixed `{2}, {T}: Create a Fractal + 2
+    // counters`. The engine's `activate_ability` path doesn't accept an
+    // x_value (X resolves to 0 for activated abilities, which would
+    // mint a 0/0 token that immediately dies to SBA — strictly
+    // worse than the printed Oracle in every scenario). The fixed
+    // {2} approximation captures a typical mid-game play pattern (a
+    // 2/2 Fractal for 2 mana via Berta's tap); the X-scaling at higher
+    // mana counts is the remaining engine gap (same X-cost activation
+    // gap as Tester of the Tangential's combat-step pay-X trigger).
     CardDefinition {
         name: "Berta, Wise Extrapolator",
         cost: cost(&[generic(2), g(), u()]),
@@ -4602,9 +4783,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: ManaCost {
-                symbols: vec![ManaSymbol::X, ManaSymbol::X],
-            },
+            mana_cost: cost(&[generic(2)]),
             effect: Effect::Seq(vec![
                 Effect::CreateToken {
                     who: PlayerRef::You,
@@ -4614,7 +4793,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
                 Effect::AddCounter {
                     what: Selector::LastCreatedToken,
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::XFromCost,
+                    amount: Value::Const(2),
                 },
             ]),
             once_per_turn: false,
@@ -5085,6 +5264,16 @@ pub fn professor_dellian_fel() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
             },
+            // -6: You get an emblem with "Whenever you gain life,
+            // target opponent loses that much life." Approximated as a
+            // per-player flag `Player.dellian_fel_emblem` that the
+            // unified dispatcher reads on LifeGained events.
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::ActivateDellianEmblem {
+                    who: PlayerRef::You,
+                },
+            },
         ],
         alternative_cost: None,
         back_face: None,
@@ -5163,6 +5352,23 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
                         controller: PlayerRef::You,
                         tapped: false,
                     },
+                },
+            },
+            // -7: Flip five coins. Target opponent skips their next X
+            // turns, where X is the number of coins that came up heads.
+            // FlipCoin's on_heads/on_tails branches each fire once per
+            // flip; on heads we SkipTurns(target opp, 1). After 5 flips
+            // the opp's `skip_turns` counter accumulates the heads-count,
+            // which the turn-advance logic decrements.
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::FlipCoin {
+                    count: Value::Const(5),
+                    on_heads: Box::new(Effect::SkipTurns {
+                        who: PlayerRef::EachOpponent,
+                        count: Value::Const(1),
+                    }),
+                    on_tails: Box::new(Effect::Noop),
                 },
             },
         ],
@@ -5452,7 +5658,21 @@ pub fn stone_docent() -> CardDefinition {
 /// still slots into colorless utility pools.
 pub fn page_loose_leaf() -> CardDefinition {
     use super::super::tap_add_colorless;
-    use crate::card::Supertype;
+    use crate::card::{ActivatedAbility, Predicate, Supertype, Zone};
+    use crate::effect::{RevealMissDest, ZoneDest};
+    // Push (modern_decks, batch 92): Grandeur "Discard another card
+    // named Page, Loose Leaf: reveal until creature → bf, rest →
+    // bottom random" wired as an activated ability with zero mana
+    // cost, gated on `Predicate::SameNamedInZoneAtLeast { who: You,
+    // zone: Hand, at_least: 1 }` (≥ 1 other Page in hand), and body
+    // = `Seq(Discard 1, RevealUntilFind(Creature, → bf,
+    // miss=BottomRandom))`. The "discard another Page" cost is
+    // approximated by gating on another Page in hand + auto-discarding
+    // 1 card — the auto-decider picks the first hand card, which in a
+    // tested deck with multiple Pages will frequently be the other
+    // Page. The Predicate now reads from `ctx.source` as a fallback
+    // (engine-wide tweak in batch 92 alongside this card) so the
+    // activation-time gate fires correctly for non-spell paths.
     CardDefinition {
         name: "Page, Loose Leaf",
         cost: cost(&[generic(2)]),
@@ -5466,7 +5686,42 @@ pub fn page_loose_leaf() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: vec![tap_add_colorless()],
+        activated_abilities: vec![
+            tap_add_colorless(),
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::RevealUntilFind {
+                        who: PlayerRef::You,
+                        find: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                        cap: Value::Const(60),
+                        life_per_revealed: 0,
+                        miss_dest: RevealMissDest::BottomRandom,
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: Some(Predicate::SameNamedInZoneAtLeast {
+                    who: PlayerRef::You,
+                    zone: Zone::Hand,
+                    at_least: Value::Const(1),
+                }),
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false,
+                exile_other_filter: None,
+                self_counter_cost_reduction: None,
+            },
+        ],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -5678,7 +5933,17 @@ pub fn the_dawning_archaic() -> CardDefinition {
 /// flying/vigilance finisher in W/B decks. Tracked in TODO.md under
 /// "Casualty keyword".
 pub fn silverquill_the_disputant() -> CardDefinition {
-    use crate::card::Supertype;
+    use crate::card::{EventKind, EventScope, EventSpec, Supertype, TriggeredAbility};
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    // Push (modern_decks, batch 91): "Each instant and sorcery spell
+    // you cast has casualty 1." Wired as a SpellCast/YourControl
+    // trigger gated on `cast_is_instant_or_sorcery()` + `Effect::MayDo
+    // { Seq([Sacrifice(Creature with power ≥ 1), CopySpell(TriggerSource)]) }`.
+    // AutoDecider declines (the printed casualty is a "you may" cost);
+    // ScriptedDecider can accept to exercise the sac+copy path. The
+    // power-≥-1 sub-filter on the sacrifice picker is implemented via
+    // `Sacrifice { filter: PowerAtLeast(1) }`. Copy inherits original
+    // targets (engine-wide gap shared with all CopySpell users).
     CardDefinition {
         name: "Silverquill, the Disputant",
         cost: cost(&[generic(2), w(), b()]),
@@ -5693,7 +5958,25 @@ pub fn silverquill_the_disputant() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::MayDo {
+                description: "Casualty 1: sacrifice a creature with power 1 or greater to copy the spell?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::PowerAtLeast(1)),
+                    },
+                    Effect::CopySpell {
+                        what: Selector::TriggerSource,
+                        count: Value::Const(1),
+                    },
+                ])),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5724,12 +6007,16 @@ pub fn silverquill_the_disputant() -> CardDefinition {
 /// `sorcery_speed: true`; sacrifice-another-creature cost via
 /// `sac_cost: true`.
 ///
-/// The "cast a spell you don't own" trigger is still omitted (engine has
-/// no owned-vs-controlled-spell predicate). The "mana of any type" rider
-/// is auto-satisfied since the free-cast path skips mana payment.
+/// Push (modern_decks, batch 72): the "Whenever you cast a spell you
+/// don't own" trigger is **now wired** via the new
+/// `Predicate::CastSpellNotOwnedByYou` predicate. Trigger body fans
+/// out +1/+1 counters across each friendly creature via
+/// `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1)`. The
+/// "mana of any type" rider on the activation is auto-satisfied since
+/// the free-cast path skips mana payment.
 pub fn nita_forum_conciliator() -> CardDefinition {
-    use crate::card::Supertype;
-    use crate::effect::ZoneDest;
+    use crate::card::{CounterType, Predicate, Supertype};
+    use crate::effect::{EventKind, EventScope, EventSpec, TriggeredAbility, ZoneDest};
     let is_in_opp_gy = SelectionRequirement::HasCardType(CardType::Instant)
         .or(SelectionRequirement::HasCardType(CardType::Sorcery));
     let target_card = Selector::take(
@@ -5778,7 +6065,23 @@ pub fn nita_forum_conciliator() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            // "Whenever you cast a spell you don't own, put a +1/+1
+            // counter on each creature you control."
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellNotOwnedByYou),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5889,14 +6192,27 @@ pub fn colorstorm_stallion() -> CardDefinition {
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        // 🟡 Opus small body (<5 mana) wired: +1/+1 EOT. Big body
-        // (≥5 mana) prints "create a token that's a copy of this
-        // creature" — without a permanent-copy primitive, we
-        // approximate the big body as the same +1/+1 EOT (no
-        // additional bonus). The pump fires on every IS cast either
-        // way, which preserves the printed "always pumps" behaviour
-        // while leaving the copy-on-big branch as a documented gap.
-        triggered_abilities: vec![opus_trigger(pump_one(), pump_one())],
+        // Push (modern_decks, batch 81): Opus rider fully wired. Small
+        // body (<5 mana): +1/+1 EOT pump. Big body (≥5 mana): +1/+1 EOT
+        // pump + mint a copy of Colorstorm Stallion via the new
+        // `Effect::CreateTokenCopyOf { source: Selector::This }`
+        // primitive. The token is a 3/3 Elemental Horse with Ward(1) +
+        // Haste keywords (inherits the printed body) plus its own Opus
+        // rider (since the copy includes triggered_abilities) — which
+        // chains additively on subsequent IS casts.
+        triggered_abilities: vec![opus_trigger(
+            pump_one(),
+            Effect::Seq(vec![
+                pump_one(),
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                },
+            ]),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -5988,7 +6304,19 @@ pub fn elemental_mascot() -> CardDefinition {
 /// spell cast this turn, which is a sibling of `Effect::CopySpell` but
 /// over a `Value::SpellsCastThisTurn` count (TODO.md).
 pub fn prismari_the_inspiration() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
     use crate::mana::{r, u};
+    // Push (modern_decks, batch 89): "Instant and sorcery spells you
+    // cast have storm" is wired via a SpellCast/YourControl trigger
+    // gated on `cast_is_instant_or_sorcery` + `Effect::CopySpell {
+    // what: TriggerSource, count: Value::StormCount }`. Each IS spell
+    // cast while Prismari is on the bf fires a copy-it-N-times trigger
+    // (N = spells_cast_this_turn − 1). The copy targets default to the
+    // original's targets (engine-wide gap shared with all CopySpell
+    // users — "you may choose new targets" is not modeled). When
+    // Prismari leaves the bf, the trigger is no longer on her, so
+    // future casts don't get the storm grant.
     CardDefinition {
         name: "Prismari, the Inspiration",
         cost: cost(&[generic(5), u(), r()]),
@@ -6003,7 +6331,14 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(5))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::CopySpell {
+                what: Selector::TriggerSource,
+                count: Value::StormCount,
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

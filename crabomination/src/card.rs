@@ -265,6 +265,13 @@ pub enum Keyword {
     Recursion,
     Flash,
     Flashback(crate::mana::ManaCost),
+    /// "Flashback—Tap N untapped creatures you control" — a Flashback
+    /// cost paid not in mana but by tapping N creatures. Used by Group
+    /// Project (Tap three) and any future tap-creatures-as-flashback
+    /// card. Recognized by `GameAction::CastFlashbackTap`. Mutually
+    /// exclusive with `Keyword::Flashback(_)` in practice (a card has
+    /// one Flashback variant or the other).
+    FlashbackTap(u32),
     Kicker(crate::mana::ManaCost),
     Convoke,
     Delve,
@@ -682,6 +689,13 @@ impl CardDefinition {
     pub fn has_flashback(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Flashback(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// Returns the number of creatures that must be tapped to flashback
+    /// this card if it has `Keyword::FlashbackTap(N)`. None otherwise.
+    pub fn has_flashback_tap(&self) -> Option<u32> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::FlashbackTap(n) = kw { Some(*n) } else { None }
         })
     }
     pub fn has_kicker(&self) -> Option<&ManaCost> {

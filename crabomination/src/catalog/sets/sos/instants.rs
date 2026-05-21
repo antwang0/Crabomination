@@ -423,7 +423,7 @@ pub fn run_behind() -> CardDefinition {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Library {
                 who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                pos: LibraryPosition::Bottom,
+                pos: LibraryPosition::OwnerChoice,
             },
         },
         activated_abilities: no_abilities(),
@@ -433,13 +433,13 @@ pub fn run_behind() -> CardDefinition {
         loyalty_abilities: vec![],
         // Push (modern_decks): "{1} less if it targets an attacking
         // creature" rider wired via `AlternativeCost { mana_cost: {2}{U},
-        // target_filter: Some(Creature + IsAttacking) }`. When the
-        // caster aims at an attacking creature, alt-cost path is
-        // available at {2}{U} (a {1} reduction from printed {3}{U});
-        // otherwise the spell goes off at full cost. The
-        // top-or-bottom owner-choice is still collapsed to bottom-only
-        // (engine has no top-or-bottom prompt for the *owner* of the
-        // moved card — tracked in TODO.md).
+        // target_filter: Some(Creature + IsAttacking) }`. The
+        // top-or-bottom owner-choice rider is wired via the new
+        // `LibraryPosition::OwnerChoice` primitive — `place_card_in_dest`
+        // asks the card's owner via `Decision::OptionalTrigger` (yes =
+        // top, no = bottom). AutoDecider's `Bool(false)` default lands
+        // the card on the bottom (the previous behavior); ScriptedDecider
+        // can flip to top for tests.
         alternative_cost: Some(AlternativeCost {
             mana_cost: cost(&[generic(2), u()]),
             life_cost: 0,
@@ -1842,6 +1842,53 @@ pub fn suspend_aggression() -> CardDefinition {
 /// per-creature "grant triggered ability for a duration" primitive —
 /// tracked in TODO.md).
 pub fn rabid_attack() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    // Push (modern_decks, batch 85): "When this creature dies, draw a
+    // card" granted trigger. Wired via `Effect::GrantTriggeredAbility`
+    // — each pumped target receives a CreatureDied/SelfSource trigger
+    // for the rest of the turn. The grant lives on
+    // `granted_triggers_eot`; the SBA dies handler in
+    // `apply_state_based_actions` (and `remove_to_graveyard_with_triggers`)
+    // walks both printed Dies triggers + granted ones, so the
+    // draw-on-die fires faithfully even though the creature has left
+    // the battlefield by trigger-resolution time.
+    let die_draw_trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
+    };
+    let pump_and_grant = |slot: u8| -> Vec<Effect> {
+        let target: Selector = if slot == 0 {
+            target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            )
+        } else {
+            Selector::TargetFiltered {
+                slot,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            }
+        };
+        vec![
+            Effect::PumpPT {
+                what: target.clone(),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantTriggeredAbility {
+                what: target,
+                trigger: Box::new(die_draw_trigger.clone()),
+                duration: Duration::EndOfTurn,
+            },
+        ]
+    };
+    let mut all_effects = Vec::with_capacity(6);
+    all_effects.extend(pump_and_grant(0));
+    all_effects.extend(pump_and_grant(1));
+    all_effects.extend(pump_and_grant(2));
     CardDefinition {
         name: "Rabid Attack",
         cost: cost(&[generic(1), b()]),
@@ -1851,39 +1898,7 @@ pub fn rabid_attack() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            // Slot 0 (mandatory): friendly creature gets +1/+0 EOT.
-            Effect::PumpPT {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            // Slot 1: optional friendly creature gets +1/+0 EOT.
-            Effect::PumpPT {
-                what: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-            // Slot 2: optional friendly creature gets +1/+0 EOT.
-            Effect::PumpPT {
-                what: Selector::TargetFiltered {
-                    slot: 2,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                power: Value::Const(1),
-                toughness: Value::Const(0),
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: Effect::Seq(all_effects),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2408,22 +2423,32 @@ pub fn sos_flashback_instant() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // Approximation: bounce target IS card from your graveyard to hand.
-        // The player can re-cast it next turn at normal cost — strictly
-        // weaker than the printed "flashback for its mana cost this turn"
-        // but preserves the recovery-of-a-spell-from-graveyard outcome.
-        effect: Effect::Move {
-            what: Selector::take(
-                Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: Zone::Graveyard,
-                    filter: SelectionRequirement::HasCardType(CardType::Instant)
-                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                },
-                Value::Const(1),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
+        // Push (modern_decks, batch 99): Flashback (the spell) now
+        // grants `MayPlay { duration: EndOfThisTurn, exile_after: true }`
+        // on a target IS card in your graveyard — the card stays in
+        // graveyard but the controller may cast it this turn via the
+        // existing `CastFromZoneWithoutPaying` path, exiling on resolve
+        // (matching the printed Flashback CR 702.34d). Approximation:
+        // the cast is *free* rather than the printed "flashback cost
+        // equals its mana cost" — no `MayPlayPermission.alt_cost`
+        // primitive today. Same overpowered-but-captures-spirit
+        // approximation as Lorehold the Historian's miracle grant.
+        effect: Effect::Seq(vec![
+            Effect::GrantMayPlay {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    },
+                    Value::Const(1),
+                ),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: true,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

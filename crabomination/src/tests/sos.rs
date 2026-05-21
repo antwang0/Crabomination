@@ -3804,6 +3804,35 @@ fn run_behind_puts_target_creature_on_bottom_of_library() {
     );
 }
 
+#[test]
+fn run_behind_top_of_library_via_scripted_owner_choice() {
+    // Run Behind's printed Oracle has the *owner* of the moved card pick
+    // top or bottom. The auto-decider lands the card on the bottom
+    // (matching the prior collapsed behavior), but a `ScriptedDecider`
+    // saying `Bool(true)` to the optional-trigger flips the placement
+    // to the top.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::run_behind());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Run Behind castable for {3}{U}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].library.first().map(|c| c.id),
+        Some(bear),
+        "Owner answered yes → bear lands on top of library",
+    );
+}
+
 // ── Antiquities on the Loose ────────────────────────────────────────────────
 
 #[test]
@@ -7118,6 +7147,39 @@ fn professor_dellian_fel_minus_three_destroys_creature() {
 }
 
 #[test]
+fn professor_dellian_fel_minus_six_activates_lifegain_drain_emblem() {
+    // Push (modern_decks, batch 90): Dellian Fel's -6 emblem ult. After
+    // activation, Player.dellian_fel_emblem = true. Any subsequent
+    // LifeGained event on P0 fires "target opp loses that much life"
+    // via the unified dispatcher's player-emblem branch.
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+    // Bump loyalty so -6 is payable.
+    {
+        let c = g.battlefield_find_mut(pw).unwrap();
+        c.add_counters(crate::card::CounterType::Loyalty, 1);
+    }
+    assert!(!g.players[0].dellian_fel_emblem);
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw, ability_index: 3, target: None,
+    }).expect("Dellian -6 castable at 6 loyalty");
+    drain_stack(&mut g);
+    assert!(g.players[0].dellian_fel_emblem,
+        "Emblem flag set after -6 activation");
+
+    // Now gain 5 life on P0 — the emblem should drain P1 by 5.
+    let p1_life_before = g.players[1].life;
+    g.adjust_life(0, 5);
+    // Manually emit + dispatch the LifeGained event so the unified
+    // dispatcher fires the emblem trigger.
+    let evs = vec![crate::game::GameEvent::LifeGained { player: 0, amount: 5 }];
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life_before - 5,
+        "Emblem fired: P1 lost 5 life when P0 gained 5");
+}
+
+#[test]
 fn unsubtle_mockery_deals_4_and_surveils() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -7327,6 +7389,61 @@ fn page_loose_leaf_taps_for_colorless() {
 }
 
 #[test]
+fn page_loose_leaf_grandeur_rejected_without_another_page_in_hand() {
+    // Push (modern_decks, batch 92): Grandeur activation requires
+    // another Page in hand. With only one Page on the battlefield and
+    // no other Page in hand, the activation gate (Predicate::
+    // SameNamedInZoneAtLeast in hand ≥ 1) rejects.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::page_loose_leaf());
+    g.clear_sickness(id);
+    drain_stack(&mut g);
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+    });
+    assert!(result.is_err(),
+        "Grandeur rejected without another Page in hand");
+}
+
+#[test]
+fn page_loose_leaf_grandeur_with_another_page_reveals_is_card() {
+    // With another Page in hand, the Grandeur activation succeeds: it
+    // discards the other Page (auto-picker picks first hand card),
+    // then reveals until an instant or sorcery card → hand, rest →
+    // bottom of library randomized.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::page_loose_leaf());
+    g.clear_sickness(id);
+    // Seed another Page in hand.
+    let _other_page = g.add_card_to_hand(0, catalog::page_loose_leaf());
+    // Seed library: 2 lands + 1 Lightning Bolt (IS) on top.
+    use crate::card::CardInstance;
+    let mut top: Vec<CardInstance> = vec![
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0),
+    ];
+    for c in top.iter_mut() { c.controller = 0; }
+    for c in top.into_iter().rev() {
+        g.players[0].library.insert(0, c);
+    }
+    drain_stack(&mut g);
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None,
+    });
+    assert!(result.is_ok(),
+        "Grandeur should activate when another Page is in hand");
+    drain_stack(&mut g);
+
+    // Lightning Bolt should be in hand.
+    let bolt_in_hand = g.players[0].hand.iter()
+        .any(|c| c.definition.name == "Lightning Bolt");
+    assert!(bolt_in_hand, "Grandeur revealed and put an IS card into hand");
+}
+
+#[test]
 fn ral_zarek_minus_two_returns_low_mv_creature_from_graveyard() {
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(0, catalog::ral_zarek_guest_lecturer());
@@ -7342,6 +7459,55 @@ fn ral_zarek_minus_two_returns_low_mv_creature_from_graveyard() {
 
     assert!(g.battlefield.iter().any(|c| c.id == bear_in_grave),
         "Ral Zarek -2 should return the bear from graveyard to battlefield");
+}
+
+#[test]
+fn ral_zarek_minus_seven_skips_target_opp_turns_via_coin_flip() {
+    // ScriptedDecider answers `Bool(true)` for every coin flip = all
+    // 5 heads → P1 (the only opp) gains skip_turns += 5.
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::ral_zarek_guest_lecturer());
+    // Bump loyalty to 7 so the -7 cost is payable.
+    {
+        let c = g.battlefield_find_mut(pw).unwrap();
+        c.add_counters(crate::card::CounterType::Loyalty, 4);
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw, ability_index: 3, target: None,
+    }).expect("Ral Zarek -7 should activate at 7 loyalty");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].skip_turns, 5,
+        "All 5 heads → P1 skips 5 turns");
+}
+
+#[test]
+fn skip_turns_counter_decrements_on_turn_advance() {
+    // Player 1 has skip_turns=2. When the engine would hand the turn
+    // to P1, decrement and skip past — P1 should never become the
+    // active player until the counter reaches 0.
+    let mut g = two_player_game();
+    g.players[1].skip_turns = 2;
+    assert_eq!(g.active_player_idx, 0, "starts at P0");
+
+    // Advance through cleanup (P0 → P1 normally; with skip, P0 → P0).
+    g.do_cleanup();
+    assert_eq!(g.active_player_idx, 0, "P1's turn 1 skipped, lands back on P0");
+    assert_eq!(g.players[1].skip_turns, 1, "skip counter decremented");
+
+    g.do_cleanup();
+    assert_eq!(g.active_player_idx, 0, "P1's turn 2 skipped, still on P0");
+    assert_eq!(g.players[1].skip_turns, 0, "all skip turns consumed");
+
+    g.do_cleanup();
+    assert_eq!(g.active_player_idx, 1, "back to normal — P1's turn");
 }
 
 #[test]
@@ -10533,9 +10699,13 @@ fn choreographed_sparks_mode_one_copies_target_creature_spell() {
 }
 
 #[test]
-fn flashback_instant_returns_an_instant_from_your_graveyard_to_hand() {
+fn flashback_instant_grants_may_play_on_gy_is_card() {
+    // Push (modern_decks, batch 99): Flashback (the spell) now grants
+    // MayPlay { EndOfThisTurn, exile_after: true } on a target IS card
+    // in your graveyard, rather than bouncing it to hand. The card
+    // stays in gy with may-cast permission for the turn; resolved
+    // casts route to exile.
     let mut g = two_player_game();
-    // Seed a Bolt in P0's graveyard.
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let fb = g.add_card_to_hand(0, catalog::sos_flashback_instant());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -10546,53 +10716,83 @@ fn flashback_instant_returns_an_instant_from_your_graveyard_to_hand() {
     .expect("Flashback (instant) castable for {R}");
     drain_stack(&mut g);
 
-    // Bolt moved from graveyard to hand.
-    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
-        "Bolt returned from graveyard to hand by Flashback approximation");
+    // Bolt stays in gy but has may_play_until stamped.
+    let bolt_gy = g.players[0].graveyard.iter().find(|c| c.id == bolt)
+        .expect("Bolt still in graveyard");
+    let perm = bolt_gy.may_play_until.expect("may_play stamped by Flashback");
+    assert!(perm.exile_after, "exile-on-resolve rider set");
+    assert_eq!(perm.player, 0, "permission to the spell caster");
 }
 
 #[test]
-fn echocasting_symposium_creates_a_three_three_wizard_token() {
-    use crate::card::CreatureType;
+fn echocasting_symposium_creates_a_copy_of_target_creature() {
+    use crate::game::types::Target;
+    // Push (modern_decks, batch 81): Echocasting Symposium now uses
+    // CreateTokenCopyOf — the token inherits the target creature's
+    // printed name + types + P/T (Grizzly Bears here, so a 2/2 Bear
+    // token enters).
     let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::echocasting_symposium());
     g.players[0].mana_pool.add(Color::Blue, 2);
     g.players[0].mana_pool.add_colorless(4);
     let bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
     })
     .expect("Echocasting Symposium castable for {4}{U}{U}");
     drain_stack(&mut g);
 
     assert_eq!(g.battlefield.len(), bf_before + 1, "One new token entered");
-    let tok = g.battlefield.iter().find(|c| c.definition.name == "Echocast").unwrap();
-    assert_eq!(tok.power(), 3);
-    assert_eq!(tok.toughness(), 3);
-    assert!(tok.definition.subtypes.creature_types.contains(&CreatureType::Wizard));
+    let tok = g.battlefield.iter().find(|c|
+        c.is_token && c.definition.name == "Grizzly Bears"
+    ).expect("token is a copy of Grizzly Bears");
+    assert_eq!(tok.power(), 2);
+    assert_eq!(tok.toughness(), 2);
 }
 
 #[test]
 fn applied_geometry_mints_a_six_six_fractal() {
     use crate::card::CreatureType;
+    use crate::game::types::Target;
     let mut g = two_player_game();
+    // Seed a target permanent for the copy. Applied Geometry's printed
+    // body copies a non-Aura permanent you control — the token inherits
+    // the source's name + types + abilities, with P/T overridden to 0/0
+    // and Fractal added to its creature types. Six +1/+1 counters
+    // then ride on the token = a 6/6 Fractal-plus-bear.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::applied_geometry());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
     })
     .expect("Applied Geometry castable for {2}{G}{U}");
     drain_stack(&mut g);
 
-    let frac = g.battlefield.iter().find(|c| c.definition.name == "Fractal").unwrap();
-    // 0/0 + 6 +1/+1 counters = 6/6.
-    assert_eq!(frac.power(), 6, "Fractal should have power 6 from counters");
-    assert_eq!(frac.toughness(), 6, "Fractal should have toughness 6 from counters");
-    assert!(frac.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
+    // Find the freshly-minted token (is_token = true).
+    let frac = g.battlefield.iter().find(|c|
+        c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal)
+    ).expect("Applied Geometry mints a Fractal-typed copy token");
+    // 0/0 base override + 6 +1/+1 counters = 6/6.
+    assert_eq!(frac.power(), 6, "token should be 6/6 from counters");
+    assert_eq!(frac.toughness(), 6);
+    assert!(
+        frac.definition.subtypes.creature_types.contains(&CreatureType::Fractal),
+        "token has Fractal type added",
+    );
 }
 
 // ── Prismari Opus rider promotions ──────────────────────────────────────────
@@ -11347,6 +11547,51 @@ fn improvisation_capstone_exiles_four_cards_and_registers_paradigm() {
 }
 
 #[test]
+fn improvisation_capstone_digs_past_lands_until_mv_threshold_hit() {
+    // Top of library: 3 Forests (MV 0) + 1 Lightning Bolt (MV 1) +
+    // 1 Cancel (MV 3). Running MV sum walks 0, 0, 0, 1, 4 — gate hit
+    // after Cancel. Five cards exiled (was four under the prior
+    // hard-coded Const(4)). Validates the new
+    // `Selector::TopOfLibraryUntilMvAtLeast` primitive.
+    let mut g = two_player_game();
+    // add_card_to_library pushes onto the END (= bottom). Insert in
+    // reverse so the top-of-library order is Forest, Forest, Forest,
+    // Bolt, Cancel.
+    use crate::card::CardInstance;
+    let mut top_to_bottom: Vec<CardInstance> = vec![
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0),
+        CardInstance::new(g.next_id(), catalog::cancel(), 0),
+    ];
+    for c in top_to_bottom.iter_mut() { c.controller = 0; }
+    // Splice these in at the top of P0's library.
+    for c in top_to_bottom.into_iter().rev() {
+        g.players[0].library.insert(0, c);
+    }
+    let id = g.add_card_to_hand(0, catalog::improvisation_capstone());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Improvisation Capstone castable");
+    drain_stack(&mut g);
+
+    // Three Forests + one Bolt + one Cancel = 5 cards in exile.
+    // (Lightning Bolt's free cast resolves immediately and may leave
+    //  the IS card on the stack / battlefield mid-stack drain; what
+    //  we're checking is that all five made it OUT of the library.)
+    let lib_remaining = g.players[0].library.len();
+    assert_eq!(
+        lib_remaining, 0,
+        "All five seeded cards walked out of the library (sum 0+0+0+1+3 ≥ 4)",
+    );
+}
+
+#[test]
 fn the_dawning_archaic_attack_trigger_uses_immediate_free_cast() {
     // The attack trigger is `CastWithoutPayingImmediate { source: Graveyard }`
     // — by default AutoDecider declines (Bool(false)), so nothing
@@ -11369,6 +11614,298 @@ fn the_dawning_archaic_attack_trigger_uses_immediate_free_cast() {
     });
     assert!(has_attack_free_cast,
         "Dawning Archaic has an attack-triggered free-cast effect");
+}
+
+#[test]
+fn the_dawning_archaic_cost_reduces_per_is_in_graveyard() {
+    // Push (modern_decks, batch 78): Dawning Archaic's "This spell
+    // costs {1} less to cast for each instant and sorcery card in
+    // your graveyard" rider is now wired via the per-card
+    // graveyard-IS counter in `cost_reduction_for_spell`. With 3 IS
+    // cards in P0's gy, the printed {10} cost reduces to {7}.
+    let mut g = two_player_game();
+    let archaic_id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+
+    // Seed 3 IS cards in P0's graveyard.
+    for _ in 0..3 {
+        let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+        bolt.controller = 0;
+        g.players[0].graveyard.push(bolt);
+    }
+
+    // Pay only 7 generic mana — should succeed thanks to the gy discount.
+    g.players[0].mana_pool.add_colorless(7);
+    g.perform_action(GameAction::CastSpell {
+        card_id: archaic_id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Dawning Archaic castable at {7} with 3 IS cards in gy");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == archaic_id),
+        "Dawning Archaic resolved onto the battlefield",
+    );
+}
+
+#[test]
+fn the_dawning_archaic_cost_does_not_reduce_with_empty_graveyard() {
+    // With an empty IS-in-gy count, full {10} is required.
+    let mut g = two_player_game();
+    let archaic_id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+    g.players[0].mana_pool.add_colorless(7);
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: archaic_id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        result.is_err(),
+        "Dawning Archaic at {{7}} with empty gy should be rejected (full cost {{10}})",
+    );
+}
+
+#[test]
+fn rabid_attack_grants_die_draws_card_trigger() {
+    // Push (modern_decks, batch 85): Rabid Attack grants each pumped
+    // target a CreatureDied/SelfSource trigger ("draw a card on die")
+    // until end of turn. Kill the bear after the grant lands — the
+    // granted trigger fires from the SBA dies handler (now consulting
+    // `granted_triggers_eot` alongside printed Dies triggers).
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let ra = g.add_card_to_hand(0, catalog::rabid_attack());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.add_card_to_library(0, catalog::lightning_bolt()); // for the draw
+
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: ra,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Rabid Attack castable");
+    drain_stack(&mut g);
+
+    // Hand size now: -1 (Rabid Attack left hand) → hand_before - 1.
+    let hand_after_cast = g.players[0].hand.len();
+    // Kill the bear via lethal damage.
+    g.battlefield_find_mut(bear).unwrap().damage = 2;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    // We need to also dispatch the CreatureDied event so the trigger
+    // we registered via granted_triggers_eot actually fires. The
+    // SBA-dies-handler already pushes printed Dies triggers + granted
+    // ones to the stack inside check_state_based_actions, so drain
+    // again to resolve.
+    drain_stack(&mut g);
+
+    // Player should have drawn 1 card from the granted die-trigger.
+    let hand_after_die = g.players[0].hand.len();
+    assert_eq!(
+        hand_after_die,
+        hand_after_cast + 1,
+        "Rabid Attack's granted die-trigger fired → +1 card",
+    );
+    let _ = hand_before;
+}
+
+#[test]
+fn root_manipulation_grants_attack_lifegain_trigger() {
+    // Push (modern_decks, batch 84): Root Manipulation grants each
+    // friendly creature an Attacks/SelfSource trigger ("gain 1 life
+    // on attack") via the new `Effect::GrantTriggeredAbility`. When
+    // the bear attacks after Root Manipulation resolved, the trigger
+    // fires and P0 gains 1 life.
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let rm = g.add_card_to_hand(0, catalog::root_manipulation());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: rm, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Root Manipulation castable");
+    drain_stack(&mut g);
+
+    let life_before = g.players[0].life;
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }])).expect("bear can attack with menace");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Root Manipulation's granted attack-trigger fires → gain 1 life");
+}
+
+#[test]
+fn group_project_flashback_taps_three_creatures_and_mints_spirit() {
+    // Push (modern_decks, batch 83): Group Project's "Flashback—Tap
+    // three untapped creatures you control" wired via the new
+    // `Keyword::FlashbackTap(3)` + `GameAction::CastFlashbackTap`. Seed
+    // Group Project in P0's graveyard, three untapped bears on the bf,
+    // and invoke the flashback action — the three bears tap, Group
+    // Project moves to exile, a 2/2 R/W Spirit token enters.
+    let mut g = two_player_game();
+    let mut gp = crate::card::CardInstance::new(g.next_id(), catalog::group_project(), 0);
+    gp.controller = 0;
+    let gp_id = gp.id;
+    g.players[0].graveyard.push(gp);
+    let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for cid in [bear_a, bear_b, bear_c] {
+        g.clear_sickness(cid);
+    }
+
+    g.perform_action(GameAction::CastFlashbackTap {
+        card_id: gp_id,
+        tap_creatures: vec![bear_a, bear_b, bear_c],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Group Project flashback castable with 3 bears");
+    drain_stack(&mut g);
+
+    // Three bears all tapped.
+    for cid in [bear_a, bear_b, bear_c] {
+        assert!(
+            g.battlefield_find(cid).unwrap().tapped,
+            "bear {} was tapped as flashback cost", cid.0,
+        );
+    }
+    // Group Project landed in exile (cast_via_flashback routing).
+    assert!(
+        g.exile.iter().any(|c| c.id == gp_id),
+        "Group Project exiled after flashback resolution",
+    );
+    // A Spirit token entered.
+    let spirit_present = g.battlefield.iter()
+        .any(|c| c.controller == 0 && c.is_token && c.definition.name == "Spirit");
+    assert!(spirit_present, "2/2 R/W Spirit token entered");
+}
+
+#[test]
+fn group_project_flashback_rejects_wrong_tap_count() {
+    // Only 2 creatures listed → flashback rejected.
+    let mut g = two_player_game();
+    let mut gp = crate::card::CardInstance::new(g.next_id(), catalog::group_project(), 0);
+    gp.controller = 0;
+    let gp_id = gp.id;
+    g.players[0].graveyard.push(gp);
+    let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear_a);
+    g.clear_sickness(bear_b);
+
+    let result = g.perform_action(GameAction::CastFlashbackTap {
+        card_id: gp_id,
+        tap_creatures: vec![bear_a, bear_b],
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(),
+        "Group Project flashback requires exactly 3 creatures");
+}
+
+#[test]
+fn fractal_tender_end_step_mints_fractal_when_gained_counter() {
+    // Push (modern_decks, batch 82): Fractal Tender's end-step "if you
+    // put a counter on this creature this turn, mint a Fractal with 3
+    // +1/+1 counters" rider. Add a counter, then advance to end step
+    // — the trigger fires and a Fractal token enters with 3 +1/+1
+    // counters (= a 3/3 Fractal).
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let tender = g.add_card_to_battlefield(0, catalog::fractal_tender());
+    // Manually add a +1/+1 counter to Tender (simulating the Increment
+    // trigger that fires on big-spell casts).
+    g.battlefield_find_mut(tender).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.permanents_gained_counter_this_turn.insert(tender);
+    // Advance to End step.
+    let bf_before = g.battlefield.len();
+    g.step = crate::game::TurnStep::End;
+    g.fire_step_triggers(crate::game::TurnStep::End);
+    drain_stack(&mut g);
+
+    let fractal_present = g.battlefield.iter()
+        .any(|c| c.is_token && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Fractal));
+    assert!(
+        fractal_present,
+        "Fractal Tender minted a Fractal at end step (gained counter this turn)",
+    );
+    let _ = bf_before;
+}
+
+#[test]
+fn fractal_tender_end_step_skips_when_no_counter_gained() {
+    // No counters added → trigger should not fire.
+    let mut g = two_player_game();
+    let _tender = g.add_card_to_battlefield(0, catalog::fractal_tender());
+    let bf_before = g.battlefield.len();
+    g.step = crate::game::TurnStep::End;
+    g.fire_step_triggers(crate::game::TurnStep::End);
+    drain_stack(&mut g);
+
+    let fractal_present = g.battlefield.iter()
+        .any(|c| c.is_token && c.definition.subtypes.creature_types
+            .contains(&crate::card::CreatureType::Fractal));
+    assert!(
+        !fractal_present,
+        "Fractal Tender does NOT mint a Fractal when no counter was added this turn",
+    );
+    assert_eq!(g.battlefield.len(), bf_before);
+}
+
+#[test]
+fn quandrix_the_proof_cascade_exiles_nonland_with_lower_mv() {
+    // Push (modern_decks, batch 79): When Quandrix is cast, walk top
+    // of library. With 2 Forests (MV 0) followed by 1 Lightning Bolt
+    // (MV 1) on top, the cascade trigger should land the Bolt in
+    // exile with may-play permission for P0.
+    let mut g = two_player_game();
+    use crate::card::CardInstance;
+    let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    let bolt_id = bolt.id;
+    let mut top: Vec<CardInstance> = vec![
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        bolt,
+    ];
+    for c in top.iter_mut() { c.controller = 0; }
+    for c in top.into_iter().rev() {
+        g.players[0].library.insert(0, c);
+    }
+    let qp_id = g.add_card_to_hand(0, catalog::quandrix_the_proof());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: qp_id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Quandrix castable at {4}{G}{U}");
+    drain_stack(&mut g);
+
+    // Bolt should be in exile with may_play stamped.
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("Bolt exiled by Cascade");
+    assert!(
+        exiled.may_play_until.is_some(),
+        "Bolt has may_play permission stamped (cascade-free-cast permission)",
+    );
 }
 
 #[test]
@@ -11402,6 +11939,98 @@ fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
     let perm = exiled.may_play_until.expect("may_play stamped");
     assert!(perm.exile_after, "Nita's permission has exile_after=true");
     assert_eq!(perm.player, 0, "permission goes to Nita's controller");
+}
+
+#[test]
+fn nita_trigger_fans_counters_when_casting_unowned_spell() {
+    // Set up Nita + a friendly bear on P0's battlefield. Manually
+    // place a P1-owned Lightning Bolt in exile with may_play_until
+    // permission granted to P0 (bypassing Nita's own activation,
+    // which would sac her and remove her trigger). When P0 then casts
+    // the Bolt, Nita's trigger fires because the spell's owner (P1)
+    // ≠ Nita's controller (P0).
+    use crate::card::{MayPlayDuration, MayPlayPermission};
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 1);
+    bolt.controller = 0; // P0 is the caster
+    bolt.may_play_until = Some(MayPlayPermission {
+        player: 0,
+        granted_turn: g.turn_number,
+        duration: MayPlayDuration::EndOfThisTurn,
+        exile_after: false,
+    });
+    let bolt_id = bolt.id;
+    g.exile.push(bolt);
+
+    let nita = g.add_card_to_battlefield(0, catalog::nita_forum_conciliator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for cid in [nita, bear] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cid) {
+            c.summoning_sick = false; c.tapped = false;
+        }
+    }
+    g.players[0].mana_pool.add(Color::Red, 1); // for the Bolt cast
+
+    let counters_before_nita = g.battlefield.iter()
+        .find(|c| c.id == nita)
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    let counters_before_bear = g.battlefield.iter()
+        .find(|c| c.id == bear)
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt_id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Bolt castable by P0 via may_play permission");
+    drain_stack(&mut g);
+
+    let nita_after = g.battlefield.iter()
+        .find(|c| c.id == nita)
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    let bear_after = g.battlefield.iter()
+        .find(|c| c.id == bear)
+        .map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne))
+        .unwrap_or(0);
+    assert_eq!(nita_after - counters_before_nita, 1,
+        "Nita gets a +1/+1 counter from her own trigger");
+    assert_eq!(bear_after - counters_before_bear, 1,
+        "the friendly bear also gets a counter");
+}
+
+#[test]
+fn nita_trigger_does_not_fire_on_own_spells() {
+    // Casting one of your OWN spells (owner = controller = you) does
+    // NOT fire Nita's "spell you don't own" trigger.
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let nita = g.add_card_to_battlefield(0, catalog::nita_forum_conciliator());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for cid in [nita, bear] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cid) {
+            c.summoning_sick = false; c.tapped = false;
+        }
+    }
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let counters_before: i32 = g.battlefield.iter()
+        .find(|c| c.id == nita).map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne) as i32).unwrap_or(0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let counters_after: i32 = g.battlefield.iter()
+        .find(|c| c.id == nita).map(|c| c.counter_count(crate::card::CounterType::PlusOnePlusOne) as i32).unwrap_or(0);
+    assert_eq!(counters_after, counters_before,
+        "Nita's trigger does NOT fire on own-spell casts");
 }
 
 #[test]

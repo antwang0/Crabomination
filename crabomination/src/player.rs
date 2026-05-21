@@ -119,6 +119,22 @@ pub struct Player {
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
+    /// Number of upcoming turns this player must skip. Read by the
+    /// turn-advance logic in `do_cleanup` — when the engine would hand
+    /// the next turn to this player, the counter is decremented and the
+    /// turn is bypassed (advancing to the player after). Set by
+    /// `Effect::SkipTurns` (Ral Zarek, Guest Lecturer's -7 ult). Defaults
+    /// to 0 for snapshot back-compat.
+    #[serde(default)]
+    pub skip_turns: u32,
+    /// True while this player has Professor Dellian Fel's -6 emblem
+    /// active: "Whenever you gain life, target opponent loses that much
+    /// life." Permanent (emblems don't leave). Set by Dellian Fel's -6
+    /// loyalty activation. Read by the trigger dispatcher when a
+    /// LifeGained event fires for this player. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub dellian_fel_emblem: bool,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -151,6 +167,8 @@ impl Player {
             poison_counters: 0,
             no_maximum_hand_size: false,
             eliminated: false,
+            skip_turns: 0,
+            dellian_fel_emblem: false,
             wants_ui: false,
         }
     }

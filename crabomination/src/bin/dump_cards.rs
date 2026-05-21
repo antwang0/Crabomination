@@ -79,6 +79,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Annihilator(_) => "Annihilator",
         Keyword::Ward(_) => "Ward",
         Keyword::Flashback(_) => "Flashback",
+        Keyword::FlashbackTap(_) => "Flashback",
         Keyword::Kicker(_) => "Kicker",
         Keyword::Echo(_) => "Echo",
         Keyword::CumulativeUpkeep(_) => "Cumulative upkeep",

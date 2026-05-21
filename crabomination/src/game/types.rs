@@ -142,6 +142,21 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
+    /// `tap_creatures` (must list exactly N untapped creatures the
+    /// caster controls). Used by Group Project ("Flashback—Tap three
+    /// untapped creatures you control"). Mana cost is zero (the tap is
+    /// the *entire* flashback cost); the resolved spell routes to exile
+    /// per CR 702.34d via the standard `cast_via_flashback` plumbing.
+    CastFlashbackTap {
+        card_id: CardId,
+        tap_creatures: Vec<CardId>,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    },
     /// Cast a card from its current zone (graveyard or exile) without
     /// paying its mana cost — consumes the `CardInstance.may_play_until`
     /// permission stamped by `Effect::GrantMayPlay`. Used by Practiced

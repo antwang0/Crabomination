@@ -191,6 +191,21 @@ pub(crate) fn cost_reduction_for_spell(
             .count();
         reduction = reduction.saturating_add(count as u32);
     }
+    // Per-card hardcoded "Affinity-for-cards-in-your-graveyard" hook.
+    // The Dawning Archaic ("This spell costs {1} less to cast for each
+    // instant and sorcery card in your graveyard") was the only card
+    // needing this primitive at promotion time; rather than thread a
+    // new `affinity_graveyard_filter` field through every CardDefinition
+    // site, the discount is dispatched per-name. Future Affinity-for-gy
+    // cards can extend this match.
+    if card.definition.name == "The Dawning Archaic" {
+        let count = state.players[caster]
+            .graveyard
+            .iter()
+            .filter(|c| c.definition.is_instant() || c.definition.is_sorcery())
+            .count();
+        reduction = reduction.saturating_add(count as u32);
+    }
     reduction
 }
 
@@ -1240,6 +1255,77 @@ impl GameState {
         Ok(events)
     }
 
+    /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
+    /// `tap_creatures` (must be exactly N untapped creatures the caster
+    /// controls). The spell costs no mana — the tap is the entire
+    /// flashback cost. Routes the resolved card to exile via
+    /// `cast_via_flashback` (CR 702.34d). Used by Group Project.
+    pub(crate) fn cast_flashback_tap(
+        &mut self,
+        card_id: CardId,
+        tap_creatures: &[CardId],
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        let required_taps = card
+            .definition
+            .has_flashback_tap()
+            .ok_or(GameError::SorcerySpeedOnly)?;
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        if tap_creatures.len() as u32 != required_taps {
+            return Err(GameError::SorcerySpeedOnly); // reuse: wrong tap count
+        }
+        // Validate every creature in `tap_creatures` is currently untapped,
+        // controlled by the caster, and a creature.
+        for cid in tap_creatures {
+            let c = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == *cid)
+                .ok_or(GameError::SorcerySpeedOnly)?;
+            if c.tapped || c.controller != p || !c.definition.is_creature() {
+                return Err(GameError::SorcerySpeedOnly);
+            }
+        }
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+        // Pay the tap cost: tap every nominated creature.
+        for cid in tap_creatures {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == *cid) {
+                c.tapped = true;
+            }
+        }
+        // Remove from graveyard.
+        let mut card = self.players[p].graveyard.remove(graveyard_pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        card.cast_via_flashback = true;
+        let events = vec![
+            GameEvent::CardLeftGraveyard { player: p, card_id },
+            GameEvent::SpellCast {
+                player: p,
+                card_id,
+                face: CastFace::Flashback,
+            },
+        ];
+        self.finalize_cast(p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, 0);
+        Ok(events)
+    }
+
     /// Cast a spell from an arbitrary zone (graveyard or exile) without
     /// paying any mana cost. The card is lifted out of `source_zone`,
     /// stamped with `cast_via_flashback = true` when `exile_after` is
@@ -2214,6 +2300,43 @@ impl GameState {
         })
     }
 
+    /// Resonating Lute static grant: "Lands you control have '{T}: Add
+    /// two mana of any one color. Spend this mana only to cast instant
+    /// and sorcery spells.'". Approximated as `{T}: Add one mana of any
+    /// one color` (the spend-restricted-mana primitive is engine-wide
+    /// ⏳, and we also collapse the 2-mana payoff to 1 to avoid the
+    /// approximation becoming overpowered when restriction enforcement
+    /// is missing). Same dispatch pattern as `galazeth_artifact_grant`.
+    fn resonating_lute_land_grant(
+        &self,
+        controller: usize,
+    ) -> Option<crate::effect::ActivatedAbility> {
+        use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
+        let lute_in_play = self.battlefield.iter().any(|c| {
+            c.definition.name == "Resonating Lute" && c.controller == controller
+        });
+        if !lute_in_play {
+            return None;
+        }
+        Some(ActivatedAbility {
+            tap_cost: true,
+            mana_cost: crate::mana::ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        })
+    }
+
     pub(crate) fn activate_ability(
         &mut self,
         card_id: CardId,
@@ -2269,11 +2392,18 @@ impl GameState {
             // standard activate_ability validation and mana payment
             // work without modifying every ability lookup path.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
-            let granted = if ability_index == printed_count
-                && self.battlefield[pos].definition.is_artifact()
-                && !stripped
-            {
-                self.galazeth_artifact_grant(self.battlefield[pos].controller)
+            let bf_card = &self.battlefield[pos];
+            let controller = bf_card.controller;
+            let is_artifact = bf_card.definition.is_artifact();
+            let is_land = bf_card.definition.is_land();
+            let granted = if ability_index == printed_count && !stripped {
+                if is_artifact {
+                    self.galazeth_artifact_grant(controller)
+                } else if is_land {
+                    self.resonating_lute_land_grant(controller)
+                } else {
+                    None
+                }
             } else {
                 None
             };

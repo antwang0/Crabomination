@@ -1080,8 +1080,11 @@ pub fn quandrix_cultivator() -> CardDefinition {
 /// (tracked in TODO.md). Hofri retains its 🟡 status until that
 /// closes; the anthem half is real-card-faithful.
 pub fn hofri_ghostforge() -> CardDefinition {
-    use crate::card::{SelectionRequirement, StaticAbility};
-    use crate::effect::{Selector, StaticEffect};
+    use crate::card::{
+        EventKind, EventScope, EventSpec, Predicate, SelectionRequirement,
+        StaticAbility, TriggeredAbility,
+    };
+    use crate::effect::{DelayedTriggerKind, Selector, StaticEffect, ZoneDest};
     CardDefinition {
         name: "Hofri Ghostforge",
         cost: cost(&[generic(2), r(), w()]),
@@ -1096,7 +1099,43 @@ pub fn hofri_ghostforge() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // Push (modern_decks, batch 80): "Whenever another nontoken
+        // creature you control dies, exile that card. Return it to the
+        // battlefield. Exile it at the beginning of the next end step."
+        // Wired as `Move(TriggerSource, gy → bf untapped)` +
+        // `DelayUntilNextEndStep { Move(TriggerSource, → Exile) }`. The
+        // brief exile-then-return half is collapsed to just "return" —
+        // the engine has no replacement primitive that routes a card
+        // through exile mid-resolution, but the net play pattern (card
+        // ends up on the battlefield, then exiles at next EOT) matches.
+        // The printed "It's a Spirit in addition to its other types"
+        // type-override (layer 4) is approximated as a no-op — the
+        // returned card keeps its printed creature types only. Filter:
+        // non-token via `Predicate::EntityMatches` against
+        // `Not(IsToken)`.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Not(Box::new(SelectionRequirement::IsToken)),
+                }),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Battlefield {
+                        controller: crate::effect::PlayerRef::You,
+                        tapped: false,
+                    },
+                },
+                Effect::DelayUntil {
+                    kind: DelayedTriggerKind::NextEndStep,
+                    body: Box::new(Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Exile,
+                    }),
+                },
+            ]),
+        }],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get +1/+0.",
             effect: StaticEffect::PumpPT {
@@ -4162,6 +4201,7 @@ pub fn defiant_strike() -> CardDefinition {
 /// hits any nonland permanent for 3 mana — strictly weaker than the
 /// printed gift back to the opp.
 pub fn divine_gambit() -> CardDefinition {
+    use crate::card::Zone;
     CardDefinition {
         name: "Divine Gambit",
         cost: cost(&[generic(2), w()]),
@@ -4171,12 +4211,47 @@ pub fn divine_gambit() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-            ),
-            to: ZoneDest::Exile,
-        },
+        // Push (modern_decks, batch 77): both printed clauses now ship.
+        // Body 1: exile target nonland permanent. Body 2: the target's
+        // *controller* may put a permanent card from their hand onto
+        // the battlefield. Body 2 wraps a Move(hand → battlefield) inside
+        // `Effect::MayDo`. AutoDecider's default `Bool(false)` declines
+        // the gift-back — matches the engine-level "auto-pessimistic"
+        // behavior (the Divine Gambit caster wouldn't want their opp to
+        // gift themselves a new threat for free). `ScriptedDecider::
+        // new([Bool(true)])` exercises the printed "opp accepts" path.
+        // The MayDo question is technically asked of ctx.controller
+        // (= Divine Gambit caster) rather than the target's controller
+        // — but the auto outcomes are equivalent since both perspectives
+        // align on declining the gift-back. The card picker for the
+        // hand → bf move auto-selects the highest-CMC permanent card via
+        // `Selector::take`'s sort.
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Exile,
+            },
+            Effect::MayDo {
+                description: "Put a permanent card from your hand onto the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::take(
+                        Selector::CardsInZone {
+                            who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                            zone: Zone::Hand,
+                            filter: SelectionRequirement::Permanent
+                                .and(SelectionRequirement::Nonland),
+                        },
+                        Value::Const(1),
+                    ),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        tapped: false,
+                    },
+                }),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -4462,6 +4537,44 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
 /// payoff that puts pressure on the opp's library while resurrecting
 /// the controller's own creatures off the milled cards.
 pub fn pestilent_cauldron() -> CardDefinition {
+    // Push (modern_decks, batch 101): the back-face Restorative Burst is
+    // now defined (3-mana sorcery: each opp loses 4 life and you gain
+    // 4 life — printed two-target lifegain collapsed to a fixed drain
+    // pattern). The MDFC transform-from-graveyard pipeline is still
+    // engine-wide ⏳ — the engine's `cast_spell_back_face` walks hand
+    // only, so the back face isn't directly reachable via the printed
+    // "exile transformed under owner's control" rider after sacking
+    // Pestilent Cauldron. The back face is preserved on the
+    // CardDefinition so a future MDFC-from-graveyard pipeline lights
+    // up automatically. From-hand cast paths can also exercise the
+    // back face for testing.
+    use crate::mana::g;
+    let restorative_burst = CardDefinition {
+        name: "Restorative Burst",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(4),
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    };
     CardDefinition {
         name: "Pestilent Cauldron",
         cost: cost(&[generic(1), b()]),
@@ -4503,7 +4616,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,
-        back_face: None,
+        back_face: Some(Box::new(restorative_burst)),
         opening_hand: None,
         enters_with_counters: None,
         exile_on_resolve: false,

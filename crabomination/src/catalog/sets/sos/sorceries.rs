@@ -2,7 +2,7 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, SelectionRequirement, Subtypes,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Subtypes,
     TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
@@ -403,7 +403,15 @@ pub fn group_project() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
+        // Push (modern_decks, batch 83): "Flashback—Tap three untapped
+        // creatures you control" is wired via the new
+        // `Keyword::FlashbackTap(3)` keyword + `GameAction::
+        // CastFlashbackTap` action. The action validates the caller has
+        // listed exactly 3 untapped creatures they control, then taps
+        // them as the entire flashback cost (no mana paid) and casts
+        // the spell out of the graveyard. Routes the resolved spell to
+        // exile via `cast_via_flashback` (CR 702.34d).
+        keywords: vec![Keyword::FlashbackTap(3)],
         effect: Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
@@ -1884,8 +1892,21 @@ pub fn withering_curse() -> CardDefinition {
 /// pump spells; granting an attack-trigger needs installing a transient
 /// trigger per-creature). Tracked in TODO.md.
 pub fn root_manipulation() -> CardDefinition {
-    use crate::card::Keyword;
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::mana::g;
+    // Push (modern_decks, batch 84): the "Whenever this creature
+    // attacks, you gain 1 life" rider is wired via the new
+    // `Effect::GrantTriggeredAbility` primitive — each friendly
+    // creature receives an Attacks/SelfSource trigger granting 1 life
+    // on attack. The grant rides on `granted_triggers_eot` and clears
+    // at cleanup, matching the printed "until end of turn" scope.
+    let attack_lifegain = TriggeredAbility {
+        event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
+    };
     CardDefinition {
         name: "Root Manipulation",
         cost: cost(&[generic(3), b(), g()]),
@@ -1909,6 +1930,11 @@ pub fn root_manipulation() -> CardDefinition {
                 Effect::GrantKeyword {
                     what: Selector::TriggerSource,
                     keyword: Keyword::Menace,
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantTriggeredAbility {
+                    what: Selector::TriggerSource,
+                    trigger: Box::new(attack_lifegain.clone()),
                     duration: Duration::EndOfTurn,
                 },
             ])),
@@ -2420,8 +2446,19 @@ pub fn zimones_experiment() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            // First: look at top 5, find a creature → hand. Misses go to
-            // the bottom of the library (printed text).
+            // Push (modern_decks, batch 94): the printed "look at top 5,
+            // partition revealed creature/land cards into hand/bf and
+            // put the rest on the bottom of library at random" is
+            // approximated as two sequential `RevealUntilFind` walks
+            // over the top of library: first a Creature (→ Hand, misses
+            // → bottom random), then a Land (→ Battlefield tapped,
+            // misses → bottom random). Each walk caps at 5 cards. This
+            // doesn't perfectly model the printed "look at 5 cards
+            // once" semantic — the second walk sees a (possibly
+            // shorter) library after the first walk completes — but
+            // captures the dual-destination harvest: a creature lands
+            // in hand AND a land lands on the bf. Substantially closer
+            // to printed than the prior "tutor a basic land" path.
             Effect::RevealUntilFind {
                 who: PlayerRef::You,
                 find: SelectionRequirement::Creature,
@@ -2430,18 +2467,16 @@ pub fn zimones_experiment() -> CardDefinition {
                 life_per_revealed: 0,
                 miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
-            // Then: search for a basic land → battlefield tapped. The real
-            // card pulls a non-basic land too if it's in the top 5;
-            // approximating with a basic-land tutor is close enough at
-            // typical cube fidelity (most non-basic lands ETB tapped
-            // anyway under our school-land template).
-            Effect::Search {
+            Effect::RevealUntilFind {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
+                find: SelectionRequirement::HasCardType(CardType::Land),
                 to: ZoneDest::Battlefield {
                     controller: PlayerRef::You,
                     tapped: true,
                 },
+                cap: Value::Const(5),
+                life_per_revealed: 0,
+                miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
         ]),
         activated_abilities: no_abilities(),
@@ -2832,23 +2867,9 @@ pub fn fix_whats_broken() -> CardDefinition {
 /// `Effect::RegisterParadigm` + `exile_on_resolve: true`. Each of the
 /// controller's pre-combat main phases offers a free copy.
 pub fn echocasting_symposium() -> CardDefinition {
-    use crate::card::{CreatureType, SpellSubtype, TokenDefinition};
+    use crate::card::SpellSubtype;
+    use crate::effect::shortcut::target_filtered;
     use crate::mana::u;
-    let placeholder = TokenDefinition {
-        name: "Echocast".into(),
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Blue],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Wizard],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    };
     CardDefinition {
         name: "Echocasting Symposium",
         cost: cost(&[generic(4), u(), u()]),
@@ -2861,11 +2882,25 @@ pub fn echocasting_symposium() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
+        // Push (modern_decks, batch 81): "Target player creates a token
+        // that's a copy of target creature you control." Wired via
+        // `Effect::CreateTokenCopyOf { who: You, source: target Creature
+        // ∧ ControlledByYou, no P/T override }`. The printed
+        // "target player creates" is approximated as "you create" — the
+        // engine has no two-target-slots-with-different-types primitive
+        // to thread the player target through; in practice the caster
+        // wouldn't gift the token to an opp. Paradigm still wired via
+        // `RegisterParadigm` + `exile_on_resolve: true`.
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
+            Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: placeholder,
+                source: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![],
+                override_pt: None,
             },
             Effect::RegisterParadigm,
         ]),
@@ -3006,10 +3041,17 @@ pub fn improvisation_capstone() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Walk top of library exiling cards until running MV sum
+            // reaches ≥ 4 (printed Oracle exact). Each card walked is
+            // counted regardless of type — basic lands (MV 0) pass
+            // through without raising the gate, so the spell can dig
+            // past a land-heavy top until a real spell pushes the sum
+            // past 4. Previously hard-coded to `Const(4)` cards, which
+            // under-counted when the top was land-heavy.
             Effect::Move {
-                what: Selector::TopOfLibrary {
+                what: Selector::TopOfLibraryUntilMvAtLeast {
                     who: PlayerRef::You,
-                    count: Value::Const(4),
+                    threshold: Value::Const(4),
                 },
                 to: ZoneDest::Exile,
             },
@@ -3038,9 +3080,9 @@ pub fn improvisation_capstone() -> CardDefinition {
 }
 
 pub fn applied_geometry() -> CardDefinition {
-    use crate::card::CounterType;
+    use crate::card::{CounterType, CreatureType};
+    use crate::effect::shortcut::target_filtered;
     use crate::mana::{g, u};
-    let fractal = fractal_token();
     CardDefinition {
         name: "Applied Geometry",
         cost: cost(&[generic(2), g(), u()]),
@@ -3050,11 +3092,28 @@ pub fn applied_geometry() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
+        // Push (modern_decks, batch 81): "Create a token that's a copy
+        // of target non-Aura permanent you control, except it's a 0/0
+        // Fractal creature in addition to its other types. Put six
+        // +1/+1 counters on it." Wired via the new
+        // `Effect::CreateTokenCopyOf` primitive — the token inherits
+        // the source's name, types, keywords, abilities, with the
+        // P/T overridden to 0/0 and Fractal added to its creature
+        // types. Six +1/+1 counters then ride on the token (net 6/6
+        // Fractal-plus-source's-types). The target filter omits the
+        // printed "non-Aura" restriction (Aura support is engine-wide
+        // ⏳, and rejecting non-Aura targets has no observable effect
+        // in the current catalog).
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
+            Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal,
+                source: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![CreatureType::Fractal],
+                override_pt: Some((0, 0)),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

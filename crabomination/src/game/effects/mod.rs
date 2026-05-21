@@ -1063,6 +1063,23 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantTriggeredAbility { what, trigger, duration: _ } => {
+                // Currently only EOT-duration grants are honored; the
+                // entry is cleared in `do_cleanup`. Permanent-duration
+                // grants would need a separate map keyed off the
+                // granting permanent (so the grant retires when the
+                // granter leaves) — tracked as future engine work.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.granted_triggers_eot
+                            .entry(cid)
+                            .or_default()
+                            .push((**trigger).clone());
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantKeyword { what, keyword, duration } => {
                 // Per-instance granted keyword. Previously mutated
                 // `definition.keywords` directly with no cleanup, so an
@@ -1123,6 +1140,11 @@ impl GameState {
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n });
                             }
+                            // Track per-turn "this permanent gained counters"
+                            // for Fractal Tender's end-step trigger and any
+                            // future "if you put a counter on this creature
+                            // this turn" payoff.
+                            self.permanents_gained_counter_this_turn.insert(cid);
                         }
                         EntityRef::Player(p) if *kind == CounterType::Poison => {
                             // Poison counters on players also scale per
@@ -1312,6 +1334,64 @@ impl GameState {
                     // triggers on the token's definition (a TokenDefinition
                     // currently doesn't carry triggered_abilities, but if
                     // one is added later it will fire correctly).
+                    self.fire_self_etb_triggers(id, p);
+                }
+                Ok(())
+            }
+
+            Effect::CreateTokenCopyOf {
+                who,
+                count,
+                source,
+                extra_creature_types,
+                override_pt,
+            } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let mut n = self.evaluate_value(count, ctx).max(0) as u32;
+                let doublers = self.token_doublers_for(p);
+                for _ in 0..doublers {
+                    n = n.saturating_mul(2);
+                }
+                // Resolve the source permanent. Walk battlefield first;
+                // fall back to graveyard / hand / exile via the same
+                // sequence `move_card_to` uses, so a fresh copy can be
+                // minted off a card that left the bf mid-resolution.
+                let source_id = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| match e {
+                        EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+                        _ => None,
+                    });
+                let Some(src_id) = source_id else { return Ok(()); };
+                let source_def = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == src_id)
+                    .map(|c| c.definition.clone());
+                let Some(mut def) = source_def else { return Ok(()); };
+                // Apply extra creature types & P/T override.
+                let mut extra_types = def.subtypes.creature_types.clone();
+                for t in extra_creature_types.iter() {
+                    if !extra_types.contains(t) {
+                        extra_types.push(t.clone());
+                    }
+                }
+                def.subtypes.creature_types = extra_types;
+                if let Some((p_o, t_o)) = override_pt {
+                    def.power = *p_o;
+                    def.toughness = *t_o;
+                }
+                for _ in 0..n {
+                    let id = self.next_id();
+                    let mut inst = CardInstance::new(id, def.clone(), p);
+                    inst.controller = p;
+                    inst.is_token = true;
+                    self.battlefield.push(inst);
+                    events.push(GameEvent::TokenCreated { card_id: id });
+                    events.push(GameEvent::PermanentEntered { card_id: id });
+                    self.last_created_token = Some(id);
+                    self.last_created_tokens.push(id);
                     self.fire_self_etb_triggers(id, p);
                 }
                 Ok(())
@@ -2075,10 +2155,16 @@ impl GameState {
                     }
                 }
                 // If we found a match, take it off the (now-shifted) top
-                // and place it via the requested destination.
+                // and place it via the requested destination. Push the
+                // matched id onto `last_moved_cards` so a downstream
+                // `Selector::LastMoved` in the same Seq can target it
+                // — used by Velomachus Lorehold's
+                // `RevealUntilFind + GrantMayPlay` chain.
                 if found_idx.is_some() && !self.players[p].library.is_empty() {
                     let card = self.players[p].library.remove(0);
+                    let cid = card.id;
                     self.place_card_in_dest(card, p, &resolved_dest, events);
+                    self.last_moved_cards.push(cid);
                 }
                 // Lose 1 life per revealed card (Spoils of the Vault rider).
                 let life = (revealed as u32).saturating_mul(*life_per_revealed);
@@ -2555,6 +2641,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ActivateDellianEmblem { who } => {
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].dellian_fel_emblem = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::SkipTurns { who, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].skip_turns =
+                            self.players[p].skip_turns.saturating_add(n);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.
@@ -2697,6 +2804,20 @@ impl GameState {
                     .take(n)
                     .map(|c| EntityRef::Card(c.id))
                     .collect()
+            }
+            Selector::TopOfLibraryUntilMvAtLeast { who, threshold } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
+                let cap = self.evaluate_value(threshold, ctx).max(0) as i32;
+                let mut sum: i32 = 0;
+                let mut out: Vec<EntityRef> = Vec::new();
+                for c in self.players[p].library.iter() {
+                    out.push(EntityRef::Card(c.id));
+                    sum += c.definition.cost.cmc() as i32;
+                    if sum >= cap {
+                        break;
+                    }
+                }
+                out
             }
             Selector::BottomOfLibrary { who, count } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };

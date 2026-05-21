@@ -4382,6 +4382,42 @@ fn hofri_ghostforge_anthem_expires_when_hofri_leaves() {
     assert_eq!(after.toughness, 2);
 }
 
+#[test]
+fn hofri_ghostforge_death_trigger_registers_delayed_exile() {
+    // Push (modern_decks, batch 80): Hofri's "non-token creature dies →
+    // exile and return, exile at next end step" trigger. Verify the
+    // trigger fires (delayed NextEndStep registration is the canonical
+    // signal) when a P0 nontoken creature dies via lethal damage.
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let delayed_before = g.delayed_triggers.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    // Hofri's trigger fired: a NextEndStep delayed trigger should be
+    // registered (one per dying-creature, regardless of whether the
+    // engine fully settled the gy→bf return mid-SBA-cycle).
+    let next_end_step_after = g.delayed_triggers.iter()
+        .filter(|dt| matches!(dt.kind, crate::game::types::DelayedKind::NextEndStep))
+        .count();
+    assert!(
+        next_end_step_after > delayed_before,
+        "Hofri registered a NextEndStep delayed exile (trigger fired on bear's death)",
+    );
+}
+
 /// `SelectionRequirement::OtherThanSource` now strictly excludes the
 /// source from target-validation contexts (push modern_decks). When the
 /// source is the only on-battlefield permanent matching the filter, the
@@ -5338,6 +5374,49 @@ fn divine_gambit_exiles_creature() {
     );
     let exiled = g.exile.iter().any(|c| c.id == bear);
     assert!(exiled, "Bear should be in the exile zone");
+}
+
+#[test]
+fn divine_gambit_opp_may_put_permanent_from_hand_via_scripted_decider() {
+    // Push (modern_decks, batch 77): the printed "Its controller may
+    // put a permanent card from their hand onto the battlefield"
+    // rider. AutoDecider's `Bool(false)` declines (the prior collapsed
+    // behavior); ScriptedDecider's `Bool(true)` exercises the printed
+    // gift-back. Target = a bear on P1's bf; P1's hand has another
+    // permanent card (a Grizzly Bears) ready to gift back.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let _bear_in_hand = g.add_card_to_hand(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::divine_gambit());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(crate::decision::ScriptedDecider::new([
+        crate::decision::DecisionAnswer::Bool(true),
+    ]));
+
+    let bf_before = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears")
+        .count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Divine Gambit castable");
+    drain_stack(&mut g);
+
+    // The original bear should be in exile (printed exile half).
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "the targeted bear is exiled");
+    // The hand-bear should have moved to the bf via the gift-back path.
+    let bf_after = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.name == "Grizzly Bears")
+        .count();
+    assert_eq!(bf_after, bf_before,
+        "P1 gifted a new bear from hand back to their battlefield");
 }
 
 // ── CR 120.8 — 0-damage event suppression audit ─────────────────────────────
@@ -45687,3 +45766,87 @@ fn prismari_ember_surge_burns_target_and_draws() {
     // Cast spell - 1 (cast itself), + 1 (draw) → net 0
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
+
+#[test]
+fn velomachus_attack_exiles_is_card_from_top_of_library_and_grants_may_play() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    // Seed library: 2 Forests (MV 0) + 1 Lightning Bolt (MV 1) on top.
+    // RevealUntilFind walks until it hits the Bolt; misses go to
+    // bottom of library randomized.
+    use crate::card::CardInstance;
+    let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    let bolt_id = bolt.id;
+    let mut top: Vec<CardInstance> = vec![
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        CardInstance::new(g.next_id(), catalog::forest(), 0),
+        bolt,
+    ];
+    for c in top.iter_mut() { c.controller = 0; }
+    for c in top.into_iter().rev() {
+        g.players[0].library.insert(0, c);
+    }
+    let velo = g.add_card_to_battlefield(0, catalog::velomachus_lorehold());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == velo) {
+        c.summoning_sick = false; c.tapped = false;
+    }
+
+    // Move to combat + declare attack.
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: velo,
+        target: AttackTarget::Player(1),
+    }])).expect("Velomachus can attack");
+    drain_stack(&mut g);
+
+    // Bolt should now be in exile with may_play permission to P0.
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("Bolt exiled by Velomachus's attack trigger");
+    assert!(
+        exiled.may_play_until.is_some(),
+        "Bolt has may_play permission stamped",
+    );
+}
+
+#[test]
+fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
+    // Mavinda's {0} activation: target IS card in your gy moves to
+    // exile with may_play_until + exile_after stamped. Once-per-turn
+    // gate enforced.
+    let mut g = two_player_game();
+    let mavinda = g.add_card_to_battlefield(0, catalog::mavinda_students_advocate());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mavinda) {
+        c.summoning_sick = false; c.tapped = false;
+    }
+    // Seed a Lightning Bolt in P0's graveyard.
+    let mut bolt = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    let bolt_id = bolt.id;
+    g.players[0].graveyard.push(bolt);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mavinda, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(bolt_id)),
+    }).expect("Mavinda activation (cost {0})");
+    drain_stack(&mut g);
+
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("Bolt moved to exile by Mavinda");
+    let perm = exiled.may_play_until.expect("may_play stamped");
+    assert!(perm.exile_after, "Mavinda's permission has exile_after=true");
+    assert_eq!(perm.player, 0, "permission goes to Mavinda's controller");
+
+    // Second activation in the same turn → rejected (once-per-turn).
+    let mut bolt2 = crate::card::CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt2.controller = 0;
+    let bolt2_id = bolt2.id;
+    g.players[0].graveyard.push(bolt2);
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: mavinda, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(bolt2_id)),
+    });
+    assert!(result.is_err(),
+        "Second Mavinda activation in same turn should be rejected (once-per-turn)");
+}
+

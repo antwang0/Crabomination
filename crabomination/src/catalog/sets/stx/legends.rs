@@ -10,7 +10,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes, Supertype,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, Selector,
+    SelectionRequirement, Subtypes, Supertype,
 };
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -133,6 +134,8 @@ pub fn beledros_witherbloom() -> CardDefinition {
 /// lets you cast one with mana value ≤ X. Body wired with three keywords;
 /// the cast-from-exile-without-paying attack-trigger is 🟡.
 pub fn velomachus_lorehold() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};
     CardDefinition {
         name: "Velomachus Lorehold",
         cost: cost(&[generic(3), r(), r(), w()]),
@@ -147,7 +150,41 @@ pub fn velomachus_lorehold() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // Push (modern_decks, batch 74): "Whenever Velomachus attacks,
+        // reveal cards from the top of your library until you reveal an
+        // instant or sorcery card with mana value less than or equal to
+        // Velomachus's power" trigger is **now wired**. Approximation:
+        // the printed "mana value ≤ Velomachus's power" filter uses a
+        // static `ManaValueAtMost(5)` (Velomachus's printed power). A
+        // pumped Velomachus (Light of Promise counters, +1/+0 EOT, etc.)
+        // doesn't widen the cap; a base-power debuff likewise doesn't
+        // narrow it. RevealUntilFind walks the top of library exiling
+        // misses to the bottom-random pile, lands the matching IS card
+        // in exile, then `GrantMayPlay` stamps a may-cast-this-turn
+        // permission on the exiled card so the caster can free-cast it
+        // via the existing `CastFromZoneWithoutPaying` action. cap=60
+        // covers any realistic library depth.
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::RevealUntilFind {
+                    who: PlayerRef::You,
+                    find: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                        .and(SelectionRequirement::ManaValueAtMost(5)),
+                    to: ZoneDest::Exile,
+                    cap: crate::card::Value::Const(60),
+                    life_per_revealed: 0,
+                    miss_dest: RevealMissDest::BottomRandom,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: false,
+                },
+            ]),
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

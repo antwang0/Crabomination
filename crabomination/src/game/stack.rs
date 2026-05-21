@@ -700,6 +700,13 @@ impl GameState {
         for card in &mut self.battlefield {
             card.damage = 0;
         }
+        // Clear the per-turn "permanents gained a counter this turn"
+        // tracker (used by Fractal Tender's end-step trigger). Resetting
+        // at cleanup is the canonical "until end of turn" scope.
+        self.permanents_gained_counter_this_turn.clear();
+        // Clear transient granted triggers (Rabid Attack, Root
+        // Manipulation EOT-duration grants).
+        self.granted_triggers_eot.clear();
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
@@ -709,9 +716,23 @@ impl GameState {
             player.mana_pool.empty();
         }
         // Advance to the next non-eliminated player's turn (TurnStarted
-        // fires on Untap entry).
-        self.active_player_idx = self.next_alive_seat(self.active_player_idx);
-        self.turn_number += 1;
+        // fires on Untap entry). If the next player has pending skip
+        // turns (Ral Zarek's -7), decrement and skip past them — keep
+        // walking until we find a player with no skip-turn debt.
+        // Safety cap at `players.len()` iterations to avoid an
+        // infinite loop in pathological "everyone skips" scenarios.
+        let n_players = self.players.len();
+        for _ in 0..n_players.max(1) {
+            self.active_player_idx = self.next_alive_seat(self.active_player_idx);
+            self.turn_number += 1;
+            let skipped = self.players[self.active_player_idx].skip_turns;
+            if skipped == 0 {
+                break;
+            }
+            self.players[self.active_player_idx].skip_turns = skipped - 1;
+            // Loop again — the current player's turn was just consumed
+            // by the skip and we advance to the next.
+        }
         // Sweep expired `may_play_until` permissions across every zone.
         // Runs *after* the turn-number bump so `elapsed = turn_number -
         // granted_turn` reflects the cleanups that have actually
@@ -873,10 +894,19 @@ impl GameState {
                     // them here matches the printed Oracle semantics for
                     // "Whenever another creature you control dies" (must
                     // be another, not this dying card).
+                    // Walk printed Dies triggers + any granted transient
+                    // ones (Rabid Attack EOT "this creature gains 'die →
+                    // draw a card'" grants ride on `granted_triggers_eot`).
+                    let granted = self
+                        .granted_triggers_eot
+                        .get(&c.id)
+                        .cloned()
+                        .unwrap_or_default();
                     let triggers: Vec<(CardId, Effect, usize)> = c
                         .definition
                         .triggered_abilities
                         .iter()
+                        .chain(granted.iter())
                         .filter(|t| t.event.kind == EventKind::CreatureDied)
                         .filter(|t| matches!(
                             t.event.scope,
@@ -1184,9 +1214,19 @@ impl GameState {
             .find(|c| c.id == id)
             .map(|c| {
                 let is_creature = c.definition.is_creature();
+                // Walk printed SelfSource LTB triggers + any transient
+                // granted ones (Rabid Attack-style "this creature gains
+                // 'when this creature dies, draw a card'" grants ride
+                // on `granted_triggers_eot[c.id]`).
+                let granted = self
+                    .granted_triggers_eot
+                    .get(&c.id)
+                    .cloned()
+                    .unwrap_or_default();
                 let triggers = c.definition
                     .triggered_abilities
                     .iter()
+                    .chain(granted.iter())
                     .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
                     .filter(|t| match t.event.kind {
                         EventKind::PermanentLeavesBattlefield => true,

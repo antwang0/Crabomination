@@ -132,6 +132,20 @@ pub enum Selector {
 
     /// Top `count` cards of `who`'s library.
     TopOfLibrary { who: PlayerRef, count: Value },
+    /// Greedy walk of the top of `who`'s library, including each card
+    /// (in order) until the running mana-value sum reaches `threshold`
+    /// inclusive (i.e. the final card pushes the sum past the gate, and
+    /// is included). Used by Improvisation Capstone's "exile cards from
+    /// the top of your library until you exile cards with total mana
+    /// value 4 or greater" rider — the engine previously hard-coded
+    /// `Const(4)` cards, which under-counts when the top is land-heavy
+    /// (top three MV-0 lands + one MV-4 spell = 4 cards, sum 4; the
+    /// printed Oracle would walk past lands and stop when sum hits the
+    /// threshold). Resolution: walk top→down summing each card's
+    /// computed MV; stop after including the card that raises sum to
+    /// ≥ threshold. Empty library returns nothing; library smaller than
+    /// the running cap returns the whole library.
+    TopOfLibraryUntilMvAtLeast { who: PlayerRef, threshold: Value },
     /// Bottom `count` cards of `who`'s library.
     BottomOfLibrary { who: PlayerRef, count: Value },
     /// Every card in `who`'s zone matching `filter`.
@@ -420,6 +434,23 @@ pub enum Predicate {
     /// payoff modal) and Increment's "mana spent > P or T" gate (read
     /// from `ctx.mana_spent` at trigger-resolution time).
     CastSpellManaSpentAtLeast(u32),
+    /// True if the just-cast spell's *owner* is not `ctx.controller`. A
+    /// spell's owner is the player who owns the physical card (CR
+    /// 108.3) — typically the same as its controller, but they diverge
+    /// when one player casts another's card (Sen Triplets, Wandering
+    /// Archaic, Possibility Storm, etc.). Used by Nita, Forum
+    /// Conciliator's "whenever you cast a spell you don't own" trigger
+    /// — fires only on the rare path where you cast a spell from an
+    /// opponent's zone. Evaluated against `ctx.trigger_source`'s
+    /// `StackItem::Spell.card.owner`.
+    CastSpellNotOwnedByYou,
+    /// True if `ctx.source` (the listening permanent's id) is currently
+    /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
+    /// the listening permanent has had one or more counters put on it
+    /// during the current turn. Used by Fractal Tender's end-step rider
+    /// ("if you put a counter on this creature this turn, …"). Cleared
+    /// at cleanup along with the other "this turn" tallies.
+    SourceGainedCounterThisTurn,
     /// True if the just-cast spell's total mana spent is **strictly
     /// greater than** the source permanent's power or toughness. Used
     /// by SOS's Increment keyword payoff: "Whenever you cast a spell,
@@ -488,6 +519,15 @@ pub enum LibraryPosition {
     Top,
     Bottom,
     Shuffled,
+    /// "On top or bottom — the card's owner chooses." Used by Run Behind
+    /// ("Target creature's owner puts it on their choice of the top or
+    /// bottom of their library."). At `place_card_in_dest` time, the
+    /// owner is asked via `Decision::OptionalTrigger { description: "Put
+    /// on top of library?" }`; yes = top, no = bottom. AutoDecider's
+    /// default (`Bool(false)`) collapses to bottom — preserving the
+    /// previous Run-Behind behavior. ScriptedDecider can flip to top
+    /// for tests.
+    OwnerChoice,
 }
 
 /// Where the non-matching revealed cards go after a
@@ -912,6 +952,21 @@ pub enum Effect {
     /// Upped creature makes it 1/5, not 1/1.
     SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
+    /// Grant a transient triggered ability to each permanent picked by
+    /// `what`, for `duration`. Stashed in `GameState.
+    /// granted_triggers_eot` (only EOT duration is wired today;
+    /// Permanent grants would need a separate map). The dispatcher
+    /// walks both printed `triggered_abilities` and granted ones,
+    /// firing matching events from either source. Used by Root
+    /// Manipulation ("creatures you control gain 'whenever this
+    /// creature attacks, you gain 1 life'") and Rabid Attack
+    /// ("creatures gain 'when this creature dies, draw a card'" — die
+    /// half requires LTB-trigger-snapshot follow-up).
+    GrantTriggeredAbility {
+        what: Selector,
+        trigger: Box<crate::card::TriggeredAbility>,
+        duration: Duration,
+    },
     /// "Target creature loses all abilities until end of turn." Installs a
     /// `Modification::RemoveAllAbilities` continuous effect against each
     /// resolved permanent at layer 6. While in scope, the layer system
@@ -938,6 +993,29 @@ pub enum Effect {
     GainControl { what: Selector, duration: Duration },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: TokenDefinition },
+    /// Create `count` token copies of the permanent resolved by `source`,
+    /// controlled by `who`. The copy inherits the source's printed
+    /// CardDefinition (name, P/T, types, keywords, activated/triggered
+    /// abilities, static abilities). `extra_creature_types` are added on
+    /// top of the source's printed creature subtypes (Applied Geometry,
+    /// Echocasting Symposium: "create a token that's a copy of target X,
+    /// except it's a 0/0 Fractal creature in addition to its other
+    /// types" — pass `vec![CreatureType::Fractal]` to honor the printed
+    /// "in addition to" rider). The token is stamped with `is_token =
+    /// true` so token-cleanup SBA removes it when it leaves the
+    /// battlefield. Power/toughness override is honored when both
+    /// `override_pt: Some((p, t))` is set (Applied Geometry overrides
+    /// the source's printed P/T to 0/0). The override applies *before*
+    /// any +1/+1 counter pile.
+    CreateTokenCopyOf {
+        who: PlayerRef,
+        count: Value,
+        source: Selector,
+        #[serde(default)]
+        extra_creature_types: Vec<crate::card::CreatureType>,
+        #[serde(default)]
+        override_pt: Option<(i32, i32)>,
+    },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
     /// Target creature becomes a vanilla 1/1, loses all abilities.
@@ -1184,6 +1262,23 @@ pub enum Effect {
     /// `caster_grants_uncounterable` to gate which creature spells the
     /// Cavern protects (only those that share the named type).
     NameCreatureType { what: Selector },
+
+    /// "[Player] skips their next `count` turns." Bumps the affected
+    /// player's `skip_turns` counter; the turn-advance logic in
+    /// `do_cleanup` decrements and bypasses each scheduled-skip turn.
+    /// Used by Ral Zarek, Guest Lecturer's -7 ult ("Flip five coins.
+    /// Target opponent skips their next X turns, where X is the number
+    /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
+    /// chain.
+    SkipTurns { who: PlayerRef, count: Value },
+    /// Activate Professor Dellian Fel's -6 emblem on `who`. Sets the
+    /// `Player.dellian_fel_emblem` flag. While the flag is true, every
+    /// LifeGained event for that player triggers "target opponent
+    /// loses that much life" (per the printed emblem text). Permanent
+    /// duration. CR 114 emblem semantics are approximated as a per-
+    /// player bool flag — the engine has no proper emblem zone yet,
+    /// but the play pattern is identical.
+    ActivateDellianEmblem { who: PlayerRef },
 
     /// "[Player] wins the game." Used by Approach of the Second Sun's
     /// second-cast win condition, Coalition Victory, Test of Endurance,
@@ -1472,6 +1567,14 @@ impl Effect {
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::WinGame { who } => player_has_target(who),
+            Effect::SkipTurns { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::ActivateDellianEmblem { who } => player_has_target(who),
+            Effect::CreateTokenCopyOf { who, count, source, .. } => {
+                player_has_target(who) || value_has_target(count) || sel_has_target(source)
+            }
+            Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)

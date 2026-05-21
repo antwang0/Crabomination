@@ -461,23 +461,29 @@ pub fn ark_of_hunger() -> CardDefinition {
 /// stays a non-creature artifact until that lands. Body resolves
 /// end-to-end for the ETB tutor, which is the most impactful clause.
 pub fn strixhaven_skycoach() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::card::{CreatureType, EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::{PlayerRef as PR, ZoneDest as ZD};
+    // Push (modern_decks, batch 88): Crew approximated as "Skycoach is
+    // always a creature." Printed Vehicle subtype kept for catalog
+    // filtering; `CardType::Creature` added so the 3/2 Flying body can
+    // attack and block. Stronger than printed (which requires tapping
+    // creatures with total power ≥ 2 to crew the Vehicle into a
+    // creature until EOT), but functional and captures the printed
+    // play pattern. The full Crew mechanic would need a tap-creatures-
+    // as-cost activation that transiently flips `CardType::Creature`
+    // on — same engine gap as Crew across the catalog.
     CardDefinition {
         name: "Strixhaven Skycoach",
         cost: cost(&[generic(3)]),
         supertypes: vec![],
-        card_types: vec![CardType::Artifact],
+        card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            creature_types: vec![CreatureType::Construct],
             ..Default::default()
         },
         power: 3,
         toughness: 2,
-        // Note: a "true" Vehicle has no keywords until crewed; we tag
-        // Flying here so the body's printed evasion is reflected during
-        // combat if a future crew layer flips the Vehicle into a creature
-        // mid-turn. Today the Vehicle is non-creature so Flying is inert.
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: vec![],

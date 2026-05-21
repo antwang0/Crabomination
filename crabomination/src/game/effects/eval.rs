@@ -341,16 +341,49 @@ impl GameState {
                 }
                 ctx.mana_spent >= *min
             }
+            Predicate::SourceGainedCounterThisTurn => {
+                ctx.source
+                    .map(|cid| self.permanents_gained_counter_this_turn.contains(&cid))
+                    .unwrap_or(false)
+            }
+            Predicate::CastSpellNotOwnedByYou => {
+                // Owner ≠ controller test against the just-cast spell.
+                // Resolution: walk the stack for the trigger source's
+                // `StackItem::Spell.card.owner` and compare to
+                // `ctx.controller` (the triggered-ability controller =
+                // the spell's caster). Falls back to `false` when the
+                // spell can't be located (defensive — should not happen
+                // during normal CastSpell trigger dispatch).
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        card.owner != ctx.controller
+                    }
+                    _ => false,
+                })
+            }
             Predicate::SameNamedInZoneAtLeast { who, zone, at_least } => {
                 // Read the resolving spell's printed name from
                 // `ctx.source_name` (stamped by `for_spell_with_source`).
                 // During spell resolution the card is in transient
                 // ownership and not present in any visible zone, so
-                // zone-walking lookups would fail — `source_name` is
-                // the reliable channel. Fall back to `False` when no
-                // name is stashed (an ad-hoc effect resolution without
-                // a spell anchor).
-                let Some(target_name) = ctx.source_name else {
+                // `source_name` is the reliable channel. Fall back to
+                // `ctx.source` (the source permanent's battlefield
+                // entry) for activated-ability resolution paths where
+                // `source_name` isn't stamped — Page, Loose Leaf's
+                // Grandeur cost gate ("Discard another card named
+                // Page, Loose Leaf") uses this fallback.
+                let target_name = ctx.source_name.or_else(|| {
+                    ctx.source.and_then(|cid| {
+                        self.battlefield
+                            .iter()
+                            .find(|c| c.id == cid)
+                            .map(|c| c.definition.name)
+                    })
+                });
+                let Some(target_name) = target_name else {
                     return false;
                 };
                 let Some(seat) = self.resolve_player(who, ctx) else {

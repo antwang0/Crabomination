@@ -226,9 +226,14 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
-        GameEvent::CardDrawn { player, .. }
-        | GameEvent::CardDiscarded { player, .. }
-        | GameEvent::CardMilled { player, .. }
+        // CardDrawn / CardDiscarded carry a card_id — bind
+        // `Selector::TriggerSource` to the *card* (not the player) so
+        // filters like `Predicate::EntityMatches { what: TriggerSource,
+        // filter: IS }` can introspect the drawn/discarded card.
+        // Lorehold the Historian's miracle grant relies on this.
+        GameEvent::CardDrawn { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardDiscarded { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::CardMilled { player, .. }
         | GameEvent::LifeGained { player, .. }
         | GameEvent::LifeLost { player, .. }
         | GameEvent::ManaAdded { player, .. }

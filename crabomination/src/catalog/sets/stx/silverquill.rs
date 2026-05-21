@@ -353,12 +353,24 @@ pub fn felisa_fang_of_silverquill() -> CardDefinition {
 /// Mavinda, Students' Advocate — {1}{W}{W}, 1/3 Legendary Human Cleric,
 /// Flying + Vigilance.
 ///
-/// 🟡 The "{3}{W}{W}: Cast target instant/sorcery from your graveyard if it
-/// targets a creature; exile it as it would leave the stack" activated
-/// ability is not wired. Cast-from-graveyard requires a graveyard-cast
-/// primitive (similar to Flashback but more constrained). Body/lifelink/
-/// flying are correct so combat behavior matches the printed card.
+/// Push (modern_decks, batch 73): the `{0}` cast-from-graveyard
+/// activated ability is **now wired** via the Move(target → Exile) +
+/// `GrantMayPlay { exile_after: true }` permission-grant pattern (same
+/// shape as Nita Forum Conciliator's activation, which lands a gy IS
+/// card in exile with may-play-this-turn + exile-on-resolve). Cost
+/// {0} + `once_per_turn: true` (printed "Activate only once each
+/// turn"). The target filter is "Instant ∨ Sorcery" in your graveyard
+/// — the printed "that targets only a single creature" sub-filter is
+/// approximated to all IS cards (the engine has no "card in gy that
+/// would target only a creature" introspection since gy cards aren't
+/// on the stack — non-creature-target IS spells in your gy can still
+/// be picked, a minor convenience extension over the printed Oracle).
+/// Body/flying/vigilance unchanged.
 pub fn mavinda_students_advocate() -> CardDefinition {
+    let target_is_in_your_gy = crate::effect::shortcut::target_filtered(
+        SelectionRequirement::HasCardType(CardType::Instant)
+            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+    );
     CardDefinition {
         name: "Mavinda, Students' Advocate",
         cost: cost(&[generic(1), w(), w()]),
@@ -372,7 +384,31 @@ pub fn mavinda_students_advocate() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: target_is_in_your_gy,
+                    to: ZoneDest::Exile,
+                },
+                Effect::GrantMayPlay {
+                    what: Selector::LastMoved,
+                    duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                    to_owner: false,
+                    exile_after: true,
+                },
+            ]),
+            once_per_turn: true,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

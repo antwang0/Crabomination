@@ -277,6 +277,29 @@ impl GameState {
                 match pos {
                     LibraryPosition::Top => self.players[p].library.insert(0, card),
                     LibraryPosition::Bottom => self.players[p].library.push(card),
+                    LibraryPosition::OwnerChoice => {
+                        // CR 701: "owner's choice" library placement.
+                        // Ask the *owner* of the moved card (= the
+                        // library we're putting it in — `p` resolved
+                        // above) yes/no via `Decision::OptionalTrigger`.
+                        // True = top, false = bottom. AutoDecider
+                        // defaults to false (bottom). Run Behind is the
+                        // only printed user today.
+                        let decision = crate::decision::Decision::OptionalTrigger {
+                            source: card.id,
+                            description: "Put on top of library? (no = bottom)".into(),
+                        };
+                        let answer = self.decider.decide(&decision);
+                        let put_on_top = matches!(
+                            answer,
+                            crate::decision::DecisionAnswer::Bool(true)
+                        );
+                        if put_on_top {
+                            self.players[p].library.insert(0, card);
+                        } else {
+                            self.players[p].library.push(card);
+                        }
+                    }
                     LibraryPosition::Shuffled => {
                         // Push the card in, then shuffle the entire library
                         // so the card lands at a random position (Chaos Warp,
