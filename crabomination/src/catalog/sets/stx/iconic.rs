@@ -18,10 +18,21 @@ use crate::mana::{b, cost, g, generic, r, u, w};
 /// Strict Proctor — {1}{W}, 1/3 Spirit Cleric. Flying. Real Oracle: "If
 /// a permanent entering the battlefield causes a triggered ability of
 /// a permanent to trigger, that ability's controller sacrifices the
-/// permanent unless they pay {2}." Body wired with Flying; the
-/// ETB-tax replacement effect is 🟡 (the engine has no
-/// replacement-effect primitive yet — tracked in TODO.md).
+/// permanent unless they pay {2}."
+///
+/// Now wired via the new `StaticEffect::EtbTriggerTax { amount: 2 }`
+/// primitive (push modern_decks batch 58). At ETB trigger push-time —
+/// both the self-source path in `fire_self_etb_triggers` and the unified
+/// dispatcher in `dispatch_triggers_for_events` — the trigger's
+/// controller is asked yes/no whether to pay {2}. On yes + affordable:
+/// pay the tax, fire the trigger normally. On no/unaffordable: sacrifice
+/// the trigger's source (the permanent whose ability is triggering) and
+/// the trigger does not fire. AutoDecider opts in to paying when the
+/// controller has enough mana floated; otherwise it declines. CR 614
+/// replacement-effect framing.
 pub fn strict_proctor() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Strict Proctor",
         cost: cost(&[generic(1), w()]),
@@ -37,7 +48,10 @@ pub fn strict_proctor() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "If a permanent entering the battlefield causes a triggered ability of a permanent to trigger, that ability's controller sacrifices the permanent unless they pay {2}.",
+            effect: StaticEffect::EtbTriggerTax { amount: 2 },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

@@ -1559,6 +1559,10 @@ impl GameState {
             filter: Option<crate::effect::Predicate>,
             subject: Option<crate::game::effects::EntityRef>,
             event_amount: u32,
+            /// True if the originating event was an ETB (PermanentEntered).
+            /// Strict Proctor's CR 614 tax only applies to ETB-triggered
+            /// abilities — this flag is read at push-time to gate the tax.
+            triggered_by_etb: bool,
         }
         let mut candidates: Vec<TriggerCandidate> = Vec::new();
         // Resolve per-permanent layer state once so the dispatcher can
@@ -1589,6 +1593,7 @@ impl GameState {
                             filter: ta.event.filter.clone(),
                             subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                             event_amount: event_amount(ev),
+                            triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         });
                         break;
                     }
@@ -1617,6 +1622,7 @@ impl GameState {
                                 filter: ta.event.filter.clone(),
                                 subject: crate::game::effects::event_subject(ev, &ta.event.kind),
                                 event_amount: event_amount(ev),
+                                triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                             });
                             break;
                         }
@@ -1674,6 +1680,7 @@ impl GameState {
                 filter,
                 subject,
                 event_amount,
+                triggered_by_etb,
             } = candidate;
             if let Some(filter) = filter {
                 let ctx = crate::game::effects::EffectContext {
@@ -1692,6 +1699,14 @@ impl GameState {
                 if !self.evaluate_predicate(&filter, &ctx) {
                     continue;
                 }
+            }
+            // Strict Proctor's CR 614 tax — applied only to triggers
+            // caused by an ETB event. The trigger's controller may pay
+            // {2} or sacrifice the trigger's source permanent.
+            if triggered_by_etb
+                && !crate::game::actions::apply_etb_trigger_tax(self, source, controller)
+            {
+                continue;
             }
             let auto_target = self.auto_target_for_effect(&effect, controller);
             // CR 700.2b — modal triggered ability mode pick at push-time.
@@ -2875,7 +2890,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::EtbTriggerSpotlight
             // UncounterableCreaturesOfChosenType — read at cast time by
             // `caster_grants_uncounterable_with_x`; no layer effect.
-            | StaticEffect::UncounterableCreaturesOfChosenType => vec![],
+            | StaticEffect::UncounterableCreaturesOfChosenType
+            // EtbTriggerTax — read at ETB trigger push time by
+            // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
+            | StaticEffect::EtbTriggerTax { .. } => vec![],
         })
         .collect()
 }

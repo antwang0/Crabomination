@@ -478,6 +478,14 @@ impl GameState {
                     let etb_multiplier =
                         crate::game::actions::etb_trigger_multiplier(self, caster);
                     for effect in etb_triggers {
+                        // Strict Proctor's CR 614 tax — pay {amount} or
+                        // sacrifice the source. Applied once per fire.
+                        if !crate::game::actions::apply_etb_trigger_tax(
+                            self, card_id, caster,
+                        ) {
+                            // Source sacrificed; remaining ETB triggers moot.
+                            break;
+                        }
                         let auto_target = self.auto_target_for_effect_avoiding(
                             &effect,
                             caster,

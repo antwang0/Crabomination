@@ -270,6 +270,69 @@ pub(crate) fn etb_trigger_multiplier(
     }
 }
 
+/// Strict Proctor ETB-trigger tax — CR 614 replacement effect.
+///
+/// "If a permanent entering the battlefield causes a triggered ability of
+/// a permanent to trigger, that ability's controller sacrifices the
+/// permanent unless they pay {amount}." Read at ETB-trigger dispatch time
+/// for each `StaticEffect::EtbTriggerTax` in play.
+///
+/// Returns `true` if the trigger should fire (controller paid or no tax in
+/// play), `false` if it should be suppressed (controller declined or
+/// couldn't pay). On `false`, the trigger source has been sacrificed.
+///
+/// `trigger_source` is the permanent whose ability is triggering — that's
+/// the permanent that gets sacrificed if the controller doesn't pay.
+pub(crate) fn apply_etb_trigger_tax(
+    state: &mut crate::game::GameState,
+    trigger_source: crate::card::CardId,
+    trigger_controller: usize,
+) -> bool {
+    use crate::decision::{Decision, DecisionAnswer};
+    use crate::effect::StaticEffect;
+    use crate::mana::ManaCost;
+
+    // Sum tax amounts from every Strict Proctor on the battlefield.
+    // Each Strict Proctor demands its own payment per the printed
+    // "sacrifices the permanent unless they pay {2}" wording — but
+    // applied as a single rolled-up amount via additive tax (matching
+    // the existing engine's handling of stacking-tax effects).
+    let total_tax: u32 = state
+        .battlefield
+        .iter()
+        .flat_map(|c| c.definition.static_abilities.iter())
+        .filter_map(|sa| {
+            if let StaticEffect::EtbTriggerTax { amount } = &sa.effect {
+                Some(*amount)
+            } else {
+                None
+            }
+        })
+        .sum();
+    if total_tax == 0 {
+        return true;
+    }
+    // Build a "Pay {total_tax}" decision aimed at the trigger's controller.
+    let answer = state.decider.decide(&Decision::OptionalTrigger {
+        source: trigger_source,
+        description: format!("Pay {{{}}} to keep this trigger?", total_tax),
+    });
+    if matches!(answer, DecisionAnswer::Bool(true)) {
+        let cost = ManaCost::new(vec![crate::mana::generic(total_tax)]);
+        if state.players[trigger_controller].mana_pool.pay(&cost).is_ok() {
+            return true;
+        }
+        // Couldn't actually afford the tax — fall through and sacrifice.
+    }
+    // Sacrifice the trigger source. Only sacrifice if it's still on
+    // the battlefield (it may have already left between push and
+    // resolution for fast self-die effects).
+    if state.battlefield.iter().any(|c| c.id == trigger_source) {
+        state.remove_from_battlefield_to_graveyard(trigger_source);
+    }
+    false
+}
+
 /// Cavern of Souls approximation: when a creature spell is cast, mark it
 /// uncounterable if the caster controls a Cavern of Souls.
 ///
@@ -499,6 +562,12 @@ impl GameState {
         // side controls a Mother of Machines.
         let multiplier = etb_trigger_multiplier(self, controller);
         for effect in etb_triggers {
+            // Strict Proctor's CR 614 replacement: pay {2} or sacrifice
+            // the source. Applied once per fire of the trigger.
+            if !apply_etb_trigger_tax(self, card_id, controller) {
+                // Source was sacrificed; remaining fires are moot.
+                return;
+            }
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(card_id));
             // CR 700.2b — modal ETB trigger mode pick at push-time.

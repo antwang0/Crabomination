@@ -1674,9 +1674,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (a) **614.1a** "instead" effects are replacement effects — 🟡 (the
   engine has `ReplacementEffect` for zone changes (Commander
   redirect), `StaticEffect::DoubleTokens` / `DoubleCounters` for
-  multiplier replacements, and the regen / Hofri exile-instead-of-
-  graveyard paths. No general "instead" framework — each "instead"
-  primitive is hand-rolled).
+  multiplier replacements, the regen / Hofri exile-instead-of-
+  graveyard paths, and now `StaticEffect::EtbTriggerTax { amount }`
+  for Strict Proctor's "sacrifices the permanent unless they pay
+  {2}" gate (push batch 58). No general "instead" framework — each
+  "instead" primitive is hand-rolled).
   (b) **614.1b** "skip" effects are replacement effects — 🟡 (only
   `Player.skip_first_draw` exists for CR 103.6's start-of-game
   first-draw skip. No general skip-step / skip-turn primitive — see
@@ -1723,6 +1725,36 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   primitive listed above already has a lock-in test. Promote
   the umbrella row to ✅ when 614.2 (general damage-replacement)
   and 614.9 (redirection) land.
+
+- ✅ **CR 614.1a — "Instead" replacement: pay-or-sacrifice ETB-trigger
+  tax** (push modern_decks batch 58, claude/modern_decks branch — audit
+  against `MagicCompRules_20260417.txt`): The CR 614.1a "instead" gate
+  applied to ETB-triggered abilities. New `StaticEffect::EtbTriggerTax
+  { amount }` primitive ships Strict Proctor's printed Oracle "If a
+  permanent entering the battlefield causes a triggered ability of a
+  permanent to trigger, that ability's controller sacrifices the
+  permanent unless they pay {amount}." Wiring lives in three places:
+  (a) `fire_self_etb_triggers` in `game/actions.rs` (the non-cast
+  paths like reanimation), (b) `stack.rs::resolve_spell`'s
+  cast-time ETB-trigger push loop (the canonical cast path), and (c)
+  the unified `dispatch_triggers_for_events` dispatcher in
+  `game/mod.rs` (for triggers fired from non-self sources reading the
+  `PermanentEntered` event — Soul Warden's "another creature enters"
+  trigger, for example). The dispatcher carries a new
+  `TriggerCandidate.triggered_by_etb: bool` field stamped at
+  candidate-gathering time so non-ETB triggers (Magecraft, Prowess,
+  attack triggers) are untaxed per the printed Oracle. Multiple
+  Strict Proctors stack via additive amount sum (matches the printed
+  "for each Proctor" framing). On decline / unable to pay: the
+  trigger source (the permanent whose ability would have triggered)
+  is sacrificed via `remove_from_battlefield_to_graveyard` and the
+  trigger does not fire. Tests:
+  `strict_proctor_is_a_two_mana_flier`,
+  `strict_proctor_taxes_an_etb_trigger_unless_paid` (AutoDecider
+  declines → source sacrificed, ETB rider suppressed; ScriptedDecider
+  accepts + floated mana → tax paid, ETB rider fires),
+  `strict_proctor_does_not_tax_non_etb_triggers` (Magecraft pumps
+  unaffected — only ETB-event triggers see the tax).
 
 - ✅ **CR 614.16 — "If an effect would create tokens / put counters,
   replacement effects apply"** (push modern_decks audit,
@@ -6649,3 +6681,83 @@ filter: HasCreatureType(Fractal) ∧ ControlledByYou }`. The cast-time
 target picker walks the battlefield for Fractals before defaulting to
 auto-target. Powers Fractal-tribal shells (Symmathematics +
 counter-doublers). Lock-in test: `quandrix_tideguard_magecraft_pumps_target_fractal`.
+
+### Engine — `StaticEffect::EtbTriggerTax` ✅ DONE
+
+The new `StaticEffect::EtbTriggerTax { amount }` primitive (push
+modern_decks batch 58) implements Strict Proctor's printed Oracle "If
+a permanent entering the battlefield causes a triggered ability of a
+permanent to trigger, that ability's controller sacrifices the
+permanent unless they pay {amount}." Wiring at all three ETB-trigger
+push sites: `fire_self_etb_triggers` (`game/actions.rs`),
+`stack.rs::resolve_spell`'s cast-time path, and the unified
+`dispatch_triggers_for_events` (via the new `triggered_by_etb` flag on
+`TriggerCandidate`). Lock-in tests:
+`strict_proctor_taxes_an_etb_trigger_unless_paid`,
+`strict_proctor_does_not_tax_non_etb_triggers`.
+
+### Engine — Mavinda, Students' Advocate cast-from-graveyard ⏳
+
+Mavinda's `{3}{W}{W}: Cast target instant/sorcery from your graveyard
+if it targets a creature; exile it as it would leave the stack` still
+needs a generalized cast-from-graveyard primitive that combines:
+1. An activation cost line that names a graveyard card as a target.
+2. A cast-without-paying step (similar to `GameAction::
+   CastFromZoneWithoutPaying`).
+3. An exile-on-resolve hook for the cast spell (similar to Flashback's
+   `exile_on_resolve` flag, but applied to a non-Flashback card).
+4. A predicate gate: the activation rejects unless the chosen spell
+   targets a creature.
+
+Once landed, promotes Mavinda 🟡 → ✅. Also unblocks similar shapes —
+Velomachus Lorehold's attack-trigger reveal-and-cast riders, Hofri
+Ghostforge's exile-on-death-return-as-Spirit cycle.
+
+### Engine — Hofri Ghostforge exile-on-death replacement ⏳
+
+Hofri Ghostforge's "When another nontoken creature you control dies,
+exile it. Return it to the battlefield as a 1/1 Spirit with haste at
+the beginning of the next end step. Sacrifice it at the beginning of
+the next end step after that" needs a delayed-replacement primitive:
+1. A `ReplacementEffect::ExileOnDeath` that fires off
+   `EventKind::CreatureDied` and replaces the gy-move with an
+   exile-move.
+2. A `DelayedTriggerSpec` for the "return as 1/1 Spirit" rider scheduled
+   for the next end step, hooked into the existing `end_step`
+   dispatcher.
+3. A second delayed trigger for "sac at the next end step after that."
+4. A return helper that mints a Spirit token with the exiled card's
+   name/types but base 1/1 (similar to Sun Titan's recursion + a P/T
+   override).
+
+Once landed, promotes Hofri Ghostforge 🟡 → ✅.
+
+### Engine — Velomachus Lorehold reveal-and-cast ⏳
+
+Velomachus Lorehold's "Whenever Velomachus Lorehold attacks, look at
+the top X cards of your library, where X is its power. You may cast a
+spell with mana value X or less from among them without paying its mana
+cost. Put the rest on the bottom of your library in a random order"
+needs:
+1. A reveal-from-library decision shape (a multi-card peek the
+   controller can examine).
+2. A cast-without-paying-from-library activation.
+3. An MV-cap gate: the cast spell's mana value must be ≤ the reveal
+   cap.
+4. A "put the rest on the bottom in random order" step (needs RNG in
+   `resolve_effect`).
+
+Once landed, promotes Velomachus Lorehold 🟡 → ✅.
+
+### Cards — Mid-priority Witherbloom additions
+
+After batch 58 the Witherbloom (B/G) STX section is fully ✅. Easy
+follow-ups for batch 59+ across other shells:
+1. **Saw It Coming-style Foretell counters** — alt-cost discount on
+   future-turn cast. Needs a turn-delayed alt-cost primitive on
+   `AlternativeCost`.
+2. **Foretold from exile** — register an exile timer; allow the next
+   turn's caster to spend a foretell-discounted mana.
+3. **Strixhaven Mystical Archive reprints** — Day of Judgment,
+   Counterspell, Lightning Bolt, etc. — most already implemented in
+   pre-STX modules; doc-sync them as STA-reprint rows.

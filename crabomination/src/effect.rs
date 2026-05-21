@@ -1983,6 +1983,22 @@ pub enum StaticEffect {
         kind: CounterType,
         value: Value,
     },
+    /// Strict Proctor — "If a permanent entering the battlefield causes
+    /// a triggered ability of a permanent to trigger, that ability's
+    /// controller sacrifices the permanent unless they pay {amount}."
+    /// Read at ETB-trigger dispatch time (both the self-source path in
+    /// `fire_self_etb_triggers` and the unified dispatcher in
+    /// `dispatch_triggers_for_events`). For each ETB trigger pushed
+    /// onto the stack, the trigger's controller is asked yes/no whether
+    /// to pay `amount` generic mana from their pool. On yes + affordable:
+    /// pay, fire the trigger normally. On no/unaffordable: sacrifice the
+    /// trigger's source (the permanent whose ability is triggering) and
+    /// the trigger does not fire. The AutoDecider opts in to paying when
+    /// the controller has enough mana floated; otherwise it declines.
+    /// Stacks across multiple Strict Proctors (one tax per source).
+    EtbTriggerTax {
+        amount: u32,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

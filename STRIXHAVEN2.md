@@ -19,10 +19,59 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1297 (incl. synthesised variants) | 6 | 0 |
+| STX (327 cards) | 1319 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 58: 22 more synthesised STX cards spread across all 5 colleges
+(5 Witherbloom + 5 Silverquill + 4 Lorehold + 4 Quandrix + 4 Prismari)
+PLUS Strict Proctor promoted 🟡 → ✅ via the new
+`StaticEffect::EtbTriggerTax { amount }` primitive — CR 614 replacement
+effect. At ETB trigger push-time (both `fire_self_etb_triggers` and the
+unified `dispatch_triggers_for_events` dispatcher), the trigger's
+controller is asked yes/no whether to pay `amount` generic mana. On yes
++ affordable, pay and fire the trigger normally. On no/unaffordable,
+sacrifice the trigger source (the permanent whose ability is triggering)
+and the trigger does not fire. The tax stacks across multiple Strict
+Proctors (summed). The new field `TriggerCandidate.triggered_by_etb`
+threads through the dispatcher so non-ETB triggers (Magecraft, Prowess,
+attack triggers) are untaxed per the printed Oracle. 25 new tests
+covering ETB drains, magecraft pumps, Spirit/Inkling/Pest/Fractal
+token-mint riders, and 3 dedicated Strict Proctor tax tests (decline →
+sacrifice, scripted accept → pay + fire, non-ETB triggers untaxed).
+
+Cards added: `witherbloom_toxicpath` ({2}{B} 2/3 Plant Warlock ETB
+drain 1 + surveil 1), `pest_tendril` ({B}{G} 2/1 Pest Beast
+dies-trigger scry 1), `witherbloom_bramblepath` ({1}{G} 1/3 Plant Druid
+Reach magecraft gain 1 life), `pest_beekeeper` ({2}{G} 2/3 Human Druid
+ETB mint Pest), `witherbloom_mire_maker` ({3}{B}{G} 4/4 Plant Warrior
+Trample ETB drain 2), `silverquill_wordmaiden` ({1}{W} 2/1 Human Cleric
+magecraft +1/+1 EOT on target friendly creature),
+`inkling_quillblade_b58` ({1}{B} 2/1 Inkling Wizard Flying),
+`silverquill_scribecaller` ({W}{B} 2/2 Inkling Soldier Lifelink),
+`silverquill_lecturer_b58` ({2}{W}{B} 2/3 Human Cleric ETB mint Inkling
++ gain 2 life), `silverquill_inkmaster_b58` ({3}{W}{B} 3/4 Inkling
+Wizard Flying magecraft drain 1), `lorehold_skybattler` ({R}{W} 2/2
+Spirit Soldier Flying), `lorehold_bonechanter` ({1}{R} 2/1 Spirit
+Wizard Haste magecraft grant Menace EOT on target creature),
+`lorehold_sparkdancer` ({2}{R}{W} 2/3 Spirit Wizard ETB 2 damage any
+target + gain 2 life), `lorehold_reliquarian` ({3}{R}{W} 3/4 Spirit
+Cleric Vigilance ETB mint Spirit + magecraft gain 1 life),
+`quandrix_spellsplicer` ({1}{U} 1/3 Merfolk Wizard magecraft scry 1),
+`fractal_bluepetal` ({1}{G} 0/0 Fractal enters with two +1/+1 counters
+via CR 614.12), `quandrix_mathweaver` ({2}{G} 2/3 Elf Druid ETB mint
+Fractal with +1/+1 counter), `quandrix_sumcaster_b58` ({2}{G}{U} 3/3
+Merfolk Wizard magecraft +1/+1 on target Fractal),
+`prismari_apprentice_b58` ({U}{R} 2/2 Human Wizard magecraft ping any
+target), `prismari_flamewriter_b58` ({2}{R} 3/2 Elemental Wizard Haste),
+`prismari_tideflame` ({1}{U}{R} 2/3 Elemental Wizard magecraft loot 1),
+`prismari_stormcaster_b58` ({2}{U}{R} 3/3 Elemental Wizard Flying ETB
+1 damage any target + scry 1). Promotions: `strict_proctor` ({1}{W}
+1/3 Spirit Cleric Flying — ETB tax wired via new primitive). Total
+tests: 3126 (was 3101).**
+
+Prior push (batch 57):
+
 **batch 57: 20 more synthesised STX cards spread across all 5 colleges
 (5 Witherbloom + 5 Silverquill + 4 Lorehold + 3 Quandrix + 3 Prismari).
 20 new tests covering aristocrats triggers, magecraft (drain / scry /
@@ -5261,7 +5310,7 @@ each college's flagship Dragon, plus a few cross-college staples.
 
 | Card | Cost | Status | Notes |
 |---|---|---|---|
-| Strict Proctor | {1}{W} | 🟡 | 1/3 Spirit Cleric, Flying. ETB-tax replacement is omitted (no replacement-effect primitive). |
+| Strict Proctor | {1}{W} | ✅ (was 🟡) | Push (modern_decks batch 58): 1/3 Spirit Cleric, Flying. The printed CR 614 replacement effect "If a permanent entering the battlefield causes a triggered ability of a permanent to trigger, that ability's controller sacrifices the permanent unless they pay {2}" is **now wired** via the new `StaticEffect::EtbTriggerTax { amount: 2 }` primitive. At ETB trigger push-time — both the self-source path in `fire_self_etb_triggers` (`game/actions.rs`), the cast-time path in `stack.rs::resolve_spell`, and the unified dispatcher's ETB-event branch (`dispatch_triggers_for_events`) — the trigger's controller is asked yes/no whether to pay the tax. On yes + affordable: pay {2} from the floated pool, fire the trigger normally. On no/unaffordable: sacrifice the trigger source (the permanent whose ability is triggering — that's the one that gets killed per the printed wording) and the trigger does not fire. Stacks across multiple Strict Proctors via additive amount sum (matches the printed "for each Proctor in play" framing). Tests: `strict_proctor_is_a_two_mana_flier`, `strict_proctor_taxes_an_etb_trigger_unless_paid` (AutoDecider declines → Beekeeper sacrificed, Pest never minted; ScriptedDecider accepts + floated {2} → Beekeeper stays, Pest mints), `strict_proctor_does_not_tax_non_etb_triggers` (Magecraft pumps unaffected — only ETB triggers are taxed per the printed Oracle). |
 | Sedgemoor Witch | {2}{B}{B} | ✅ | 3/2 Human Warlock, Menace + Ward(1) keyword. Magecraft creates a Pest token. Ward enforcement still pending — keyword tag is correct. Test: `sedgemoor_witch_magecraft_creates_pest_token`. |
 | Spectacle Mage | {U}{R} | ✅ | Push XXXI doc sync: Prowess is functional via the `effect::shortcut::prowess()` helper. Fires on every non-creature spell you cast, pumping the source +1/+1 EOT. Hybrid {U/R}{U/R} approximated as {U}{R}. |
 | Mage Hunters' Onslaught | {2}{B}{B} | ✅ | Sorcery. Destroy target creature; draw a card. Test: `mage_hunters_onslaught_destroys_creature_and_draws_card`. |
