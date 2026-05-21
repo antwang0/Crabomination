@@ -2279,6 +2279,69 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test in the suite (Lightning Bolt-to-the-face, Exsanguinate at X≥20,
   etc.).
 
+- 🟡 **CR 305 — Lands** (push modern_decks batch 67 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The land primitive — playing a land,
+  basic land types and their intrinsic mana abilities, and land
+  subtype manipulation. Audit:
+  (a) **305.1** "A player who has priority may play a land card from
+  their hand during a main phase of their turn when the stack is
+  empty. Playing a land is a special action; it doesn't use the
+  stack" — ✅ (`actions.rs::play_land` checks the priority +
+  stack-empty + main-phase invariants via `can_cast_sorcery_speed`;
+  the land moves direct to battlefield, no `StackItem` push).
+  (b) **305.2 / 305.2a / 305.2b** "One land per turn unless modified"
+  — ✅ (`Player.can_play_land()` enforces `lands_played_this_turn ==
+  0`; bumped per land-play, reset in `do_untap`. See dedicated row
+  below).
+  (c) **305.3** "Can't play a land if it isn't your turn" — ✅
+  (`play_land` checks `active_player == player_idx` via
+  `can_cast_sorcery_speed`'s priority gate).
+  (d) **305.4** "Put onto the battlefield" ≠ "play a land" — ✅
+  (`Effect::Search { filter: Land, to: Battlefield }` and
+  `Effect::Move(Land → Battlefield)` do NOT bump
+  `lands_played_this_turn`. Cultivate / Verdant Mastery / Field Trip
+  / Quandrix Cartographer-style ramp respects this — putting lands
+  into play from library doesn't count against the per-turn limit).
+  (e) **305.5** "Land subtypes are listed after a long dash, may
+  have multiple subtypes" — ✅ (`Subtypes.land_types: Vec<LandType>`
+  supports multi-subtype lands like Lorehold Excavation, all SOS
+  school lands, every Snarl dual).
+  (f) **305.6** "Basic land types grant the corresponding intrinsic
+  mana ability `{T}: Add [color]`" — ✅ (the `tap_add_basic_color`
+  shortcut at `mana.rs` is hard-wired to each of the five basic
+  types; the intrinsic ability ships as a single
+  `ActivatedAbility { tap_cost: true, effect: AddMana }` per type).
+  Every Plains/Island/Swamp/Mountain/Forest in catalog ships this
+  ability — no land "has no text box" today.
+  (g) **305.7** "Setting a land's subtype to a basic type wipes
+  prior subtypes and abilities, grants new mana abilities" — ⏳ (no
+  `Effect::SetLandSubtype` primitive; cards like Spreading Seas
+  (becomes Island), Trace of Abundance (becomes basic), Blood Moon
+  ("each nonbasic land is a Mountain") aren't in the catalog today.
+  Adding the primitive would need a layer-4 type-rewrite + a
+  layer-6 mana-ability-replacement pass — same shape as
+  `Effect::LoseAllAbilities` but specifically swapping in the new
+  basic mana ability.).
+  (h) **305.8** "Supertype Basic distinguishes basic from nonbasic"
+  — ✅ (`Subtypes.supertypes: Vec<Supertype>` includes `Basic` only
+  for the five vanilla basics; predicates like
+  `SelectionRequirement::IsBasicLand` walk the supertype list).
+  (i) **305.9** "If an object is both a land and another card type,
+  it can be played only as a land" — ✅ (the cast-spell pipeline
+  rejects land cards via `CardDefinition.is_land()`; the only way to
+  put a land onto the battlefield from the hand is `play_land`. No
+  MDFC catalog card today is land-on-front + nonland-on-back, but
+  the engine's `play_land_back` path correctly takes the back-face
+  land via the same one-per-turn gate, never via `cast_spell_back`).
+  Tests: per-clause exercise covered by the play-land + ramp test
+  matrix (`play_land_enforces_one_per_turn`,
+  `cultivate_does_not_count_against_land_drop`,
+  `back_face_land_costs_a_land_drop`,
+  `lorehold_excavation_is_a_lorehold_dual_with_two_mana_abilities`).
+  Promote the umbrella to ✅ when 305.7 (set-subtype rewrite) lands;
+  the remaining clauses are end-to-end CR-compliant.
+
 - ✅ **CR 305.2 / 305.2b — One land per turn enforcement** (push
   modern_decks audit): "A player can normally play one land during
   their turn; however, continuous effects may increase this number."
@@ -3393,6 +3456,28 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ⏳ **`effect::shortcut::etb_drain_each_opp(amount)` shortcut** — Many
+  STX cards print "ETB drain N" as `etb(Seq(LoseLife N each opp, GainLife
+  N you))`. Today batch 67's `silverquill_drainscribe` calls
+  `etb_drain(2)` which packages the symmetric (each-opp / you) drain;
+  but for the asymmetric per-opp variant the inline `Seq` shape is used.
+  A future helper `etb_drain_each_opp(amount)` could simplify ~15
+  cards across `stx::silverquill` / `stx::witherbloom` / `stx::lorehold`
+  where the drain is only the opp-loses-N half.
+
+- ⏳ **`effect::shortcut::magecraft_loot()` callsite reduction** — Batch
+  67's `prismari_stormtide` uses `magecraft_loot()`. The same shape
+  occurs ~12 times across `stx::prismari` / `stx::quandrix` /
+  `stx::extras` inline as `magecraft(Seq(Draw 1, Discard 1))`. A
+  cleanup refactor pass to collapse them onto the existing helper
+  would shrink the catalog ~80 lines.
+
+- ⏳ **Witherbloom-tribal token Pest helpers** — Most Witherbloom cards
+  in batch 67+ mint a `stx_pest_token()` via inline
+  `Effect::CreateToken`. A `mint_pests(count)` shortcut would simplify
+  the call sites. Same shape for `mint_inklings(count)` (Silverquill)
+  and `mint_spirits(count)` (Lorehold).
 
 - ✅ **`effect::shortcut::etb_ping_any(amount)` /
   `etb_ping_creature(amount)` helpers** (push modern_decks batch 63

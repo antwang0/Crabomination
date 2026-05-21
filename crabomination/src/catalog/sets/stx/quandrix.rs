@@ -8466,3 +8466,239 @@ pub fn quandrix_fractal_forge() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 67): 6 more Quandrix cards ───────────────────
+
+/// Quandrix Mistwarden — {U}, 0/3 Merfolk Wizard Defender. `{T}: Scry 1`.
+/// 1-mana defensive selection wall.
+pub fn quandrix_mistwarden() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mistwarden",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 3,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[]),
+            tap_cost: true,
+            sac_cost: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            life_cost: 0,
+            sorcery_speed: false,
+            from_graveyard: false,
+            condition: None,
+            once_per_turn: false,
+            self_counter_cost_reduction: None,
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Spellseer-Adept — {1}{G}{U}, 2/3 Elf Wizard. Magecraft Scry 1.
+/// 3-mana defensive smoother + magecraft.
+pub fn quandrix_spellseer_adept() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Quandrix Spellseer-Adept",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Floodling — {3}{G}{U}, 0/0 Fractal. Enters with N +1/+1
+/// counters where N = creatures you control. 5-mana wide-board scaler.
+pub fn fractal_floodling() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Floodling",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ))),
+        )),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sumchant — {G}{U}, Instant. Adds a +1/+1 counter to target
+/// friendly creature and draws a card. 2-mana sticky pump + cantrip.
+pub fn quandrix_sumchant() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sumchant",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sumcaster (b67) — {2}{G}{U}, 3/3 Elf Wizard. ETB Draw 1 +
+/// magecraft AddCounter(+1/+1, Self). 4-mana scaling cantrip body.
+pub fn quandrix_sumcaster_b67() -> CardDefinition {
+    use crate::effect::shortcut::{etb_draw, magecraft};
+    CardDefinition {
+        name: "Quandrix Sumcaster (b67)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_draw(1),
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Riverflux — {1}{G}{U}, Sorcery. Mints a 0/0 Fractal with
+/// counters equal to instants/sorceries in your graveyard. 3-mana
+/// graveyard-scaling Fractal mint.
+pub fn quandrix_riverflux() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Quandrix Riverflux",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: quandrix_fractal_token(),
+                count: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                })),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
