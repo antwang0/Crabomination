@@ -43859,6 +43859,40 @@ fn lorehold_coinflinger_tails_discards_a_card() {
 }
 
 #[test]
+fn lorehold_sparkscholar_b63_etb_pings_creature_via_shortcut() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_sparkscholar_b63());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkscholar castable");
+    drain_stack(&mut g);
+    // 2/2 bear takes 1 damage — survives with 1 toughness left.
+    let bear = g.battlefield_find(target).expect("bear");
+    assert_eq!(bear.damage, 1);
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn lorehold_sparkscholar_b63_v2_magecraft_pings_creature_via_shortcut() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _ = g.add_card_to_battlefield(0, catalog::lorehold_sparkscholar_b63_v2());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 dmg + magecraft 1 dmg = 4 total, bear (2 toughness) dies.
+    assert!(g.battlefield_find(target).is_none());
+}
+
+#[test]
 fn coin_flip_auto_decider_defaults_to_heads() {
     // AutoDecider's `CoinFlip` answer is `Bool(true)` (heads).
     let mut g = two_player_game();

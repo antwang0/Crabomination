@@ -10009,6 +10009,70 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
     }
 }
 
+/// Lorehold Sparkscholar III — {1}{R}, 2/1 Spirit Wizard Haste. ETB
+/// deals 1 damage to target creature. Uses the new `etb_ping_creature`
+/// shortcut. 2-mana hasty creature-removal ETB body.
+pub fn lorehold_sparkscholar_b63() -> CardDefinition {
+    use crate::effect::shortcut::etb_ping_creature;
+    CardDefinition {
+        name: "Lorehold Sparkscholar III",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_ping_creature(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkscholar IV — {2}{R}, 2/2 Spirit Wizard. Magecraft 1
+/// damage to target creature via the new `magecraft_ping_creature`
+/// shortcut. Creature-removal-only magecraft body at the 3-mana slot.
+pub fn lorehold_sparkscholar_b63_v2() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_creature;
+    CardDefinition {
+        name: "Lorehold Sparkscholar IV",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_creature(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Coinflinger — {2}{R}, 2/2 Spirit Wizard. "When this creature
 /// enters, flip a coin. If you win the flip, this creature deals 3
 /// damage to any target. If you lose, you discard a card." CR 705 +
