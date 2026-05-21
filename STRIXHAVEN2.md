@@ -19,10 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1448 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1453 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 65: 5 more synthesised STX Prismari cards. Cards added:
+`prismari_sparkforger` ({1}{U}{R} 2/2 Elemental Wizard ETB mint Treasure),
+`prismari_flashbinder` ({U}{R} 2/1 Elemental Wizard Prowess),
+`prismari_tidefurnace` ({2}{U}{R} Sorcery mint Treasure + 2 damage),
+`prismari_embergloss` ({1}{R} 2/1 Elemental Wizard Haste magecraft +1/+1
+counter), `prismari_stormtide` ({1}{U} 1/3 Merfolk Wizard Flying
+magecraft loot). Total tests: 3268 (was 3263). All 5 cards have
+functionality tests in `tests::stx`.**
+
+Prior push (batch 64):
+
 **batch 64: 28 more synthesised STX cards across three colleges
 (10 Silverquill + 10 Witherbloom + 4 Lorehold + 4 Quandrix). Cards added:
 Silverquill (`inkling_recitalist`, `silverquill_vespersong`,

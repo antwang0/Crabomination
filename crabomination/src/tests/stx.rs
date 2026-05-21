@@ -44408,6 +44408,96 @@ fn quandrix_streamcaller_magecraft_loots_on_cast() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1);
 }
 
+// ─ Prismari (U/R) batch 65 ─
+
+#[test]
+fn prismari_sparkforger_etb_mints_treasure_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_sparkforger());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkforger castable");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Treasure")
+        .count();
+    assert_eq!(treasures, 1);
+}
+
+#[test]
+fn prismari_flashbinder_is_a_two_one_prowess_elemental() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_flashbinder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Flashbinder castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).expect("Flashbinder on bf");
+    assert_eq!(body.power(), 2);
+    assert_eq!(body.toughness(), 1);
+    assert!(body.has_keyword(&Keyword::Prowess));
+}
+
+#[test]
+fn prismari_tidefurnace_mints_treasure_and_burns_for_two() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::prismari_tidefurnace());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tidefurnace castable");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Treasure")
+        .count();
+    assert_eq!(treasures, 1);
+    assert_eq!(g.players[1].life, opp_before - 2);
+}
+
+#[test]
+fn prismari_embergloss_magecraft_grows_self() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_embergloss());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).expect("Embergloss on bf");
+    // 2/1 base + +1/+1 counter = 3/2.
+    assert_eq!(body.power(), 3);
+    assert_eq!(body.toughness(), 2);
+    assert!(body.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn prismari_stormtide_magecraft_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::prismari_stormtide());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Loot: -1 (cast) + 1 (draw) - 1 (discard) = -1 net.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
 #[test]
 fn quandrix_fractal_forge_mints_two_fractals_each_with_two_counters() {
     let mut g = two_player_game();
