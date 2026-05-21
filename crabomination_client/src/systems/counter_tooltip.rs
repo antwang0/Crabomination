@@ -4,7 +4,7 @@
 //! Hold either Alt (left/right) while hovering a card to surface a small
 //! HUD panel with:
 //!
-//! - Card name + current power/toughness (if creature) and `(was X/Y)`
+//! - Current power/toughness (if creature) and `(printed X/Y)`
 //!   when the values differ from the printed P/T.
 //! - Loyalty count (for planeswalkers).
 //! - One row per counter type and quantity (`+1/+1 ×3`, `Stun ×2`, …).
@@ -12,24 +12,18 @@
 //! The 3-D counter coins handle the at-a-glance "this card has stuff on
 //! it" indicator; this tooltip is the click-through for the details
 //! a player needs when the coin column gets dense.
+//!
+//! Anchored to the bottom-right corner of the viewport rather than
+//! floating next to the 3-D card, because the peek popup
+//! (`systems::ui::peek_popup`) also lights up on Alt-hold and centers a
+//! large card-art image — a card-adjacent tooltip would overlap it.
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
 use crabomination::card::{CardId, CardType, CounterType};
 
 use crate::card::{BattlefieldCard, CardHovered, GameCardId};
 use crate::net_plugin::CurrentView;
 use crate::theme::UiFonts;
-
-/// Estimated maximum rendered size of the tooltip panel. Used to clamp
-/// the panel position so it doesn't slide off the right or bottom edge
-/// for cards near the viewport boundary. Conservative — real panels are
-/// usually narrower and shorter than this.
-const TOOLTIP_EST_WIDTH: f32 = 240.0;
-const TOOLTIP_EST_HEIGHT: f32 = 200.0;
-/// Padding from the viewport edge so the clamped tooltip doesn't look
-/// jammed against the window border.
-const TOOLTIP_EDGE_PAD: f32 = 8.0;
 
 /// Root marker for the floating tooltip panel.
 #[derive(Component)]
@@ -46,23 +40,21 @@ pub fn update_alt_tooltip(
     keys: Res<ButtonInput<KeyCode>>,
     view: Res<CurrentView>,
     ui_fonts: Res<UiFonts>,
-    hovered: Query<(&GameCardId, &Transform), (With<BattlefieldCard>, With<CardHovered>)>,
-    cameras: Query<(&Camera, &GlobalTransform), With<Camera3d>>,
-    windows: Query<&Window, With<PrimaryWindow>>,
-    mut tooltip_q: Query<(Entity, &mut Node), With<AltTooltip>>,
+    hovered: Query<&GameCardId, (With<BattlefieldCard>, With<CardHovered>)>,
+    mut tooltip_q: Query<Entity, With<AltTooltip>>,
     mut text_q: Query<&mut Text, With<AltTooltipText>>,
 ) {
     let alt_held = keys.pressed(KeyCode::AltLeft) || keys.pressed(KeyCode::AltRight);
 
     // No alt or no hovered card → tear down any tooltip.
-    let hovered_card: Option<(CardId, Vec3)> = if alt_held {
-        hovered.iter().next().map(|(gid, t)| (gid.0, t.translation))
+    let hovered_card_id: Option<CardId> = if alt_held {
+        hovered.iter().next().map(|gid| gid.0)
     } else {
         None
     };
 
-    let Some((card_id, card_pos)) = hovered_card else {
-        for (e, _) in tooltip_q.iter() {
+    let Some(card_id) = hovered_card_id else {
+        for e in tooltip_q.iter() {
             commands.entity(e).despawn();
         }
         return;
@@ -71,41 +63,25 @@ pub fn update_alt_tooltip(
     let Some(cv) = &view.0 else { return };
     let Some(p) = cv.battlefield.iter().find(|p| p.id == card_id) else {
         // Card left the battlefield — drop the tooltip.
-        for (e, _) in tooltip_q.iter() {
+        for e in tooltip_q.iter() {
             commands.entity(e).despawn();
         }
         return;
     };
 
-    let body = build_tooltip_body(p);
-
-    // Project the card's world position to viewport pixels for placement.
-    let Ok((camera, cam_xform)) = cameras.single() else { return };
-    let Ok(screen) = camera.world_to_viewport(
-        cam_xform,
-        card_pos + Vec3::new(0.9, 0.6, 1.4),
-    ) else {
+    // Build the body without the card name (the peek popup already
+    // shows the card art with its name). If there's nothing
+    // interesting (no P/T mod, no loyalty, no counters, not tapped),
+    // skip the tooltip entirely so we don't render an empty panel.
+    let Some(body) = build_tooltip_body(p) else {
+        for e in tooltip_q.iter() {
+            commands.entity(e).despawn();
+        }
         return;
     };
 
-    // Clamp the tooltip's top-left so the panel stays on-screen for
-    // cards near the right or bottom viewport edge. Without this the
-    // panel runs off-screen and the user has to chase the cursor to
-    // see counter detail.
-    let Ok(window) = windows.single() else { return };
-    let win_w = window.resolution.width();
-    let win_h = window.resolution.height();
-    let raw_left = screen.x + 18.0;
-    let raw_top = screen.y - 16.0;
-    let max_left = (win_w - TOOLTIP_EST_WIDTH - TOOLTIP_EDGE_PAD).max(TOOLTIP_EDGE_PAD);
-    let max_top = (win_h - TOOLTIP_EST_HEIGHT - TOOLTIP_EDGE_PAD).max(TOOLTIP_EDGE_PAD);
-    let left = raw_left.clamp(TOOLTIP_EDGE_PAD, max_left);
-    let top = raw_top.clamp(TOOLTIP_EDGE_PAD, max_top);
-
-    if let Ok((_, mut node)) = tooltip_q.single_mut() {
-        // Update existing tooltip's position and text.
-        node.left = Val::Px(left);
-        node.top = Val::Px(top);
+    if let Ok(_) = tooltip_q.single_mut() {
+        // Existing tooltip — just refresh its text.
         if let Ok(mut text) = text_q.single_mut()
             && text.0 != body
         {
@@ -114,13 +90,14 @@ pub fn update_alt_tooltip(
         return;
     }
 
-    // Spawn fresh tooltip.
+    // Spawn fresh tooltip pinned to the bottom-right corner so it
+    // never overlaps the centered peek-popup card art.
     let panel = commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                left: Val::Px(left),
-                top: Val::Px(top),
+                right: Val::Px(10.0),
+                bottom: Val::Px(10.0),
                 padding: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
@@ -141,20 +118,22 @@ pub fn update_alt_tooltip(
     });
 }
 
-fn build_tooltip_body(p: &crabomination::net::PermanentView) -> String {
+/// Build the tooltip body. Returns `None` when the card has nothing
+/// the peek-popup art doesn't already show — we don't want a tiny
+/// dark panel popping up just to repeat "this is a creature with 2/2"
+/// while the user is looking at the full card art.
+fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     let mut lines = Vec::new();
-    lines.push(p.name.clone());
 
-    // P/T summary for creatures.
-    if p.card_types.contains(&CardType::Creature) {
-        if p.power != p.base_power || p.toughness != p.base_toughness {
-            lines.push(format!(
-                "{}/{}  (printed {}/{})",
-                p.power, p.toughness, p.base_power, p.base_toughness
-            ));
-        } else {
-            lines.push(format!("{}/{}", p.power, p.toughness));
-        }
+    // P/T summary — only if modified, since the peek popup shows the
+    // printed P/T as part of the card art.
+    if p.card_types.contains(&CardType::Creature)
+        && (p.power != p.base_power || p.toughness != p.base_toughness)
+    {
+        lines.push(format!(
+            "{}/{}  (printed {}/{})",
+            p.power, p.toughness, p.base_power, p.base_toughness
+        ));
     }
 
     // Loyalty for planeswalkers (separate from counters list since it's
@@ -177,7 +156,9 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> String {
         .collect();
     counters.sort_by_key(|(k, _)| sort_key(*k));
     if !counters.is_empty() {
-        lines.push(String::from("─────────"));
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
         for (kind, n) in counters {
             lines.push(format!("{} ×{}", counter_label(kind), n));
         }
@@ -187,7 +168,11 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> String {
         lines.push(String::from("(tapped)"));
     }
 
-    lines.join("\n")
+    if lines.is_empty() {
+        None
+    } else {
+        Some(lines.join("\n"))
+    }
 }
 
 fn sort_key(kind: CounterType) -> u8 {

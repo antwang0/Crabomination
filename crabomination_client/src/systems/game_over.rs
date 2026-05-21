@@ -77,7 +77,8 @@ pub struct AutoRematchState {
 }
 
 use crate::theme::{
-    self, UiFonts, BUTTON_ACCENT_BG, BUTTON_INFO_BG, BUTTON_PRIMARY_BG, FIELD_BG, FIELD_BG_FOCUSED,
+    self, HoverTint, UiFonts, BUTTON_ACCENT_BG, BUTTON_INFO_BG, BUTTON_PRIMARY_BG, FIELD_BG,
+    FIELD_BG_FOCUSED, RADIUS_BUTTON, RADIUS_PANEL,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -158,6 +159,7 @@ pub fn sync_game_over_modal(
                     align_items: AlignItems::Center,
                     min_width: Val::Px(440.0),
                     border: UiRect::all(Val::Px(3.0)),
+                    border_radius: BorderRadius::all(RADIUS_PANEL),
                     ..default()
                 },
                 BackgroundColor(theme::PANEL_BG),
@@ -184,8 +186,13 @@ pub fn sync_game_over_modal(
                 .with_children(|row| {
                     row.spawn((
                         Button,
-                        Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)), ..default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)),
+                            border_radius: BorderRadius::all(RADIUS_BUTTON),
+                            ..default()
+                        },
                         BackgroundColor(BUTTON_PRIMARY_BG),
+                        HoverTint::new(BUTTON_PRIMARY_BG),
                         RematchButton,
                     ))
                     .with_children(|b| {
@@ -198,8 +205,13 @@ pub fn sync_game_over_modal(
                     });
                     row.spawn((
                         Button,
-                        Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)), ..default() },
+                        Node {
+                            padding: UiRect::axes(Val::Px(24.0), Val::Px(11.0)),
+                            border_radius: BorderRadius::all(RADIUS_BUTTON),
+                            ..default()
+                        },
                         BackgroundColor(BUTTON_INFO_BG),
+                        HoverTint::new(BUTTON_INFO_BG),
                         NewGameButton,
                     ))
                     .with_children(|b| {
@@ -232,6 +244,7 @@ pub fn sync_game_over_modal(
                             Node {
                                 min_width: Val::Px(80.0),
                                 padding: UiRect::axes(Val::Px(10.0), Val::Px(7.0)),
+                                border_radius: BorderRadius::all(RADIUS_BUTTON),
                                 ..default()
                             },
                             BackgroundColor(bg),
@@ -248,8 +261,13 @@ pub fn sync_game_over_modal(
                         });
                         row.spawn((
                             Button,
-                            Node { padding: UiRect::axes(Val::Px(16.0), Val::Px(7.0)), ..default() },
+                            Node {
+                                padding: UiRect::axes(Val::Px(16.0), Val::Px(7.0)),
+                                border_radius: BorderRadius::all(RADIUS_BUTTON),
+                                ..default()
+                            },
                             BackgroundColor(BUTTON_ACCENT_BG),
+                            HoverTint::new(BUTTON_ACCENT_BG),
                             AutoRematchSetButton,
                         ))
                         .with_children(|b| {
@@ -392,12 +410,13 @@ pub fn handle_rematch_button(
     log: ResMut<GameLog>,
     format: Res<ActiveMatchFormat>,
     kind: Res<ActiveMatchKind>,
+    audit: Res<crate::audit::AuditTarget>,
     commands: Commands,
 ) {
     if !button_q.iter().any(|i| *i == Interaction::Pressed) {
         return;
     }
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind);
+    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit);
 }
 
 /// When a game ends and `auto_rematch.remaining > 0`, fire a rematch
@@ -411,6 +430,7 @@ pub fn apply_auto_rematch_on_game_over(
     log: ResMut<GameLog>,
     format: Res<ActiveMatchFormat>,
     kind: Res<ActiveMatchKind>,
+    audit: Res<crate::audit::AuditTarget>,
     mut auto: ResMut<AutoRematchState>,
     commands: Commands,
 ) {
@@ -422,7 +442,7 @@ pub fn apply_auto_rematch_on_game_over(
     if !matches!(*kind, ActiveMatchKind::SpectateBotVsBot) { return; }
     if auto.remaining == 0 { return; }
     auto.remaining -= 1;
-    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind);
+    rematch_in_place(commands, modal_q, cards_q, view, ended, log, *format, *kind, audit);
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -435,6 +455,7 @@ fn rematch_in_place(
     mut log: ResMut<GameLog>,
     format: ActiveMatchFormat,
     kind: ActiveMatchKind,
+    audit: Res<crate::audit::AuditTarget>,
 ) {
     for e in &modal_q {
         commands.entity(e).despawn();
@@ -453,12 +474,19 @@ fn rematch_in_place(
     let sink: SnapshotSink = Arc::new(Mutex::new(SnapshotSinkState::default()));
     let sink_for_match = Arc::clone(&sink);
     let chosen = format.0;
+    // Audit-mode rematch reuses the same target card so the user
+    // can re-attempt the same setup without re-picking from the
+    // catalog.
+    let state = audit.0
+        .as_deref()
+        .and_then(crate::audit::build_audit_state)
+        .unwrap_or_else(|| chosen.build_state_for_restart());
 
     match kind {
         ActiveMatchKind::HumanVsBot => {
             std::thread::spawn(move || {
                 run_match_full(
-                    chosen.build_state_for_restart(),
+                    state,
                     vec![
                         SeatOccupant::Human(server_seat),
                         SeatOccupant::Bot(Box::new(RandomBot::new())),
@@ -471,7 +499,7 @@ fn rematch_in_place(
         ActiveMatchKind::SpectateBotVsBot => {
             std::thread::spawn(move || {
                 run_match_full(
-                    chosen.build_state_for_restart(),
+                    state,
                     vec![
                         SeatOccupant::Bot(Box::new(RandomBot::new())),
                         SeatOccupant::Bot(Box::new(RandomBot::new())),

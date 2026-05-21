@@ -44,6 +44,7 @@ impl bevy::app::Plugin for UiFontsPlugin {
     fn build(&self, app: &mut bevy::app::App) {
         let font = app.world().resource::<AssetServer>().load(FONT_PATH);
         app.world_mut().insert_resource(UiFonts { sans: font });
+        app.add_systems(bevy::app::Update, update_hover_tint);
     }
 }
 
@@ -137,3 +138,52 @@ pub const TEXT_INFO: Color = Color::srgb(0.65, 0.88, 1.0);
 pub const TEXT_DANGER: Color = Color::srgb(1.0, 0.55, 0.55);
 /// Mid-green — used for life-gain events in the log.
 pub const TEXT_GOOD: Color = Color::srgb(0.55, 0.95, 0.55);
+
+// ── Geometry ─────────────────────────────────────────────────────────────────
+
+/// Standard pill-corner radius for buttons and small chips.
+pub const RADIUS_BUTTON: Val = Val::Px(4.0);
+/// Standard rounded-rect radius for menus and modal panels. (HUD strips
+/// stay square-cornered — they shouldn't read as floating cards.)
+pub const RADIUS_PANEL: Val = Val::Px(8.0);
+
+// ── Hover tint ───────────────────────────────────────────────────────────────
+
+/// Attach to any `Button` whose background should brighten on hover/press.
+/// `update_hover_tint` watches `Changed<Interaction>` and applies the
+/// stored idle/hot colors. Do *not* attach to buttons whose background
+/// is already state-driven (Pass-priority colour swap, format toggles,
+/// quality presets, focused text fields) — the two systems would fight.
+#[derive(Component, Clone, Copy)]
+pub struct HoverTint {
+    pub idle: Color,
+    pub hot: Color,
+}
+
+impl HoverTint {
+    /// Derive a hot colour by lightening `idle` ~12% per channel. Keeps
+    /// theme variants visually related without per-call tuning.
+    pub fn new(idle: Color) -> Self {
+        let s = idle.to_srgba();
+        let hot = Color::srgba(
+            (s.red + 0.12).min(1.0),
+            (s.green + 0.12).min(1.0),
+            (s.blue + 0.12).min(1.0),
+            s.alpha,
+        );
+        Self { idle, hot }
+    }
+}
+
+/// Bevy system: brighten `HoverTint` buttons on Hovered/Pressed,
+/// restore idle on None.
+pub fn update_hover_tint(
+    mut q: Query<(&Interaction, &HoverTint, &mut BackgroundColor), Changed<Interaction>>,
+) {
+    for (interaction, tint, mut bg) in &mut q {
+        *bg = BackgroundColor(match *interaction {
+            Interaction::Hovered | Interaction::Pressed => tint.hot,
+            Interaction::None => tint.idle,
+        });
+    }
+}

@@ -175,12 +175,21 @@ pub fn player_target_zone_position(seat: usize, viewer: usize, n_seats: usize) -
 
 /// Hand-card transform for `seat`. Viewer's hand is face-up and fanned at the
 /// front of the table; opponent hands are face-down and mirrored at the back.
+///
+/// `viewer_zoom` is a resolution-driven multiplier that enlarges the
+/// viewer's hand on low-resolution displays so each card occupies a
+/// roughly constant on-screen size. A zoom of 1.0 reproduces the
+/// historical layout. The zoom scales: card mesh size, hand spacing,
+/// fan Y drop, and a small pull toward the camera so the larger mesh
+/// doesn't clip the table edge. Opponent hands ignore zoom — they're
+/// face-down at the back of the table where size is fine.
 pub fn hand_card_transform(
     seat: usize,
     viewer: usize,
     n_seats: usize,
     slot: usize,
     total: usize,
+    viewer_zoom: f32,
 ) -> Transform {
     let center = (total as f32 - 1.0) / 2.0;
     let offset = slot as f32 - center;
@@ -193,12 +202,16 @@ pub fn hand_card_transform(
 
     let spacing = hand_spacing(total);
     if is_viewer(seat, viewer) {
-        let x = offset * spacing;
-        let y = HAND_Y - offset.abs() * HAND_FAN_Y_DROP;
-        let z = HAND_CENTER_Z + z_offset * CARD_THICKNESS * 4.0;
+        let z = viewer_zoom;
+        let x = offset * spacing * z;
+        let y = HAND_Y * z - offset.abs() * HAND_FAN_Y_DROP * z;
+        // Pull the hand a fraction closer to the camera as it scales up
+        // so the (now larger) cards don't poke up into the battlefield.
+        let world_z = HAND_CENTER_Z + (z - 1.0) * 1.5 + z_offset * CARD_THICKNESS * 4.0;
         let rot_z = -offset * HAND_FAN_ANGLE;
-        Transform::from_xyz(x, y, z)
+        Transform::from_xyz(x, y, world_z)
             .with_rotation(Quat::from_rotation_x(HAND_TILT_X) * Quat::from_rotation_z(rot_z))
+            .with_scale(Vec3::splat(z))
     } else {
         let x = offset * spacing + opp_x_offset(seat, viewer, n_seats);
         // Extra lift so cards clear the table at the far camera angle.

@@ -8,6 +8,7 @@ use bevy::light::{CascadeShadowConfigBuilder, DirectionalLightShadowMap, GlobalA
 use bevy::picking::mesh_picking::MeshPickingPlugin;
 use bevy::{anti_alias::smaa::Smaa, color::palettes::basic::SILVER, prelude::*};
 
+mod audit;
 mod card;
 mod config;
 mod debug_export;
@@ -23,7 +24,7 @@ use menu::{AppState, MenuPlugin, start_net_session_from_menu};
 use net_plugin::SinglePlayerPlugin;
 
 use card::{
-    init_shared_assets, CardHighlightAssets, CardMeshAssets,
+    init_shared_assets, CardHighlightAssets, CardMeshAssets, HandZoom,
     CARD_HEIGHT, CARD_WIDTH, create_border_mesh, create_rounded_rect_mesh, BORDER_WIDTH, CORNER_RADIUS,
 };
 use render_quality::{ChangeQuality, RenderQuality};
@@ -46,7 +47,9 @@ use systems::game_ui::{
     handle_export_keypress, handle_game_input, poll_action_buttons, setup_game_hud,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
-    trigger_reveal_animation, update_attack_all_visibility, update_log_text, update_p1_text,
+    handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons,
+    sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
+    update_log_text, update_mana_pips, update_opponent_panel_tint, update_p1_text,
     update_hint, update_pass_button, update_phase_chart, update_player_text,
     update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
@@ -55,8 +58,9 @@ use systems::gizmos::{
     draw_stack_arrows, AttackerGizmos, BlockingGizmos, PtModifiedGizmos, StackGizmos,
 };
 use systems::quality::{
-    handle_quality_buttons, handle_speed_slider, setup_quality_panel,
-    update_speed_slider_visuals,
+    handle_quality_buttons, handle_settings_toggle, handle_speed_slider, reset_esc_consumed,
+    setup_quality_panel, sync_settings_visibility, update_speed_slider_visuals, EscConsumed,
+    SettingsOpen,
 };
 use systems::ui::{
     graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, peek_popup,
@@ -189,20 +193,73 @@ fn main() {
         .insert_resource(RevealPopupState::default())
         .insert_resource(AnimationSpeed::default())
         .insert_resource(ButtonState::default())
+        .insert_resource(HandZoom::default())
+        .insert_resource(systems::kb_cursor::KeyboardCursor::default())
+        .insert_resource(SettingsOpen::default())
+        .insert_resource(EscConsumed::default())
+        .insert_resource(audit::AuditTarget::default())
+        .insert_resource(audit::AuditPoolFilter::default())
+        .insert_resource(audit::load_audited_cards())
         .insert_resource(DecisionUiState::default())
         .insert_resource(systems::debug_console::DebugConsoleState::default())
         .init_resource::<game::AbilityMenuState>()
         .init_resource::<systems::export_prompt::ExportPromptState>()
         .insert_resource(menu::CliBootHint(load_state_arg))
         .add_systems(Startup, setup)
+        // Resolution-driven hand zoom + 2-D UI scale — both run every
+        // frame but only write when the chosen tier flips, so they're
+        // effectively free.
+        .add_systems(
+            Update,
+            (update_hand_zoom_from_window, update_ui_scale_from_window),
+        )
         // HUD scaffolding + network connection only spawn once the menu picks
         // a mode and we transition into the in-game state.
         .add_systems(
             OnEnter(AppState::InGame),
             (start_net_session_from_menu, setup_game_hud, setup_quality_panel),
         )
+        // Audit-mode card picker.
+        .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
+        .add_systems(OnExit(AppState::Audit), audit::despawn_audit_picker)
+        .add_systems(
+            Update,
+            audit::handle_audit_picker.run_if(in_state(AppState::Audit)),
+        )
+        // Audit-mode HUD buttons: sync visibility every frame, handle
+        // click → save + return to picker.
+        .add_systems(
+            Update,
+            (sync_audit_buttons, handle_audit_buttons)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Button polling runs first so handle_game_input can read latched state.
         .add_systems(Update, poll_action_buttons.run_if(in_state(AppState::InGame)))
+        // Esc / settings precedence chain. `reset_esc_consumed` clears
+        // the cross-system flag, `handle_settings_toggle` claims Esc
+        // when it acts on the modal, and `sync_settings_visibility`
+        // flips the modal's `Display` on toggle. The kb-cursor input
+        // system reads `EscConsumed` to know when to skip its own Esc
+        // clear, so it must run after the toggle handler.
+        .add_systems(
+            Update,
+            (
+                reset_esc_consumed,
+                handle_settings_toggle,
+                sync_settings_visibility,
+            )
+                .chain()
+                .before(systems::kb_cursor::handle_keyboard_cursor_input)
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Keyboard cursor: Tab/Arrows update `KeyboardCursor.selection`
+        // before `handle_game_input` reads it as a fallback for clicks.
+        .add_systems(
+            Update,
+            systems::kb_cursor::handle_keyboard_cursor_input
+                .before(handle_game_input)
+                .run_if(in_state(AppState::InGame)),
+        )
         // Game logic: auto-advance → player input
         .add_systems(
             Update,
@@ -217,6 +274,19 @@ fn main() {
         .add_systems(
             Update,
             sync_game_visuals.after(GameLogicSet).run_if(in_state(AppState::InGame)),
+        )
+        // Keyboard selection marker — runs after sync so freshly-spawned
+        // hand / bf entities exist; mirrors into `CardHovered` so the
+        // existing hover highlight + hand-card lift react for free.
+        .add_systems(
+            Update,
+            (
+                systems::kb_cursor::apply_keyboard_selection,
+                systems::kb_cursor::sync_kb_hover_marker,
+            )
+                .chain()
+                .after(sync_game_visuals)
+                .run_if(in_state(AppState::InGame)),
         )
         // MDFC flip sync — runs after visual sync so freshly-spawned hand
         // cards see their flipped state immediately on the next frame.
@@ -241,13 +311,17 @@ fn main() {
             (
                 update_turn_text,
                 update_player_text,
+                update_mana_pips,
                 update_p1_text,
+                update_opponent_panel_tint,
                 update_hint,
                 update_phase_chart,
                 update_log_text,
                 update_stack_panel,
                 update_pass_button,
+                pulse_urgent_pass_button,
                 update_attack_all_visibility,
+                sync_hint_chip_visibility,
             )
                 .after(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
@@ -552,5 +626,60 @@ fn apply_render_quality_change(
             Some(preset) => { commands.entity(cam).insert(Smaa { preset }); }
             None => { commands.entity(cam).remove::<Smaa>(); }
         }
+    }
+}
+
+/// Pick a hand-zoom factor from the primary window's logical height.
+/// 1.0 at 1440p+, ramping up on smaller displays so the viewer's hand
+/// stays roughly the same apparent size regardless of resolution.
+/// Conservative curve — earlier values overflowed the play area into
+/// the corner HUD panels at 1080p, so we keep the multiplier small
+/// and only bump it for genuinely-small displays.
+fn pick_hand_zoom(logical_height: f32) -> f32 {
+    if logical_height >= 1080.0 {
+        1.0
+    } else if logical_height >= 800.0 {
+        1.15
+    } else {
+        1.30
+    }
+}
+
+/// Update `HandZoom` whenever the primary window's height crosses a
+/// tier boundary. Runs every frame; only writes when the chosen tier
+/// actually changes, so it doesn't churn change-detection on every
+/// hand-card consumer.
+fn update_hand_zoom_from_window(
+    windows: Query<&Window>,
+    mut zoom: ResMut<HandZoom>,
+) {
+    let Ok(window) = windows.single() else { return };
+    let target = pick_hand_zoom(window.height());
+    if (zoom.0 - target).abs() > 0.001 {
+        zoom.0 = target;
+    }
+}
+
+/// 2-D UI scale tier. Currently a no-op — every tier returns `1.0` —
+/// because earlier non-1.0 values grew the corner HUD panels enough
+/// to cover the bottom-center hand area at 1080p. Kept as a stub so
+/// re-enabling it is a one-line tuning change once the HUD layout
+/// stops anchoring everything to the corners.
+fn pick_ui_scale(_logical_height: f32) -> f32 {
+    1.0
+}
+
+/// Drive Bevy's built-in `UiScale` from the primary window's logical
+/// height. Currently a no-op (see `pick_ui_scale`) but the system
+/// stays registered so re-enabling resolution-aware UI scaling
+/// doesn't need to re-touch `main()`.
+fn update_ui_scale_from_window(
+    windows: Query<&Window>,
+    mut scale: ResMut<UiScale>,
+) {
+    let Ok(window) = windows.single() else { return };
+    let target = pick_ui_scale(window.height());
+    if (scale.0 - target).abs() > 0.001 {
+        scale.0 = target;
     }
 }

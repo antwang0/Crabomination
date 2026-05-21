@@ -12113,3 +12113,4 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
     assert!(g.exile.iter().any(|c| c.id == seminar_id),
         "original Seminar stays in exile");
 }
+

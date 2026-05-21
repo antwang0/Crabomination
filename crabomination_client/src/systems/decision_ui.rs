@@ -9,14 +9,14 @@ use bevy::prelude::*;
 use crabomination::{
     card::CardId,
     decision::DecisionAnswer,
-    game::GameAction,
+    game::{GameAction, Target},
     net::DecisionWire,
 };
 
 use crate::game::{GameLog};
 use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::scryfall;
-use crate::theme::{self, UiFonts};
+use crate::theme::{self, HoverTint, UiFonts};
 
 #[derive(Component)]
 pub struct DecisionModal;
@@ -93,6 +93,10 @@ pub enum DecisionKey {
     Discard(Vec<CardId>, u32),
     Mulligan(Vec<CardId>, usize),
     ChooseColor(CardId),
+    /// `Decision::ChooseTarget` — keyed by the legal-target list so a
+    /// re-spawned decision with a different legal set is treated as
+    /// new (the old highlight-set needs to clear).
+    ChooseTarget(CardId, Vec<Target>),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -115,6 +119,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             *mulligans_taken,
         )),
         DecisionWire::ChooseColor { source, .. } => Some(DecisionKey::ChooseColor(*source)),
+        DecisionWire::ChooseTarget { source, legal } => {
+            Some(DecisionKey::ChooseTarget(*source, legal.clone()))
+        }
         _ => None,
     }
 }
@@ -135,6 +142,7 @@ pub fn spawn_decision_ui(
     mut commands: Commands,
     view: Res<CurrentView>,
     mut state: ResMut<DecisionUiState>,
+    mut targeting: ResMut<crate::game::TargetingState>,
     existing: Query<Entity, With<DecisionModal>>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
@@ -149,6 +157,12 @@ pub fn spawn_decision_ui(
         state.put_on_library.clear();
         state.discard_selected.clear();
         state.spawned_for = None;
+        // Clear any decision-driven targeting flag so the cursor
+        // doesn't stay armed across a state change.
+        if targeting.pending_decision_target {
+            targeting.active = false;
+            targeting.pending_decision_target = false;
+        }
         return;
     };
 
@@ -164,6 +178,10 @@ pub fn spawn_decision_ui(
                 state.put_on_library.clear();
                 state.discard_selected.clear();
                 state.spawned_for = None;
+            }
+            if targeting.pending_decision_target {
+                targeting.active = false;
+                targeting.pending_decision_target = false;
             }
             return;
         }
@@ -232,6 +250,19 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_discard_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
         }
+        DecisionWire::ChooseTarget { .. } => {
+            // No modal — reuse the existing in-scene targeting cursor.
+            // Flipping `pending_decision_target` flags `handle_game_input`
+            // to submit picks as `DecisionAnswer::Target` instead of
+            // wrapping them in `CastSpell` / `ActivateAbility`.
+            state.spawned_for = Some(key);
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_ability_source = None;
+            targeting.pending_ability_index = None;
+            targeting.back_face_pending = false;
+            targeting.pending_decision_target = true;
+        }
         _ => {}
     }
 }
@@ -267,6 +298,7 @@ fn spawn_scry_modal(
                 padding: UiRect::all(Val::Px(20.0)),
                 row_gap: Val::Px(16.0),
                 align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
@@ -384,9 +416,11 @@ fn spawn_scry_modal(
                 Button,
                 Node {
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
@@ -439,6 +473,7 @@ fn spawn_search_modal(
                 align_items: AlignItems::Center,
                 max_width: Val::Percent(85.0),
                 max_height: Val::Percent(90.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
@@ -518,9 +553,11 @@ fn spawn_search_modal(
                 Button,
                 Node {
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
@@ -574,6 +611,7 @@ fn spawn_discard_modal(
                 row_gap: Val::Px(16.0),
                 align_items: AlignItems::Center,
                 max_width: Val::Percent(90.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
@@ -636,9 +674,11 @@ fn spawn_discard_modal(
                 Button,
                 Node {
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
@@ -688,6 +728,7 @@ fn spawn_put_on_library_modal(
                 padding: UiRect::all(Val::Px(16.0)),
                 row_gap: Val::Px(10.0),
                 align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),
@@ -718,9 +759,11 @@ fn spawn_put_on_library_modal(
                 Button,
                 Node {
                     padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
@@ -798,16 +841,26 @@ fn spawn_mulligan_modal(
         .with_children(|btns| {
             btns.spawn((
                 Button,
-                Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)), ..default() },
+                Node {
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
                 BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
                 MulliganKeepButton,
             ))
             .with_children(|b| { b.spawn((Text::new("Keep (K)"), ui_fonts.tf(16.0), TextColor(theme::TEXT_PRIMARY))); });
 
             btns.spawn((
                 Button,
-                Node { padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)), ..default() },
+                Node {
+                    padding: UiRect::axes(Val::Px(24.0), Val::Px(12.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
                 BackgroundColor(theme::BUTTON_DANGER_BG),
+                HoverTint::new(theme::BUTTON_DANGER_BG),
                 MulliganTakeButton,
             ))
             .with_children(|b| { b.spawn((Text::new("Mulligan (M)"), ui_fonts.tf(16.0), TextColor(theme::TEXT_PRIMARY))); });
@@ -1238,6 +1291,7 @@ fn spawn_choose_color_modal(
                 padding: UiRect::all(Val::Px(20.0)),
                 row_gap: Val::Px(14.0),
                 align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
                 ..default()
             },
             BackgroundColor(theme::PANEL_BG),

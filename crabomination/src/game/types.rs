@@ -252,8 +252,31 @@ impl PendingDecision {
             ResumeContext::Trigger { controller, .. } => *controller,
             ResumeContext::Ability { controller, .. } => *controller,
             ResumeContext::Mulligan { player, .. } => *player,
+            ResumeContext::TriggerTargetPick { pending, .. } => pending.controller,
         }
     }
+}
+
+/// One triggered ability waiting to be pushed onto the stack.
+/// Captures the resolved per-trigger data after filter-gating (the
+/// `EventSpec::filter` predicate is already evaluated when this is
+/// built) so the resume path doesn't need to re-walk filters.
+///
+/// Holds Effect / Option / Vec — boxed everywhere it'd otherwise
+/// bloat `ResumeContext` past the threshold the Clippy
+/// `large_enum_variant` lint trips on, but kept inline here because
+/// the existing variants in `ResumeContext` are already this size.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingTriggerPush {
+    pub source: CardId,
+    pub controller: usize,
+    pub effect: Effect,
+    pub subject: Option<crate::game::effects::EntityRef>,
+    pub event_amount: u32,
+    /// Modal trigger mode (already picked at push-time). `None`
+    /// when the trigger isn't modal.
+    #[serde(default)]
+    pub mode: Option<usize>,
 }
 
 /// Recorded where resolution suspended so it can resume after the decision.
@@ -319,6 +342,18 @@ pub(crate) enum ResumeContext {
         player: usize,
         mulligans_taken: usize,
         next_player: Option<usize>,
+    },
+    /// Suspended *before* pushing a triggered ability onto the stack
+    /// because its controller has `wants_ui` and the effect requires
+    /// a target. `pending` is the one trigger awaiting its target;
+    /// `remaining` is the queue of triggers from the same event
+    /// batch that haven't been processed yet. On answer, push
+    /// `pending` with the chosen target, then continue draining
+    /// `remaining` (which may suspend again on the next targeted
+    /// trigger).
+    TriggerTargetPick {
+        pending: PendingTriggerPush,
+        remaining: Vec<PendingTriggerPush>,
     },
 }
 

@@ -189,6 +189,70 @@ impl GameState {
         None
     }
 
+    /// Enumerate every legal slot-0 target for `eff` from the
+    /// perspective of `controller`. Used by the UI trigger-target
+    /// picker — when a wants_ui controller is about to push a
+    /// targeted trigger, the engine surfaces a `Decision::ChooseTarget`
+    /// listing all of these so the player can pick.
+    ///
+    /// Order: players (controller first, then opponents), then
+    /// battlefield permanents (in battlefield iteration order), then
+    /// each graveyard (controller first), then exile. This matches
+    /// the auto-picker's traversal order but accumulates instead of
+    /// returning on first hit.
+    pub fn enumerate_legal_targets(
+        &self,
+        eff: &crate::effect::Effect,
+        controller: usize,
+    ) -> Vec<Target> {
+        use crate::card::SelectionRequirement;
+        let any_filter = SelectionRequirement::Any;
+        let req = eff.primary_target_filter().unwrap_or(&any_filter);
+        let accepts_player = eff.accepts_player_target();
+        let is_legal = |t: &Target| -> bool {
+            self.evaluate_requirement_static(req, t, controller, None)
+                && self.check_target_legality(t, controller).is_ok()
+        };
+
+        let mut out: Vec<Target> = Vec::new();
+        if accepts_player {
+            // Caster first, then each other seat in turn order.
+            let n = self.players.len();
+            for offset in 0..n {
+                let seat = (controller + offset) % n;
+                let t = Target::Player(seat);
+                if is_legal(&t) {
+                    out.push(t);
+                }
+            }
+        }
+        for c in &self.battlefield {
+            let t = Target::Permanent(c.id);
+            if is_legal(&t) {
+                out.push(t);
+            }
+        }
+        // Graveyards: walk controller's first for graveyard-friendly
+        // effects (Reanimate, Disentomb), then others.
+        let n = self.players.len();
+        for offset in 0..n {
+            let seat = (controller + offset) % n;
+            for c in &self.players[seat].graveyard {
+                let t = Target::Permanent(c.id);
+                if is_legal(&t) {
+                    out.push(t);
+                }
+            }
+        }
+        for c in &self.exile {
+            let t = Target::Permanent(c.id);
+            if is_legal(&t) {
+                out.push(t);
+            }
+        }
+        out
+    }
+
     /// Pick legal targets for every slot the effect uses, returning
     /// `(slot 0, Vec<slot 1..>)`.
     ///

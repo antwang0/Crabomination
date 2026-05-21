@@ -1759,6 +1759,14 @@ impl GameState {
         // source permanent is bound as `ctx.source`, and the event's
         // subject (cast spell, dying creature, attacker, etc.) is bound as
         // `Selector::TriggerSource` so filters can reference it.
+        // Build the queue of triggers waiting to be pushed onto the
+        // stack. `drain_trigger_queue` walks the queue and either
+        // pushes each trigger with an auto-picked target, or — when
+        // the controller has `wants_ui` and the effect needs a target
+        // — suspends on `Decision::ChooseTarget` so the human can
+        // pick. Remaining queue items are saved in
+        // `ResumeContext::TriggerTargetPick` and drained on answer.
+        let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for candidate in candidates {
             let TriggerCandidate {
                 source,
@@ -1795,35 +1803,119 @@ impl GameState {
             {
                 continue;
             }
-            let auto_target = self.auto_target_for_effect(&effect, controller);
             // CR 700.2b — modal triggered ability mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, source);
-            self.stack.push(StackItem::Trigger {
+            queue.push(PendingTriggerPush {
                 source,
                 controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode,
-                x_value: 0,
-                converged_value: 0,
-                // Thread the event subject through so `Selector::TriggerSource`
-                // (the attacker, the cast spell, the ETBing permanent, …)
-                // resolves correctly during effect resolution. Previously
-                // hardcoded to `None`, which silently zero'd
-                // TriggerSource-driven effects for unified-dispatcher
-                // triggers like Sparring Regimen's per-attacker counter
-                // bump.
-                trigger_source: subject,
-                mana_spent: 0,
+                effect,
+                subject,
                 event_amount,
+                mode,
             });
         }
+        self.drain_trigger_queue(queue);
         // Clear the per-die-event snapshot cache
         // after the dispatcher finishes with this event batch. Any
         // subsequent SBA cycle re-populates the entries it needs at
         // that cycle's die-time, so stale entries from prior batches
         // can't leak into later trigger resolution.
         self.died_card_snapshots.clear();
+    }
+
+    /// Walk a queue of pending triggers, pushing each onto the stack.
+    /// Suspends on the first trigger whose controller has `wants_ui`
+    /// and whose effect needs a target — emits
+    /// `Decision::ChooseTarget` and parks the remaining queue in
+    /// `ResumeContext::TriggerTargetPick`. The resume path
+    /// (`submit_decision`) re-enters this function with the remaining
+    /// queue once the user picks.
+    pub(crate) fn drain_trigger_queue(&mut self, queue: Vec<PendingTriggerPush>) {
+        // Don't stack up multiple pending decisions — if the engine
+        // already suspended on something else, leave the queue alone.
+        // Trigger queues are episodic per event batch and we have
+        // nowhere outside `ResumeContext::TriggerTargetPick` to park
+        // them, so this matches the pre-fix behaviour (auto-target
+        // everything) for the rare case where a pending decision
+        // races a trigger batch.
+        if self.pending_decision.is_some() {
+            if !queue.is_empty() {
+                eprintln!(
+                    "engine: dropping {} pending trigger(s) — a decision was already \
+                     pending when the trigger batch arrived",
+                    queue.len()
+                );
+            }
+            return;
+        }
+        // Walk the queue in *forward* (APNAP) order so the active
+        // player's triggers push first and resolve last, matching CR
+        // 603.3b. Using an iterator lets us collect the unconsumed
+        // tail into `remaining` when we suspend mid-batch.
+        let mut iter = queue.into_iter();
+        while let Some(pending) = iter.next() {
+            let needs = pending.effect.requires_target();
+            let wants_ui = self
+                .players
+                .get(pending.controller)
+                .map(|p| p.wants_ui)
+                .unwrap_or(false);
+            if needs && wants_ui {
+                let legal = self.enumerate_legal_targets(&pending.effect, pending.controller);
+                // No legal targets → fall back to auto (which returns
+                // None) so the trigger still resolves CR-correctly as
+                // a no-op rather than blocking the game on an
+                // unanswerable picker.
+                if legal.is_empty() {
+                    self.push_pending_trigger(pending, None);
+                    continue;
+                }
+                let remaining: Vec<PendingTriggerPush> = iter.collect();
+                self.pending_decision = Some(PendingDecision {
+                    decision: Decision::ChooseTarget {
+                        source: pending.source,
+                        legal,
+                    },
+                    resume: ResumeContext::TriggerTargetPick {
+                        pending,
+                        remaining,
+                    },
+                });
+                return;
+            }
+            let auto = self.auto_target_for_effect(&pending.effect, pending.controller);
+            self.push_pending_trigger(pending, auto);
+        }
+    }
+
+    /// Push a `PendingTriggerPush` onto the stack with the given
+    /// (already-chosen) target. Mirrors the original inline push at
+    /// the trigger-dispatch site.
+    pub(crate) fn push_pending_trigger(
+        &mut self,
+        pending: PendingTriggerPush,
+        target: Option<Target>,
+    ) {
+        let PendingTriggerPush {
+            source,
+            controller,
+            effect,
+            subject,
+            event_amount,
+            mode,
+        } = pending;
+        self.stack.push(StackItem::Trigger {
+            source,
+            controller,
+            effect: Box::new(effect),
+            target,
+            mode,
+            x_value: 0,
+            converged_value: 0,
+            trigger_source: subject,
+            mana_spent: 0,
+            event_amount,
+        });
     }
 
 
@@ -2116,6 +2208,19 @@ impl GameState {
                     }
                     _ => return Err(GameError::DecisionAnswerMismatch),
                 }
+            }
+            ResumeContext::TriggerTargetPick { pending, remaining } => {
+                // Apply the answered target to the trigger that was
+                // waiting on it, then continue draining the queue
+                // (which may suspend again on the next targeted
+                // trigger in the same batch).
+                let target = match answer {
+                    DecisionAnswer::Target(t) => Some(t),
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                };
+                self.push_pending_trigger(pending, target);
+                self.drain_trigger_queue(remaining);
+                vec![]
             }
         };
         let mut sba = self.check_state_based_actions();

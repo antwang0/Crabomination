@@ -38,6 +38,10 @@ use crate::net_plugin::{NetInbox, NetOutbox};
 pub enum AppState {
     #[default]
     Menu,
+    /// Audit-mode card picker. Selecting a card writes its name to
+    /// `AuditTarget` and transitions into `InGame` with an
+    /// audit-tailored state (see `crate::audit::build_audit_state`).
+    Audit,
     InGame,
 }
 
@@ -164,6 +168,9 @@ struct SpectateBotsButton;
 struct LoadDebugStateButton;
 
 #[derive(Component)]
+struct AuditCardsButton;
+
+#[derive(Component)]
 struct HostButton;
 
 #[derive(Component)]
@@ -223,8 +230,9 @@ fn apply_cli_boot_hint(
 // ── UI setup ─────────────────────────────────────────────────────────────────
 
 use crate::theme::{
-    self, UiFonts, BUTTON_ACCENT_BG, BUTTON_DANGER_BG, BUTTON_INFO_BG, BUTTON_PRIMARY_BG,
-    BUTTON_WARN_BG, FIELD_BG, FIELD_BG_FOCUSED, PANEL_BG,
+    self, HoverTint, UiFonts, BUTTON_ACCENT_BG, BUTTON_DANGER_BG, BUTTON_INFO_BG,
+    BUTTON_PRIMARY_BG, BUTTON_WARN_BG, FIELD_BG, FIELD_BG_FOCUSED, PANEL_BG,
+    RADIUS_BUTTON, RADIUS_PANEL,
 };
 
 fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
@@ -253,6 +261,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     row_gap: Val::Px(18.0),
                     align_items: AlignItems::Center,
                     min_width: Val::Px(380.0),
+                    border_radius: BorderRadius::all(RADIUS_PANEL),
                     ..default()
                 },
                 BackgroundColor(PANEL_BG),
@@ -310,6 +319,16 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     "Load Latest Debug State",
                     BUTTON_DANGER_BG,
                     LoadDebugStateButton,
+                );
+
+                // Audit Cards — opens the card picker for verifying
+                // individual card implementations one-by-one.
+                button(
+                    p,
+                    &tf,
+                    "Audit Cards",
+                    BUTTON_ACCENT_BG,
+                    AuditCardsButton,
                 );
 
                 // Host LAN
@@ -371,9 +390,11 @@ fn button<M: Component>(
                 padding: UiRect::axes(Val::Px(20.0), Val::Px(10.0)),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(RADIUS_BUTTON),
                 ..default()
             },
             BackgroundColor(bg),
+            HoverTint::new(bg),
             marker,
         ))
         .with_children(|b| {
@@ -410,6 +431,7 @@ fn field(
                 Node {
                     flex_grow: 1.0,
                     padding: UiRect::axes(Val::Px(8.0), Val::Px(6.0)),
+                    border_radius: BorderRadius::all(RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(FIELD_BG),
@@ -437,6 +459,7 @@ fn format_toggle(
             Button,
             Node {
                 padding: UiRect::axes(Val::Px(14.0), Val::Px(6.0)),
+                border_radius: BorderRadius::all(RADIUS_BUTTON),
                 ..default()
             },
             BackgroundColor(FIELD_BG),
@@ -590,9 +613,14 @@ fn handle_action_buttons(
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
     load_q: Query<&Interaction, (Changed<Interaction>, With<LoadDebugStateButton>)>,
+    audit_q: Query<&Interaction, (Changed<Interaction>, With<AuditCardsButton>)>,
     host_q: Query<&Interaction, (Changed<Interaction>, With<HostButton>)>,
     join_q: Query<&Interaction, (Changed<Interaction>, With<JoinButton>)>,
 ) {
+    if audit_q.iter().any(|i| *i == Interaction::Pressed) {
+        next_state.set(AppState::Audit);
+        return;
+    }
     let format = fields.format;
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
         pending.0 = Some((NetMode::LocalBot, format));
@@ -694,7 +722,21 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     // [Human, Bot]; four-player formats (Commander) get
     // [Human, Bot, Bot, Bot]. Pre-fix this was hardcoded to two and
     // panicked when a Commander match brought 4 seats.
-    let state = format.build_state();
+    //
+    // Audit override: if the menu wrote a card name into `AuditTarget`
+    // before entering InGame, build a tailored two-seat audit state
+    // around that card instead of the chosen format.
+    let audit_card: Option<String> = world
+        .get_resource::<crate::audit::AuditTarget>()
+        .and_then(|t| t.0.clone());
+    let state = if let Some(name) = audit_card.as_deref() {
+        crate::audit::build_audit_state(name).unwrap_or_else(|| {
+            eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
+            format.build_state()
+        })
+    } else {
+        format.build_state()
+    };
     let n_seats = state.players.len();
     let mut occupants: Vec<SeatOccupant> = Vec::with_capacity(n_seats);
     occupants.push(SeatOccupant::Human(server_seat));

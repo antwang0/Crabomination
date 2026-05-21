@@ -279,51 +279,51 @@ impl GameState {
         }
         self.delayed_triggers = keep;
 
-        for (source, effect, controller, target) in delayed_to_fire {
-            // If the delayed trigger was registered with no captured
-            // target (e.g. rebound's re-cast), pick a fresh auto-target at
-            // fire time so the trigger doesn't enter the stack with a
-            // None target slot.
-            let target = target.or_else(|| {
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source))
-            });
-            // CR 700.2b — pick the mode at push time if the trigger is modal.
+        // Build a single APNAP-ordered queue (delayed triggers first,
+        // then step triggers) so `drain_trigger_queue` can surface
+        // `Decision::ChooseTarget` for wants_ui controllers instead of
+        // silently auto-targeting them.
+        let mut queue: Vec<PendingTriggerPush> = Vec::new();
+        for (source, effect, controller, captured_target) in delayed_to_fire {
             let mode = self.pick_trigger_mode(&effect, source);
-            self.stack.push(StackItem::Trigger {
+            // Delayed triggers may have captured a target at registration
+            // time (e.g. Pact's "lose the game"). If so, push immediately
+            // with that target — we already passed the targeting moment.
+            if captured_target.is_some() {
+                self.push_pending_trigger(
+                    PendingTriggerPush {
+                        source,
+                        controller,
+                        effect,
+                        subject: None,
+                        event_amount: 0,
+                        mode,
+                    },
+                    captured_target,
+                );
+                continue;
+            }
+            queue.push(PendingTriggerPush {
                 source,
                 controller,
-                effect: Box::new(effect),
-                target,
-                mode,
-                x_value: 0,
-                converged_value: 0,
-            trigger_source: None,
-                mana_spent: 0,
+                effect,
+                subject: None,
                 event_amount: 0,
+                mode,
             });
         }
-
         for (source, effect, controller) in triggers {
-            // Triggered abilities pass the trigger source so the picker
-            // can avoid pumping the source itself when a better target
-            // exists (Strixhaven Magecraft / Repartee, etc.).
-            let auto_target =
-                self.auto_target_for_effect_avoiding(&effect, controller, Some(source));
-            // CR 700.2b — modal trigger mode pick at push-time.
             let mode = self.pick_trigger_mode(&effect, source);
-            self.stack.push(StackItem::Trigger {
+            queue.push(PendingTriggerPush {
                 source,
                 controller,
-                effect: Box::new(effect),
-                target: auto_target,
-                mode,
-                x_value: 0,
-                converged_value: 0,
-            trigger_source: None,
-                mana_spent: 0,
+                effect,
+                subject: None,
                 event_amount: 0,
+                mode,
             });
         }
+        self.drain_trigger_queue(queue);
     }
 
     // ── Stack resolution ──────────────────────────────────────────────────────

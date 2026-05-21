@@ -1,15 +1,18 @@
-//! Quality preset selector panel + animation-speed slider (bottom-right HUD).
+//! Settings menu — animation-speed slider + render-quality preset
+//! toggles. Hidden by default; toggled by Esc via
+//! [`handle_settings_toggle`]. The on-screen Pass/End/Next/Export
+//! buttons live in `game_ui` and stay out of this menu.
 
 use bevy::prelude::*;
 
 use crate::render_quality::{ChangeQuality, RenderQuality};
 use crate::systems::animate::{AnimationSpeed, ANIM_SPEED_MAX, ANIM_SPEED_MIN};
-use crate::theme::{self, UiFonts};
+use crate::theme::{self, HoverTint, UiFonts};
 
 /// Selected quality tier (green = "active").
 const QUALITY_BTN_ACTIVE: Color = Color::srgb(0.15, 0.45, 0.15);
 
-const SPEED_SLIDER_WIDTH: f32 = 180.0;
+const SPEED_SLIDER_WIDTH: f32 = 220.0;
 const SPEED_SLIDER_HEIGHT: f32 = 16.0;
 const SPEED_TRACK_BG: Color = Color::srgb(0.10, 0.10, 0.14);
 /// Blue fill bar inside the speed-slider track.
@@ -31,6 +34,25 @@ pub struct SpeedSliderFill;
 #[derive(Component)]
 pub struct SpeedSliderLabel;
 
+/// Whether the settings modal is open. Toggled by Esc — see
+/// `handle_settings_toggle` in this module.
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub struct SettingsOpen(pub bool);
+
+/// Set to `true` for one frame by `handle_settings_toggle` when it
+/// consumed an Esc press, so the keyboard-cursor Esc handler can skip
+/// itself and the user gets a single, predictable action per press.
+#[derive(Resource, Default, Debug, Clone, Copy)]
+pub struct EscConsumed(pub bool);
+
+/// Root entity of the settings modal, used by `sync_settings_visibility`
+/// to flip the panel between `Display::Flex` and `Display::None`.
+#[derive(Component)]
+pub struct SettingsMenuRoot;
+
+#[derive(Component)]
+pub struct SettingsCloseButton;
+
 pub fn setup_quality_panel(
     mut commands: Commands,
     ui_fonts: Res<UiFonts>,
@@ -39,21 +61,45 @@ pub fn setup_quality_panel(
 ) {
     let tf = |size: f32| ui_fonts.tf(size);
 
+    // Full-screen scrim + centered modal. Display::None by default;
+    // `sync_settings_visibility` flips it when `SettingsOpen` toggles.
     commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                bottom: Val::Px(10.0),
-                right: Val::Px(10.0),
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(6.0)),
-                row_gap: Val::Px(6.0),
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                display: Display::None,
                 ..default()
             },
-            BackgroundColor(theme::HUD_BG),
+            BackgroundColor(theme::OVERLAY_BG),
+            SettingsMenuRoot,
             crate::systems::game_ui::InGameRoot,
         ))
-        .with_children(|p| {
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(24.0)),
+                    row_gap: Val::Px(12.0),
+                    min_width: Val::Px(320.0),
+                    align_items: AlignItems::Stretch,
+                    border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|p| {
+            // Title.
+            p.spawn((
+                Text::new("Settings"),
+                tf(20.0),
+                TextColor(theme::ACCENT_GOLD),
+            ));
             // ── Animation speed (top section) ────────────────────────
             p.spawn((
                 Text::new(format_speed(speed.0)),
@@ -68,7 +114,7 @@ pub fn setup_quality_panel(
                     width: Val::Px(SPEED_SLIDER_WIDTH),
                     height: Val::Px(SPEED_SLIDER_HEIGHT),
                     align_items: AlignItems::Stretch,
-                    ..default()
+                        ..default()
                 },
                 BackgroundColor(SPEED_TRACK_BG),
                 Button,
@@ -80,7 +126,7 @@ pub fn setup_quality_panel(
                     Node {
                         width: Val::Percent(frac * 100.0),
                         height: Val::Percent(100.0),
-                        ..default()
+                                ..default()
                     },
                     BackgroundColor(SPEED_TRACK_FILL),
                     SpeedSliderFill,
@@ -105,6 +151,7 @@ pub fn setup_quality_panel(
                     p.spawn((
                         Node {
                             padding: UiRect::axes(Val::Px(8.0), Val::Px(5.0)),
+                            border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                             ..default()
                         },
                         BackgroundColor(bg),
@@ -116,7 +163,109 @@ pub fn setup_quality_panel(
                     });
                 }
             });
+
+            // Close button at the bottom of the modal. Esc also closes;
+            // the explicit button is useful when the user is browsing
+            // settings with the mouse only.
+            p.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                justify_content: JustifyContent::FlexEnd,
+                margin: UiRect::top(Val::Px(6.0)),
+                ..default()
+            })
+            .with_children(|row| {
+                row.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(18.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                    HoverTint::new(theme::BUTTON_NEUTRAL_BG),
+                    SettingsCloseButton,
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new("Close (Esc)"),
+                        tf(13.0),
+                        TextColor(theme::TEXT_PRIMARY),
+                        Pickable::IGNORE,
+                    ));
+                });
+            });
         });
+    });
+}
+
+// ─── Settings open/close plumbing ────────────────────────────────────
+
+/// Reset `EscConsumed` to false at the very start of each frame so
+/// the Esc-precedence chain has a clean slate to write to.
+pub fn reset_esc_consumed(mut consumed: ResMut<EscConsumed>) {
+    consumed.0 = false;
+}
+
+/// Toggle the settings modal on Esc. Precedence:
+/// * Esc while the modal is open → close (consumes Esc).
+/// * Esc while targeting / blocking / a cursor selection is active → no-op
+///   (those handlers own the press).
+/// * Otherwise → open the modal (consumes Esc).
+///
+/// Runs before the keyboard-cursor input system so that opening the
+/// modal in the same frame doesn't also clear the cursor selection.
+#[allow(clippy::too_many_arguments)]
+pub fn handle_settings_toggle(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    cursor: Res<crate::systems::kb_cursor::KeyboardCursor>,
+    targeting: Res<crate::game::TargetingState>,
+    blocking: Res<crate::game::BlockingState>,
+    export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
+    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
+    alt_cast: Res<crate::game::AltCastState>,
+    close_btn: Query<&Interaction, (Changed<Interaction>, With<SettingsCloseButton>)>,
+    mut settings: ResMut<SettingsOpen>,
+    mut consumed: ResMut<EscConsumed>,
+) {
+    // Close button always closes.
+    if close_btn.iter().any(|i| *i == Interaction::Pressed) {
+        settings.0 = false;
+        return;
+    }
+    if !keyboard.just_pressed(KeyCode::Escape) {
+        return;
+    }
+    if export_prompt.active || debug_console.card_input_focused {
+        return;
+    }
+    if settings.0 {
+        settings.0 = false;
+        consumed.0 = true;
+        return;
+    }
+    // Don't open settings on top of an active modal/selection — those
+    // handlers want this Esc press.
+    if targeting.active
+        || blocking.selected_blocker.is_some()
+        || cursor.selection.is_some()
+        || alt_cast.pending.is_some()
+    {
+        return;
+    }
+    settings.0 = true;
+    consumed.0 = true;
+}
+
+/// Show / hide the settings modal whenever `SettingsOpen` flips.
+pub fn sync_settings_visibility(
+    settings: Res<SettingsOpen>,
+    mut q: Query<&mut Node, With<SettingsMenuRoot>>,
+) {
+    if !settings.is_changed() {
+        return;
+    }
+    let Ok(mut node) = q.single_mut() else { return };
+    node.display = if settings.0 { Display::Flex } else { Display::None };
 }
 
 /// Map a speed value in `[ANIM_SPEED_MIN, ANIM_SPEED_MAX]` to a 0..1

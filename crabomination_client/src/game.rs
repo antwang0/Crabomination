@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use crabomination::card::CardId;
-use crabomination::mana::Color as ManaColor;
 use std::collections::{HashMap, VecDeque};
 
 use crate::theme;
@@ -46,27 +45,6 @@ impl GameLog {
     }
 }
 
-/// Format a `ManaPool` as a compact string, e.g. "R:3".
-pub fn format_mana_pool_from_pool(pool: &crabomination::mana::ManaPool) -> String {
-    let colors = [
-        (ManaColor::White, 'W'),
-        (ManaColor::Blue, 'U'),
-        (ManaColor::Black, 'B'),
-        (ManaColor::Red, 'R'),
-        (ManaColor::Green, 'G'),
-    ];
-    let mut parts: Vec<String> = colors
-        .iter()
-        .filter_map(|(c, sym)| {
-            let n = pool.amount(*c);
-            if n > 0 { Some(format!("{sym}:{n}")) } else { None }
-        })
-        .collect();
-    let cl = pool.colorless_amount();
-    if cl > 0 { parts.push(format!("C:{cl}")); }
-    if parts.is_empty() { "0".into() } else { parts.join(" ") }
-}
-
 /// Targeting-mode UI state (when a spell/ability is waiting for the player to pick a target).
 #[derive(Resource, Default)]
 pub struct TargetingState {
@@ -81,6 +59,13 @@ pub struct TargetingState {
     /// non-land MDFCs being played via their back face. The flag is
     /// cleared once the cast is submitted (or cancelled).
     pub back_face_pending: bool,
+    /// When `true`, this targeting session is satisfying a server-
+    /// raised `Decision::ChooseTarget` (typically a triggered
+    /// ability picking its target on the way to the stack). The
+    /// picked target is submitted via
+    /// `GameAction::SubmitDecision(DecisionAnswer::Target(t))` rather
+    /// than `CastSpell` / `ActivateAbility`.
+    pub pending_decision_target: bool,
 }
 
 /// State for the activated-ability context menu (right-click on P0 battlefield card).

@@ -7,5 +7,6 @@ pub mod export_prompt;
 pub mod game_over;
 pub mod game_ui;
 pub mod gizmos;
+pub mod kb_cursor;
 pub mod quality;
 pub mod ui;

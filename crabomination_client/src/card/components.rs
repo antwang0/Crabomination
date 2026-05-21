@@ -10,6 +10,24 @@ pub const DECK_CARD_Y_STEP: f32 = CARD_THICKNESS * 1.5;
 pub const HOVER_LIFT_AMOUNT: f32 = 0.6;
 pub const HOVER_LIFT_SPEED: f32 = 8.0;
 
+/// Resolution-driven scale factor for the viewer's hand cards. At 4K
+/// (≥1440 logical pixels tall) hands render at their original world
+/// size; on lower-resolution displays each card is enlarged to keep
+/// the on-screen pixel size roughly constant. Only the viewer's own
+/// hand is zoomed — opponent hands are already face-down, so their
+/// size doesn't affect readability.
+///
+/// Updated by `update_hand_zoom_from_window` whenever the window
+/// changes size.
+#[derive(Resource, Clone, Copy, Debug)]
+pub struct HandZoom(pub f32);
+
+impl Default for HandZoom {
+    fn default() -> Self {
+        Self(1.0)
+    }
+}
+
 /// Marker for any card entity.
 #[derive(Component)]
 pub struct Card;
@@ -283,6 +301,12 @@ pub struct ReturnToHandAnimation {
     /// seat's hand visuals — otherwise the reconciler spawns a
     /// duplicate face-down placeholder while the bounce is mid-arc.
     pub target_owner: usize,
+    /// Scale to snap to on completion. Battlefield cards are scale 1.0
+    /// but the viewer's hand may be enlarged on low-res displays
+    /// (resolution-driven hand zoom), so the bounce target needs to
+    /// match the rest of the destination hand. Opponent targets stay
+    /// at 1.0.
+    pub target_scale: f32,
 }
 
 /// Animates a hand card back to the deck position during a mulligan.
@@ -306,6 +330,10 @@ pub struct PlayCardAnimation {
     pub start_rotation: Quat,
     pub target_translation: Vec3,
     pub target_rotation: Quat,
+    /// Captured at animation start so the system can lerp scale back
+    /// to 1.0 over the flight; a hand card may be zoomed >1 by the
+    /// resolution-driven hand-zoom system.
+    pub start_scale: f32,
 }
 
 /// Three-phase peek animation for deck cards: flip face-up, hold briefly, flip back.

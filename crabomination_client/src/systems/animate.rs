@@ -185,6 +185,7 @@ pub fn animate_draw_card(
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
     view: Res<CurrentView>,
+    hand_zoom: Res<crate::card::HandZoom>,
     mut cards: Query<(
         Entity,
         &mut Transform,
@@ -213,9 +214,10 @@ pub fn animate_draw_card(
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
 
         if anim.progress >= 1.0 {
-            let final_t = hand_card_transform(viewer, viewer, n_seats, hand_card.slot, total);
+            let final_t = hand_card_transform(viewer, viewer, n_seats, hand_card.slot, total, hand_zoom.0);
             transform.translation = final_t.translation;
             transform.rotation = final_t.rotation;
+            transform.scale = final_t.scale;
             lift.base_translation = final_t.translation;
             lift.current_lift = 0.0;
             lift.target_lift = 0.0;
@@ -267,10 +269,15 @@ pub fn animate_play_card(
         pos.y += arc_y;
         transform.translation = pos;
         transform.rotation = anim.start_rotation.slerp(anim.target_rotation, t);
+        // Smooth scale from hand size → battlefield size (1.0). Hand
+        // zoom can make `start_scale` > 1 on small displays.
+        let scale = anim.start_scale + (1.0 - anim.start_scale) * t;
+        transform.scale = Vec3::splat(scale);
 
         if anim.progress >= 1.0 {
             transform.translation = anim.target_translation;
             transform.rotation = anim.target_rotation;
+            transform.scale = Vec3::ONE;
             lift.base_translation = anim.target_translation;
             lift.current_lift = 0.0;
             lift.target_lift = 0.0;
@@ -353,6 +360,13 @@ pub fn animate_return_to_hand(
             transform.translation = anim.target_translation;
             transform.rotation = anim.target_rotation;
             if anim.to_viewer {
+                // Card was on the battlefield (scale 1.0) and is
+                // becoming a viewer hand card; pick up whatever scale
+                // the rest of the hand currently uses. The target was
+                // computed with the current hand_zoom factor, so
+                // snapping to its scale keeps the bounced card visually
+                // consistent with neighbours.
+                transform.scale = Vec3::splat(anim.target_scale);
                 if let Some(ref mut l) = lift {
                     l.base_translation = anim.target_translation;
                     l.current_lift = 0.0;
