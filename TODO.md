@@ -3321,6 +3321,76 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
      field for in-resolution mode dispatch.
   No catalog card needs this today; the gap is doc-tracked.
 
+- 🟡 **CR 903 — Commander Variant** (push modern_decks batch 64,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`). The Commander multiplayer variant —
+  color-identity deck building, the command zone, commander tax,
+  commander damage, and game setup. Audit:
+  (a) **903.4** "Color identity = colored / hybrid / phyrexian pips in
+  mana cost + colors in rules text + color indicator" — 🟡 (Phase K of
+  the Commander rollout: `ColorSet` bitfield in `mana.rs` + `color_
+  identity(def)` in `format.rs` unions the mana-cost pips; rules-text
+  mana symbols + printed color indicators are not parsed — the catalog
+  doesn't currently use indicator-only color identity sources).
+  (b) **903.4d** "DFC back-face counts toward color identity" — ⏳
+  (Phase K limitation: `color_identity` only inspects the front-face
+  mana cost; MDFC back-face mana costs aren't unioned in. No current
+  Commander-legal MDFC in the catalog leans on this beyond what's
+  derivable from the front face).
+  (c) **903.5a** "Each deck must contain exactly 100 cards including
+  its commander" — ✅ (`validate_commander_deck` in `format.rs` checks
+  `deck.main.len() + deck.commanders.len() == 100` via the Phase K
+  validator; 99-or-101 decks are rejected).
+  (d) **903.5b** "Other than basic lands, each card must have a
+  different English name" — ✅ (singleton check in `validate_commander_
+  deck` walks `deck.main` and asserts `HashSet::insert(card.name)`
+  succeeds, with `is_basic_land` carving out the basic exception).
+  (e) **903.5c** "Each card's color identity ⊆ commander identity" —
+  ✅ (color identity validation in `validate_commander_deck`: walks
+  each main-deck card's `color_identity(def)` and asserts the bitfield
+  is a subset of the combined commander identity via `ColorSet::is_
+  subset_of`).
+  (f) **903.5d** "Basic land subtypes restricted by commander identity"
+  — ✅ (covered by 903.5c since each `LandType::Plains` etc. resolves
+  to its corresponding color via the basic-land-to-color mapping; the
+  validator filters Mountain out of a {W}{U} commander deck).
+  (g) **903.6 / 903.7** "Setup: command zone + starting life 40 + 7
+  cards" — ✅ (`Player::with_starting_life(40)` for Commander format
+  via `Format::starting_life`; `seat_commanders(seat, defs)` pushes
+  each commander to the seat's command zone and registers the CR 903.9b
+  zone-change replacement effect).
+  (h) **903.8** "Cast commander from command zone; +{2} per prior
+  cast (commander tax)" — ✅ (`GameAction::CastFromCommandZone` +
+  `commander_cast_count: HashMap<CardId, u32>` in `game/types.rs`;
+  Phase L's cost-build step adds `2 * prior_casts` generic to the
+  spell's mana cost; tests in `tests/multiplayer.rs` verify the tax
+  bumps after each successful cast).
+  (i) **903.9** "Commander may return to command zone" — ✅ (Phase H's
+  `ReplacementEffect::ZoneChange { from: any, to: graveyard|exile|
+  hand|library, redirect: Command }` registered per commander via
+  `seat_commanders`; `resolve_zone_change` consults the replacement
+  registry and redirects the move). The "may" choice is currently
+  always-yes (no decision plumbing for the optional rider); doc-tracked
+  for Phase L.
+  (j) **903.10a** "21+ combat damage from same commander → lose" —
+  ✅ (`Player.commander_damage: HashMap<CardId, u32>` accumulates per-
+  attacker damage in `assign_combat_damage` / `effects/movement.rs`;
+  state-based action in `stack.rs:1033` checks for any entry ≥ 21 and
+  emits `PlayerLost`).
+  (k) **903.11** "Cards from outside the game restricted" — N/A (no
+  Wish / Spawnsire sideboard model; no current catalog uses CSB).
+  (l) **903.12** Brawl option — ⏳ (no `Format::Brawl` variant, no
+  Standard subset; the Commander codepath uses the 40-life / 100-card
+  setup unconditionally).
+  (m) **903.13** Commander Draft — ⏳ (no drafted-card-pool primitive;
+  the sealed pool generator targets cube / sealed only).
+  Tests: `tests/multiplayer.rs` covers (c), (d), (e), (g), (h), (i),
+  (j) via 11 scenarios — `seat_commanders_sets_up_command_zone_and_
+  replacement`, `destroyed_commander_returns_to_command_zone`,
+  `commander_tax_grows_each_cast`, `commander_damage_state_based_
+  action_kills_player`. Promote to ✅ when 903.4d (MDFC back-face color
+  identity) and 903.9's optional rider land.
+
 ## Suggested next-up tasks
 
 - ✅ **`effect::shortcut::etb_ping_any(amount)` /

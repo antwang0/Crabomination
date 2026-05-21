@@ -19,10 +19,31 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1420 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1448 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 64: 28 more synthesised STX cards across three colleges
+(10 Silverquill + 10 Witherbloom + 4 Lorehold + 4 Quandrix). Cards added:
+Silverquill (`inkling_recitalist`, `silverquill_vespersong`,
+`inkling_battlechoir`, `silverquill_inkmuse`, `inkling_heraldcourier`,
+`silverquill_inkscale`, `inkling_pallidwing`, `silverquill_cantillator`,
+`inkling_stormpenner`, `silverquill_inkmark`); Witherbloom
+(`pest_burrowmonger`, `witherbloom_mossrunner`, `witherbloom_toxinspeaker`,
+`pest_vinerunner`, `witherbloom_drainvine`, `witherbloom_sapblade`,
+`pest_vinegrower`, `witherbloom_loamcaller`, `witherbloom_lifedrain`,
+`pest_brood_marauder`); Lorehold (`lorehold_ember_speaker_b64`,
+`spirit_spellblade`, `lorehold_sparkchorus`, `lorehold_sigilbearer`);
+Quandrix (`quandrix_sumherald`, `fractal_stridepetal`,
+`quandrix_streamcaller`, `quandrix_fractal_forge`). Total tests: 3262
+(was 3234). All cards have functionality tests in `tests::stx`. Focus:
+Silverquill / Witherbloom completion sweep — Inkling-tribal +1/+1 counter
++ drain payoffs, Pest-tribal counters + tokens, magecraft self-grow +
+loot bodies, Fractal go-tall via `enters_with_counters`. Plus a new
+CR 903 (Commander Variant) audit row in TODO.md.**
+
+Prior push:
+
 **batch 63: 25 more synthesised STX cards (5 per college) — follow-up
 to batch 62. Cards added across all five colleges: Quandrix
 (`quandrix_counterweave`, `quandrix_sumwarden`, `fractal_petalcaller`,
