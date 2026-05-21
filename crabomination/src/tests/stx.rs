@@ -44481,6 +44481,112 @@ fn prismari_embergloss_magecraft_grows_self() {
     assert!(body.has_keyword(&Keyword::Haste));
 }
 
+// ─ Lorehold (R/W) batch 66 ─
+
+#[test]
+fn spirit_wardancer_magecraft_pumps_self_eot() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::spirit_wardancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).expect("Wardancer on bf");
+    // 2/2 base + magecraft +1/+1 EOT = 3/3 this turn.
+    assert_eq!(body.power(), 3);
+    assert_eq!(body.toughness(), 3);
+}
+
+#[test]
+fn lorehold_pyromancer_b66_etb_pings_two_to_any_target() {
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, catalog::lorehold_pyromancer_b66());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pyromancer castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 2);
+    let body = g.battlefield_find(id).expect("Pyromancer on bf");
+    assert!(body.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn lorehold_spiritmint_b66_etb_mints_a_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_spiritmint_b66());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spiritmint castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Spirit")
+        .count();
+    assert_eq!(spirits, 1);
+}
+
+#[test]
+fn lorehold_battlegrave_etb_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    // Plant a creature card in our graveyard.
+    let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_battlegrave());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Battlegrave castable");
+    drain_stack(&mut g);
+    // The dead bear should be on the battlefield now.
+    let bear = g.battlefield_find(dead_bear).expect("Bear reanimated");
+    assert_eq!(bear.controller, 0);
+    let body = g.battlefield_find(id).expect("Battlegrave on bf");
+    assert!(body.has_keyword(&Keyword::FirstStrike));
+    assert!(body.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn lorehold_skybearer_is_a_two_three_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_skybearer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skybearer castable");
+    drain_stack(&mut g);
+    let body = g.battlefield_find(id).expect("Skybearer on bf");
+    assert_eq!(body.power(), 2);
+    assert_eq!(body.toughness(), 3);
+    assert!(body.has_keyword(&Keyword::Flying));
+    assert!(body.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn lorehold_spellbreaker_magecraft_pings_any_for_one() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::lorehold_spellbreaker());
+    let opp_before = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 dmg + magecraft 1 dmg = 4 total.
+    assert_eq!(g.players[1].life, opp_before - 4);
+}
+
 #[test]
 fn prismari_stormtide_magecraft_loots() {
     let mut g = two_player_game();

@@ -19,10 +19,25 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1453 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1459 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 66: 6 more synthesised STX Lorehold cards. Cards added:
+`spirit_wardancer` ({2}{W} 2/2 Spirit Soldier Vigilance magecraft self
++1/+1 EOT), `lorehold_pyromancer_b66` ({1}{R}{W} 2/2 Spirit Wizard Haste
+ETB ping 2), `lorehold_spiritmint_b66` ({2}{R} 2/2 Spirit Wizard ETB
+mint Spirit), `lorehold_battlegrave` ({3}{R}{W} 3/4 Spirit Soldier First
+Strike+Vigilance ETB reanimate creature from gy), `lorehold_skybearer`
+({2}{W} 2/3 Spirit Cleric Flying+Vigilance vanilla evasive defender),
+`lorehold_spellbreaker` ({1}{R} 2/1 Spirit Wizard magecraft ping 1 any).
+Total tests: 3274 (was 3268). All 6 cards have functionality tests in
+`tests::stx`. Notable: lorehold_battlegrave exercises the
+graveyard-to-battlefield reanimator pattern via `Selector::one_of(
+CardsInZone(Graveyard, Creature))` + `ZoneDest::Battlefield`.**
+
+Prior push (batch 65):
+
 **batch 65: 5 more synthesised STX Prismari cards. Cards added:
 `prismari_sparkforger` ({1}{U}{R} 2/2 Elemental Wizard ETB mint Treasure),
 `prismari_flashbinder` ({U}{R} 2/1 Elemental Wizard Prowess),
