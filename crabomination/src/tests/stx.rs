@@ -40891,3 +40891,143 @@ fn prismari_floodfire_deals_four_and_draws_two() {
     // Hand: +1 Floodfire, -1 cast, +2 drawn = +2 net.
     assert_eq!(g.players[0].hand.len(), hand_before + 2);
 }
+
+// ── CR 122.3 — +1/+1 vs -1/-1 counter cancellation (state-based action) ─────
+
+/// CR 122.3: "If a permanent has both a +1/+1 counter and a -1/-1
+/// counter on it, N +1/+1 and N -1/-1 counters are removed from it
+/// as a state-based action, where N is the smaller of the number of
+/// +1/+1 and -1/-1 counters on it."
+///
+/// This audit-style lock-in test stages a creature with 3 +1/+1 and
+/// 2 -1/-1 counters and asserts the SBA cancels 2 of each, leaving
+/// 1 +1/+1 counter (and 0 -1/-1).
+#[test]
+fn cr_122_3_plus_one_and_minus_one_counters_cancel_as_state_based_action() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Manually stamp counters and trigger SBA.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+        c.add_counters(CounterType::MinusOneMinusOne, 2);
+    }
+    g.check_state_based_actions();
+    let b = g.battlefield_find(bear).expect("bear alive");
+    let plus = b.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    let minus = b.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0);
+    assert_eq!(plus, 1, "expected 1 +1/+1 counter after CR 122.3 cancel");
+    assert_eq!(minus, 0, "expected 0 -1/-1 counters after CR 122.3 cancel");
+    // P/T reflects the net +1/+1 over the printed 2/2.
+    let computed = g.compute_battlefield().into_iter()
+        .find(|c| c.id == bear).expect("computed bear");
+    assert_eq!(computed.power, 3);
+    assert_eq!(computed.toughness, 3);
+}
+
+/// CR 122.3 boundary: equal counts of +1/+1 and -1/-1 cancel each
+/// other entirely; the bear ends with no counters at all.
+#[test]
+fn cr_122_3_equal_counters_cancel_completely() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
+        c.add_counters(CounterType::PlusOnePlusOne, 4);
+        c.add_counters(CounterType::MinusOneMinusOne, 4);
+    }
+    g.check_state_based_actions();
+    let b = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(b.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
+    assert_eq!(b.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0), 0);
+}
+
+// ── Push (modern_decks, batch 56b): 5 more Witherbloom cards ───────────────
+
+#[test]
+fn witherbloom_crypt_caller_dies_drains_two() {
+    let mut g = two_player_game();
+    let cc = g.add_card_to_battlefield(0, catalog::witherbloom_crypt_caller());
+    let opp_before = g.players[1].life;
+    let life_before = g.players[0].life;
+    // Lethal the Crypt-Caller.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == cc) {
+        c.damage = 99;
+    }
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 2);
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn witherbloom_mill_mage_etb_mills_four_each_opp() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let opp_gy_before = g.players[1].graveyard.len();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_mill_mage());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Mill-Mage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 4);
+}
+
+#[test]
+fn pest_bonewright_dies_drains_one() {
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::pest_bonewright());
+    let opp_before = g.players[1].life;
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pb) {
+        c.damage = 99;
+    }
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 1);
+}
+
+#[test]
+fn witherbloom_decoder_magecraft_mills_each_opp() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_decoder());
+    g.add_card_to_library(1, catalog::island());
+    let opp_gy_before = g.players[1].graveyard.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 1,
+        "Decoder magecraft should mill 1 from opp on instant cast");
+}
+
+#[test]
+fn pest_roostmaster_mints_pest_on_sacrifice() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::pest_roostmaster());
+    let _ = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .count();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Sacrosanct castable");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .count();
+    assert_eq!(pests_after, pests_before + 1,
+        "Roostmaster should mint a Pest on Sacrosanct's sacrifice");
+}

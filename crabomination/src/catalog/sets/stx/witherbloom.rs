@@ -8387,3 +8387,173 @@ pub fn witherbloom_tomeshade() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 56b) — five more Witherbloom cards ────────────
+
+/// Witherbloom Crypt-Caller — {2}{B}, 2/2 Pest Warlock. Dies-trigger
+/// drain 2 via the new `dies_drain(2)` shortcut. 3-mana
+/// aristocrats-fodder body.
+pub fn witherbloom_crypt_caller() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Witherbloom Crypt-Caller",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mill-Mage — {2}{B}{G}, 2/3 Human Druid. ETB mill 4
+/// from each opponent via the new `etb_mill_each_opp(4)` shortcut.
+/// Aggressive graveyard fuel for delirium / mill-matters builds.
+pub fn witherbloom_mill_mage() -> CardDefinition {
+    use crate::effect::shortcut::etb_mill_each_opp;
+    CardDefinition {
+        name: "Witherbloom Mill-Mage",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mill_each_opp(4)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Bonewright — {1}{B}, 2/1 Pest Warlock. Dies-trigger drain 1.
+/// 2-mana cheap aristocrats trade body — 2-power offense + drain
+/// rider on the way out.
+pub fn pest_bonewright() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Pest Bonewright",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Decoder — {1}{U}, 1/3 Human Wizard. Magecraft mill 1
+/// from each opponent. Cheap recurring graveyard fuel.
+pub fn witherbloom_decoder() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Decoder",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Roostmaster — {2}{B}{G}, 3/3 Pest Warlock. "Whenever you
+/// sacrifice a creature, create a 1/1 black-green Pest token."
+/// Self-replacing aristocrats engine — every sacrifice mints a
+/// fresh Pest, which itself can be sacrificed later for chained drain.
+pub fn pest_roostmaster() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Roostmaster",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

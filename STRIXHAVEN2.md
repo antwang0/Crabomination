@@ -19,10 +19,25 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1272 (incl. synthesised variants) | 6 | 0 |
+| STX (327 cards) | 1277 (incl. synthesised variants) | 6 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 56b: 5 more Witherbloom cards exercising the new
+`effect::shortcut::dies_drain` and `etb_mill_each_opp` helpers.
+Cards: `witherbloom_crypt_caller` ({2}{B} 2/2 dies-trigger drain 2),
+`witherbloom_mill_mage` ({2}{B}{G} 2/3 ETB mill 4 each opp),
+`pest_bonewright` ({1}{B} 2/1 dies-trigger drain 1),
+`witherbloom_decoder` ({1}{B} 1/3 magecraft mill 1 each opp),
+`pest_roostmaster` ({2}{B}{G} 3/3 sacrifice-trigger mint Pest).
+5 new tests covering each card + 2 new CR 122.3 audit tests
+(`cr_122_3_plus_one_and_minus_one_counters_cancel_as_state_based_action`,
+`cr_122_3_equal_counters_cancel_completely`). Refactored 3 existing
+dies-trigger drainers (Saproot, Drainbreath, Reaper-Hand) onto the
+`dies_drain` shortcut. Total tests: 3081 (was 3074).**
+
+Prior push (batch 56):
+
 **batch 56: 25 more synthesised STX cards spread evenly across all 5
 colleges (5 Witherbloom + 5 Silverquill + 5 Lorehold + 5 Quandrix +
 5 Prismari). 25 new tests covering ETB triggers, magecraft (with
