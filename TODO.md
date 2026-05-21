@@ -3224,7 +3224,86 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Murder, Vanishing Verse, Witherbloom Withercut, and many more.
   Promote to ✅ when CR 701.19 (Regenerate) lands.
 
+- ⏳ **CR 705/706 — Coin flipping and dice rolling** (push
+  modern_decks batch 61 audit, claude/modern_decks branch — audit
+  against `MagicCompRules_20260417.txt`). The randomization primitives
+  the engine doesn't ship yet.
+  (a) **705.1** "Some cards refer to flipping a coin" — ⏳ (no
+  `Effect::FlipCoin { who }` primitive; no `EventKind::CoinFlipped`
+  event; no `Selector::CoinFlipResult` or `Value::CoinFlipResult`.
+  The only catalog cards exercising this gap today are: SOS Ral
+  Zarek's `-7` planeswalker ult ("Flip five coins. Target opponent
+  skips their next X turns, where X is the number of coins that came
+  up heads") — already doc-tracked under `Ral Zarek, Guest Lecturer`
+  in STRIXHAVEN2.md as the {1}{B}{B} planeswalker; the `-7` ult
+  collapses to a no-op in the catalog.
+  (b) **705.2** "Wins/loses a coin flip" — ⏳ (no
+  `Predicate::WonCoinFlip` or `Predicate::LostCoinFlip` for "if you
+  won this flip, …" / "if you lost the flip, …" mode dispatch).
+  Old cards exercising this gap (not in current catalogs): Karplusan
+  Minotaur, Krark's Thumb (replacement: "you may ignore one and
+  reflip"), Mana Clash, Squee's Toy, Stitch in Time, Boldwyr Heavyweights
+  (each player flips), Goblin Bomb.
+  (c) **705.3** "Effect may state coin flip has a certain result" — ⏳
+  (no `Effect::SetCoinFlipResult` primitive; would interact with the
+  same replacement-effect framework as Krark's Thumb's reflip rider).
+  (d) **706.1a** "N-sided die" — ⏳ (no `Effect::RollDie { sides, count }`
+  primitive; no `Value::DieRollResult`; no `EventKind::DieRolled`).
+  Old cards exercising this gap: Game Plan (d20), Sword of Dungeons and
+  Dragons (d20), every Adventures in the Forgotten Realms / Commander
+  Legends: Battle for Baldur's Gate "roll a d20" Initiative card. No
+  STX / SOS card needs this today.
+  (e) **706.2/706.2b** "Modifiers and reroll ordering" — ⏳ (depends on
+  (d); no roll modifier primitive). Old cards: Vedalken Orrery's
+  "you may reroll", Anhelo, the Painter, etc.
+  (f) **706.3** "Results table" — ⏳ (depends on (d); no
+  `Effect::DieRollTable { ranges: Vec<(u8, u8, Effect)> }`
+  primitive). Old cards: every AFR "Class" card's level-up dice,
+  Bag of Holding, Dungeon-Master's Guide.
+  (g) **706.7** "Planar die" — ⏳ (Planechase not modelled; no
+  `Plane` zone; no `EventKind::PlanarDieRolled`). Tracked in
+  TODO.md's `## Formats` section under `Planechase`.
+  Wiring shape for the future when a coin/dice card surfaces in a
+  catalog target (e.g. Ral Zarek's ult or a Commander cube of
+  AFR dice cards):
+  1. New `Effect::FlipCoin { who: Selector, on_win: Box<Effect>,
+     on_lose: Box<Effect> }` and `Effect::RollDie { who: Selector,
+     sides: u8, count: u32, body: DieRollBody }` primitives.
+  2. New `EventKind::CoinFlipped { won: bool }` and
+     `EventKind::DieRolled { sides: u8, result: u8 }` for trigger
+     hookups (Krark's Thumb-style replacement riders).
+  3. `GameState::flip_coin(player_idx) -> bool` and
+     `GameState::roll_die(player_idx, sides) -> u8` helpers — RNG-backed
+     via the existing `Player.random_seed` plumbing for deterministic
+     replay.
+  4. `Predicate::WonCoinFlip` reads the most-recent coin-flip's
+     winner from a `GameState.last_coin_flip_winner: Option<usize>`
+     field for in-resolution mode dispatch.
+  No catalog card needs this today; the gap is doc-tracked.
+
 ## Suggested next-up tasks
+
+- 🟡 **`effect::shortcut::etb_ping_any(amount)` /
+  `etb_ping_creature(amount)` helpers** (push modern_decks batch 61) —
+  The `etb_ping_any(amount: i32)` half **landed** in batch 61 in
+  `effect.rs`; mirrors `magecraft_ping_any` for the ETB trigger
+  flavor. Refactored Lorehold Emberspeaker to use the new helper.
+  The remaining ~10-15 STX/SOS cards inlining the same "ETB deal N
+  damage to any target" trigger (Lorehold Battle-Keeper's
+  `Seq([CreateToken, DealDamage])` body, Prismari Emberforge,
+  Prismari Smiteforge, etc.) can fold onto the helper in a future
+  cleanup pass. The "creature-only" sibling
+  (`etb_ping_creature(amount)`) for Lorehold Sparkscholar-template
+  bodies is still ⏳ — drop-in if a card surfaces that needs it.
+
+- ⏳ **`effect::shortcut::magecraft_pump_each_creature_type(creature_type,
+  power, toughness)` helper** (push modern_decks batch 61 suggested) —
+  Spirit Bannerer (batch 61, `stx::lorehold`) pumps each Spirit you
+  control via a magecraft trigger with inline
+  `ForEach(HasCreatureType(Spirit) ∧ ControlledByYou) → PumpPT`. A
+  tribal-pump shortcut would let future "Pest Bannerer" / "Inkling
+  Bannerer" / "Fractal Bannerer" cards reuse the pattern via a single
+  helper call. No engine primitive needed — pure call-site cleanup.
 
 - ✅ **`effect::shortcut::drain(amount)` helper** (push modern_decks
   batch 54): The canonical "each opponent loses N life, you gain N

@@ -2730,4 +2730,22 @@ pub mod shortcut {
             amount: Value::Const(amount),
         })
     }
+
+    /// ETB-Ping-Any shortcut: "When this creature enters, deal
+    /// `amount` damage to any target." Wraps [`etb`] with the
+    /// canonical "any target" damage body (creature OR player OR
+    /// planeswalker filter). Mirrors `magecraft_ping_any` for the
+    /// ETB trigger flavor. Used by Lorehold Emberspeaker / Prismari
+    /// Smiteforge-style "ETB shock-on-entry" creatures.
+    pub fn etb_ping_any(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(amount),
+        })
+    }
 }
