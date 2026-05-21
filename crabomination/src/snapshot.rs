@@ -547,6 +547,35 @@ mod tests {
     }
 
     #[test]
+    fn flipcoin_effect_serde_round_trip() {
+        // CR 705 — Effect::FlipCoin must survive snapshot/restore with
+        // both heads/tails branches intact.
+        use crate::card::{Effect, Selector, Value};
+        let original = Effect::FlipCoin {
+            count: Value::Const(1),
+            on_heads: Box::new(Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
+            on_tails: Box::new(Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            }),
+        };
+        let json = serde_json::to_string(&original).expect("serialize");
+        let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+        match parsed {
+            Effect::FlipCoin { count, on_heads, on_tails } => {
+                assert!(matches!(count, Value::Const(1)));
+                assert!(matches!(*on_heads, Effect::Draw { .. }));
+                assert!(matches!(*on_tails, Effect::Discard { .. }));
+            }
+            other => panic!("expected FlipCoin, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn setbasept_effect_serde_round_trip() {
         // Layer-7b base-P/T overrides must survive snapshot/restore so a
         // Square-Upped creature stays 0/4 across a save.

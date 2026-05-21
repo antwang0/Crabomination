@@ -342,6 +342,27 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 705 — Flip a coin `count` times; for each flip ask the
+            // controller's decider for heads/tails and dispatch to
+            // `on_heads` / `on_tails`. AutoDecider always picks heads;
+            // ScriptedDecider can override per-flip via DecisionAnswer::
+            // Bool(false) for tails.
+            Effect::FlipCoin { count, on_heads, on_tails } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                for _ in 0..n {
+                    let answer = self.decider.decide(&crate::decision::Decision::CoinFlip {
+                        player: ctx.controller,
+                    });
+                    let heads = matches!(answer, crate::decision::DecisionAnswer::Bool(true));
+                    if heads {
+                        self.run_effect(on_heads, ctx, events)?;
+                    } else {
+                        self.run_effect(on_tails, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseMode(modes) => {
                 let idx = ctx.mode;
                 if let Some(m) = modes.get(idx) {

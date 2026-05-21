@@ -8134,3 +8134,196 @@ pub fn fractal_rookling() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 63): 5 more Quandrix cards ────────────────────
+
+/// Quandrix Counterweave — {1}{G}{U}, Instant. Counter target spell unless
+/// its controller pays {2}, then put a +1/+1 counter on a target friendly
+/// creature. Hybrid Quandrix tempo + growth (Mana Leak + Aether Charge).
+pub fn quandrix_counterweave() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Counterweave",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CounterUnlessPaid {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::IsSpellOnStack,
+                },
+                mana_cost: cost(&[generic(2)]),
+            },
+            Effect::AddCounter {
+                what: Selector::TargetFiltered {
+                    slot: 1,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                },
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sumwarden — {3}{G}{U}, 4/4 Elf Druid. ETB Seq(draw 1 + AddCounter
+/// +1/+1 to self). 5-mana sturdier draw + +1/+1 body.
+pub fn quandrix_sumwarden() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Sumwarden",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Petalcaller — {2}{U}, 0/0 Fractal Wizard that enters with two
+/// +1/+1 counters on it. Magecraft +1/+1 counter on self. 3-mana evasive
+/// Fractal growth body.
+pub fn fractal_petalcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Petalcaller",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Echoreader — {1}{U}, 1/3 Merfolk Wizard. Magecraft Scry 1.
+/// 2-mana defensive smoothing body.
+pub fn quandrix_echoreader() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Quandrix Echoreader",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Synthesizer — {2}{G}{U}, Sorcery. Create a 0/0 G/U Fractal
+/// token, then put X +1/+1 counters on it, where X is the number of cards
+/// in your hand. Hand-size-scaling go-tall.
+pub fn quandrix_synthesizer() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Synthesizer",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: quandrix_fractal_token(),
+                count: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::HandSizeOf(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -802,6 +802,46 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   when 105.3 (color-becomes / color-adds) lands as a runtime
   primitive backed by at least one catalog card.
 
+- 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 63 — audit
+  against `MagicCompRules_20260417.txt`): The coin-flip primitive — what
+  flipping means, win/loss semantics, and "ignore the result" overrides.
+  Audit:
+  (a) **705.1** "A coin used in a flip must be a two-sided object with
+  easily distinguished sides and equal likelihood that either side lands
+  face up" — ✅ (the `Effect::FlipCoin` resolver asks the decider for a
+  `Bool` answer per flip. `AutoDecider` always returns `Bool(true)`
+  (heads) for determinism in tests; a real client RNG would call
+  `rand::random::<bool>()`. The two-sided constraint is enforced by the
+  `Bool` return type.).
+  (b) **705.2** "the player that flips the coin calls 'heads' or 'tails'…
+  If the call matches the result, the player wins the flip" — 🟡 (the
+  engine collapses "call + result" into a single boolean: `true` = the
+  flipper "wins" the call. Cards that distinguish "heads" vs "tails"
+  specifically — Karplusan Minotaur ("Whenever Karplusan Minotaur deals
+  damage to a creature, flip a coin. If you win, Karplusan Minotaur deals
+  1 damage to that creature's controller. If you lose, that creature deals
+  1 damage to you.") — can be modelled directly by mapping `on_heads ↔
+  win`, `on_tails ↔ lose`. Mana Clash's symmetric "we both flip until one
+  comes up tails" needs a two-player flip loop; not yet wired but the
+  primitive supports it via `count: Value::Const(N)`.).
+  (c) **705.3** "An effect may state that a coin flip has a certain
+  result… ignore the actual results of that flip and use the indicated
+  results instead" — ⏳ (no Krark's Thumb-style "flip two and pick"
+  override yet; would need a `Player.coin_flip_modifier: CoinFlipMod`
+  flag or a stacked replacement effect on `Decision::CoinFlip`).
+  Implementation: `Effect::FlipCoin { count, on_heads, on_tails }` at
+  `effect.rs`; `Decision::CoinFlip { player }` +
+  `DecisionAnswer::Bool(true|false)` in `decision.rs`; the resolver in
+  `game/effects/mod.rs::run_effect` walks `count` flips and dispatches
+  per-result. Wire-format mirror `DecisionWire::CoinFlip` in `net.rs`
+  for client round-trip. Lock-in tests:
+  `lorehold_coinflinger_heads_burns_target`,
+  `lorehold_coinflinger_tails_discards_a_card`,
+  `coin_flip_auto_decider_defaults_to_heads`. Affected catalog cards:
+  Lorehold Coinflinger (synthesised exercise card). Promote to ✅ when
+  705.3 (override / re-flip primitives) lands; the primary 705.1 / 705.2
+  shapes are already wired.
+
 - 🟡 **CR 122 — Counters** (push modern_decks audit, claude/modern_decks
   branch — batch 10): The counter primitive — placement, accumulation,
   +1/+1 vs -1/-1 cancellation, ETB-with-counters, "Nth counter" trigger.
@@ -3283,18 +3323,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
-- 🟡 **`effect::shortcut::etb_ping_any(amount)` /
-  `etb_ping_creature(amount)` helpers** (push modern_decks batch 61) —
-  The `etb_ping_any(amount: i32)` half **landed** in batch 61 in
-  `effect.rs`; mirrors `magecraft_ping_any` for the ETB trigger
+- ✅ **`effect::shortcut::etb_ping_any(amount)` /
+  `etb_ping_creature(amount)` helpers** (push modern_decks batch 63
+  finished) — The `etb_ping_any(amount: i32)` half landed in batch 61
+  in `effect.rs`; mirrors `magecraft_ping_any` for the ETB trigger
   flavor. Refactored Lorehold Emberspeaker to use the new helper.
-  The remaining ~10-15 STX/SOS cards inlining the same "ETB deal N
-  damage to any target" trigger (Lorehold Battle-Keeper's
-  `Seq([CreateToken, DealDamage])` body, Prismari Emberforge,
-  Prismari Smiteforge, etc.) can fold onto the helper in a future
-  cleanup pass. The "creature-only" sibling
-  (`etb_ping_creature(amount)`) for Lorehold Sparkscholar-template
-  bodies is still ⏳ — drop-in if a card surfaces that needs it.
+  The "creature-only" sibling `etb_ping_creature(amount)` (and the
+  parallel `magecraft_ping_creature(amount)`) **landed in batch 63**
+  for Lorehold Sparkscholar-template bodies and Lorehold Ironhand-
+  style "ETB ping target creature" cards. Both helpers are now
+  available as one-line drop-ins; future cleanup pass can fold the
+  remaining inline `Seq([CreateToken, DealDamage(creature)])` bodies
+  onto the helper.
 
 - ⏳ **`effect::shortcut::magecraft_pump_each_creature_type(creature_type,
   power, toughness)` helper** (push modern_decks batch 61 suggested) —
@@ -5617,16 +5657,28 @@ in Books targeting its own card id rejected). Future Spell Burst /
 Lava Spike-style printed "can't target this spell" cards plug in
 against the same primitive.
 
-### Engine — Coin flip primitive (CR 705)
+### Engine — Coin flip primitive (CR 705) ✅ DONE
 
-Ral Zarek, Guest Lecturer's -7 ultimate flips five coins. No coin-
-flip primitive exists; tracked as part of Ral's promotion. Would also
-unblock Karplusan Minotaur, Krark's Thumb, Mana Clash, and the
-Goblin Pulse / Lobotomy effects.
+✅ Done in push (modern_decks claude/modern_decks batch 63): new
+`Effect::FlipCoin { count: Value, on_heads: Box<Effect>, on_tails:
+Box<Effect> }` primitive shipped along with `Decision::CoinFlip
+{ player: usize }` and `DecisionWire::CoinFlip` for the wire format.
+The resolver in `game/effects/mod.rs::run_effect` asks the controller's
+decider for each flip and dispatches to `on_heads`/`on_tails`.
+`AutoDecider` defaults to heads (deterministic for tests); a
+`ScriptedDecider` can script per-flip outcomes via
+`DecisionAnswer::Bool(true|false)`.
 
-**Shape**: `Effect::FlipCoin { count: Value, on_heads: Box<Effect>,
-on_tails: Box<Effect> }` + a per-decision `Decision::CoinFlip` so
-deterministic test fixtures can script the outcome.
+Lock-in tests (`tests::stx`):
+- `lorehold_coinflinger_heads_burns_target` (heads branch: 3 dmg)
+- `lorehold_coinflinger_tails_discards_a_card` (tails branch: discard 1)
+- `coin_flip_auto_decider_defaults_to_heads`
+
+Catalog: `lorehold_coinflinger` ({2}{R} 2/2 Spirit Wizard, "ETB flip
+a coin; on heads 3 dmg to any target, on tails discard a card") —
+exercise card for the new primitive. Future unblocks: Ral Zarek's -7
+ultimate (5 flips), Karplusan Minotaur, Mana Clash, Krark's Thumb
+(needs reroll-on-loss flag), Goblin Pulse, Goblin Bookie.
 
 ### Engine — Skip-turn primitive (CR 716)
 

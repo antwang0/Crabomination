@@ -9835,3 +9835,226 @@ pub fn spirit_reliquarian() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 63): 5 more Lorehold cards ────────────────────
+
+/// Spirit Sparkblade — {1}{R}, 2/2 Spirit Warrior Haste. Magecraft +1/+0
+/// EOT self-pump. 2-mana hasty aggressive Spirit. Stacks with Spirit
+/// anthems for early pressure.
+pub fn spirit_sparkblade() -> CardDefinition {
+    CardDefinition {
+        name: "Spirit Sparkblade",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritchron II — {2}{R}{W}, 3/3 Spirit Cleric Vigilance.
+/// ETB Seq(mint 2 Spirit tokens). 4-mana go-wide Spirit anchor.
+pub fn lorehold_spiritchron_b63() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritchron II",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embertongue — {R}{W}, Instant. Seq(DealDamage 2 to any target +
+/// GainLife 1). 2-mana Lightning-Helix-template at half power. Affordable
+/// early burn + life-swing.
+pub fn lorehold_embertongue() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embertongue",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkstoneflinger — {2}{R}, 2/3 Spirit Wizard. Magecraft
+/// 1 damage to any target. 3-mana sturdier magecraft burn engine.
+pub fn lorehold_sparkstoneflinger() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkstoneflinger",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Memorialcaller — {3}{R}{W}, 3/4 Spirit Cleric Lifelink. ETB
+/// mints 2 Spirit tokens + magecraft gain 1 life. 5-mana sticky lifelink
+/// + token-mint payoff.
+pub fn lorehold_memorialcaller() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Memorialcaller",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: lorehold_spirit_token(),
+                count: Value::Const(2),
+            }),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Coinflinger — {2}{R}, 2/2 Spirit Wizard. "When this creature
+/// enters, flip a coin. If you win the flip, this creature deals 3
+/// damage to any target. If you lose, you discard a card." CR 705 +
+/// CR 122 — exercises the new `Effect::FlipCoin` primitive on a
+/// representative red gamble body.
+pub fn lorehold_coinflinger() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Coinflinger",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::FlipCoin {
+            count: Value::Const(1),
+            on_heads: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            }),
+            on_tails: Box::new(Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            }),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -9451,3 +9451,186 @@ pub fn witherbloom_vineshaper() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 63): 5 more Witherbloom cards ─────────────────
+
+/// Pest Soulkeeper — {B}{G}, 2/2 Pest Cleric. "Whenever you sacrifice a
+/// creature, put a +1/+1 counter on this creature." 2-mana aristocrats
+/// scaler via the CR-701.16 sacrifice event.
+pub fn pest_soulkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Soulkeeper",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CreatureSacrificed,
+                EventScope::YourControl,
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Marshhulk — {3}{B}{G}, 4/5 Plant Beast Trample. ETB drain
+/// 2. 5-mana big-body drain finisher.
+pub fn witherbloom_marshhulk() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Marshhulk",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Reaverling — {1}{B}, 2/1 Pest Warlock. Dies-trigger Drain 1.
+/// 2-mana aristocrats trade body.
+pub fn pest_reaverling() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Pest Reaverling",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifesnare — {1}{B}{G}, Sorcery. Seq(target creature gets
+/// -3/-3 EOT + you gain 3 life). 3-mana shrink-removal + lifegain.
+pub fn witherbloom_lifesnare() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifesnare",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bonewright — {2}{B}{G}, 3/3 Plant Druid. ETB Seq(mint Pest
+/// + gain 2 life). 4-mana double-body + lifegain.
+pub fn witherbloom_bonewright() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Witherbloom Bonewright",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: stx_pest_token(),
+                count: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

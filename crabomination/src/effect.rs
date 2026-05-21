@@ -705,6 +705,16 @@ pub enum Effect {
     ForEach { selector: Selector, body: Box<Effect> },
     /// Execute `body` `count` times.
     Repeat { count: Value, body: Box<Effect> },
+    /// CR 705 — flip a coin `count` times. For each flip, asks the
+    /// controller's decider for `Decision::CoinFlip` (heads = true,
+    /// tails = false), then runs `on_heads` or `on_tails`. Used by
+    /// Karplusan Minotaur, Mana Clash, Krark's Thumb, and Ral Zarek's
+    /// -7 ultimate.
+    FlipCoin {
+        count: Value,
+        on_heads: Box<Effect>,
+        on_tails: Box<Effect>,
+    },
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
@@ -1348,6 +1358,11 @@ impl Effect {
                 sel_has_target(selector) || body.requires_target()
             }
             Effect::Repeat { count, body } => value_has_target(count) || body.requires_target(),
+            Effect::FlipCoin { count, on_heads, on_tails } => {
+                value_has_target(count)
+                    || on_heads.requires_target()
+                    || on_tails.requires_target()
+            }
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
@@ -1549,6 +1564,12 @@ impl Effect {
             Effect::IfRevealFromHand { then, else_, .. } => then
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
+            // FlipCoin: surface the heads branch first (the active
+            // outcome) — same pattern as If/IfRevealFromHand. Falls back
+            // to the tails branch if heads has no target.
+            Effect::FlipCoin { on_heads, on_tails, .. } => on_heads
+                .primary_target_filter()
+                .or_else(|| on_tails.primary_target_filter()),
             _ => None,
         }
     }
@@ -1709,6 +1730,9 @@ impl Effect {
             | Effect::ForEach { body, .. } => body.accepts_player_target(),
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.accepts_player_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.accepts_player_target()),
+            Effect::FlipCoin { on_heads, on_tails, .. } => {
+                on_heads.accepts_player_target() || on_tails.accepts_player_target()
+            }
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects
             // mismatched types, this just changes the heuristic's preference
@@ -1788,6 +1812,9 @@ impl Effect {
                 }
                 Effect::IfRevealFromHand { then, else_, .. } => {
                     eff_find(then, slot, mode).or_else(|| eff_find(else_, slot, mode))
+                }
+                Effect::FlipCoin { on_heads, on_tails, .. } => {
+                    eff_find(on_heads, slot, mode).or_else(|| eff_find(on_tails, slot, mode))
                 }
                 Effect::DealDamage { to, .. } => sel_find(to, slot),
                 Effect::Fight { attacker, defender } => {
@@ -2745,6 +2772,32 @@ pub mod shortcut {
                     .or(SelectionRequirement::Player)
                     .or(SelectionRequirement::Planeswalker),
             ),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// ETB-Ping-Creature shortcut: "When this creature enters, deal
+    /// `amount` damage to target creature." Wraps [`etb`] with a
+    /// creature-only damage body. Used by Lorehold Sparkscholar /
+    /// Lorehold Ironhand-style "ETB ping creature" creatures (no
+    /// player/planeswalker target option).
+    pub fn etb_ping_creature(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        etb(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Ping-Creature shortcut: "Whenever you cast or copy
+    /// an instant or sorcery spell, deal `amount` damage to target
+    /// creature." Wraps [`magecraft`] with a creature-only damage
+    /// body. Used by Lorehold Sparkscholar II and other "creature-
+    /// removal-only magecraft" cards.
+    pub fn magecraft_ping_creature(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        magecraft(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(amount),
         })
     }

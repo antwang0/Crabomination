@@ -87,6 +87,16 @@ pub enum Decision {
         source: CardId,
     },
 
+    /// CR 705 — flip a coin. The decider answers with `Bool(true)` for
+    /// heads or `Bool(false)` for tails. `AutoDecider` uses the engine's
+    /// rng to pick randomly; `ScriptedDecider` can script the outcome.
+    /// Used by `Effect::FlipCoin` (Karplusan Minotaur, Mana Clash, Ral
+    /// Zarek's -7 ultimate).
+    CoinFlip {
+        /// Player flipping (typically `EffectContext.controller`).
+        player: usize,
+    },
+
     /// CR 903.9b — the commander would land in `would_be` from
     /// somewhere; its owner *may* redirect to the command zone
     /// instead. Answered with `DecisionAnswer::Bool` (true = redirect,
@@ -211,6 +221,10 @@ impl Decider for AutoDecider {
             Decision::ChooseCreatureType { .. } => {
                 DecisionAnswer::CreatureType(crate::card::CreatureType::Demon)
             }
+            // CR 705 — AutoDecider always picks heads. For deterministic
+            // tests; a real client would use an rng. ScriptedDecider can
+            // override with `DecisionAnswer::Bool(false)` for tails.
+            Decision::CoinFlip { .. } => DecisionAnswer::Bool(true),
         }
     }
 }

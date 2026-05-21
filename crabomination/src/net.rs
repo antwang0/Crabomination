@@ -433,6 +433,11 @@ pub enum DecisionWire {
         commander: CardId,
         would_be: crate::card::Zone,
     },
+    /// CR 705 — flip a coin. Decider answers `Bool(true)` for heads,
+    /// `Bool(false)` for tails.
+    CoinFlip {
+        player: usize,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -492,6 +497,7 @@ impl From<&Decision> for DecisionWire {
                     would_be: *would_be,
                 }
             }
+            Decision::CoinFlip { player } => DecisionWire::CoinFlip { player: *player },
         }
     }
 }

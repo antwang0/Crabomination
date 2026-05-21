@@ -7537,3 +7537,193 @@ pub fn prismari_pyreforge() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 63): 5 more Prismari cards ────────────────────
+
+/// Prismari Goldcaster — {1}{R}, 2/2 Elemental Wizard. ETB mints a
+/// Treasure token. 2-mana ramp body — pairs with Prismari spell-mana
+/// payoffs and 5-mana Opus thresholds.
+pub fn prismari_goldcaster() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Goldcaster",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            definition: treasure_token(),
+            count: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Echoflame — {2}{U}{R}, Instant. Seq(DealDamage 2 + draw 1).
+/// 4-mana burn + cantrip — Prismari's pet pattern at instant tempo.
+pub fn prismari_echoflame() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Prismari Echoflame",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: crate::card::Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Loresprite — {U}{R}, 2/1 Faerie Wizard Flying. Magecraft
+/// Scry 1. 2-mana evasive smoothing body.
+pub fn prismari_loresprite() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Prismari Loresprite",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormcaller II — {2}{U}{R}, 3/3 Elemental Wizard. ETB
+/// Seq(mint Treasure + ping 1 to any target). 4-mana ramp + burn ETB.
+pub fn prismari_stormcaller_b63() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::etb;
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Stormcaller II",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition: treasure_token(),
+                count: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Combustomancer — {1}{R}, 2/2 Elemental Wizard. Magecraft 1
+/// damage to any target. 2-mana magecraft burn engine — same shape as
+/// Lorehold Sparkflinger but at the Prismari Wizard slot.
+pub fn prismari_combustomancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Combustomancer",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

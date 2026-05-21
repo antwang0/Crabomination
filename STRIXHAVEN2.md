@@ -19,10 +19,30 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1394 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1420 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 63: 25 more synthesised STX cards (5 per college) — follow-up
+to batch 62. Cards added across all five colleges: Quandrix
+(`quandrix_counterweave`, `quandrix_sumwarden`, `fractal_petalcaller`,
+`quandrix_echoreader`, `quandrix_synthesizer`); Lorehold
+(`spirit_sparkblade`, `lorehold_spiritchron_b63`, `lorehold_embertongue`,
+`lorehold_sparkstoneflinger`, `lorehold_memorialcaller`); Witherbloom
+(`pest_soulkeeper`, `witherbloom_marshhulk`, `pest_reaverling`,
+`witherbloom_lifesnare`, `witherbloom_bonewright`); Silverquill
+(`inkling_scribesage`, `silverquill_dirgesage`, `silverquill_hymnsmith`,
+`silverquill_quillchorus`, `inkling_riftcaster`); Prismari
+(`prismari_goldcaster`, `prismari_echoflame`, `prismari_loresprite`,
+`prismari_stormcaller_b63`, `prismari_combustomancer`). Total tests:
+3228 (was 3203). All batch 63 cards have functionality tests in
+`tests::stx`. New tactical primitive: a Mana-Leak-style counter (`{1}{G}{U}
+Counter unless pays {2}, then +1/+1 to friendly creature`) — uses
+multi-target slots 0 (spell) + 1 (creature) via `Selector::TargetFiltered
+{ slot, filter }`.**
+
+Prior push:
+
 **batch 62: 10 more synthesised STX cards (2 per college) — follow-up
 to batch 61. Cards added: `inkling_calligrapher_b62` ({1}{W}{B} 2/3
 Inkling Wizard Flying magecraft Scry 1), `silverquill_lecturer_b62`
@@ -5075,6 +5095,12 @@ parity is a matter of porting card factories one at a time.
 | Lorehold Warpoet | {3}{R}{W} | ✅ | Push (modern_decks batch 61, NEW, `stx::lorehold`): 3/3 Spirit Soldier First Strike + Lifelink. ETB mints a 2/2 R/W Spirit. 5-mana evasive combat-keyword + token-mint finisher. Test: `lorehold_warpoet_etb_mints_spirit_with_first_strike_lifelink`. |
 | Lorehold Brimstoner | {3}{R} | ✅ | Push (modern_decks batch 62, NEW, `stx::lorehold`): 3/2 Spirit Wizard Haste. ETB 2 damage any target via the `etb_ping_any(2)` shortcut. 4-mana hasty burn-on-entry body. Test: `lorehold_brimstoner_etb_pings_two_via_shortcut`. |
 | Spirit Reliquarian | {1}{R}{W} | ✅ | Push (modern_decks batch 62, NEW, `stx::lorehold`): 2/3 Spirit Cleric Vigilance. Static "Other Spirit creatures you control get +1/+0" via the `StaticEffect::PumpPT` + `OtherThanSource` shape. Spirit-tribal anthem at the 3-mana slot. Test: `spirit_reliquarian_anthems_other_spirits`. |
+| Spirit Sparkblade | {1}{R} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`): 2/2 Spirit Warrior Haste. Magecraft +1/+0 EOT self-pump. 2-mana hasty aggressive Spirit. Test: `spirit_sparkblade_magecraft_pumps_self`. |
+| Lorehold Spiritchron II | {2}{R}{W} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`, factory `lorehold_spiritchron_b63`): 3/3 Spirit Cleric Vigilance. ETB Seq(mint 2 Spirit tokens). Test: `lorehold_spiritchron_b63_etb_mints_two_spirits`. |
+| Lorehold Embertongue | {R}{W} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`): Instant. Seq(DealDamage 2 to any target + GainLife 1). 2-mana half-Helix template. Test: `lorehold_embertongue_burns_and_gains_life`. |
+| Lorehold Sparkstoneflinger | {2}{R} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`): 2/3 Spirit Wizard. Magecraft 1 damage to any target. 3-mana sturdier magecraft burn body. Test: `lorehold_sparkstoneflinger_magecraft_pings`. |
+| Lorehold Memorialcaller | {3}{R}{W} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`): 3/4 Spirit Cleric Lifelink. ETB mints 2 Spirit tokens + magecraft GainLife 1. 5-mana sticky lifelink + token-mint payoff. Test: `lorehold_memorialcaller_etb_mints_two_spirits_and_magecraft_gains_life`. |
+| Lorehold Coinflinger | {2}{R} | ✅ | Push (modern_decks batch 63, NEW, `stx::lorehold`): 2/2 Spirit Wizard. "When this creature enters, flip a coin. If you win the flip, this creature deals 3 damage to any target. If you lose, you discard a card." Wired against the new `Effect::FlipCoin` primitive (CR 705) + `Decision::CoinFlip` decider hook. Tests: `lorehold_coinflinger_heads_burns_target`, `lorehold_coinflinger_tails_discards_a_card`, `coin_flip_auto_decider_defaults_to_heads`. |
 
 ### Quandrix (G/U)
 
