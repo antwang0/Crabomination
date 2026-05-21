@@ -9939,6 +9939,41 @@ pub fn witherbloom_lifedrain() -> CardDefinition {
     }
 }
 
+/// Pest Bannerer — {1}{B}, 2/2 Pest Warlock. Magecraft pump each Pest
+/// you control +1/+0 EOT via the new tribal-pump shortcut.
+pub fn pest_bannerer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_pump_each_creature_type;
+    CardDefinition {
+        name: "Pest Bannerer",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_pump_each_creature_type(
+            CreatureType::Pest,
+            1,
+            0,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Pest Brood-Marauder — {3}{B}{G}, 4/3 Pest Warrior Menace. 5-mana
 /// aggressive pest finisher with evasion.
 pub fn pest_brood_marauder() -> CardDefinition {

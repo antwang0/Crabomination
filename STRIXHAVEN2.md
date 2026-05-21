@@ -19,10 +19,20 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1459 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1461 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 66 follow-up: New `magecraft_pump_each_creature_type` shortcut +
+2 new tribal-Bannerer cards. The helper wraps the canonical "Magecraft —
+pump each [tribe] you control +N/+M EOT" pattern; Spirit Bannerer (batch
+61, `stx::lorehold`) refactored to use it. New cards: `inkling_bannerer`
+({1}{W}{B} 2/2 Inkling Cleric magecraft Inkling-tribal-pump +1/+0 EOT),
+`pest_bannerer` ({1}{B} 2/2 Pest Warlock magecraft Pest-tribal-pump
++1/+0 EOT). Total tests: 3276 (was 3274).**
+
+Prior push (batch 66):
+
 **batch 66: 6 more synthesised STX Lorehold cards. Cards added:
 `spirit_wardancer` ({2}{W} 2/2 Spirit Soldier Vigilance magecraft self
 +1/+1 EOT), `lorehold_pyromancer_b66` ({1}{R}{W} 2/2 Spirit Wizard Haste

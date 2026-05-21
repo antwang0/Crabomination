@@ -3407,14 +3407,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   remaining inline `Seq([CreateToken, DealDamage(creature)])` bodies
   onto the helper.
 
-- ⏳ **`effect::shortcut::magecraft_pump_each_creature_type(creature_type,
-  power, toughness)` helper** (push modern_decks batch 61 suggested) —
-  Spirit Bannerer (batch 61, `stx::lorehold`) pumps each Spirit you
-  control via a magecraft trigger with inline
-  `ForEach(HasCreatureType(Spirit) ∧ ControlledByYou) → PumpPT`. A
-  tribal-pump shortcut would let future "Pest Bannerer" / "Inkling
-  Bannerer" / "Fractal Bannerer" cards reuse the pattern via a single
-  helper call. No engine primitive needed — pure call-site cleanup.
+- ✅ **`effect::shortcut::magecraft_pump_each_creature_type(creature_type,
+  power, toughness)` helper** (push modern_decks batch 66 done) —
+  Tribal-pump shortcut landed in `effect.rs`. Wraps
+  `magecraft(Effect::PumpPT { what: EachPermanent(HasCreatureType(t) ∧
+  ControlledByYou), …, EndOfTurn })` in a single helper call. Drop-in
+  for any tribal Bannerer-template card. Refactored Spirit Bannerer
+  (batch 61, `stx::lorehold`) to use the helper. New tribal cards:
+  Inkling Bannerer (`stx::silverquill`), Pest Bannerer (`stx::
+  witherbloom`) — both 2/2 magecraft tribal-pump bodies. Tests:
+  `inkling_bannerer_magecraft_pumps_each_friendly_inkling`,
+  `pest_bannerer_magecraft_pumps_each_friendly_pest`,
+  `spirit_bannerer_magecraft_pumps_friendly_spirits` (pre-existing).
 
 - ✅ **`effect::shortcut::drain(amount)` helper** (push modern_decks
   batch 54): The canonical "each opponent loses N life, you gain N

@@ -12446,6 +12446,41 @@ pub fn inkling_stormpenner() -> CardDefinition {
     }
 }
 
+/// Inkling Bannerer — {1}{W}{B}, 2/2 Inkling Cleric. Magecraft pump each
+/// Inkling you control +1/+0 EOT via the new tribal-pump shortcut.
+pub fn inkling_bannerer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_pump_each_creature_type;
+    CardDefinition {
+        name: "Inkling Bannerer",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_pump_each_creature_type(
+            CreatureType::Inkling,
+            1,
+            0,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Silverquill Inkmark — {1}{B}, Sorcery. Target opponent loses 3 life,
 /// you gain 3 life. Pure 2-mana drain spell.
 pub fn silverquill_inkmark() -> CardDefinition {

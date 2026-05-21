@@ -9661,6 +9661,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
 /// you control gets +1/+0 EOT (`ForEach Spirit/ControlledByYou →
 /// PumpPT(+1/+0, EOT)`). 2-mana Spirit-tribal magecraft engine.
 pub fn spirit_bannerer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_pump_each_creature_type;
     CardDefinition {
         name: "Spirit Bannerer",
         cost: cost(&[generic(1), w()]),
@@ -9675,15 +9676,11 @@ pub fn spirit_bannerer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: Selector::EachPermanent(
-                SelectionRequirement::HasCreatureType(CreatureType::Spirit)
-                    .and(SelectionRequirement::ControlledByYou),
-            ),
-            power: Value::Const(1),
-            toughness: Value::Const(0),
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![magecraft_pump_each_creature_type(
+            CreatureType::Spirit,
+            1,
+            0,
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -44571,6 +44571,48 @@ fn lorehold_skybearer_is_a_two_three_flying_vigilance() {
     assert!(body.has_keyword(&Keyword::Vigilance));
 }
 
+// ─ Tribal-pump shortcut helper coverage ─
+
+#[test]
+fn inkling_bannerer_magecraft_pumps_each_friendly_inkling() {
+    let mut g = two_player_game();
+    let bannerer = g.add_card_to_battlefield(0, catalog::inkling_bannerer());
+    let inkling = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bannerer is itself an Inkling, so it pumps too: 2 → 3 power.
+    let bannerer_view = g.battlefield_find(bannerer).expect("Bannerer on bf");
+    assert_eq!(bannerer_view.power(), 3);
+    // Inkling Aspirant: 2 → 3 power EOT.
+    let inkling_view = g.battlefield_find(inkling).expect("Inkling on bf");
+    assert_eq!(inkling_view.power(), 3);
+}
+
+#[test]
+fn pest_bannerer_magecraft_pumps_each_friendly_pest() {
+    let mut g = two_player_game();
+    let bannerer = g.add_card_to_battlefield(0, catalog::pest_bannerer());
+    let pest = g.add_card_to_battlefield(0, catalog::pest_vinerunner());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(crate::game::types::Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bannerer is itself a Pest, so it pumps too: 2 → 3.
+    let bannerer_view = g.battlefield_find(bannerer).expect("Bannerer on bf");
+    assert_eq!(bannerer_view.power(), 3);
+    // Pest Vinerunner: 1 → 2 power EOT.
+    let pest_view = g.battlefield_find(pest).expect("Pest on bf");
+    assert_eq!(pest_view.power(), 2);
+}
+
 #[test]
 fn lorehold_spellbreaker_magecraft_pings_any_for_one() {
     let mut g = two_player_game();

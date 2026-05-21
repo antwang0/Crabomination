@@ -2611,6 +2611,29 @@ pub mod shortcut {
         })
     }
 
+    /// Convenience: Magecraft trigger that pumps every controlled
+    /// creature of a given tribe (e.g. Spirit / Pest / Inkling /
+    /// Fractal) by `(power, toughness)` until end of turn. Wraps the
+    /// canonical `ForEach(Creature ∧ HasCreatureType(t) ∧ ControlledByYou)
+    /// → PumpPT` body used by Spirit Bannerer-template cards in a single
+    /// helper call. Tribal-bannerer drop-in for any college.
+    pub fn magecraft_pump_each_creature_type(
+        creature_type: crate::card::CreatureType,
+        power: i32,
+        toughness: i32,
+    ) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        magecraft(Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(creature_type)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            duration: Duration::EndOfTurn,
+        })
+    }
+
     /// Convenience: Magecraft trigger dealing `amount` damage to any
     /// chosen target (Creature ∨ Player ∨ Planeswalker). Wraps
     /// [`magecraft`] with a `DealDamage` body whose target is a
