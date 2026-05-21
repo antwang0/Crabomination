@@ -19,10 +19,86 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1319 (incl. synthesised variants) | 5 | 0 |
+| STX (327 cards) | 1359 (incl. synthesised variants) | 5 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 60: 15 more synthesised STX cards across all 5 colleges
+(3 per school). 15 new tests covering Magecraft self-pump / target pump /
+counter scaling / surveil, ETB drain + surveil / drain + magecraft, Inkling
+tribal pump-on-ETB (Sigilwarden), Spirit token mint, Fractal token go-tall
+(stormpetal with 4 counters), double-Fractal mint via LastCreatedTokens,
+ETB Treasure + 1-damage ping. New shortcut helpers landed:
+`shortcut::etb_surveil(amount)` and `shortcut::magecraft_surveil(amount)`.
+
+Cards added: `silverquill_mageblade` ({1}{W} 2/2 Human Soldier magecraft
++1/+0 EOT target friendly), `inkling_sigilwarden` ({3}{W} 2/4 Inkling
+Soldier Flying+Vigilance ETB +1/+1 counter on each other Inkling),
+`silverquill_quillthane` ({2}{W}{B} 3/3 Vampire Cleric ETB drain 2 +
+surveil 1), `pest_roostkeeper` ({1}{B}{G} 2/3 Pest Warlock ETB mint Pest
++ magecraft scry 1), `witherbloom_mossherald` ({2}{G} 3/2 Plant Druid
+Trample magecraft AddCounter +1/+1 on self), `witherbloom_vinepriest_b60`
+({2}{B}{G} 3/3 Plant Cleric Lifelink ETB drain 1 + magecraft gain 1 life),
+`lorehold_chronicler_b60` ({2}{W} 2/3 Spirit Cleric Vigilance ETB mint
+Spirit), `lorehold_sparkmage_b60` ({1}{R} 2/2 Spirit Wizard Haste
+magecraft ping 1), `lorehold_battle_sage` ({2}{R}{W} 3/3 Spirit Soldier
+First Strike magecraft +1/+1 EOT target friendly), `quandrix_tideborn`
+({1}{U} 1/3 Merfolk Wizard magecraft surveil 1), `fractal_stormpetal`
+({3}{G} 0/0 Fractal enters with four +1/+1 counters), `quandrix_pondwarden`
+({3}{G}{U} 3/4 Elf Druid ETB mint 2 Fractals each w/ a +1/+1 counter
+via LastCreatedTokens), `prismari_spell_smith_b60` ({U}{R} 2/1 Human
+Wizard magecraft scry 1), `prismari_fluxshaper` ({2}{U}{R} 3/3 Elemental
+Wizard Flying magecraft +1/+0 EOT self-pump), `prismari_glassblower`
+({3}{R} 3/3 Elemental Wizard ETB mint Treasure + 1 damage any target).
+Total tests: 3168 (was 3153).**
+
+Prior push (batch 59):
+
+**batch 59: 25 more synthesised STX cards spread across all 5 colleges
+(5 Silverquill + 5 Witherbloom + 5 Lorehold + 5 Quandrix + 5 Prismari).
+26 new tests covering ETB drains, magecraft (drain / scry / ping /
+loot / counter / target-Pest-pump / target-Fractal-pump), evasive
+flyer bodies, dies-drain riders, dies-mint-Pest replacement bodies,
+Inkling-tribal pump-on-ETB (uses `OtherThanSource`), Fractal-enters-
+with-counters cycle expansion, Treasure-mint ETB, and graveyard exile
+on ETB. New CR 700.1 (Events) audit row landed in TODO.md.
+
+Cards added: `silverquill_scrivener_b59` ({2}{W} 2/2 Human Cleric ETB
+surveil 1 + magecraft scry 1), `silverquill_inkflight_b59` ({1}{W} 1/2
+Inkling Cleric Flying magecraft self-pump +1/+0 EOT),
+`silverquill_pen_priest` ({W}{B} 1/3 Vampire Cleric Lifelink ETB drain
+1), `inkling_summit_b59` ({2}{W}{B} 2/3 Inkling Soldier Flying ETB
++1/+1 counter on each other Inkling you control via OtherThanSource),
+`silverquill_drainbearer` ({1}{B} 2/1 Inkling Rogue Menace dies-trigger
+drain 1), `witherbloom_corpsegrove` ({2}{B}{G} 3/3 Plant Beast dies-
+trigger mint Pest), `pest_grovetender` ({1}{B} 1/1 Pest Druid
+Deathtouch ETB scry 1), `witherbloom_thornpoet` ({1}{G} 1/3 Plant Druid
+Reach magecraft self-pump +1/+1 EOT), `witherbloom_sapler` ({B}{G} 2/2
+Plant Beast magecraft +1/+1 EOT to target friendly Pest),
+`witherbloom_blightbearer` ({3}{B} 3/3 Zombie Warlock ETB drain 2 +
+scry 1), `lorehold_skyignite` ({R}{W} 2/1 Spirit Soldier Flying + First
+Strike magecraft 1 damage any target), `lorehold_pyrelearner` ({1}{R}
+2/1 Spirit Wizard Haste magecraft self-pump +1/+0 EOT),
+`lorehold_spiritbinder_b59` ({2}{R}{W} 2/3 Spirit Cleric Vigilance ETB
+mint Spirit + gain 1 life), `lorehold_emberscribe_b59` ({1}{R}{W} 2/2
+Spirit Wizard magecraft 1 damage any target), `lorehold_relicseer`
+({3}{R}{W} 3/3 Spirit Wizard Flying ETB exile target opp gy card),
+`quandrix_growth_tutor` ({1}{G} 1/2 Elf Druid ETB +1/+1 counter on
+target friendly Fractal), `fractal_redleaf` ({2}{U} 0/0 Fractal enters
+with three +1/+1 counters via CR 614.12), `quandrix_oracle_b59` ({U}{G}
+2/1 Merfolk Wizard magecraft scry 1), `quandrix_summerkeeper` ({2}{G}{U}
+3/3 Elf Wizard ETB mint Fractal with two +1/+1 counters),
+`quandrix_skywinder` ({3}{G}{U} 3/3 Merfolk Wizard Flying magecraft
++1/+1 EOT on target friendly Fractal), `prismari_emberglyph` ({U}{R}
+2/1 Human Wizard magecraft each opp loses 1 life), `prismari_iceforge`
+({1}{U} 1/3 Merfolk Wizard magecraft scry 1), `prismari_flameseer`
+({2}{U}{R} 3/2 Elemental Wizard Haste magecraft loot 1),
+`prismari_artificer` ({3}{U}{R} 3/4 Elemental Wizard ETB mint Treasure
++ scry 1), `prismari_blast_apprentice` ({1}{R} 2/1 Human Wizard
+magecraft 1 damage any target). Total tests: 3153 (was 3126).**
+
+Prior push (batch 58):
+
 **batch 58: 22 more synthesised STX cards spread across all 5 colleges
 (5 Witherbloom + 5 Silverquill + 4 Lorehold + 4 Quandrix + 4 Prismari)
 PLUS Strict Proctor promoted 🟡 → ✅ via the new

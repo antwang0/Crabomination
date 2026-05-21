@@ -2131,6 +2131,39 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test needed for this audit row — the framework is end-to-end correct
   via the existing CreateToken pipeline.
 
+- ✅ **CR 700.1 — Events** (push modern_decks batch 59 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`):
+  "Anything that happens in a game is an event. Multiple events may
+  take place during the resolution of a spell or ability. The text of
+  triggered abilities and replacement effects defines the event they're
+  looking for. One 'happening' may be treated as a single event by one
+  ability and as multiple events by another." The engine's event model
+  faithfully matches CR 700.1: every state transition emits a discrete
+  `GameEvent` via `emit_event` in `game/effects/events.rs`, which the
+  trigger dispatcher consumes in `dispatch_triggers_for_events`. Each
+  trigger spec (`EventSpec`) declares an `EventKind` (the event class)
+  + `EventScope` (`SelfSource` / `YourControl` / `AnotherOfYours` /
+  `OpponentControl` / `AnyPlayer`), and the dispatcher folds events
+  into trigger candidates per-emission. The 700.1 example — "a single
+  attacking creature blocked by two creatures fires one 'becomes
+  blocked' trigger but two 'becomes blocked by a creature' triggers" —
+  maps cleanly: `EventKind::BecomesBlocked` fires once per attacker
+  per combat, while `EventKind::BlockedByCreature` (if shipped — same
+  framework) would fan out per blocker. Today the engine collapses
+  multi-blocker triggers to one fire per attacker via
+  `EventKind::Blocks` on the blocker side and `EventKind::BecomesBlocked`
+  on the attacker side; the per-blocker fan-out for "Whenever this
+  becomes blocked by a creature" is engine-wide ⏳ (no STX card prints
+  that wording). Resolved spells/abilities emitting multiple events
+  is supported through `Effect::Seq` and `Effect::ForEach` which both
+  walk their bodies once per inner iteration, emitting events at each
+  step. Tests: implicit across the ~3150 catalog tests — every Bolt
+  cast emits `SpellCast` + `DealsDamage` + `LifeLost` in that order;
+  every Pest token death emits `CreatureDied` (per token, not batched);
+  every counter add emits `CounterAdded` per counter (Tanazir's
+  ETB-doubling fires once per +1/+1 added). The event-per-happening
+  contract is end-to-end correct.
+
 - ✅ **CR 701.17 — Mill** (push modern_decks audit, claude/modern_decks
   branch): "For a player to mill a number of cards, that player puts
   that many cards from the top of their library into their graveyard.
@@ -6761,3 +6794,30 @@ follow-ups for batch 59+ across other shells:
 3. **Strixhaven Mystical Archive reprints** — Day of Judgment,
    Counterspell, Lightning Bolt, etc. — most already implemented in
    pre-STX modules; doc-sync them as STA-reprint rows.
+
+### Cards — Mid-priority batch 61+ suggestions
+
+After batches 59 + 60, the STX catalog is at 3168 tests and 1359 cards
+across all five colleges. Easy follow-ups for batch 61+:
+1. **Inkling-tribal cycle expansion** — Inkling Mentor / Inkling
+   Scholar / Inkling Champion: per-Inkling-ETB counter triggers via
+   `EventKind::EntersBattlefield/AnotherOfYours + HasCreatureType(Inkling)`.
+2. **Pest-tribal cycle expansion** — pestbinder/pestwarden/pestkeeper
+   stack with the existing Pestmancer/Vinemaster engine.
+3. **Spirit-tribal Lorehold expansion** — gravewatcher /
+   spirit-sage / battle-spirit using shared `lorehold_spirit_token`
+   and the magecraft Spirit-pump precedent (Sparring Regimen).
+4. **Fractal-tribal Quandrix expansion** — fractal-with-N-counters
+   cycle (fractal_redleaf was 3, fractal_stormpetal was 4; add
+   fractal_skybloom (2) and fractal_emberdust (5)).
+5. **Prismari Treasure-mint cycle** — combine Prismari Artificer's
+   ETB Treasure + something — discard/draw, scry, or 1-damage rider.
+
+### Engine — `etb_drain_and_scry` shortcut ⏳
+
+The pattern `etb(Effect::Seq(vec![drain(N), Effect::Scry { … }]))` shows
+up across ~10 STX cards (Witherbloom Toxicpath, Witherbloom Blightbearer,
+Silverquill Quillthane, etc.). Add a `shortcut::etb_drain_and_scry(drain,
+scry)` helper to collapse the recurring 8-line trigger body into one
+helper call. Same pattern for `etb_drain_and_surveil(drain, surveil)`
+which would land Toxicpath and Quillthane.

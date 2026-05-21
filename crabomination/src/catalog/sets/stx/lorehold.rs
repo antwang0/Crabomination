@@ -9298,3 +9298,281 @@ pub fn lorehold_reliquarian() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 59): 5 more Lorehold cards ───────────────────
+
+/// Lorehold Skyignite — {R}{W}, 2/1 Spirit Soldier with Flying + First
+/// Strike. Magecraft: 1 damage to any target. 2-mana double-keyword
+/// evasive pinger.
+pub fn lorehold_skyignite() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skyignite",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrelearner — {1}{R}, 2/1 Spirit Wizard with Haste.
+/// Magecraft self-pump +1/+0 EOT. Aggressive hasty body that grows on
+/// each IS cast.
+pub fn lorehold_pyrelearner() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrelearner",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritbinder II — {2}{R}{W}, 2/3 Spirit Cleric with Vigilance.
+/// ETB Seq(mint a 2/2 Spirit token + gain 1 life). 4-mana wide
+/// double-payoff body.
+pub fn lorehold_spiritbinder_b59() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Spiritbinder II",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Emberscribe II — {1}{R}{W}, 2/2 Spirit Wizard. Magecraft: deal
+/// 1 damage to any target. 3-mana Lorehold ping engine.
+pub fn lorehold_emberscribe_b59() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Emberscribe II",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks, batch 60): 3 more Lorehold cards ───────────────────
+
+/// Lorehold Chronicler III — {2}{W}, 2/3 Spirit Cleric with Vigilance. ETB
+/// mint a Spirit token. 3-mana wide body + flier-friendly defender.
+pub fn lorehold_chronicler_b60() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Chronicler III",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkmage II — {1}{R}, 2/2 Spirit Wizard with Haste.
+/// Magecraft: 1 damage to any target. 2-mana hasty pinger body —
+/// canonical aggressive Lorehold ping shape.
+pub fn lorehold_sparkmage_b60() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkmage II",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle-Sage — {2}{R}{W}, 3/3 Spirit Soldier with First
+/// Strike. Magecraft: target friendly creature gets +1/+1 EOT. 4-mana
+/// combat-anchor + per-cast pump.
+pub fn lorehold_battle_sage() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_target_pump;
+    CardDefinition {
+        name: "Lorehold Battle-Sage",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_target_pump(
+            target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            1, 1,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Relicseer — {3}{R}{W}, 3/3 Spirit Wizard with Flying. ETB
+/// exile target card from a graveyard. 5-mana evasive body + graveyard
+/// hate.
+pub fn lorehold_relicseer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Relicseer",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::EachOpponent,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Any,
+                },
+                Value::Const(1),
+            ),
+            to: ZoneDest::Exile,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

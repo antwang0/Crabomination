@@ -7015,3 +7015,277 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 59): 5 more Prismari cards ───────────────────
+
+/// Prismari Emberglyph — {U}{R}, 2/1 Human Wizard. Magecraft: each opp
+/// loses 1 life. 2-mana cheap ping-each-opp body.
+pub fn prismari_emberglyph() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Emberglyph",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Iceforge — {1}{U}, 1/3 Merfolk Wizard. Magecraft: Scry 1.
+/// 2-mana defensive smoother for spell-slinger shells.
+pub fn prismari_iceforge() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Prismari Iceforge",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Flameseer — {2}{U}{R}, 3/2 Elemental Wizard with Haste.
+/// Magecraft: loot (draw 1, discard 1). 4-mana hasty velocity body.
+pub fn prismari_flameseer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_loot;
+    CardDefinition {
+        name: "Prismari Flameseer",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Artificer — {3}{U}{R}, 3/4 Elemental Wizard. ETB Seq(create
+/// a Treasure token + Scry 1). 5-mana mana-base + selection top-end.
+pub fn prismari_artificer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Prismari Artificer",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks, batch 60): 3 more Prismari cards ───────────────────
+
+/// Prismari Spell-Smith II — {U}{R}, 2/1 Human Wizard. Magecraft Scry 1.
+/// 2-mana cheap selector — aggressive Prismari smoothing.
+pub fn prismari_spell_smith_b60() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Prismari Spell-Smith II",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Fluxshaper — {2}{U}{R}, 3/3 Elemental Wizard with Flying.
+/// Magecraft self-pump +1/+0 EOT. 4-mana evasive scaling body.
+pub fn prismari_fluxshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Fluxshaper",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Glassblower — {3}{R}, 3/3 Elemental Wizard. ETB Seq(create
+/// a Treasure token + DealDamage 1 any target). 4-mana ramp-and-ping.
+pub fn prismari_glassblower() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Prismari Glassblower",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::game::effects::treasure_token(),
+            },
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Blast Apprentice — {1}{R}, 2/1 Human Wizard. Magecraft:
+/// 1 damage to any target. 2-mana cheap ping body.
+pub fn prismari_blast_apprentice() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Blast Apprentice",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

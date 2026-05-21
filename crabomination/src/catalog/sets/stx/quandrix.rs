@@ -7596,3 +7596,287 @@ pub fn quandrix_sumcaster_b58() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 59): 5 more Quandrix cards ───────────────────
+
+/// Quandrix Growth-Tutor — {1}{G}, 1/2 Elf Druid. ETB: put a +1/+1
+/// counter on target Fractal you control. 2-mana Fractal-tribal pump
+/// enabler.
+pub fn quandrix_growth_tutor() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Growth-Tutor",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Redleaf — {2}{U}, 0/0 Fractal that enters with three +1/+1
+/// counters on it. 3-mana 3/3 with a bigger counter pile than
+/// Bluepetal.
+pub fn fractal_redleaf() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Redleaf",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Oracle II — {U}{G}, 2/1 Merfolk Wizard. Magecraft: Scry 1.
+/// Cheap aggressive body that smooths card velocity per IS cast.
+pub fn quandrix_oracle_b59() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Quandrix Oracle II",
+        cost: cost(&[u(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Summerkeeper — {2}{G}{U}, 3/3 Elf Wizard. ETB mint 0/0
+/// Fractal with two +1/+1 counters. 4-mana Fractal-tribal anchor —
+/// drops a 2/2 token body for combat + Tanazir doubling fuel.
+pub fn quandrix_summerkeeper() -> CardDefinition {
+    use crate::effect::shortcut::{create_token_with_counter, etb};
+    CardDefinition {
+        name: "Quandrix Summerkeeper",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(create_token_with_counter(
+            PlayerRef::You,
+            1,
+            quandrix_fractal_token(),
+            CounterType::PlusOnePlusOne,
+            2,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks, batch 60): 3 more Quandrix cards ───────────────────
+
+/// Quandrix Tideborn — {1}{U}, 1/3 Merfolk Wizard. Magecraft Surveil 1.
+/// 2-mana defensive smoother with graveyard fuel.
+pub fn quandrix_tideborn() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_surveil;
+    CardDefinition {
+        name: "Quandrix Tideborn",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_surveil(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Stormpetal — {3}{G}, 0/0 Fractal that enters with four +1/+1
+/// counters on it. 4-mana 4/4 Fractal body for go-tall plans.
+pub fn fractal_stormpetal() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Stormpetal",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Pondwarden — {3}{G}{U}, 3/4 Elf Druid. ETB mint two 0/0
+/// Fractals each with one +1/+1 counter. 5-mana double-Fractal anchor.
+pub fn quandrix_pondwarden() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Pondwarden",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedTokens,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Skywinder — {3}{G}{U}, 3/3 Merfolk Wizard with Flying.
+/// Magecraft: +1/+1 EOT to target friendly Fractal. 5-mana evasive
+/// Fractal-pumper.
+pub fn quandrix_skywinder() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_target_pump;
+    CardDefinition {
+        name: "Quandrix Skywinder",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_target_pump(
+            target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            1, 1,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

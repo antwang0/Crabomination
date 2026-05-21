@@ -11457,3 +11457,289 @@ pub fn silverquill_inkmaster_b58() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 59): 5 more Silverquill cards ────────────────
+
+/// Silverquill Scrivener II — {2}{W}, 2/2 Human Cleric. ETB Surveil 1 +
+/// magecraft Scry 1. 3-mana double-selection body — scales card velocity
+/// per IS cast.
+pub fn silverquill_scrivener_b59() -> CardDefinition {
+    use crate::effect::shortcut::{etb_surveil, magecraft_scry};
+    CardDefinition {
+        name: "Silverquill Scrivener II",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_surveil(1),
+            magecraft_scry(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkflight — {1}{W}, 1/2 Inkling Cleric with Flying.
+/// Magecraft self-pump +1/+0 EOT. Cheap evasive body that grows on
+/// each IS cast.
+pub fn silverquill_inkflight_b59() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkflight",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Priest — {W}{B}, 1/3 Vampire Cleric Lifelink. ETB
+/// drain 1. 2-mana defensive lifelink + immediate drain.
+pub fn silverquill_pen_priest() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen-Priest",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Summit — {2}{W}{B}, 2/3 Inkling Soldier with Flying. ETB:
+/// put a +1/+1 counter on each other Inkling you control. 4-mana
+/// tribal anthem-on-ETB.
+pub fn inkling_summit_b59() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Inkling Summit",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Inkling)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Drainbearer — {1}{B}, 2/1 Inkling Rogue with Menace.
+/// Dies-trigger: each opp loses 1, you gain 1. Aggressive evasive-ish
+/// body with on-death drain rider.
+pub fn silverquill_drainbearer() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Silverquill Drainbearer",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks, batch 60): 3 more Silverquill cards ────────────────
+
+/// Silverquill Mageblade — {1}{W}, 2/2 Human Soldier. Magecraft: +1/+0
+/// EOT to target friendly creature. 2-mana per-cast combat trick body.
+pub fn silverquill_mageblade() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_target_pump;
+    CardDefinition {
+        name: "Silverquill Mageblade",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_target_pump(
+            target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            1, 0,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Sigilwarden — {3}{W}, 2/4 Inkling Soldier with Flying +
+/// Vigilance. ETB +1/+1 counter on each other Inkling you control.
+/// 4-mana defensive flier tribal payoff.
+pub fn inkling_sigilwarden() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Inkling Sigilwarden",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Inkling)
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillthane — {2}{W}{B}, 3/3 Vampire Cleric. ETB Drain 2
+/// + Surveil 1. 4-mana defensive value engine — Drain swing + selection
+///   on entry.
+pub fn silverquill_quillthane() -> CardDefinition {
+    use crate::effect::shortcut::{drain, etb};
+    CardDefinition {
+        name: "Silverquill Quillthane",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            drain(2),
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -8906,3 +8906,285 @@ pub fn witherbloom_mire_maker() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 59): 5 more Witherbloom cards ────────────────
+
+/// Witherbloom Corpsegrove — {2}{B}{G}, 3/3 Plant Beast. Dies-trigger:
+/// create a Pest token. 4-mana sticky body — the Corpsegrove dies and
+/// hands the controller a 1/1 + lifegain Pest as consolation.
+pub fn witherbloom_corpsegrove() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Witherbloom Corpsegrove",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Grovetender — {1}{B}, 1/1 Pest Druid with Deathtouch. ETB Scry 1.
+/// 2-mana deathtouch trader with built-in graveyard selection — a
+/// versatile early defender that scry-fixes the controller's draws.
+pub fn pest_grovetender() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry;
+    CardDefinition {
+        name: "Pest Grovetender",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Thornpoet — {1}{G}, 1/3 Plant Druid with Reach. Magecraft
+/// self-pump +1/+1 EOT. Defensive Reach + scaling per IS cast — closes
+/// out aggro and ramps into combat.
+pub fn witherbloom_thornpoet() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Thornpoet",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapler — {B}{G}, 2/2 Plant Beast. Magecraft: +1/+1 EOT
+/// to target friendly Pest. Pest-tribal pump payoff at 2 mana —
+/// stacks with the Pest fan-out across batches.
+pub fn witherbloom_sapler() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapler",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Push (modern_decks, batch 60): 3 more Witherbloom cards ────────────────
+
+/// Pest Roostkeeper — {1}{B}{G}, 2/3 Pest Warlock. ETB mint 1 Pest +
+/// magecraft scry 1. 3-mana go-wide body with selection scaling.
+pub fn pest_roostkeeper() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Pest Roostkeeper",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_mint_token(stx_pest_token(), 1),
+            magecraft_scry(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mossherald — {2}{G}, 3/2 Plant Druid Trample. Magecraft
+/// AddCounter(+1/+1, self). 3-mana magecraft-scaling tramper.
+pub fn witherbloom_mossherald() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mossherald",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinepriest II — {2}{B}{G}, 3/3 Plant Cleric Lifelink. ETB
+/// Drain 1 + magecraft GainLife 1. 4-mana defensive value engine —
+/// double-incidental lifegain.
+pub fn witherbloom_vinepriest_b60() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinepriest II",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_drain(1),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Blightbearer — {3}{B}, 3/3 Zombie Warlock. ETB Seq(drain 2
+/// + Scry 1). 4-mana defensive value engine — bulky body, immediate
+///   drain swing, and graveyard selection rider.
+pub fn witherbloom_blightbearer() -> CardDefinition {
+    use crate::effect::shortcut::{drain, etb};
+    CardDefinition {
+        name: "Witherbloom Blightbearer",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            drain(2),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

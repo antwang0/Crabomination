@@ -2707,4 +2707,27 @@ pub mod shortcut {
             count: Value::Const(count),
         })
     }
+
+    /// ETB-Surveil shortcut: "When this creature enters, surveil
+    /// `amount`." Wraps [`etb`] with the canonical surveil body. Used
+    /// by ~5 STX/SOS Witherbloom / Silverquill surveil creatures
+    /// (Silverquill Scrivener, Witherbloom Toxicpath, etc.).
+    pub fn etb_surveil(amount: i32) -> TriggeredAbility {
+        etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Surveil shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, surveil `amount`." Wraps
+    /// [`magecraft`] with a `Surveil` body. The Witherbloom
+    /// counterpart to `magecraft_scry`; useful for "smooth + dig"
+    /// payoffs that want graveyard fuel.
+    pub fn magecraft_surveil(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(amount),
+        })
+    }
 }
