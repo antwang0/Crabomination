@@ -12760,7 +12760,7 @@ pub fn silverquill_inkdiplomat() -> CardDefinition {
 }
 
 /// Inkling Glyphkeeper — {W}{B}, 2/2 Inkling Cleric Flying. Magecraft
-/// Seq(GainLife 1 + Drain 1). 2-mana magecraft-doublepayoff Inkling.
+/// Drain 1. 2-mana magecraft Inkling.
 pub fn inkling_glyphkeeper() -> CardDefinition {
     CardDefinition {
         name: "Inkling Glyphkeeper",
@@ -12776,16 +12776,7 @@ pub fn inkling_glyphkeeper() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -12798,8 +12789,8 @@ pub fn inkling_glyphkeeper() -> CardDefinition {
     }
 }
 
-/// Silverquill Scriptdrain — {2}{B}, Instant. Seq(LoseLife 3 each opp
-/// + GainLife 3). 3-mana instant-speed drain finisher.
+/// Silverquill Scriptdrain — {2}{B}, Instant. Drain 3. 3-mana instant-
+/// speed drain finisher.
 pub fn silverquill_scriptdrain() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Scriptdrain",
@@ -12810,16 +12801,11 @@ pub fn silverquill_scriptdrain() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
-            },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        ]),
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

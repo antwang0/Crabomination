@@ -2824,4 +2824,43 @@ pub mod shortcut {
             amount: Value::Const(amount),
         })
     }
+
+    /// ETB-Drain-and-Surveil shortcut: "When this creature enters, each
+    /// opponent loses `drain` life and you gain `drain` life. Surveil
+    /// `surveil`." Wraps [`etb`] with a `Seq([Drain, Surveil])` body.
+    /// Used by Silverquill Quillthane, Witherbloom Toxicpath, Silverquill
+    /// Conviction-style "ETB drain + select" creatures to collapse the
+    /// recurring 10-line pattern.
+    pub fn etb_drain_and_surveil(drain: i32, surveil: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(drain),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(surveil),
+            },
+        ]))
+    }
+
+    /// ETB-Drain-and-Scry shortcut: "When this creature enters, each
+    /// opponent loses `drain` life and you gain `drain` life. Scry
+    /// `scry`." Wraps [`etb`] with a `Seq([Drain, Scry])` body. Used
+    /// by Silverquill Quillscribe / Inkling Stormcaller-style "ETB drain
+    /// + smooth" creatures to collapse the recurring pattern.
+    pub fn etb_drain_and_scry(drain: i32, scry: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(drain),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(scry),
+            },
+        ]))
+    }
 }

@@ -10232,12 +10232,9 @@ pub fn witherbloom_sapchant() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
-            },
-            Effect::GainLife {
-                who: Selector::You,
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
                 amount: Value::Const(3),
             },
             Effect::Surveil {
@@ -10352,12 +10349,9 @@ pub fn pest_carrionbinder() -> CardDefinition {
                 definition: stx_pest_token(),
                 count: Value::Const(2),
             },
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-            Effect::GainLife {
-                who: Selector::You,
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
                 amount: Value::Const(1),
             },
         ]))],
@@ -10485,12 +10479,9 @@ pub fn witherbloom_reapdrain() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(2),
-            },
-            Effect::GainLife {
-                who: Selector::You,
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
                 amount: Value::Const(2),
             },
             Effect::Draw {
