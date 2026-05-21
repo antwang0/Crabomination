@@ -8069,3 +8069,68 @@ pub fn quandrix_pondseer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 62): 2 more Quandrix cards ────────────────────
+
+/// Quandrix Numberminder — {2}{G}, 2/3 Elf Druid. Magecraft Scry 1 via
+/// the `magecraft_scry(1)` shortcut. 3-mana defensive smoother body —
+/// turns each IS cast into a smoother.
+pub fn quandrix_numberminder() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Quandrix Numberminder",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Rookling — {G}, 0/0 Fractal that enters with one +1/+1
+/// counter. 1-mana cheapest Fractal — a vanilla 1/1 for {G} with growth
+/// potential under Tanazir / +1/+1 doublers.
+pub fn fractal_rookling() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

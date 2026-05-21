@@ -7472,3 +7472,68 @@ pub fn prismari_smiteforge() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 62): 2 more Prismari cards ────────────────────
+
+/// Prismari Sparksinger — {U}{R}, 2/2 Human Wizard. Magecraft ping each
+/// opponent for 1 via `magecraft_ping_each_opp(1)`. 2-mana drain payoff
+/// at the Prismari Apprentice slot.
+pub fn prismari_sparksinger() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparksinger",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyreforge — {2}{R}, 2/3 Elemental Wizard. ETB 1 damage any
+/// target via the new `etb_ping_any(1)` shortcut. 3-mana cheap ping-on-
+/// entry body — drops a Bolt for a 2/3 body at the curve.
+pub fn prismari_pyreforge() -> CardDefinition {
+    use crate::effect::shortcut::etb_ping_any;
+    CardDefinition {
+        name: "Prismari Pyreforge",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

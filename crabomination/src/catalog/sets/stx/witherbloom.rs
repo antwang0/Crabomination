@@ -9371,3 +9371,83 @@ pub fn witherbloom_vinemaster_b61() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 62): 2 more Witherbloom cards ────────────────
+
+/// Pest Soulbinder — {1}{B}{G}, 2/2 Pest Warlock. "Whenever you
+/// sacrifice a creature, scry 1." Card-selection aristocrats engine
+/// via CR-701.16 sacrifice event.
+pub fn pest_soulbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Soulbinder",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CreatureSacrificed,
+                EventScope::YourControl,
+            ),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vineshaper — {2}{G}, 2/3 Plant Druid. Magecraft +1/+1
+/// counter on each Pest you control (`ForEach Pest/ControlledByYou →
+/// AddCounter +1/+1`). 3-mana Pest-tribal magecraft scaler.
+pub fn witherbloom_vineshaper() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vineshaper",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
