@@ -956,47 +956,56 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
-- ⏳ **CR 705 — Flipping a Coin** (push modern_decks batch 48 audit,
-  claude/modern_decks branch — `MagicCompRules_20260417.txt`): The coin-
-  flip randomization primitive — how a flipped coin generates a binary
-  outcome, what "winning a flip" means, and how scripted-outcome effects
-  override the natural result. Audit:
-  (a) **705.1** "A coin must have two sides + equal-likelihood outcomes;
-  designate one side heads, the other tails" — ⏳ (no `Effect::FlipCoin`
-  primitive; no `Player.last_coin_flip_result` field; the engine's RNG
-  layer (`game::rng::Rng`) supports deterministic test seeding but isn't
-  threaded into any coin-flip site since no card uses it).
-  (b) **705.2** "Some effects that flip a coin care only about heads/tails
-  with no winner. For others, the flipping player calls heads/tails and
-  wins if the call matches the result" — ⏳ (no
-  `Effect::FlipCoinChoiceMatches { call }` two-outcome primitive; no
-  no-winner variant for "this turn's coin flip" referenced by Karplusan
-  Minotaur etc.).
-  (c) **705.3** "An effect may state that a flip has a certain result
-  or that a certain player wins — ignore the natural result" — ⏳ (no
-  scripted-flip override primitive; no `Krark's Thumb` reroll primitive;
-  test fixtures would need a `ScriptedDecider::CoinFlip(Heads)` variant
-  in `Decision`).
-  Affected cards (none in catalog today):
-  - **Ral Zarek, Guest Lecturer** -7: "Flip five coins. Target opponent
-    skips their next X turns where X is heads count." Currently the body
-    omits the ult entirely (no coin-flip + no skip-turn primitive).
-  - **Karplusan Minotaur**, **Mana Clash**, **Goblin Pulse** — all
-    out-of-set; doc-tracked.
-  - **Krark's Thumb** — reroll primitive; doc-tracked.
-  Tests: no test coverage; gates on `Effect::FlipCoin` landing.
-  Suggested wiring:
+- 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 48/63 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`): Stale ⏳
+  row promoted to 🟡; see the higher-level CR 705 row above for the
+  current implementation status. This is now a duplicate audit retained
+  for historical reference only — primitive lands via `Effect::FlipCoin
+  { count, on_heads, on_tails }` paired with `Decision::CoinFlip(CoinFace)`
+  for scripted test fixtures, with `Lorehold Coinflinger` as the wired
+  exercise card. Remaining gap: CR 705.3 (Krark's Thumb-style override /
+  reroll primitive). Promote the parent row to ✅ when 705.3 lands; this
+  stale-row should be removed in a future doc-sweep.
+
+- ⏳ **CR 706 — Rolling a Die** (push modern_decks batch 68 audit,
+  claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
+  die-roll randomization primitive — how a rolled die generates a 1..N
+  outcome, how modifiers / results tables work, and how multi-roll
+  ignored-roll mechanics interact. Audit:
+  (a) **706.1** "An N-sided die has N equally likely outcomes 1..N" — ⏳
+  (no `Effect::RollDie { sides, count }` primitive; no
+  `Decision::DieRoll { sides }` request shape; no `Value::DieResult`
+  accumulator).
+  (b) **706.2** "Natural result vs. final result after modifiers; modifier
+  application order: reroll first, then add/subtract" — ⏳ (no modifier-
+  application layer; no reroll primitive).
+  (c) **706.3** "Result-table abilities ('1: do X, 2-3: do Y, 4+: do Z')"
+  — ⏳ (no result-table primitive in `Effect::`; the equivalent shape
+  would be a `ChooseMode`-style multi-arm dispatch on the `Value`
+  returned from the roll).
+  (d) **706.5** "Doubles rolling (Celebr-8000)" — ⏳ (no two-roll-with-
+  doubles-check predicate).
+  (e) **706.6** "Ignoring a roll causes no triggers to fire from it" —
+  ⏳ (no ignore-roll primitive).
+  (f) **706.8** "Storing roll results on a permanent (Centaur of
+  Attention)" — ⏳ (no `CounterType` representation of stored rolls;
+  would need a new `CardInstance.stored_rolls: Vec<DieResult>` field).
+  Affected cards (none in catalog today): Krark, Tribute Brought,
+  Bone Splinters-Variant cards, Aether Sphere Harvester (out-of-set).
+  Tests: no coverage; gates on `Effect::RollDie` primitive landing.
+  Suggested wiring (when landed):
   ```rust
-  Effect::FlipCoin {
+  Effect::RollDie {
+      sides: u8,
       count: Value,
-      on_heads: Box<Effect>,
-      on_tails: Box<Effect>,
+      then: Box<Effect>,  // body that reads Value::LastRollResult
   }
   ```
-  paired with `Decision::CoinFlip(CoinFace)` for scripted test
-  fixtures and an `RNG`-backed default for live play. Promote to 🟡
-  when the primitive lands; promote to ✅ when Ral Zarek's -7 ships
-  end-to-end alongside a `Decision::CoinFlip` scripted-result test.
+  paired with `Decision::DieRoll { sides, count }` for scripted test
+  fixtures and an `Rng`-backed default for live play. Promote to 🟡
+  when the primitive lands; promote to ✅ when at least one card in
+  the catalog (e.g. Goblin Goliath, Wand of the Elements) exercises
+  the primary 706.1 + 706.3 shapes end-to-end.
 
 - 🟡 **CR 707 — Copying Objects** (push modern_decks batch 41 audit,
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
@@ -7112,3 +7121,45 @@ Silverquill Quillthane, etc.). Add a `shortcut::etb_drain_and_scry(drain,
 scry)` helper to collapse the recurring 8-line trigger body into one
 helper call. Same pattern for `etb_drain_and_surveil(drain, surveil)`
 which would land Toxicpath and Quillthane.
+
+### Cards — Batch 68 follow-ups ⏳
+
+After batch 68 (modern_decks claude/modern_decks branch — 30 new STX
+cards across all five colleges, 6 per college, total tests now 3336):
+
+1. **Pest tribal anthem / lord cycle** — a 3-mana 2/3 "Other Pests you
+   control get +1/+1" lord using `StaticEffect::PumpPT` + `OtherThanSource`
+   (same shape as Tenured Inkcaster's Inkling anthem). Would tie the
+   existing Pest token cycle together as a build-around.
+2. **Inkling-tribal multiplicative pump** — magecraft trigger that
+   pumps each Inkling +1/+0 EOT (already have `magecraft_pump_each_creature_type`
+   shortcut; just add the Inkling instance — Inkling Bannerer exists,
+   but lower-cost variants would round out the curve).
+3. **Spirit-tribal go-wide payoff** — a 4-mana 3/3 R/W "Whenever Spirits
+   you control attack, they get +1/+0 EOT" (uses `Attacks/AnotherOfYours
+   + HasCreatureType(Spirit)` + `ForEach(Spirit + Attacking) → PumpPT`).
+4. **Fractal lord** — a 3-mana 2/3 "Other Fractals you control get +1/+1"
+   tribal anthem to tie the Quandrix Fractal cycle together.
+5. **Prismari ramp + burn engine** — a creature with both ETB Treasure
+   AND on-attack 1-damage-to-any-target (combines two existing
+   shortcuts on a single body — fills the curve gap at 3 mana).
+
+### Engine — `etb_pump_each_with_type` shortcut ⏳
+
+The pattern `etb(ForEach(Creature & HasCreatureType(X) & ControlledByYou)
+→ AddCounter(+1/+1))` shows up in Inkling Sigilbearer (push batch 51).
+A shortcut helper `shortcut::etb_pump_each_with_type(creature_type, p, t)`
+would collapse the 10-line trigger body into one helper call, paving
+the way for ~6 other "ETB pump each [tribe]" cards across all five
+schools' tribal payoffs.
+
+### Engine — `magecraft_drain_target` shortcut ⏳
+
+Mirror of `magecraft_drain_each_opp` but targeting a single opponent.
+The "target opponent loses N life and you gain N life" magecraft body
+shows up in Promising Duskmage, Inkling Coursebinder, Inkling Confessor,
+Inkling Pamphleteer, Inkling Vassal, and Silverquill Adept. Currently
+collapsed to "each opponent" via the auto-target framework. A
+`shortcut::magecraft_drain_target(amount)` helper using a
+`PlayerRef::Target(0)` slot would let the picker pick the opp
+explicitly (relevant in multiplayer).
