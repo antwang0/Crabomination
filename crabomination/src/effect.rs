@@ -2247,6 +2247,31 @@ pub mod shortcut {
         })
     }
 
+    /// Dies-Drain shortcut: "When this creature dies, each opponent
+    /// loses `amount` life and you gain `amount` life." Mirrors
+    /// [`etb_drain`] for the on-death event, used by aristocrats-style
+    /// payoffs where the source itself dies (Witherbloom Saproot,
+    /// Witherbloom Reaper-Hand, Witherbloom Drainbreath templates).
+    pub fn dies_drain(amount: i32) -> TriggeredAbility {
+        on_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// ETB-Mill-Each-Opp shortcut: "When this creature enters, each
+    /// opponent mills `amount` cards." Wraps [`etb`] with the
+    /// canonical opponent-mill body. Useful for delirium / graveyard-
+    /// matters payoffs that put opp cards into their own graveyard
+    /// (Witherbloom Tomeshade template).
+    pub fn etb_mill_each_opp(amount: i32) -> TriggeredAbility {
+        etb(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(amount),
+        })
+    }
+
     /// ETB-Loot shortcut: "When this creature enters, draw a card,
     /// then discard a card." Wraps [`etb`] with the canonical loot
     /// body. Used by ~10 STX/SOS Prismari / Witherbloom loot creatures

@@ -1667,6 +1667,63 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   the 1v1 case. Multi-player priority (CR 117.6 shared team
   turns) is still ⏳, tracked under Format Phase F (2HG).
 
+- 🟡 **CR 614 — Replacement Effects** (push modern_decks batch 56
+  audit, claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): The replacement-effect primitive —
+  how effects watch for and replace events. Audit:
+  (a) **614.1a** "instead" effects are replacement effects — 🟡 (the
+  engine has `ReplacementEffect` for zone changes (Commander
+  redirect), `StaticEffect::DoubleTokens` / `DoubleCounters` for
+  multiplier replacements, and the regen / Hofri exile-instead-of-
+  graveyard paths. No general "instead" framework — each "instead"
+  primitive is hand-rolled).
+  (b) **614.1b** "skip" effects are replacement effects — 🟡 (only
+  `Player.skip_first_draw` exists for CR 103.6's start-of-game
+  first-draw skip. No general skip-step / skip-turn primitive — see
+  CR 614.10 row).
+  (c) **614.1c–d** "[This permanent] enters with N counters", "As X
+  enters" — ✅ (`CardDefinition.enters_with_counters` field + the
+  layer-injection pass at `stack.rs` and `place_card_in_dest`). Used
+  by Quandrix Calligrapher, Symmathematics, Fractal Augmenter (batch
+  56), and ~10 other Fractal cards.
+  (d) **614.2** damage-replacement effects — 🟡 (the damage pipeline
+  in `game/effects/movement.rs::deal_damage_to_from` honors
+  Protection + Indestructible but has no general "would deal damage,
+  do X instead" hook — Furnace of Rath / Gisela / Heartless Hidetsugu
+  not modelled).
+  (e) **614.3** no special casting restrictions — ✅ (replacement
+  effects come from on-resolve effects like any other; no engine
+  gates the casting of a spell with a replacement clause).
+  (f) **614.4** replacement effects exist before the event — ✅
+  (the resolver walks the registry at the moment of zone change /
+  token mint / counter placement; pre-existing replacements catch
+  the event in flight).
+  (g) **614.5** replacement effects don't invoke themselves
+  repeatedly — ✅ (`MAX_REPLACEMENT_ITERATIONS` cap at
+  `replacement.rs:76` + each match is rebuilt per pass; the
+  pathological infinite loop is bounded).
+  (h) **614.6** if event is replaced, never happens — ✅ (replaced
+  zone changes drop the original move; the modified destination
+  is the only one that fires triggers).
+  (i) **614.7a** 0 damage → no event → no replacement — ✅ (the
+  `deal_damage_to_from` pipeline early-returns on amount==0, so
+  Furnace-of-Rath-style doublers don't fire for 0 sources).
+  (j) **614.8** Regeneration as destruction-replacement — ✅
+  (`Regeneration::regen_shields` on `CardInstance` + the destroy
+  pipeline check at `effects/mod.rs`).
+  (k) **614.9** redirection effects — ⏳ (no general
+  damage-redirection primitive; Maze of Ith / Lightning Greaves /
+  Boros Guildmage-style redirects aren't modelled).
+  (l) **614.10** skip-effects (see row (b)) — 🟡.
+  (m) **614.12** "Enters with N counters" — ✅ (see row (c) above;
+  full audit row at `TODO.md:2222`).
+  (n) **614.16** "create tokens / put counters" replacement —
+  ✅ (`StaticEffect::DoubleTokens` + `DoubleCounters`).
+  No new tests added in this audit pass — every replacement
+  primitive listed above already has a lock-in test. Promote
+  the umbrella row to ✅ when 614.2 (general damage-replacement)
+  and 614.9 (redirection) land.
+
 - ✅ **CR 614.16 — "If an effect would create tokens / put counters,
   replacement effects apply"** (push modern_decks audit,
   claude/modern_decks branch — **batch 11 promoted to ✅**): "Some

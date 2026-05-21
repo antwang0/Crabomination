@@ -1760,6 +1760,7 @@ pub fn toxic_bloodletting() -> CardDefinition {
 /// 4-mana trampler with a baked-in death drain — even if it trades
 /// down, you net a 2-life swing.
 pub fn witherbloom_saproot() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
     CardDefinition {
         name: "Witherbloom Saproot",
         cost: cost(&[generic(2), b(), g()]),
@@ -1774,14 +1775,7 @@ pub fn witherbloom_saproot() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![dies_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2146,14 +2140,7 @@ pub fn witherbloom_drainbreath() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::dies_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2423,14 +2410,7 @@ pub fn witherbloom_reaper_hand() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::dies_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
