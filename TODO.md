@@ -2720,8 +2720,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   pass emits one event per blocker, then the dispatcher fans out
   matching triggers. Test: STX
   `daemogoth_titan_blocks_sacrifices_another_creature`.
-- ⏳ **CR 702.21 — Cycling**: Not implemented. `keyword::Cycling`
+- ⏳ **CR 702.29 — Cycling** (renumbered from CR 702.21 in the
+  20260116 rules edition): Not implemented. `keyword::Cycling`
   doesn't exist; cards with Cycling are either stubbed or omitted.
+  See `MagicCompRules_20260417.txt` line 4194 for the current rule
+  text.
 - ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for

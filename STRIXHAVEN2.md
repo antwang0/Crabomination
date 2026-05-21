@@ -19,10 +19,51 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 229 | 27 | 0 |
-| STX (327 cards) | 1247 (incl. synthesised variants) | 6 | 0 |
+| STX (327 cards) | 1272 (incl. synthesised variants) | 6 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (modern_decks, claude/modern_decks branch — latest revision —
+**batch 56: 25 more synthesised STX cards spread evenly across all 5
+colleges (5 Witherbloom + 5 Silverquill + 5 Lorehold + 5 Quandrix +
+5 Prismari). 25 new tests covering ETB triggers, magecraft (with
+team-wide counter scaling), sacrifice triggers + sacrifice-as-spell-
+effect (Necrofeast), dies-trigger gy recursion, enters-with-counters
+scaling off hand size, and a team-wide haste anthem (Lorehold Summit).
+Cards added: `witherbloom_pestreaper_b56` ({2}{B}{G} 3/3 Pest Warlock
+sacrifice-trigger AddCounter self + GainLife 1), `witherbloom_
+soulshade` ({1}{B} 2/2 Pest Wizard dies → return ≤2-MV creature from
+gy → hand), `witherbloom_necrofeast` ({2}{B}{G} Sorcery sac-a-creature
++ Drain 4), `pest_caretaker` ({1}{G} 2/1 Pest Druid ETB mint Pest +
+Surveil 1), `witherbloom_tomeshade` ({1}{B}{G} 2/3 Plant Druid ETB
+mill 3 each opp + Drain 1), `silverquill_bloodscribe` ({1}{W}{B} 2/2
+Vampire Cleric Flying+Lifelink — sacrifice-trigger Draw 1),
+`inkling_penblade` ({W} 1/1 Inkling Soldier Flying ETB target creature
++1/+0 EOT), `silverquill_litany_b56` ({1}{W}{B} Sorcery Drain 2 + Mill
+2 each opp), `inkling_inkmaster` ({2}{W}{B} 2/3 Inkling Wizard Flying
+magecraft Drain 1), `silverquill_acolyte_b56` ({1}{W} 2/2 Human Cleric
+ETB Drain 1), `lorehold_forge_cleric` ({1}{R}{W} 2/3 Spirit Cleric
+Vigilance magecraft +1/+1 counter on friendly Spirit), `lorehold_
+pyrescholar_b56` ({2}{R} 2/2 Spirit Wizard Haste magecraft 2 damage
+to opp), `lorehold_summit` ({3}{R}{W} Sorcery mint 2 Spirits + grant
+Haste EOT to team), `spirit_scribe` ({1}{W} 1/3 Spirit Cleric ETB
+Scry 2), `lorehold_ember_strike` ({R} Instant 1 damage any target +
+Surveil 1), `quandrix_mathlord` ({2}{G}{U} 2/2 Elf Wizard ETB mint
+Fractal + team-wide +1/+1 counter on Fractals + magecraft +1/+1 on
+each Fractal), `quandrix_geometer_b56` ({1}{G} 2/2 Elf Druid magecraft
+team-wide +1/+1 counter on creatures you control), `fractal_trifecta`
+({1}{G}{U} Sorcery mint 3 Fractals + team-wide +1/+1 on Fractals),
+`quandrix_tidesower` ({2}{U} 1/4 Merfolk Wizard ETB shrink target -2/-0
+EOT + Draw 1), `fractal_augmenter` ({3}{G}{U} 0/0 Fractal Wizard
+enters with +1/+1 counters = HandSizeOf(You)), `prismari_sparkleap`
+({U}{R} 2/1 Elemental Haste + Prowess), `prismari_flamewriter`
+({2}{U}{R} 3/3 Elemental Wizard magecraft Ping any 1 + Draw 1),
+`prismari_cinderchant` ({1}{R} Instant 2 damage any target + Scry 1),
+`prismari_skydrake` ({3}{U}{R} 3/3 Drake Wizard Flying + Prowess),
+`prismari_floodfire` ({3}{U}{R} Sorcery 4 damage target player +
+Draw 2). Total tests: 3074.**
+
+Prior push (batch 55):
+
 **batch 55: 25 more synthesised STX cards spread evenly across all 5
 colleges (5 Witherbloom + 5 Lorehold + 5 Quandrix + 5 Prismari + 5
 Silverquill). 25 new tests covering ETB triggers, magecraft, sacrifice
