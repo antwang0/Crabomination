@@ -8557,3 +8557,184 @@ pub fn pest_roostmaster() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 57): 5 more Witherbloom cards ────────────────
+
+/// Pest Soulreaver — {3}{B}{G}, 3/3 Pest Warlock. Dies-trigger drain 3.
+/// 5-mana finisher with built-in 6-life death swing.
+pub fn pest_soulreaver() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Pest Soulreaver",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestmender — {1}{G}, 1/2 Plant Druid. Magecraft puts a
+/// +1/+1 counter on target Pest you control. Cheap Pest-tribal counter
+/// engine — scales every IS spell into a Pest pump.
+pub fn witherbloom_pestmender() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestmender",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necropoet — {2}{B}, 2/3 Human Warlock. "Whenever you
+/// sacrifice a creature, put a +1/+1 counter on each Pest you control."
+/// Pest-tribal scaling that grows the entire Pest swarm per sacrifice.
+pub fn witherbloom_necropoet() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necropoet",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Soulsmith — {3}{B}{G}, 3/4 Plant Druid. ETB drain 2 +
+/// Scry 1. 5-mana value engine combining drain swing with selection.
+pub fn witherbloom_soulsmith() -> CardDefinition {
+    use crate::effect::shortcut::{drain, etb};
+    CardDefinition {
+        name: "Witherbloom Soulsmith",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            drain(2),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Vanguard — {1}{B}{G}, 2/2 Pest Insect with Deathtouch.
+/// Magecraft drain 1. 3-mana deathtouch trade body that also drains
+/// per IS spell — fits squarely into the Witherbloom magecraft shell.
+pub fn pest_vanguard() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Vanguard",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

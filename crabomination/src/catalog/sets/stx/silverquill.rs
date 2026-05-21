@@ -11105,3 +11105,182 @@ pub fn silverquill_acolyte_b56() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 57): 5 more Silverquill cards ────────────────
+
+/// Silverquill Inkscribe — {W}{B}, 2/2 Inkling Cleric with Flying.
+/// Dies-trigger: each opponent loses 2 life. 2-mana evasive trade-up
+/// body — when removed it still extracts value via the on-die drain.
+pub fn silverquill_inkscribe_b57() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Silverquill Inkscribe II",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_dies(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Scriptmaster — {2}{W}{B}, 3/3 Vampire Cleric.
+/// ETB Drain 2 + Scry 1. 4-mana mid-curve value engine.
+pub fn silverquill_scriptmaster() -> CardDefinition {
+    use crate::effect::shortcut::{drain, etb};
+    CardDefinition {
+        name: "Silverquill Scriptmaster",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            drain(2),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Bladerunner — {2}{W}, 2/2 Inkling Soldier with Flying +
+/// First Strike. 3-mana evasive combat-ready Inkling — works under
+/// the Tenured Inkcaster anthem for an effective 4/4 first-strike flyer.
+pub fn inkling_bladerunner() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Bladerunner",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sentinel — {1}{W}, 1/3 Inkling Soldier with Vigilance
+/// + Flying. 2-mana defensive flyer that pulls double duty on attack
+///   (with Tenured Inkcaster: 3/5 vigilance flyer).
+pub fn silverquill_sentinel_b57() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sentinel III",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Master — {3}{W}{B}, 3/3 Inkling Wizard with Flying.
+/// ETB loot + drain 1 (each opp loses 1, you gain 1). Top-curve
+/// value engine — five mana for an evasive 3/3 + card velocity + drain.
+pub fn silverquill_pen_master() -> CardDefinition {
+    use crate::effect::shortcut::{drain, etb};
+    CardDefinition {
+        name: "Silverquill Pen-Master",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+            drain(1),
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

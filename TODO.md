@@ -2542,6 +2542,58 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   control `non_infect_spell_damage_to_player_reduces_life_per_cr_702_
   90b_control` (bare bear deals 2 → 2 life loss, 0 poison).
 
+- 🟡 **CR 116 — Special Actions** (push modern_decks batch 57,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`). Special actions are priority-window
+  actions that don't use the stack. Audit:
+  (a) **116.1** "Special actions don't use the stack" — ✅ (the engine's
+  `play_land`, `do_untap`, etc. paths apply their effects without
+  pushing a `StackItem`; the priority cycle resumes with the active
+  player without an intervening resolve step).
+  (b) **116.2a** Play a land — ✅ (`play_land` in `game/actions.rs`
+  enforces main-phase + stack-empty + lands-played-this-turn cap with
+  the `extra_land_per_turn` static modifier for Exploration / Azusa;
+  CR 305 / 505.6b coverage already tracked above).
+  (c) **116.2b** Turn a face-down creature face up — ⏳ (no face-down
+  permanent or morph primitive; `CardInstance.face_down` field doesn't
+  exist; engine has no `GameAction::TurnFaceUp`).
+  (d) **116.2c** End a continuous effect / stop a delayed trigger —
+  ⏳ (no card in the catalog grants "any time you have priority, end
+  this effect" — the printed-Oracle template appears on Pemmin's Aura
+  / Will of the Council corner cases, none of which are in the
+  catalog).
+  (e) **116.2d** Ignore a static ability for a duration — ⏳ (no card
+  prints this rider; the engine has no per-permanent "ignored-by-X"
+  flag on static effects).
+  (f) **116.2e** Discard Circling Vultures any time you could cast
+  an instant — ⏳ (the literal card is not in the catalog; no general
+  "discard as a special action" primitive).
+  (g) **116.2f** Suspend: exile a card from hand — ⏳ (no Suspend
+  keyword primitive; suspend triggers + time-counter framework absent).
+  (h) **116.2g** Companion {3} pay to put into hand — ⏳ (no
+  companion sideboard model; the engine has no "outside the game"
+  zone wiring for companion picks).
+  (i) **116.2h** Foretell {2} exile face down — ⏳ (no Foretell
+  keyword + no face-down-in-exile + no alt-cost-on-cast-from-exile
+  primitive).
+  (j) **116.2i** Planechase planar die roll — ⏳ (no Planechase
+  variant in the format module; planar deck + planar die TBD).
+  (k) **116.2j** Conspiracy face-up — ⏳ (no Conspiracy variant; not
+  on the format roadmap).
+  (l) **116.2k** Plot a card from hand — ⏳ (no Plot keyword; would
+  need an exile-with-marker + cast-from-exile-at-sorcery primitive,
+  same shape as Foretell with a different timing window).
+  (m) **116.2m** Unlock a locked half via paying its mana cost — ⏳
+  (no "rooms" / lockable-permanent primitive; this is the Murders at
+  Karlov Manor Rooms cycle, which doesn't appear in any wired catalog).
+  (n) **116.3** "After taking a special action, the player receives
+  priority again" — ✅ (`play_land` doesn't pass priority; the
+  `GameAction` loop re-enters the priority window with the same
+  player). Tests: implicit across every `play_land` test in
+  `tests/game.rs` + `tests/multiplayer.rs`. Promote to ✅ when
+  Foretell / Plot / Companion / Suspend land (they're the next four
+  blockers for ⏳ → 🟡 promotion).
+
 - 🟡 **CR 701.34 — Proliferate** (push modern_decks audit,
   claude/modern_decks branch): "To proliferate means to choose any
   number of permanents and/or players that have a counter, then give
@@ -6559,3 +6611,41 @@ existing `Effect::CopySpell` primitive. Engine shape: a new
 HasCardType(Sorcery), keyword: Storm }` + a spell-cast hook that fans
 out the copies. Promotes Prismari, the Inspiration + any future
 storm-keyword card.
+
+### Engine — `EventKind::CardLeftGraveyard` source-controller scope ✅ DONE
+
+The new `EventKind::CardLeftGraveyard` event (push XV) emits per-card
+zone-out from a graveyard. The `EventScope::YourControl` variant is
+correctly scoped to the leaving card's *previous* controller (the
+graveyard owner), so Ark of Hunger / Hardened Academic / Spirit
+Mascot / Lorehold Reliquary fire correctly when *your* gy cards
+leave. Lock-in tests across each of those cards.
+
+### Engine — Per-sacrifice "you control the sacrificer" gating ✅ DONE
+
+The new `EventKind::CreatureSacrificed` event (push modern_decks batch
+51) carries a `who: PlayerIndex` payload identifying the sacrificing
+player. `EventScope::YourControl` correctly gates "Whenever you
+sacrifice a creature, …" triggers (Pest Pestmaster, Pest Anointer,
+Witherbloom Bloodreaper, Pest Brewmaster) while `EventScope::AnyPlayer`
+catches the Mortician Beetle template (Witherbloom Mortician).
+
+### Engine — Pest-tribal sacrifice scaling (Witherbloom Necropoet)
+
+The new card Witherbloom Necropoet (push modern_decks batch 57) fires
+"Whenever you sacrifice a creature, put a +1/+1 counter on each Pest
+you control" via the existing `EventKind::CreatureSacrificed/YourControl`
+event + `Selector::EachPermanent(HasCreatureType(Pest) ∧
+ControlledByYou)`. The +1/+1 counter is applied via fan-out
+`Effect::AddCounter` whose `what:` is the fan-out selector. Multi-pest
+boards bump every Pest off a single sacrifice event. Lock-in test:
+`witherbloom_necropoet_grows_pests_on_sacrifice`.
+
+### Engine — Magecraft Fractal-tribal scaling (Quandrix Tideguard)
+
+The new card Quandrix Tideguard (push modern_decks batch 57) targets a
+friendly Fractal on magecraft via `Selector::TargetFiltered { slot: 0,
+filter: HasCreatureType(Fractal) ∧ ControlledByYou }`. The cast-time
+target picker walks the battlefield for Fractals before defaulting to
+auto-target. Powers Fractal-tribal shells (Symmathematics +
+counter-doublers). Lock-in test: `quandrix_tideguard_magecraft_pumps_target_fractal`.

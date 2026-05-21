@@ -7339,3 +7339,118 @@ pub fn fractal_augmenter() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (modern_decks, batch 57): 3 more Quandrix cards ───────────────────
+
+/// Fractal Greenstone — {1}{G}, 0/0 Fractal. Enters with 2 +1/+1
+/// counters (CR 614.12) — a printed-0/0 frame that lands at 2/2 for
+/// 2 mana. Cheap Fractal-tribal body that scales with Tanazir / +1/+1
+/// counter doublers.
+pub fn fractal_greenstone() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Greenstone",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tideguard — {2}{U}, 2/3 Merfolk Wizard. Magecraft places
+/// a +1/+1 counter on target Fractal you control. 3-mana scaling
+/// Fractal-tribal pump engine.
+pub fn quandrix_tideguard() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tideguard",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                    .and(SelectionRequirement::ControlledByYou),
+            },
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Greenmage — {2}{G}{U}, 3/3 Elf Druid. ETB Seq(Scry 1 +
+/// AddCounter(+1/+1, Self)). 4-mana scaling value body — lands at
+/// 4/4 with selection.
+pub fn quandrix_greenmage() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Greenmage",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: super::no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
