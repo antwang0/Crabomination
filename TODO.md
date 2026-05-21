@@ -3332,11 +3332,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity(def)` in `format.rs` unions the mana-cost pips; rules-text
   mana symbols + printed color indicators are not parsed — the catalog
   doesn't currently use indicator-only color identity sources).
-  (b) **903.4d** "DFC back-face counts toward color identity" — ⏳
-  (Phase K limitation: `color_identity` only inspects the front-face
-  mana cost; MDFC back-face mana costs aren't unioned in. No current
-  Commander-legal MDFC in the catalog leans on this beyond what's
-  derivable from the front face).
+  (b) **903.4d** "DFC back-face counts toward color identity" — ✅
+  (push modern_decks batch 64: `color_identity(def)` in `format.rs` now
+  recursively unions in the back-face's mana cost via the new
+  `union_cost_identity` helper. MDFCs with differently-colored faces
+  contribute both halves to the deck-validation identity check.
+  Test: `color_identity_unions_mdfc_back_face_per_cr_903_4d`).
   (c) **903.5a** "Each deck must contain exactly 100 cards including
   its commander" — ✅ (`validate_commander_deck` in `format.rs` checks
   `deck.main.len() + deck.commanders.len() == 100` via the Phase K

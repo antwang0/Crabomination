@@ -282,8 +282,21 @@ pub fn validate_deck(deck: &[CardDefinition], format: Format) -> Result<(), Vec<
 /// text aren't in the catalog). When such a card is added, extend
 /// `CardDefinition` with a `printed_color_identity: Option<ColorSet>`
 /// override field that this helper unions in.
+///
+/// CR 903.4d: "The back face of a double-faced card is included when
+/// determining a card's color identity." We recursively union the
+/// back-face cost into the front-face identity so an MDFC's combined
+/// identity is correct for Commander deck-validation.
 pub fn color_identity(def: &CardDefinition) -> ColorSet {
     let mut out = ColorSet::empty();
+    union_cost_identity(&mut out, def);
+    if let Some(back) = &def.back_face {
+        union_cost_identity(&mut out, back.as_ref());
+    }
+    out
+}
+
+fn union_cost_identity(out: &mut ColorSet, def: &CardDefinition) {
     for s in &def.cost.symbols {
         match s {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => out.insert(*c),
@@ -297,7 +310,6 @@ pub fn color_identity(def: &CardDefinition) -> ColorSet {
             | ManaSymbol::X => {}
         }
     }
-    out
 }
 
 /// Errors specific to Commander deck validation (on top of the

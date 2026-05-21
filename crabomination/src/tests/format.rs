@@ -54,6 +54,65 @@ fn too_many_copies_rejected() {
 }
 
 #[test]
+fn color_identity_unions_mdfc_back_face_per_cr_903_4d() {
+    // CR 903.4d — the back face of a DFC is included when determining
+    // a card's color identity. Construct a synthetic blue front /
+    // red back MDFC and assert color_identity returns {U, R}.
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::Effect;
+    use crate::mana::{cost, r, u, Color};
+    let back = CardDefinition {
+        name: "Synthetic Back",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    };
+    let front = CardDefinition {
+        name: "Synthetic Front",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes::default(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: Some(Box::new(back)),
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    };
+    let id = color_identity(&front);
+    assert!(id.contains(Color::Blue), "U should be in identity");
+    assert!(id.contains(Color::Red), "R should be in identity (from back)");
+    assert!(!id.contains(Color::White));
+    assert_eq!(id.len(), 2);
+}
+
+#[test]
 fn basic_lands_are_unlimited() {
     // 100 basic forests: valid in Standard (no max deck size) and Commander.
     let deck = make_deck(catalog::forest, 100);
