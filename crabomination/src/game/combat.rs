@@ -97,12 +97,12 @@ impl GameState {
             // Walk printed Attacks triggers + any transient granted
             // Attacks triggers (Root Manipulation's "gain 1 life when
             // this attacks" grant lands in `granted_triggers_eot`).
-            let granted = self.granted_triggers_eot
+            let granted: &[crate::card::TriggeredAbility] = self
+                .granted_triggers_eot
                 .get(&id)
-                .cloned()
-                .unwrap_or_default();
-            let printed = card.definition.triggered_abilities.clone();
-            for t in printed.iter().chain(granted.iter()) {
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
+            for t in card.definition.triggered_abilities.iter().chain(granted) {
                 if t.event.kind == EventKind::Attacks {
                     // Capture the trigger's optional filter so we can
                     // re-evaluate it AFTER the entire attacker batch is

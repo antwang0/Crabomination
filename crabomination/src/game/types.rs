@@ -607,4 +607,6 @@ pub enum GameError {
     NotEnoughLoyalty(CardId),
     #[error("Cannot pay this ability's life cost (would lose at or below 0 life)")]
     InsufficientLife,
+    #[error("Flashback-tap cast invalid (missing keyword, wrong tap count, or invalid creature)")]
+    FlashbackTapInvalid,
 }

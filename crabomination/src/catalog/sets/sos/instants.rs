@@ -6,7 +6,7 @@ use crate::card::{
     AlternativeCost, CardDefinition, CardType, CounterType, Effect, Keyword, SelectionRequirement, Subtypes,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, PlayerRef, Selector, Value, ZoneDest};
+use crate::effect::{Duration, PlayerRef, Selector, Value};
 use crate::mana::{b, cost, generic, w};
 
 // ── White ───────────────────────────────────────────────────────────────────

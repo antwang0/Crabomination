@@ -204,7 +204,7 @@ pub struct GameState {
     #[serde(skip)]
     pub(crate) last_created_token: Option<CardId>,
     /// Transient: ids of all tokens created within the current effect
-    /// resolution. Push (modern_decks batch 28): set by `Effect::CreateToken`
+    /// resolution. Set by `Effect::CreateToken`
     /// alongside `last_created_token` and read by
     /// `Selector::LastCreatedTokens` (plural) so a follow-up `AddCounter`
     /// in the same resolution can fan over every freshly-minted token
@@ -318,7 +318,7 @@ pub struct GameState {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commander_damage: HashMap<(usize, CardId), u32>,
-    /// Push (modern_decks claude/modern_decks): per-dying-card snapshot
+    /// Per-dying-card snapshot
     /// cache, populated at SBA emission time for every dying creature
     /// (token or non-token). Used by trigger-dispatch lookups
     /// (`game/effects/events.rs::event_matches_spec`,
@@ -470,6 +470,21 @@ impl GameState {
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
         }
+    }
+
+    /// Transient triggers granted to a permanent until EOT (Root
+    /// Manipulation, Rabid Attack-style "creatures gain '…' EOT").
+    /// Returns an empty slice when no grant is active — call sites can
+    /// `.iter().chain(self.granted_triggers(id))` against the printed
+    /// abilities without cloning.
+    pub(crate) fn granted_triggers(
+        &self,
+        id: CardId,
+    ) -> &[crate::card::TriggeredAbility] {
+        self.granted_triggers_eot
+            .get(&id)
+            .map(Vec::as_slice)
+            .unwrap_or(&[])
     }
 
     /// Apply format-specific setup: starting life total, turn-1 draw
@@ -1616,16 +1631,11 @@ impl GameState {
             // Walk printed triggered abilities AND any transient
             // granted_triggers_eot for this permanent (Root Manipulation,
             // Rabid Attack-style "creatures gain '…trigger…' EOT").
-            let granted_for_card = self
-                .granted_triggers_eot
-                .get(&card.id)
-                .cloned()
-                .unwrap_or_default();
             let all_triggers = card
                 .definition
                 .triggered_abilities
                 .iter()
-                .chain(granted_for_card.iter());
+                .chain(self.granted_triggers(card.id));
             for ta in all_triggers {
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
@@ -1808,7 +1818,7 @@ impl GameState {
                 event_amount,
             });
         }
-        // Push (modern_decks): clear the per-die-event snapshot cache
+        // Clear the per-die-event snapshot cache
         // after the dispatcher finishes with this event batch. Any
         // subsequent SBA cycle re-populates the entries it needs at
         // that cycle's die-time, so stale entries from prior batches

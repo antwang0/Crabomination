@@ -32,13 +32,10 @@ use crate::mana::Color;
 /// Translate the cast-site `effect::Duration` into the runtime
 /// `layers::EffectDuration` used by the continuous-effect layer system.
 ///
-/// CR 511.2 mapping for `EndOfCombat` lands here: prior to push
-/// modern_decks batch 55 the cast-site `Duration::EndOfCombat` was
-/// downgraded to `EffectDuration::UntilEndOfTurn`, which let "until end
-/// of combat" effects linger across the post-combat main phase. The
-/// dedicated `UntilEndOfCombat` variant clears the effect at the end of
-/// the combat phase (via the cleanup pass in `do_combat_end`), matching
-/// the printed rule.
+/// CR 511.2: `Duration::EndOfCombat` maps to the dedicated
+/// `UntilEndOfCombat` variant (cleared in `do_combat_end`) so that
+/// "until end of combat" effects don't linger into the post-combat
+/// main phase.
 pub(crate) fn map_effect_duration(
     duration: crate::effect::Duration,
 ) -> EffectDuration {

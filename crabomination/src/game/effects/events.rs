@@ -120,8 +120,8 @@ pub(crate) fn event_matches_spec(
                     state.players.iter().position(|p|
                         p.graveyard.iter().any(|c| c.id == target))
                 })
-                // Push (modern_decks): for token deaths the SBA "ceases to
-                // exist" rule (CR 111.7c) removes the token from every zone
+                // For token deaths the SBA "ceases to exist" rule
+                // (CR 111.7c) removes the token from every zone
                 // in the same SBA sweep as the death event emission, so by
                 // the time the trigger dispatcher walks this lookup the
                 // token isn't anywhere. The `died_card_snapshots` cache

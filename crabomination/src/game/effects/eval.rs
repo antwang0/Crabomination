@@ -569,8 +569,8 @@ impl GameState {
                     // the controller's own library).
                     .or_else(|| self.players.iter().find_map(|p| p.library.iter().find(|c| c.id == *cid)))
                     .or_else(|| self.players.iter().find_map(|p| p.hand.iter().find(|c| c.id == *cid)))
-                    // Push (modern_decks): dying-card snapshot, populated
-                    // at SBA die-time and cleared after trigger dispatch.
+                    // Dying-card snapshot, populated at SBA die-time and
+                    // cleared after trigger dispatch.
                     // Lets predicates like
                     // `EntityMatches { TriggerSource, HasCreatureType(Pest) }`
                     // read the dying card's printed types even when the

@@ -2552,8 +2552,7 @@ pub fn tester_of_the_tangential() -> CardDefinition {
     use crate::card::{CounterType, EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::shortcut::{increment_self_plus_one, target_filtered};
     use crate::game::types::TurnStep;
-    use crate::mana::{u, generic as gen2};
-    let _ = gen2; // suppress unused-import warning on the use line
+    use crate::mana::u;
     CardDefinition {
         name: "Tester of the Tangential",
         cost: cost(&[generic(1), u()]),

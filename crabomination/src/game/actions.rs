@@ -1235,14 +1235,38 @@ impl GameState {
             .total()
             .saturating_sub(self.players[p].mana_pool.total());
 
-        // Remove from graveyard.
+        self.finalize_flashback_cast(
+            p,
+            card_id,
+            graveyard_pos,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            mana_spent,
+        )
+    }
+
+    /// Shared tail for `cast_flashback` and `cast_flashback_tap`:
+    /// remove the card from its owner's graveyard, mark it
+    /// `cast_via_flashback` so the resolver exiles it (CR 702.34d),
+    /// emit `CardLeftGraveyard` + `SpellCast{Flashback}`, and thread the
+    /// rest through `finalize_cast`.
+    fn finalize_flashback_cast(
+        &mut self,
+        p: usize,
+        card_id: CardId,
+        graveyard_pos: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: u32,
+        mana_spent: u32,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let mut card = self.players[p].graveyard.remove(graveyard_pos);
         self.players[p].cards_left_graveyard_this_turn =
             self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
-        // Mark as cast via flashback so the resolver routes the card to
-        // exile (CR 702.34d) instead of its owner's graveyard.
         card.cast_via_flashback = true;
-
         let events = vec![
             GameEvent::CardLeftGraveyard { player: p, card_id },
             GameEvent::SpellCast {
@@ -1251,7 +1275,7 @@ impl GameState {
                 face: CastFace::Flashback,
             },
         ];
-        self.finalize_cast(p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent);
+        self.finalize_cast(p, card, target, additional_targets, mode, x_value, 0, mana_spent);
         Ok(events)
     }
 
@@ -1279,14 +1303,14 @@ impl GameState {
         let required_taps = card
             .definition
             .has_flashback_tap()
-            .ok_or(GameError::SorcerySpeedOnly)?;
+            .ok_or(GameError::FlashbackTapInvalid)?;
         let must_be_sorcery_speed = !card.definition.is_instant_speed()
             || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
         if tap_creatures.len() as u32 != required_taps {
-            return Err(GameError::SorcerySpeedOnly); // reuse: wrong tap count
+            return Err(GameError::FlashbackTapInvalid);
         }
         // Validate every creature in `tap_creatures` is currently untapped,
         // controlled by the caster, and a creature.
@@ -1295,9 +1319,9 @@ impl GameState {
                 .battlefield
                 .iter()
                 .find(|c| c.id == *cid)
-                .ok_or(GameError::SorcerySpeedOnly)?;
+                .ok_or(GameError::FlashbackTapInvalid)?;
             if c.tapped || c.controller != p || !c.definition.is_creature() {
-                return Err(GameError::SorcerySpeedOnly);
+                return Err(GameError::FlashbackTapInvalid);
             }
         }
         if let Some(ref tgt) = target {
@@ -1309,21 +1333,16 @@ impl GameState {
                 c.tapped = true;
             }
         }
-        // Remove from graveyard.
-        let mut card = self.players[p].graveyard.remove(graveyard_pos);
-        self.players[p].cards_left_graveyard_this_turn =
-            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
-        card.cast_via_flashback = true;
-        let events = vec![
-            GameEvent::CardLeftGraveyard { player: p, card_id },
-            GameEvent::SpellCast {
-                player: p,
-                card_id,
-                face: CastFace::Flashback,
-            },
-        ];
-        self.finalize_cast(p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, 0);
-        Ok(events)
+        self.finalize_flashback_cast(
+            p,
+            card_id,
+            graveyard_pos,
+            target,
+            additional_targets,
+            mode,
+            x_value.unwrap_or(0),
+            0,
+        )
     }
 
     /// Cast a spell from an arbitrary zone (graveyard or exile) without
@@ -1637,7 +1656,7 @@ impl GameState {
             return Err(GameError::NoAlternativeCost);
         }
 
-        // Push (modern_decks): optional cast-time predicate gate. Used by
+        // Optional cast-time predicate gate. Used by
         // SOS Wilt in the Heat's "{2} less if cards left your graveyard
         // this turn" rider, where the alt cost is only legal under a
         // specific game-state condition. Rejected before any state
@@ -2258,64 +2277,30 @@ impl GameState {
 
     // ── Activate ability ──────────────────────────────────────────────────────
 
-    /// Galazeth Prismari static — "Artifacts you control have
-    /// '{T}: Add one mana of any color.'" If any Galazeth Prismari is
-    /// on the battlefield under the given controller's seat, returns a
-    /// virtual mana ability that can be slotted in as the artifact's
-    /// `printed_count`-th ability. Otherwise returns `None`.
-    ///
-    /// Hooked into `activate_ability` so the standard cost-pay /
-    /// target-validation / mana-emit path "just works" — no separate
-    /// branch in the resolver. The granted ability uses
-    /// `ManaPayload::AnyOneColor(1)`, which routes through the
+    /// Static grant: "Permanents of type T you control have '{T}: Add
+    /// one mana of any one color.'" — returns the virtual mana ability
+    /// when a permanent named `source_name` is on the battlefield under
+    /// `controller`'s seat. Hooked into `activate_ability` so the
+    /// standard cost-pay / target-validation / mana-emit path "just
+    /// works" — no separate branch in the resolver. The granted ability
+    /// uses `ManaPayload::AnyOneColor(1)`, which routes through the
     /// `AnyOneColorPending` decision (chooser picks the color) for UI
     /// players; the AutoDecider picks the first legal color.
-    fn galazeth_artifact_grant(
+    ///
+    /// Used by Galazeth Prismari (artifacts) and Resonating Lute
+    /// (lands; the printed text grants two restricted-spend mana —
+    /// collapsed to one unrestricted until the spend-restriction
+    /// primitive lands).
+    fn any_one_color_grant(
         &self,
         controller: usize,
+        source_name: &str,
     ) -> Option<crate::effect::ActivatedAbility> {
         use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
-        let galazeth_in_play = self.battlefield.iter().any(|c| {
-            c.definition.name == "Galazeth Prismari" && c.controller == controller
+        let source_in_play = self.battlefield.iter().any(|c| {
+            c.definition.name == source_name && c.controller == controller
         });
-        if !galazeth_in_play {
-            return None;
-        }
-        Some(ActivatedAbility {
-            tap_cost: true,
-            mana_cost: crate::mana::ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
-        })
-    }
-
-    /// Resonating Lute static grant: "Lands you control have '{T}: Add
-    /// two mana of any one color. Spend this mana only to cast instant
-    /// and sorcery spells.'". Approximated as `{T}: Add one mana of any
-    /// one color` (the spend-restricted-mana primitive is engine-wide
-    /// ⏳, and we also collapse the 2-mana payoff to 1 to avoid the
-    /// approximation becoming overpowered when restriction enforcement
-    /// is missing). Same dispatch pattern as `galazeth_artifact_grant`.
-    fn resonating_lute_land_grant(
-        &self,
-        controller: usize,
-    ) -> Option<crate::effect::ActivatedAbility> {
-        use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
-        let lute_in_play = self.battlefield.iter().any(|c| {
-            c.definition.name == "Resonating Lute" && c.controller == controller
-        });
-        if !lute_in_play {
+        if !source_in_play {
             return None;
         }
         Some(ActivatedAbility {
@@ -2398,9 +2383,9 @@ impl GameState {
             let is_land = bf_card.definition.is_land();
             let granted = if ability_index == printed_count && !stripped {
                 if is_artifact {
-                    self.galazeth_artifact_grant(controller)
+                    self.any_one_color_grant(controller, "Galazeth Prismari")
                 } else if is_land {
-                    self.resonating_lute_land_grant(controller)
+                    self.any_one_color_grant(controller, "Resonating Lute")
                 } else {
                     None
                 }

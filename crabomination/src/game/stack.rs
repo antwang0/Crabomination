@@ -859,9 +859,9 @@ impl GameState {
 
         for id in dead {
             events.push(GameEvent::CreatureDied { card_id: id });
-            // Push (modern_decks claude/modern_decks): cache the dying card's
-            // snapshot so AnotherOfYours-scope triggers AND printed-type
-            // filter predicates fire reliably even for tokens. CR 111.7c's
+            // Cache the dying card's snapshot so AnotherOfYours-scope
+            // triggers AND printed-type filter predicates fire reliably
+            // even for tokens. CR 111.7c's
             // "ceases to exist" SBA removes the token from every zone in
             // the same sweep — by dispatch time the zone-walking lookup
             // returns None. The cached `CardInstance` survives the sweep
@@ -897,16 +897,16 @@ impl GameState {
                     // Walk printed Dies triggers + any granted transient
                     // ones (Rabid Attack EOT "this creature gains 'die →
                     // draw a card'" grants ride on `granted_triggers_eot`).
-                    let granted = self
+                    let granted: &[crate::card::TriggeredAbility] = self
                         .granted_triggers_eot
                         .get(&c.id)
-                        .cloned()
-                        .unwrap_or_default();
+                        .map(Vec::as_slice)
+                        .unwrap_or(&[]);
                     let triggers: Vec<(CardId, Effect, usize)> = c
                         .definition
                         .triggered_abilities
                         .iter()
-                        .chain(granted.iter())
+                        .chain(granted)
                         .filter(|t| t.event.kind == EventKind::CreatureDied)
                         .filter(|t| matches!(
                             t.event.scope,
@@ -1218,15 +1218,15 @@ impl GameState {
                 // granted ones (Rabid Attack-style "this creature gains
                 // 'when this creature dies, draw a card'" grants ride
                 // on `granted_triggers_eot[c.id]`).
-                let granted = self
+                let granted: &[crate::card::TriggeredAbility] = self
                     .granted_triggers_eot
                     .get(&c.id)
-                    .cloned()
-                    .unwrap_or_default();
+                    .map(Vec::as_slice)
+                    .unwrap_or(&[]);
                 let triggers = c.definition
                     .triggered_abilities
                     .iter()
-                    .chain(granted.iter())
+                    .chain(granted)
                     .filter(|t| matches!(t.event.scope, EventScope::SelfSource))
                     .filter(|t| match t.event.kind {
                         EventKind::PermanentLeavesBattlefield => true,
