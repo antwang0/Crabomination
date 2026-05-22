@@ -860,6 +860,55 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
+                    ManaPayload::AnyColorOpponentCouldProduce => {
+                        // Fellwar Stone — scan opponents' battlefield for
+                        // basic-typed lands, build the legal-color set from
+                        // those land types. Falls back to colorless if no
+                        // opponent controls a basic-typed land (so the
+                        // activation produces *something* — matches the
+                        // engine's "never silently no-op" convention for
+                        // mana abilities).
+                        use crate::card::LandType;
+                        let mut legal: Vec<Color> = Vec::new();
+                        let push_unique = |c: Color, v: &mut Vec<Color>| {
+                            if !v.contains(&c) { v.push(c); }
+                        };
+                        for opp in self.battlefield.iter()
+                            .filter(|c| c.controller != p)
+                        {
+                            for lt in &opp.definition.subtypes.land_types {
+                                match lt {
+                                    LandType::Plains => push_unique(Color::White, &mut legal),
+                                    LandType::Island => push_unique(Color::Blue, &mut legal),
+                                    LandType::Swamp => push_unique(Color::Black, &mut legal),
+                                    LandType::Mountain => push_unique(Color::Red, &mut legal),
+                                    LandType::Forest => push_unique(Color::Green, &mut legal),
+                                    _ => {} // Non-basic land types (Desert,
+                                            // Gate, Locus, etc.) don't produce
+                                            // a fixed color.
+                                }
+                            }
+                        }
+                        if legal.is_empty() {
+                            self.players[p].mana_pool.add_colorless(1);
+                            events.push(GameEvent::ColorlessManaAdded { player: p });
+                        } else {
+                            let source = ctx.source.unwrap_or(CardId(0));
+                            let answer = self.decider.decide(
+                                &crate::decision::Decision::ChooseColor {
+                                    source,
+                                    legal: legal.clone(),
+                                },
+                            );
+                            let color = match answer {
+                                crate::decision::DecisionAnswer::Color(c)
+                                    if legal.contains(&c) => c,
+                                _ => legal[0],
+                            };
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
                     ManaPayload::AnyColors(v) => {
                         // N independent color choices (one per pip). Currently
                         // resolves synchronously via the installed decider — a

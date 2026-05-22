@@ -232,7 +232,9 @@ pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> boo
         && let Effect::AddMana { pool, .. } = &a.effect
     {
         return match pool {
-            ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => true,
+            ManaPayload::AnyOneColor(_)
+            | ManaPayload::AnyColors(_)
+            | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::Colors(cs) => cs.len() > 1,
             ManaPayload::OfColor(_, _) => false,
             ManaPayload::Colorless(_) => false,
@@ -449,7 +451,9 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
     match effect {
         Effect::AddMana { pool, .. } => match pool {
             ManaPayload::Colors(cs) => cs.contains(&color),
-            ManaPayload::AnyOneColor(_) | ManaPayload::AnyColors(_) => true,
+            ManaPayload::AnyOneColor(_)
+            | ManaPayload::AnyColors(_)
+            | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::OfColor(c, _) => *c == color,
             ManaPayload::Colorless(_) => false,
         },

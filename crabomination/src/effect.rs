@@ -600,6 +600,15 @@ pub enum ManaPayload {
     AnyOneColor(Value),
     /// Add `amount` mana of any colors (player chooses each).
     AnyColors(Value),
+    /// Add one mana of any color a controller's opponent's land could
+    /// produce. The pool of legal colors is the union of basic-land
+    /// types under any opponent's control (`Plains` → White, `Island`
+    /// → Blue, `Swamp` → Black, `Mountain` → Red, `Forest` → Green).
+    /// If no opponent controls a basic-typed land, falls back to
+    /// colorless (so the activation never silently no-ops). Used by
+    /// Fellwar Stone — `{T}: Add one mana of any color an opponent's
+    /// land could produce.`
+    AnyColorOpponentCouldProduce,
 }
 
 // ── Event specification (triggers) ───────────────────────────────────────────
@@ -1518,7 +1527,8 @@ impl Effect {
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) => value_has_target(v),
-                    ManaPayload::Colors(_) => false,
+                    ManaPayload::Colors(_)
+                    | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }
             }
             Effect::Destroy { what }

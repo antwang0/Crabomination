@@ -8892,26 +8892,73 @@ fn sudden_edict_rejects_creature_target() {
 /// any one color.
 #[test]
 fn fellwar_stone_taps_for_any_color() {
+    // Push (batch 117): Fellwar Stone now respects "an opponent's
+    // land could produce". With no opp lands at all, falls back to
+    // colorless. Seed an opp Island so the pool gains blue.
     let mut g = two_player_game();
     let stone = g.add_card_to_battlefield(0, catalog::fellwar_stone());
     g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
+    // Opp has an Island → Blue is in the legal pool.
+    g.add_card_to_battlefield(1, catalog::island());
 
-    // Activate the tap-for-mana ability.
     g.perform_action(GameAction::ActivateAbility {
         card_id: stone, ability_index: 0, target: None, x_value: None })
     .expect("Fellwar Stone's mana ability should resolve");
 
-    // The mana ability resolves immediately (no stack); the pool
-    // should now have one of any color. AnyOneColor defaults to White.
     let pool = &g.players[0].mana_pool;
-    assert!(
-        pool.amount(Color::White) >= 1
-            || pool.amount(Color::Blue) >= 1
-            || pool.amount(Color::Black) >= 1
-            || pool.amount(Color::Red) >= 1
-            || pool.amount(Color::Green) >= 1,
-        "Fellwar Stone added one mana of some color"
-    );
+    // With only Island under opp's control, only Blue should be legal.
+    assert_eq!(pool.amount(Color::Blue), 1,
+        "Fellwar Stone produced 1 blue (the only color opp's Island can produce)");
+    assert_eq!(pool.amount(Color::White), 0);
+    assert_eq!(pool.amount(Color::Black), 0);
+    assert_eq!(pool.amount(Color::Red), 0);
+    assert_eq!(pool.amount(Color::Green), 0);
+}
+
+#[test]
+fn fellwar_stone_falls_back_to_colorless_when_no_opp_basic_lands() {
+    // No opp lands → pool gains 1 colorless (so the activation isn't
+    // a silent no-op). Matches the "never silently no-op" convention.
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::fellwar_stone());
+    g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
+    // Opp has no battlefield permanents at all.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0, target: None, x_value: None })
+    .expect("Fellwar Stone activates with no opp lands");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total(), 1, "Pool has exactly 1 mana");
+    // Colorless fallback — none of the colored amounts increment.
+    assert_eq!(pool.amount(Color::White), 0);
+    assert_eq!(pool.amount(Color::Blue), 0);
+    assert_eq!(pool.amount(Color::Black), 0);
+    assert_eq!(pool.amount(Color::Red), 0);
+    assert_eq!(pool.amount(Color::Green), 0);
+}
+
+#[test]
+fn fellwar_stone_unions_colors_across_multiple_opp_lands() {
+    // Multiple opp basic-typed lands → union of their colors is the
+    // legal pool. With opp Island + Forest, only Blue + Green are
+    // legal; AutoDecider picks the first (Blue).
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(0, catalog::fellwar_stone());
+    g.battlefield_find_mut(stone).unwrap().summoning_sick = false;
+    g.add_card_to_battlefield(1, catalog::island());
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: stone, ability_index: 0, target: None, x_value: None })
+    .expect("Fellwar Stone activates");
+    let pool = &g.players[0].mana_pool;
+    assert_eq!(pool.total(), 1);
+    // White / Black / Red are not in the legal pool — opp controls no
+    // Plains / Swamp / Mountain.
+    assert_eq!(pool.amount(Color::White), 0);
+    assert_eq!(pool.amount(Color::Black), 0);
+    assert_eq!(pool.amount(Color::Red), 0);
+    // Blue or Green (one of them) gained 1.
+    assert!(pool.amount(Color::Blue) + pool.amount(Color::Green) == 1,
+        "Exactly one of Blue/Green gained 1");
 }
 
 /// Grim Lavamancer's `{R}, {T}, Exile two cards from your gy:` deals
