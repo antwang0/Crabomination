@@ -48018,3 +48018,111 @@ fn witherbloom_cultivator_b120_rejects_activation_without_fodder() {
     assert_eq!(g.players[0].mana_pool.colorless_amount(), mana_before);
 }
 
+// ── batch 121 — additional sac_other_filter cards ──────────────────────────
+
+#[test]
+fn pest_cultmaster_b121_sacs_creature_to_draw() {
+    let mut g = two_player_game();
+    let cult = g.add_card_to_battlefield(0, catalog::pest_cultmaster_b121());
+    g.clear_sickness(cult);
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cult,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
+}
+
+#[test]
+fn witherbloom_sapdrinker_b121_sacs_to_pump_self() {
+    let mut g = two_player_game();
+    let sd = g.add_card_to_battlefield(0, catalog::witherbloom_sapdrinker_b121());
+    g.clear_sickness(sd);
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    let p_before = g.battlefield_find(sd).unwrap().power();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sd,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("activation (free ability)");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.battlefield_find(sd).unwrap().power(), p_before + 2);
+}
+
+#[test]
+fn witherbloom_bonechanter_b121_sacs_to_shrink_target() {
+    let mut g = two_player_game();
+    let bone = g.add_card_to_battlefield(0, catalog::witherbloom_bonechanter_b121());
+    g.clear_sickness(bone);
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.clear_sickness(target);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bone,
+        ability_index: 0,
+        target: Some(Target::Permanent(target)),
+        x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    // Serra Angel is 4/4 → -2/-2 → 2/2.
+    let angel = g.battlefield_find(target).expect("angel still alive");
+    assert_eq!(angel.power(), 2);
+    assert_eq!(angel.toughness(), 2);
+}
+
+#[test]
+fn pest_ringleader_b121_sacs_to_drain_two() {
+    let mut g = two_player_game();
+    let rl = g.add_card_to_battlefield(0, catalog::pest_ringleader_b121());
+    g.clear_sickness(rl);
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rl,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    assert_eq!(g.players[0].life, life0_before + 2);
+    assert_eq!(g.players[1].life, life1_before - 2);
+}
+
+#[test]
+fn witherbloom_reaper_b121_sacs_to_gain_indestructible() {
+    let mut g = two_player_game();
+    let reaper = g.add_card_to_battlefield(0, catalog::witherbloom_reaper_b121());
+    g.clear_sickness(reaper);
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: reaper,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "fodder sacrificed");
+    let r = g.battlefield_find(reaper).expect("reaper alive");
+    assert!(r.has_keyword(&Keyword::Indestructible),
+        "reaper has indestructible until end of turn");
+}
+

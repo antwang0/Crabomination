@@ -19,10 +19,28 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1637 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1643 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 120:
+Push (claude/modern_decks branch — current head — **post-batch 121:
+new `sac_other_filter` activated-ability primitive lands, plus 6 new
+sacrifice-as-cost cards across Silverquill/Witherbloom:
+- **Witherbloom Cultivator (b120)** — {1}{B}{G} 1/3 Plant Warlock with
+  `{1}, Sacrifice another creature: drain 1` (validated the primitive).
+- **Pest Cultmaster (b121)** — {2}{B}{G} 2/2 Pest Warlock with `{2},
+  Sacrifice another creature: Draw a card`.
+- **Witherbloom Sapdrinker (b121)** — {1}{B}{G} 2/2 Vampire Warlock
+  with `Sacrifice another creature: this gets +2/+0 EOT`.
+- **Witherbloom Bonechanter (b121)** — {1}{B} 1/2 Skeleton Wizard with
+  `{1}{B}, Sacrifice another creature: target creature -2/-2 EOT`.
+- **Pest Ringleader (b121)** — {3}{B}{G} 3/3 Pest Warlock with
+  `Sacrifice another creature: drain 2`.
+- **Witherbloom Reaper (b121)** — {3}{B} 3/2 Skeleton Warlock with
+  Deathtouch + `Sacrifice another creature: gain Indestructible EOT`.
+
+Tests: 3563 → 3568 (5 new b121 tests).**
+
+Prior push (claude/modern_decks branch — post-batch 120:
 both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
 batch ships 25 brand-new Strixhaven synthesised cards across all five
 colleges (5 per college):

@@ -36764,3 +36764,222 @@ pub fn fractal_bloomwright_b120() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Batch 121 — 5 additional cards leveraging sac_other_filter primitive
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Pest Cultmaster (batch 121) — {2}{B}{G}, 2/2 Pest Warlock.
+///
+/// Synthesised: "{2}, Sacrifice another creature: Draw a card."
+/// Uses sac_other_filter for the cost — picks the lowest-power
+/// controlled creature (not self).
+pub fn pest_cultmaster_b121() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Cultmaster (Batch 121)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapdrinker (batch 121) — {1}{B}{G}, 2/2 Vampire Warlock.
+///
+/// Synthesised: "Sacrifice another creature: This creature gets +2/+0
+/// until end of turn." A combat trick that requires fodder — Pest
+/// tokens make this scale.
+pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Sapdrinker (Batch 121)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bonechanter (batch 121) — {1}{B}, 1/2 Skeleton Wizard.
+///
+/// Synthesised: "{1}{B}, Sacrifice another creature: Target creature
+/// gets -2/-2 until end of turn." Anti-grow removal at instant speed.
+pub fn witherbloom_bonechanter_b121() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Bonechanter (Batch 121)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Ringleader (batch 121) — {3}{B}{G}, 3/3 Pest Warlock.
+///
+/// Synthesised: "Sacrifice another creature: Each opponent loses 2
+/// life and you gain 2 life." Pure aristocrats payoff.
+pub fn pest_ringleader_b121() -> CardDefinition {
+    use crate::effect::shortcut::drain;
+    CardDefinition {
+        name: "Pest Ringleader (Batch 121)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: drain(2),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reaper (batch 121) — {3}{B}, 3/2 Skeleton Warlock with
+/// Deathtouch.
+///
+/// Synthesised: "Deathtouch. Sacrifice another creature: This creature
+/// gains indestructible until end of turn." A combat phase survivor
+/// against board wipes.
+pub fn witherbloom_reaper_b121() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Witherbloom Reaper (Batch 121)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
