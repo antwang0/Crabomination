@@ -48,9 +48,9 @@ use systems::game_ui::{
     sync_game_visuals,
     handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
-    update_log_text, update_mana_pips, update_opponent_panel_tint, update_p1_text,
+    update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_target_zone_material,
-    update_player_text, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
+    update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attacker_overlays, draw_blocking_gizmos, draw_pt_modified_overlays,
@@ -311,9 +311,9 @@ fn main() {
             Update,
             (
                 update_turn_text,
-                update_player_text,
+                update_player_stats_chips,
                 update_mana_pips,
-                update_p1_text,
+                update_opponent_stats_rows,
                 update_opponent_panel_tint,
                 update_hint,
                 update_phase_chart,
@@ -413,6 +413,7 @@ fn main() {
                 systems::debug_console::toggle_debug_console,
                 systems::debug_console::handle_debug_console_input,
                 systems::debug_console::handle_debug_console_buttons,
+                systems::debug_console::handle_debug_console_suggestions,
                 systems::debug_console::sync_debug_console_ui,
             )
                 .chain()

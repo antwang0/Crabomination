@@ -108,6 +108,22 @@ pub const BUTTON_DISABLED_BG: Color = Color::srgba(0.08, 0.15, 0.25, 0.5);
 /// Used inside modal choice lists to mark a toggle as "selected".
 pub const BUTTON_SELECTED_BG: Color = Color::srgba(0.60, 0.25, 0.25, 0.95);
 
+/// Muted-green "selected / verified / active filter" tint used inside
+/// picker rows (audit ✓-rows, active pool filter, on toggle). Less
+/// attention-stealing than `BUTTON_SELECTED_BG` (red) — fits states
+/// that mean "this is good / done" rather than "this is chosen".
+pub const BUTTON_SELECTED_GOOD_BG: Color = Color::srgba(0.18, 0.30, 0.20, 1.0);
+
+/// Modal "card tile / row" background — un-selected entries in a grid
+/// of cards (scry/search/discard/put-on-library pickers).
+pub const PANEL_TILE_BG: Color = Color::srgba(0.20, 0.20, 0.24, 0.95);
+
+/// Tertiary action background — small arrow / nudge buttons inside
+/// modals (Scry reorder arrows, Serum Powder).
+pub const BUTTON_TERTIARY_BG: Color = Color::srgba(0.25, 0.30, 0.40, 0.95);
+/// Tertiary action — disabled state.
+pub const BUTTON_TERTIARY_BG_DISABLED: Color = Color::srgba(0.15, 0.15, 0.18, 0.6);
+
 // ── Accents ──────────────────────────────────────────────────────────────────
 
 /// Warm cream gold — used for titles and "your turn" hints.

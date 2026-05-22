@@ -48,6 +48,22 @@ pub struct DebugAddCardButton;
 #[derive(Component)]
 pub struct DebugCardInputBox;
 
+/// Container holding the live autocomplete suggestion buttons under the
+/// card-name input field. Rebuilt whenever the buffer changes.
+#[derive(Component)]
+pub struct DebugSuggestionsRoot;
+
+/// One clickable suggestion row. Clicking it copies `name` into the
+/// console's `card_name` buffer.
+#[derive(Component)]
+pub struct DebugSuggestion {
+    pub name: String,
+}
+
+/// Maximum number of autocomplete rows to render at once. Keeps the
+/// panel compact even when the prefix matches dozens of cards.
+const MAX_SUGGESTIONS: usize = 8;
+
 use crate::theme::{self, UiFonts};
 
 /// Inactive text-input background inside the debug console (darker than
@@ -133,6 +149,7 @@ pub fn sync_debug_console_ui(
     existing: Query<Entity, With<DebugConsoleRoot>>,
     mut text_q: Query<&mut Text, With<DebugConsoleCardText>>,
     mut box_q: Query<&mut BackgroundColor, With<DebugCardInputBox>>,
+    suggestions_root_q: Query<Entity, With<DebugSuggestionsRoot>>,
     mut commands: Commands,
 ) {
     if state.open && existing.is_empty() {
@@ -155,6 +172,65 @@ pub fn sync_debug_console_ui(
             INPUT_BG
         });
     }
+    // Rebuild suggestions: despawn existing children and respawn from
+    // the current buffer. Cheap — at most MAX_SUGGESTIONS rows.
+    if let Ok(root) = suggestions_root_q.single() {
+        commands.entity(root).despawn_related::<Children>();
+        let suggestions = compute_suggestions(&state.card_name);
+        if !suggestions.is_empty() {
+            commands.entity(root).with_children(|p| {
+                for name in suggestions {
+                    p.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(8.0), Val::Px(4.0)),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_NEUTRAL_BG),
+                        DebugSuggestion { name: name.clone() },
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new(name),
+                            ui_fonts.tf(11.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                }
+            });
+        }
+    }
+}
+
+/// Best-effort fuzzy match: prefix matches first (sorted by length),
+/// then any substring matches. Case-insensitive. Returns up to
+/// `MAX_SUGGESTIONS` names. Empty buffer → no suggestions (we'd
+/// otherwise spam the panel with every card).
+fn compute_suggestions(buffer: &str) -> Vec<String> {
+    let trimmed = buffer.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+    let needle = trimmed.to_lowercase();
+    let catalog = crate::audit::catalog();
+    let mut prefix: Vec<&str> = Vec::new();
+    let mut substr: Vec<&str> = Vec::new();
+    for entry in &catalog {
+        let lower = entry.name.to_lowercase();
+        if lower.starts_with(&needle) {
+            prefix.push(&entry.name);
+        } else if lower.contains(&needle) {
+            substr.push(&entry.name);
+        }
+    }
+    prefix.sort_by_key(|s| s.len());
+    substr.sort_by_key(|s| s.len());
+    prefix.into_iter()
+        .chain(substr)
+        .take(MAX_SUGGESTIONS)
+        .map(|s| s.to_string())
+        .collect()
 }
 
 fn render_card_text(state: &DebugConsoleState) -> String {
@@ -177,9 +253,12 @@ fn spawn_panel(
     commands
         .spawn((
             Node {
+                // Anchored bottom-right so the panel doesn't overlap the
+                // viewer's hand, deck pile, or hovered-card popup in the
+                // top-left corner.
                 position_type: PositionType::Absolute,
-                top: Val::Px(10.0),
-                left: Val::Px(10.0),
+                bottom: Val::Px(10.0),
+                right: Val::Px(10.0),
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(10.0)),
                 row_gap: Val::Px(8.0),
@@ -287,6 +366,17 @@ fn spawn_panel(
             .with_children(|b| {
                 b.spawn((Text::new("Add Card"), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
             });
+
+            // Autocomplete suggestions populated by sync_debug_console_ui
+            // whenever the buffer changes. Empty container at spawn time.
+            p.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(2.0),
+                    ..default()
+                },
+                DebugSuggestionsRoot,
+            ));
         });
 }
 
@@ -346,6 +436,31 @@ pub fn handle_debug_console_buttons(
     for interaction in box_q.iter_mut() {
         if *interaction == Interaction::Pressed {
             state.card_input_focused = !state.card_input_focused;
+        }
+    }
+}
+
+/// Handle clicks on autocomplete suggestion rows: fill the buffer and
+/// keep focus so the user can press Enter (or click "Add Card") to
+/// submit. Kept in its own system because the per-row `Without<…>`
+/// disjointness gymnastics on `handle_debug_console_buttons` are
+/// already at their limit.
+pub fn handle_debug_console_suggestions(
+    mut state: ResMut<DebugConsoleState>,
+    mut q: Query<
+        (&Interaction, &DebugSuggestion, &mut BackgroundColor),
+        Changed<Interaction>,
+    >,
+) {
+    for (interaction, sug, mut bg) in q.iter_mut() {
+        match interaction {
+            Interaction::Pressed => {
+                state.card_name = sug.name.clone();
+                state.card_input_focused = true;
+                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT);
+            }
+            Interaction::Hovered => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_HOT),
+            Interaction::None => *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG),
         }
     }
 }

@@ -26,7 +26,7 @@ use bevy::prelude::*;
 use crabomination::card::CardDefinition;
 use crabomination::catalog::{forest, grizzly_bears, island, mountain, plains, swamp};
 use crabomination::cube::all_cube_cards;
-use crabomination::game::GameState;
+use crabomination::game::{GameState, TurnStep};
 use crabomination::player::Player;
 use crabomination::sos_mode::all_sos_cards;
 
@@ -246,12 +246,9 @@ pub fn build_audit_state(card_name: &str) -> Option<GameState> {
             state.add_card_to_battlefield(0, land());
         }
     }
-    // Target card in hand.
+    // Target card in hand — alone, so the auditor isn't squinting past
+    // a fan of filler basics to find the card under test.
     state.add_card_to_hand(0, factory());
-    // A few extra basics in hand so the hand isn't suspiciously empty.
-    for _ in 0..6 {
-        state.add_card_to_hand(0, forest());
-    }
     // Library padding — basic lands won't crash the engine and avoid
     // any "library out" state-based action mid-audit.
     for _ in 0..40 {
@@ -277,6 +274,13 @@ pub fn build_audit_state(card_name: &str) -> Option<GameState> {
 
     state.players[0].wants_ui = true;
     state.players[1].wants_ui = true;
+
+    // Skip mulligan + opening-draw: `run_match_full` triggers the
+    // London-mulligan deal only when `step == Untap && turn_number ==
+    // 1`. Advancing to PreCombatMain bypasses that, so the auditor's
+    // hand stays at exactly one card (the target under test) instead
+    // of being padded with 7 forests from the library.
+    state.step = TurnStep::PreCombatMain;
 
     Some(state)
 }
@@ -471,7 +475,7 @@ fn build_picker_ui(
                                        label: &str| {
                         let active = filter.0 == pool;
                         let bg = if active {
-                            Color::srgba(0.18, 0.30, 0.20, 1.0)
+                            theme::BUTTON_SELECTED_GOOD_BG
                         } else {
                             theme::BUTTON_NEUTRAL_BG
                         };
@@ -511,7 +515,7 @@ fn build_picker_ui(
                 })
                 .with_children(|row| {
                     let bg = if show_verified.0 {
-                        Color::srgba(0.18, 0.30, 0.20, 1.0)
+                        theme::BUTTON_SELECTED_GOOD_BG
                     } else {
                         theme::BUTTON_NEUTRAL_BG
                     };
@@ -537,7 +541,12 @@ fn build_picker_ui(
                     });
                 });
 
-                // Scrollable list.
+                // Scrollable list. Note `min_height: 0` — without it,
+                // flexbox's default `min-height: auto` lets the list
+                // grow to fit its content and ignore the parent's
+                // max_height, which silently disables scrolling. The
+                // explicit height floor keeps the list visually large
+                // on short pools.
                 panel.spawn((
                     Node {
                         flex_direction: FlexDirection::Column,
@@ -545,7 +554,8 @@ fn build_picker_ui(
                         overflow: Overflow::scroll_y(),
                         padding: UiRect::axes(Val::Px(2.0), Val::Px(4.0)),
                         flex_grow: 1.0,
-                        min_height: Val::Px(360.0),
+                        min_height: Val::Px(0.0),
+                        height: Val::Px(480.0),
                         border_radius: BorderRadius::all(RADIUS_BUTTON),
                         ..default()
                     },
@@ -558,7 +568,7 @@ fn build_picker_ui(
                         let name = &entry.name;
                         let is_done = verified.0.contains(name);
                         let row_bg = if is_done {
-                            Color::srgba(0.18, 0.30, 0.20, 1.0)
+                            theme::BUTTON_SELECTED_GOOD_BG
                         } else {
                             theme::PANEL_BG_RAISED
                         };

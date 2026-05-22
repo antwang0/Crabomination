@@ -161,8 +161,12 @@ pub struct FastForward {
 #[derive(Component)]
 pub struct TurnInfoText;
 
+/// Flex-row container that holds the viewer's stat chips (name, life,
+/// hand, deck, graveyard). `update_player_stats_chips` rebuilds its
+/// children whenever the view changes — one tinted chip per stat,
+/// styled to match the mana-pip row visually.
 #[derive(Component)]
-pub struct PlayerStatusText;
+pub struct PlayerStatsRow;
 
 /// Flex-row container next to the player status text. `update_mana_pips`
 /// rebuilds its children whenever the viewer's mana pool changes — one
@@ -170,8 +174,11 @@ pub struct PlayerStatusText;
 #[derive(Component)]
 pub struct ManaPipRow;
 
+/// Flex-column container inside the top-right opponent panel that holds
+/// one chip-row per opponent. `update_opponent_stats_rows` rebuilds the
+/// children when the view changes.
 #[derive(Component)]
-pub struct P1StatusText;
+pub struct OpponentStatsContainer;
 
 /// Container for the opponent status strip. Marker so the
 /// `update_opponent_panel_tint` system can flip the background between
@@ -332,24 +339,27 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 TextColor(theme::TEXT_PRIMARY),
                 TurnInfoText,
             ));
-            // Status row: short textual life/hand/deck counts on the
-            // left, colored mana pips on the right. Compact labels
-            // (`L:` / `H:` / `D:` / `G:`) keep the row from spilling
-            // over the panel at normal player-name widths.
+            // Stats row: small tinted chips for life / hand / deck / grave
+            // (rebuilt by `update_player_stats_chips`) and a sibling row
+            // of mana pips. Both use the same chip visual vocabulary so
+            // the entire HUD strip reads as one consistent control bar.
             p.spawn(Node {
                 flex_direction: FlexDirection::Row,
                 align_items: AlignItems::Center,
-                column_gap: Val::Px(8.0),
+                column_gap: Val::Px(6.0),
                 flex_wrap: FlexWrap::Wrap,
-                row_gap: Val::Px(2.0),
+                row_gap: Val::Px(4.0),
                 ..default()
             })
             .with_children(|row| {
                 row.spawn((
-                    Text::new(""),
-                    tf(14.0),
-                    TextColor(theme::TEXT_INFO),
-                    PlayerStatusText,
+                    Node {
+                        flex_direction: FlexDirection::Row,
+                        align_items: AlignItems::Center,
+                        column_gap: Val::Px(4.0),
+                        ..default()
+                    },
+                    PlayerStatsRow,
                 ));
                 row.spawn((
                     Node {
@@ -364,21 +374,10 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
         });
 
     // Left side: phase chart — pushed down below the (now taller)
-    // turn + player panel.
-    let all_steps = [
-        (TurnStep::Untap, "Untap"),
-        (TurnStep::Upkeep, "Upkeep"),
-        (TurnStep::Draw, "Draw"),
-        (TurnStep::PreCombatMain, "Main 1"),
-        (TurnStep::BeginCombat, "Begin Combat"),
-        (TurnStep::DeclareAttackers, "Attackers"),
-        (TurnStep::DeclareBlockers, "Blockers"),
-        (TurnStep::CombatDamage, "Damage"),
-        (TurnStep::EndCombat, "End Combat"),
-        (TurnStep::PostCombatMain, "Main 2"),
-        (TurnStep::End, "End"),
-        (TurnStep::Cleanup, "Cleanup"),
-    ];
+    // turn + player panel. Each row is a Node so we can tint the
+    // current step's background (not just its text). `update_phase_chart`
+    // rewrites the text label with a leading "▶" / "  " marker so the
+    // active step is recognisable in peripheral vision without colour.
     commands
         .spawn((
             Node {
@@ -388,20 +387,31 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(6.0)),
                 row_gap: Val::Px(2.0),
-                min_width: Val::Px(110.0),
+                min_width: Val::Px(118.0),
                 ..default()
             },
             BackgroundColor(theme::HUD_BG),
             InGameRoot,
         ))
         .with_children(|p| {
-            for (step, label) in &all_steps {
+            for (step, _) in PHASE_CHART_STEPS {
                 p.spawn((
-                    Text::new(*label),
-                    tf(12.0),
-                    TextColor(theme::TEXT_MUTED),
+                    Node {
+                        padding: UiRect::axes(Val::Px(4.0), Val::Px(1.0)),
+                        border_radius: BorderRadius::all(Val::Px(2.0)),
+                        ..default()
+                    },
+                    BackgroundColor(Color::NONE),
                     PhaseStepLabel(*step),
-                ));
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Text::new(format!("   {}", step_short_label(*step))),
+                        tf(12.0),
+                        TextColor(theme::TEXT_MUTED),
+                        Pickable::IGNORE,
+                    ));
+                });
             }
         });
 
@@ -425,13 +435,18 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             InGameRoot,
         ))
         .with_children(|p| {
-            // Text colour stays neutral; the panel tint (driven by
-            // `update_opponent_panel_tint`) carries the threat signal.
+            // Container — `update_opponent_stats_rows` rebuilds one
+            // chip-row per opponent on view changes. Multi-opponent
+            // formats (Commander) get one visible row per seat instead
+            // of a single `\n`-joined text node.
             p.spawn((
-                Text::new(""),
-                tf(16.0),
-                TextColor(theme::TEXT_BODY),
-                P1StatusText,
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(6.0),
+                    align_items: AlignItems::Stretch,
+                    ..default()
+                },
+                OpponentStatsContainer,
             ));
         });
 
@@ -486,6 +501,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 Node {
                     padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
                     display: Display::None,
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::HUD_BG),
@@ -531,6 +547,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 p.spawn((
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
                     BackgroundColor(theme::BUTTON_INFO_BG),
@@ -546,13 +563,19 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ));
                 });
 
+                // End Turn / Next Turn are both "advance the game" actions
+                // — neither is an affirmative choice, so they share the
+                // neutral-info blue rather than primary-green/accent-purple.
+                // Reserves the strong colours for actual commitments
+                // (Pass-while-spell-on-stack stays primary/urgent).
                 p.spawn((
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
-                    BackgroundColor(theme::BUTTON_PRIMARY_BG),
-                    HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                    BackgroundColor(theme::BUTTON_INFO_BG),
+                    HoverTint::new(theme::BUTTON_INFO_BG),
                     Button,
                     EndTurnButton,
                 ))
@@ -563,10 +586,11 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 p.spawn((
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
-                    BackgroundColor(theme::BUTTON_ACCENT_BG),
-                    HoverTint::new(theme::BUTTON_ACCENT_BG),
+                    BackgroundColor(theme::BUTTON_INFO_BG),
+                    HoverTint::new(theme::BUTTON_INFO_BG),
                     Button,
                     NextTurnButton,
                 ))
@@ -581,6 +605,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 p.spawn((
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
                     BackgroundColor(theme::BUTTON_NEUTRAL_BG),
@@ -603,6 +628,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
                         display: Display::None,
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
                     BackgroundColor(theme::BUTTON_PRIMARY_BG),
@@ -621,6 +647,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Node {
                         padding: UiRect::all(Val::Px(8.0)),
                         display: Display::None,
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                         ..default()
                     },
                     BackgroundColor(theme::BUTTON_NEUTRAL_BG),
@@ -772,25 +799,79 @@ fn player_name(cv: &crabomination::net::ClientView, seat: usize) -> String {
         .unwrap_or_else(|| format!("Player {seat}"))
 }
 
-pub fn update_player_text(
-    view: Res<CurrentView>,
-    mut q: Query<&mut Text, With<PlayerStatusText>>,
+/// Per-stat visual style for a player stat chip: (background, text colour).
+/// Picked to mirror the mana-pip palette — saturated enough to register
+/// as distinct chips, dim enough not to compete with the action buttons.
+fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
+    match kind {
+        StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
+        StatChipKind::Life => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::TEXT_PRIMARY),
+        StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
+        StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
+        StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
+    }
+}
+
+#[derive(Clone, Copy)]
+enum StatChipKind {
+    Name,
+    Life,
+    Hand,
+    Deck,
+    Grave,
+}
+
+fn spawn_stat_chip(
+    parent: &mut ChildSpawnerCommands,
+    ui_fonts: &UiFonts,
+    kind: StatChipKind,
+    text: String,
 ) {
-    let Ok(mut t) = q.single_mut() else { return };
+    let (bg, fg) = stat_chip_style(kind);
+    parent
+        .spawn((
+            Node {
+                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: BorderRadius::all(Val::Px(3.0)),
+                ..default()
+            },
+            BackgroundColor(bg),
+        ))
+        .with_children(|chip| {
+            chip.spawn((
+                Text::new(text),
+                ui_fonts.tf(12.0),
+                TextColor(fg),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
+/// Rebuild the viewer's stat chip row whenever the view changes.
+/// Sibling system to `update_mana_pips` — same visual vocabulary, so
+/// the entire HUD-strip reads as a single chip-based status bar.
+pub fn update_player_stats_chips(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    row_q: Query<Entity, With<PlayerStatsRow>>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Ok(row) = row_q.single() else { return };
     let Some(cv) = &view.0 else { return };
     let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-    // Mana is rendered separately as colored pips next to this text
-    // (see `ManaPipRow` + `update_mana_pips`). Compact `L/H/D/G`
-    // labels keep the row inside the top-left HUD panel at normal
-    // player-name widths instead of spilling over.
-    t.0 = format!(
-        "{}  L{}  H{}  D{}  G{}",
-        p.name,
-        p.life,
-        p.hand.len(),
-        p.library.size,
-        p.graveyard.len(),
-    );
+    commands.entity(row).despawn_children();
+    commands.entity(row).with_children(|row| {
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
+        spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
+    });
 }
 
 /// Per-color visual style for a mana pip: background tint + readable
@@ -930,31 +1011,42 @@ pub fn update_opponent_panel_tint(
     *bg = BackgroundColor(if threatened { theme::HUD_BG_DANGER } else { theme::HUD_BG });
 }
 
-/// Render a status line per opponent. The HUD container only has one
-/// `P1StatusText` entity today — it shows summed status if there are multiple
-/// opponents.
-pub fn update_p1_text(
+/// Rebuild one chip-row per opponent inside the top-right panel.
+/// Replaces the old single-`Text`-with-newlines approach so each
+/// opponent is visually distinct (especially in Commander where there
+/// are 3 of them) and uses the same chip vocabulary as the viewer.
+pub fn update_opponent_stats_rows(
+    mut commands: Commands,
     view: Res<CurrentView>,
-    mut q: Query<&mut Text, With<P1StatusText>>,
+    ui_fonts: Res<UiFonts>,
+    container_q: Query<Entity, With<OpponentStatsContainer>>,
 ) {
-    let Ok(mut t) = q.single_mut() else { return };
+    if !view.is_changed() {
+        return;
+    }
+    let Ok(container) = container_q.single() else { return };
     let Some(cv) = &view.0 else { return };
-    let lines: Vec<String> = cv
-        .players
-        .iter()
-        .filter(|p| p.seat != cv.your_seat)
-        .map(|p| {
-            format!(
-                "{}  L{}  H{}  D{}  G{}",
-                p.name,
-                p.life,
-                p.hand.len(),
-                p.library.size,
-                p.graveyard.len()
-            )
-        })
-        .collect();
-    t.0 = lines.join("\n");
+    commands.entity(container).despawn_children();
+    let opponents: Vec<_> = cv.players.iter().filter(|p| p.seat != cv.your_seat).collect();
+    commands.entity(container).with_children(|col| {
+        for p in opponents {
+            col.spawn(Node {
+                flex_direction: FlexDirection::Row,
+                align_items: AlignItems::Center,
+                column_gap: Val::Px(4.0),
+                flex_wrap: FlexWrap::Wrap,
+                row_gap: Val::Px(2.0),
+                ..default()
+            })
+            .with_children(|row| {
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
+                spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
+            });
+        }
+    });
 }
 
 /// Rebuild the `GameLogPanel` children from `GameLog.entries`. Each
@@ -985,18 +1077,55 @@ pub fn update_log_text(
     });
 }
 
+/// Canonical phase ordering rendered by the left-edge phase chart.
+/// Kept here (not inline in `setup_game_hud`) so `update_phase_chart`
+/// can reuse the same ordering / label strings.
+pub(crate) const PHASE_CHART_STEPS: &[(TurnStep, &str)] = &[
+    (TurnStep::Untap, "Untap"),
+    (TurnStep::Upkeep, "Upkeep"),
+    (TurnStep::Draw, "Draw"),
+    (TurnStep::PreCombatMain, "Main 1"),
+    (TurnStep::BeginCombat, "Begin Combat"),
+    (TurnStep::DeclareAttackers, "Attackers"),
+    (TurnStep::DeclareBlockers, "Blockers"),
+    (TurnStep::CombatDamage, "Damage"),
+    (TurnStep::EndCombat, "End Combat"),
+    (TurnStep::PostCombatMain, "Main 2"),
+    (TurnStep::End, "End"),
+    (TurnStep::Cleanup, "Cleanup"),
+];
+
+fn step_short_label(step: TurnStep) -> &'static str {
+    PHASE_CHART_STEPS
+        .iter()
+        .find(|(s, _)| *s == step)
+        .map(|(_, l)| *l)
+        .unwrap_or("")
+}
+
+/// Subtle row background for the currently-active phase. Sits between
+/// `HUD_BG` and `BUTTON_INFO_BG` so the active row reads as "lit up"
+/// without competing with the action buttons.
+const PHASE_ROW_ACTIVE_BG: Color = Color::srgba(0.18, 0.18, 0.28, 0.85);
+
 pub fn update_phase_chart(
     view: Res<CurrentView>,
-    mut labels: Query<(&PhaseStepLabel, &mut TextColor)>,
+    mut rows: Query<(&PhaseStepLabel, &Children, &mut BackgroundColor)>,
+    mut texts: Query<(&mut Text, &mut TextColor)>,
 ) {
     let Some(cv) = &view.0 else { return };
     let current = cv.step;
-    for (label, mut color) in &mut labels {
-        *color = if label.0 == current {
-            TextColor(theme::ACCENT_YELLOW)
-        } else {
-            TextColor(theme::TEXT_MUTED)
-        };
+    for (label, children, mut bg) in &mut rows {
+        let active = label.0 == current;
+        *bg = BackgroundColor(if active { PHASE_ROW_ACTIVE_BG } else { Color::NONE });
+        // Each row has exactly one Text child — rewrite its content + colour.
+        for child in children.iter() {
+            if let Ok((mut text, mut color)) = texts.get_mut(child) {
+                let marker = if active { "▶ " } else { "   " };
+                text.0 = format!("{marker}{}", step_short_label(label.0));
+                *color = TextColor(if active { theme::ACCENT_YELLOW } else { theme::TEXT_MUTED });
+            }
+        }
     }
 }
 
@@ -1006,26 +1135,40 @@ pub fn update_hint(
     targeting: Res<TargetingState>,
     blocking: Res<BlockingState>,
     time: Res<Time>,
-    mut q: Query<&mut Text, With<HintText>>,
+    mut q: Query<(&mut Text, &mut TextColor, &mut TextFont), With<HintText>>,
 ) {
-    let Ok(mut t) = q.single_mut() else { return };
+    let Ok((mut t, mut color, mut font)) = q.single_mut() else { return };
     let Some(cv) = &view.0 else { return };
     if cv.game_over.is_some() {
-        t.0 = String::new();
+        apply_hint(&mut t, &mut color, &mut font, String::new(), theme::ACCENT_GOLD, 13.0);
         return;
     }
     if targeting.active {
-        t.0 = if targeting.pending_decision_target {
-            "A triggered ability needs a target. Click / Enter on a legal target.".into()
+        let (msg, hint_color, hint_size) = if targeting.pending_decision_target {
+            (
+                "⚡ A triggered ability needs a target. Click / Enter on a legal target.".to_string(),
+                theme::ACCENT_BLUE,
+                15.0_f32,
+            )
         } else {
-            "Click / Enter on a target. Tab,← → select. Esc cancels.".into()
+            (
+                "Click / Enter on a target. Tab,← → select. Esc cancels.".to_string(),
+                theme::ACCENT_GOLD,
+                13.0_f32,
+            )
         };
+        apply_hint(&mut t, &mut color, &mut font, msg, hint_color, hint_size);
         return;
     }
     if !cv.stack.is_empty() {
         let your_priority = cv.priority == cv.your_seat;
-        t.0 = if your_priority {
-            // Describe the top item so the player knows what they're responding to.
+        use crabomination::net::StackItemKind;
+        // Style the hint based on the top-of-stack kind so triggered
+        // abilities visually stand out from spells (and from idle
+        // status messages). Triggers are the most "surprising" event —
+        // they can fire without the player initiating anything — so
+        // they get the boldest treatment.
+        let (style_text, style_color, style_size) = if your_priority {
             match cv.stack.last() {
                 Some(StackItemView::Known(k)) => {
                     let ctrl = if k.controller == cv.your_seat {
@@ -1046,35 +1189,62 @@ pub fn update_hint(
                             .unwrap_or_default(),
                         None => String::new(),
                     };
-                    format!("{} {} on stack{}. Respond from hand, or Space to let it resolve.", ctrl, k.name, tgt)
+                    match k.kind {
+                        StackItemKind::Trigger => (
+                            format!(
+                                "⚡ TRIGGER: {} {}{}. Respond from hand, or Space to let it resolve.",
+                                ctrl, k.name, tgt
+                            ),
+                            theme::ACCENT_BLUE,
+                            16.0_f32,
+                        ),
+                        StackItemKind::Spell => (
+                            format!(
+                                "↻ {} {} on stack{}. Respond from hand, or Space to let it resolve.",
+                                ctrl, k.name, tgt
+                            ),
+                            theme::ACCENT_ORANGE,
+                            14.0_f32,
+                        ),
+                    }
                 }
-                _ => format!("{} item(s) on stack. Space = let it resolve.", cv.stack.len()),
+                _ => (
+                    format!("{} item(s) on stack. Space = let it resolve.", cv.stack.len()),
+                    theme::ACCENT_GOLD,
+                    13.0_f32,
+                ),
             }
         } else {
-            format!("Waiting for {} to act on the stack.", player_name(cv, cv.priority))
+            (
+                format!("Waiting for {} to act on the stack.", player_name(cv, cv.priority)),
+                theme::TEXT_SECONDARY,
+                13.0_f32,
+            )
         };
+        apply_hint(&mut t, &mut color, &mut font, style_text, style_color, style_size);
         return;
     }
     let your_seat = cv.your_seat;
     let viewer_is_defending =
         cv.step == TurnStep::DeclareBlockers && cv.active_player != your_seat && cv.priority == your_seat;
     if viewer_is_defending {
-        t.0 = if blocking.selected_blocker.is_some() {
-            "Click / Enter on an attacker to assign the block. Esc cancels.".into()
+        let msg = if blocking.selected_blocker.is_some() {
+            "Click / Enter on an attacker to assign the block. Esc cancels.".to_string()
         } else {
-            "Click / Enter on a creature to block with it. Tab,← → select. P skip.".into()
+            "Click / Enter on a creature to block with it. Tab,← → select. P skip.".to_string()
         };
+        apply_hint(&mut t, &mut color, &mut font, msg, theme::ACCENT_GOLD, 13.0);
         return;
     }
-    t.0 = match (cv.active_player == your_seat, cv.step) {
+    let body = match (cv.active_player == your_seat, cv.step) {
         (true, TurnStep::PreCombatMain) | (true, TurnStep::PostCombatMain) => {
-            "Click / Enter to play. Tab,← →: select. F flip · L alt · M ability. P pass.".into()
+            "Click / Enter to play. Tab,← →: select. F flip · L alt · M ability. P pass.".to_string()
         }
         (true, TurnStep::DeclareAttackers) => {
-            "A = Attack with all eligible creatures. P = Pass (no attack).".into()
+            "A = Attack with all eligible creatures. P = Pass (no attack).".to_string()
         }
         (true, TurnStep::DeclareBlockers) => {
-            "Opponent is assigning blocks. P = Proceed to combat.".into()
+            "Opponent is assigning blocks. P = Proceed to combat.".to_string()
         }
         (true, _) => String::new(),
         (false, _) => {
@@ -1091,6 +1261,29 @@ pub fn update_hint(
             format!("{} is thinking{}", player_name(cv, cv.active_player), dots)
         }
     };
+    apply_hint(&mut t, &mut color, &mut font, body, theme::ACCENT_GOLD, 13.0);
+}
+
+/// Apply `(text, colour, size)` to the hint chip, skipping the write
+/// when the field already matches. Avoids spurious change-detection
+/// fanout from per-frame writes (this system runs every frame).
+fn apply_hint(
+    text: &mut Text,
+    color: &mut TextColor,
+    font: &mut TextFont,
+    new_text: String,
+    new_color: Color,
+    new_size: f32,
+) {
+    if text.0 != new_text {
+        text.0 = new_text;
+    }
+    if color.0 != new_color {
+        *color = TextColor(new_color);
+    }
+    if (font.font_size - new_size).abs() > f32::EPSILON {
+        font.font_size = new_size;
+    }
 }
 
 /// Sync the dark-tinted hint chip's visibility to the current
@@ -1191,13 +1384,17 @@ pub fn update_stack_panel(
         });
 
         // Items: top of stack (last index) shown first — that's what resolves next.
+        // Triggers get a stronger badge (higher alpha + larger font) so a
+        // surprise trigger doesn't blend into a row of spells.
         use crabomination::net::{StackItemKind, StackItemView};
-        for item in cv.stack.iter().rev() {
-            let (kind_str, kind_color, name, ctrl_str, tgt_str) = match item {
+        for (offset, item) in cv.stack.iter().rev().enumerate() {
+            // Resolution-order index: top of stack is "1" (resolves next).
+            let resolves_at = offset + 1;
+            let (kind_str, kind_color, name, ctrl_str, tgt_str, is_trigger) = match item {
                 StackItemView::Known(k) => {
-                    let (kstr, kcol) = match k.kind {
-                        StackItemKind::Spell   => ("SPELL",   theme::ACCENT_ORANGE),
-                        StackItemKind::Trigger => ("TRIGGER", theme::ACCENT_BLUE),
+                    let (kstr, kcol, is_trig) = match k.kind {
+                        StackItemKind::Spell   => ("SPELL",   theme::ACCENT_ORANGE, false),
+                        StackItemKind::Trigger => ("⚡ TRIGGER", theme::ACCENT_BLUE, true),
                     };
                     let ctrl = if k.controller == cv.your_seat {
                         "You".to_string()
@@ -1207,7 +1404,7 @@ pub fn update_stack_panel(
                     let tgt = k.target.as_ref()
                         .map(|t| format!("  →  {}", target_display(cv, t)))
                         .unwrap_or_default();
-                    (kstr, kcol, k.name.clone(), ctrl, tgt)
+                    (kstr, kcol, k.name.clone(), ctrl, tgt, is_trig)
                 }
                 StackItemView::Hidden { controller, .. } => {
                     let ctrl = if *controller == cv.your_seat {
@@ -1215,39 +1412,76 @@ pub fn update_stack_panel(
                     } else {
                         player_name(cv, *controller)
                     };
-                    ("?", theme::TEXT_MUTED, "Hidden card".to_string(), ctrl, String::new())
+                    ("?", theme::TEXT_MUTED, "Hidden card".to_string(), ctrl, String::new(), false)
                 }
             };
+            let badge_alpha = if is_trigger { 0.45 } else { 0.22 };
+            let badge_font = if is_trigger { 12.0 } else { 10.0 };
+            let name_color = if is_trigger { theme::ACCENT_BLUE } else { theme::TEXT_PRIMARY };
 
-            // Row
-            p.spawn(Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(6.0),
-                padding: UiRect::vertical(Val::Px(2.0)),
-                ..default()
-            })
+            // Row — triggers get a faint tinted background so they pop
+            // even at a glance.
+            let row_bg = if is_trigger {
+                Color::srgba(
+                    kind_color.to_srgba().red,
+                    kind_color.to_srgba().green,
+                    kind_color.to_srgba().blue,
+                    0.10,
+                )
+            } else {
+                Color::NONE
+            };
+            p.spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(6.0),
+                    padding: UiRect::axes(Val::Px(4.0), Val::Px(3.0)),
+                    border_radius: BorderRadius::all(Val::Px(3.0)),
+                    ..default()
+                },
+                BackgroundColor(row_bg),
+            ))
             .with_children(|row| {
+                // Resolution-order index — "1" resolves next.
+                row.spawn((
+                    Node {
+                        min_width: Val::Px(16.0),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    BackgroundColor(Color::NONE),
+                ))
+                .with_children(|idx| {
+                    idx.spawn((
+                        Text::new(format!("{resolves_at}.")),
+                        tf(11.0),
+                        TextColor(theme::TEXT_MUTED),
+                    ));
+                });
+
                 // Kind badge
                 row.spawn((
                     Node {
-                        padding: UiRect::axes(Val::Px(5.0), Val::Px(2.0)),
+                        padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
+                        border_radius: BorderRadius::all(Val::Px(3.0)),
                         ..default()
                     },
                     BackgroundColor(Color::srgba(
                         kind_color.to_srgba().red,
                         kind_color.to_srgba().green,
                         kind_color.to_srgba().blue,
-                        0.22,
+                        badge_alpha,
                     )),
                 ))
                 .with_children(|badge| {
-                    badge.spawn((Text::new(kind_str), tf(10.0), TextColor(kind_color)));
+                    badge.spawn((Text::new(kind_str), tf(badge_font), TextColor(kind_color)));
                 });
 
                 // Name  ·  controller  →  target
                 let label = format!("{}  ·  {}{}", name, ctrl_str, tgt_str);
-                row.spawn((Text::new(label), tf(12.0), TextColor(theme::TEXT_PRIMARY)));
+                let label_size = if is_trigger { 13.0 } else { 12.0 };
+                row.spawn((Text::new(label), tf(label_size), TextColor(name_color)));
             });
         }
     });
@@ -1280,28 +1514,34 @@ pub fn update_pass_button(
         )
     });
 
-    if your_priority && top_is_opp_spell {
-        // Urgent: opponent has a spell on stack waiting for a response.
-        // Base colour is set here; `pulse_urgent_pass_button` modulates
-        // its alpha each frame while the marker is present.
-        *bg = BackgroundColor(theme::BUTTON_URGENT_BG);
-        label.0 = "Pass / Respond (Space)".into();
-        commands.entity(btn_entity).insert(PassButtonUrgent);
-    } else if your_priority && !cv.stack.is_empty() {
-        // Have priority with something on stack (own spell or trigger).
-        *bg = BackgroundColor(theme::BUTTON_PRIMARY_BG);
-        label.0 = "Pass (Space)".into();
-        commands.entity(btn_entity).remove::<PassButtonUrgent>();
-    } else if your_priority {
-        // Have priority, empty stack (main phase).
-        *bg = BackgroundColor(theme::BUTTON_INFO_BG);
-        label.0 = "Pass (Space)".into();
-        commands.entity(btn_entity).remove::<PassButtonUrgent>();
+    // Pick the new background based on priority + stack state, then write
+    // it once. Track whether the urgent-pulse marker should be present so
+    // we add/remove it in a single place. Refresh `HoverTint` to match the
+    // new idle colour — the button's BG is state-driven, so we maintain
+    // hover affordance manually instead of attaching a static `HoverTint`
+    // at spawn time (which would fight the swaps).
+    let (new_bg, new_label, urgent): (Color, &str, bool) =
+        if your_priority && top_is_opp_spell {
+            (theme::BUTTON_URGENT_BG, "Pass / Respond (Space)", true)
+        } else if your_priority && !cv.stack.is_empty() {
+            (theme::BUTTON_PRIMARY_BG, "Pass (Space)", false)
+        } else if your_priority {
+            (theme::BUTTON_INFO_BG, "Pass (Space)", false)
+        } else {
+            (theme::BUTTON_DISABLED_BG, "Pass (Space)", false)
+        };
+    *bg = BackgroundColor(new_bg);
+    label.0 = new_label.into();
+    let mut entity = commands.entity(btn_entity);
+    // Skip `HoverTint` for the urgent state — `pulse_urgent_pass_button`
+    // is animating the BG alpha and HoverTint would clobber it on every
+    // hover event.
+    if urgent {
+        entity.insert(PassButtonUrgent);
+        entity.remove::<HoverTint>();
     } else {
-        // Waiting for another player.
-        *bg = BackgroundColor(theme::BUTTON_DISABLED_BG);
-        label.0 = "Pass (Space)".into();
-        commands.entity(btn_entity).remove::<PassButtonUrgent>();
+        entity.remove::<PassButtonUrgent>();
+        entity.insert(HoverTint::new(new_bg));
     }
 }
 

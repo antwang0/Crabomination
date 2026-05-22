@@ -362,12 +362,21 @@ pub fn pile_tooltip(
 
     if let Some(msg) = text {
         if existing.is_empty() {
+            // Pin the tooltip's *center* to the screen midline. Without
+            // the negative margin Bevy positions the node's left edge at
+            // 50% and the tooltip drifts right of center (worse the
+            // longer the string). 140px is half the widest tooltip text
+            // ("Player N's graveyard: NN cards — click to browse") at
+            // the 14px font, which is close enough for visual centering
+            // without measuring text width per frame.
             commands.spawn((
                 Node {
                     position_type: PositionType::Absolute,
                     bottom: Val::Px(130.0),
                     left: Val::Percent(50.0),
+                    margin: UiRect::left(Val::Px(-140.0)),
                     padding: UiRect::axes(Val::Px(12.0), Val::Px(6.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
                 BackgroundColor(theme::OVERLAY_BG_HEAVY),

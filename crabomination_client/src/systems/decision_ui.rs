@@ -129,12 +129,13 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
 const CARD_ASPECT_RATIO: f32 = 88.0 / 63.0;
 const CARD_W: f32 = 180.0;
 const CARD_H: f32 = CARD_W * CARD_ASPECT_RATIO;
-/// Modal "card tile / row" background — used for un-selected entries in a
-/// grid of cards. (Selected entries use `theme::BUTTON_SELECTED_BG`.)
-const MODAL_TILE_BG: Color = Color::srgba(0.20, 0.20, 0.24, 0.95);
-/// Tertiary action background (Scry reorder arrows, Serum Powder).
-const REORDER_BG: Color = Color::srgba(0.25, 0.30, 0.40, 0.95);
-const REORDER_BG_DISABLED: Color = Color::srgba(0.15, 0.15, 0.18, 0.6);
+
+// Aliases that keep the existing call sites short and locally
+// self-documenting. The actual values live in `theme.rs` so the modal
+// look stays in sync with the rest of the chrome.
+use theme::PANEL_TILE_BG as MODAL_TILE_BG;
+use theme::BUTTON_TERTIARY_BG as REORDER_BG;
+use theme::BUTTON_TERTIARY_BG_DISABLED as REORDER_BG_DISABLED;
 
 /// Spawn or despawn the decision modal based on the server view. Only shows
 /// for decisions owned by P0 (your_seat).
