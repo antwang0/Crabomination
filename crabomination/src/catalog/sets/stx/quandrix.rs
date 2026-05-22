@@ -15,7 +15,8 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    etb, magecraft, magecraft_loot, magecraft_scry, magecraft_self_pump, target_filtered,
+    etb, magecraft, magecraft_draw, magecraft_loot, magecraft_scry, magecraft_self_pump,
+    target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, g, u, Color, ManaCost};
@@ -8960,6 +8961,182 @@ pub fn fractal_reflection_b125() -> CardDefinition {
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 126 (push claude/modern_decks): five new Quandrix cards ──────────
+
+/// Quandrix Mistshaper (b126) — {1}{U}, 1/3 Merfolk Wizard. Magecraft
+/// Draw 1 via the new `magecraft_draw` shortcut. 2-mana defensive
+/// magecraft cantripper — pairs with Archmage Emeritus' draw-on-cast.
+pub fn quandrix_mistshaper_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mistshaper (b126)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Skyrunner (b126) — {2}{G}, 0/0 Fractal enters with 3 +1/+1
+/// counters via `enters_with_counters`. 3-mana base 3/3 Fractal —
+/// Quandrix-tribal payoff scales aggressively under Tanazir Quandrix.
+pub fn fractal_skyrunner_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Skyrunner (b126)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Riftcraftsman (b126) — {2}{G}{U}, 3/3 Elf Druid. ETB
+/// +1/+1 counter on target Fractal you control + Magecraft Loot. 4-mana
+/// Fractal-tribal value engine.
+pub fn quandrix_riftcraftsman_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Riftcraftsman (b126)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            magecraft_loot(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Forecaster-Adept (b126) — {G}{U}, 1/2 Elf Druid. Magecraft
+/// Scry 1 (paired with the existing magecraft helpers). 2-mana
+/// defensive smoother — pairs with the broader Quandrix scry chain.
+pub fn quandrix_forecaster_adept_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Forecaster-Adept (b126)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Petalcaller (b126) — {2}{G}{U} Sorcery. "Create a 0/0
+/// green-and-blue Fractal creature token. Put three +1/+1 counters on
+/// it." 4-mana Fractal-mint with built-in 3/3 stat-line.
+pub fn fractal_petalcaller_b126() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Fractal Petalcaller (b126)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(3),
             },
         ]),
         activated_abilities: no_abilities(),

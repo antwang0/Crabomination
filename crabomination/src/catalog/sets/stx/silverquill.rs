@@ -25,9 +25,9 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_self_pump, on_attack_drain, on_attack_gain_life,
-    target_filtered,
+    drain_and_surveil, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, magecraft_scry,
+    on_attack_drain, on_attack_gain_life, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, u, w, b, x, ManaCost};
@@ -13065,6 +13065,158 @@ pub fn silverquill_ravenstrike_b125() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 126 (push claude/modern_decks): five new Silverquill cards ──────
+
+/// Silverquill Glyphmage (b126) — {1}{W}, 1/3 Human Cleric. Magecraft
+/// Scry 1. 2-mana defensive smoother body. Pairs with the new
+/// `magecraft_scry` helper.
+pub fn silverquill_glyphmage_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Glyphmage (b126)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Sage (b126) — {2}{W}{B}, 3/3 Vampire Cleric. ETB
+/// drain 2. 4-mana drain race-breaker body.
+pub fn silverquill_pen_sage_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen-Sage (b126)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Squire (b126) — {1}{B}, 2/1 Inkling Knight Flying. 2-mana
+/// aggressive evasive Inkling — Tenured Inkcaster fodder.
+pub fn inkling_squire_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Squire (b126)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Sigilrider (b126) — {2}{W}{B}, 3/3 Inkling Cleric Flying +
+/// Lifelink. ETB GainLife 2. 4-mana evasive lifelinker — race-breaker
+/// finisher.
+pub fn inkling_sigilrider_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Sigilrider (b126)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Glyphcaller (b126) — {W}{B} Instant. Seq(Drain 2 +
+/// Surveil 1). 2-mana drain + selection at instant speed via
+/// `drain_and_surveil(2, 1)`.
+pub fn silverquill_glyphcaller_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Glyphcaller (b126)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_surveil(2, 1),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -15,9 +15,9 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_ping_any, magecraft_self_pump, on_attack_drain,
-    on_attack_gain_life, on_attack_ping_any, target_filtered,
+    dies_mint_token, dies_ping_any, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
+    on_attack_drain, on_attack_gain_life, on_attack_ping_any, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -10960,6 +10960,193 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 126 (push claude/modern_decks): six new Lorehold cards ──────────
+
+/// Lorehold Spiritbinder (b126) — {2}{W}, 2/3 Spirit Cleric. "When this
+/// creature dies, create a 2/2 R/W Spirit token." Self-replacing body via
+/// the new `dies_mint_token` shortcut.
+pub fn lorehold_spiritbinder_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritbinder (b126)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cinderscholar (b126) — {1}{R}, 2/1 Human Wizard. Magecraft
+/// self-pump +1/+0 EOT. Aggressive 2-mana magecraft body.
+pub fn lorehold_cinderscholar_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cinderscholar (b126)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Halfblood (b126) — {3}{R}{W}, 4/4 Spirit Soldier Trample.
+/// 5-mana go-large finisher — Trample with double tribal subtypes
+/// (Spirit + Soldier) for Spirit-lord shells.
+pub fn lorehold_halfblood_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Halfblood (b126)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skywatcher (b126) — {2}{W}, 1/4 Spirit Cleric Flying +
+/// Vigilance. 3-mana defensive double-keyword evasive blocker —
+/// Tenured Inkcaster style anthem fodder for Spirit-tribal shells.
+pub fn lorehold_skywatcher_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skywatcher (b126)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Mage (b126) — {1}{R}, 1/2 Human Wizard. Magecraft
+/// ping any 1. 2-mana magecraft burn body — Prodigal Sorcerer template
+/// at instant-cast speed.
+pub fn lorehold_ember_mage_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Mage (b126)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkscholar (b126) — {2}{R}, 2/2 Human Wizard. On_dies
+/// ping 2 to any target. 3-mana parting-shot body — Mogg Fanatic at a
+/// higher P/T frame using the new `dies_ping_any` shortcut.
+pub fn lorehold_sparkscholar_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkscholar (b126)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_ping_any(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

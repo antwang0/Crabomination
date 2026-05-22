@@ -3353,4 +3353,100 @@ pub mod shortcut {
             amount: Value::Const(amount),
         })
     }
+
+    /// Dies-Ping-Any shortcut: "When this creature dies, it deals
+    /// `amount` damage to any target." Wraps [`on_dies`] with a
+    /// `DealDamage` body whose target is `target_filtered(Creature ∨
+    /// Player ∨ Planeswalker)`. Mirrors `on_attack_ping_any` /
+    /// `etb_ping_any` for the on-death event. Used by parting-shot
+    /// creatures (Mogg Fanatic / Goblin Cratermaker template) and
+    /// Lorehold's death-pyromancer cycle.
+    ///
+    /// Push claude/modern_decks batch 126: shipped to collapse the
+    /// recurring on-death ping pattern across STX Lorehold / Prismari
+    /// catalog cards.
+    pub fn dies_ping_any(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        on_dies(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Dies-Mint-Token shortcut: "When this creature dies, create
+    /// `count` copies of `definition`." Wraps [`on_dies`] with the
+    /// canonical mint-on-death body. Used by Pest Swarmer-style
+    /// self-replacing bodies (a Pest mints a Pest on death) and the
+    /// Lorehold death-spirit cycle.
+    ///
+    /// Push claude/modern_decks batch 126: shipped to collapse the
+    /// recurring death-mint pattern (Witherbloom Mossgrower, Lorehold
+    /// Spiritbinder, etc.).
+    pub fn dies_mint_token(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+    ) -> TriggeredAbility {
+        on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(count),
+            definition,
+        })
+    }
+
+    /// Magecraft-Draw shortcut: "Whenever you cast or copy an instant
+    /// or sorcery spell, draw a card." Wraps [`magecraft`] with the
+    /// canonical Draw 1 body. Distinct from [`magecraft_loot`] which
+    /// also discards. Used by Archmage Emeritus' draw-on-cast payoff
+    /// and any future "magecraft → draw" engine creature.
+    ///
+    /// Push claude/modern_decks batch 126: shipped to collapse the
+    /// recurring magecraft-draw pattern.
+    pub fn magecraft_draw(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Treasure shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create a Treasure token." Wraps
+    /// [`magecraft`] with a Treasure-mint body. Used by Prismari
+    /// Inventor / Prismari Treasure Smith / Symphony of the Wilds-
+    /// style treasure-on-cast bodies.
+    ///
+    /// Push claude/modern_decks batch 126: shipped to collapse the
+    /// recurring magecraft-treasure pattern.
+    pub fn magecraft_treasure() -> TriggeredAbility {
+        magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::game::effects::treasure_token(),
+        })
+    }
+
+    /// On-Attack-Loot shortcut: "Whenever this creature attacks, draw
+    /// a card, then discard a card." Wraps [`on_attack`] with the
+    /// canonical Seq[Draw 1, Discard 1] body. Used by attack-trigger
+    /// looters (Stormchaser-class fliers, Prismari attack-tempo
+    /// bodies).
+    ///
+    /// Push claude/modern_decks batch 126: shipped to collapse the
+    /// recurring attack-loot pattern (Prismari Stormbearer template).
+    pub fn on_attack_loot() -> TriggeredAbility {
+        on_attack(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))
+    }
 }

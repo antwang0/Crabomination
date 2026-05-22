@@ -14,8 +14,9 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_self_pump, on_attack_drain, on_other_dies, target_filtered,
+    dies_drain, dies_mint_token, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, on_attack_drain,
+    on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -10660,7 +10661,6 @@ pub fn pest_cinderpriest_b125() -> CardDefinition {
 /// Deathtouch. Dies-trigger Drain 2 via `on_dies(Drain)`. 5-mana
 /// finisher with deathtouch + death-drain rider.
 pub fn witherbloom_reaperscholar_b125() -> CardDefinition {
-    use crate::effect::shortcut::dies_drain;
     CardDefinition {
         name: "Witherbloom Reaperscholar (b125)",
         cost: cost(&[generic(3), b(), g()]),
@@ -10676,6 +10676,161 @@ pub fn witherbloom_reaperscholar_b125() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![dies_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 126 (push claude/modern_decks): five new Witherbloom cards ──────
+
+/// Witherbloom Mossgrower (b126) — {2}{B}{G}, 3/3 Plant Druid. On_dies
+/// mints a 1/1 B/G Pest token (with the standard on-death gain-1-life
+/// rider riding on the token). Self-replacing 4-mana body via the new
+/// `dies_mint_token` shortcut.
+pub fn witherbloom_mossgrower_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mossgrower (b126)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxinscholar (b126) — {1}{G}, 2/2 Plant Druid.
+/// Magecraft GainLife 2. 2-mana magecraft lifegain body.
+pub fn witherbloom_toxinscholar_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxinscholar (b126)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Pyrechewer (b126) — {1}{B}, 1/2 Pest. Dies-Drain 1. 2-mana
+/// parting-shot Pest body — overlaps with stx_pest_token but on a
+/// non-token frame so it stacks with Pestmancer / Pestmaster engines.
+pub fn pest_pyrechewer_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Pyrechewer (b126)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapcaster (b126) — {3}{B}{G}, 4/4 Plant Warlock. ETB
+/// drain 3. 5-mana race-breaker finisher (6-life swing on entry).
+pub fn witherbloom_sapcaster_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapcaster (b126)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinerunner (b126) — {2}{G}, 3/3 Plant Warrior Trample.
+/// ETB GainLife 2. 3-mana defensive trampler with built-in lifegain.
+pub fn witherbloom_vinerunner_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinerunner (b126)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

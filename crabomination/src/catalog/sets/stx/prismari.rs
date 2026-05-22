@@ -12,7 +12,10 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_self_pump, magecraft_treasure,
+    target_filtered,
+};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u};
 
@@ -8400,6 +8403,180 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
                 random: false,
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 126 (push claude/modern_decks): five new Prismari cards ──────────
+
+/// Prismari Cinderscholar (b126) — {1}{R}, 2/1 Human Wizard Haste.
+/// Magecraft Loot (Draw 1 + Discard 1). 2-mana haste magecraft looter.
+pub fn prismari_cinderscholar_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cinderscholar (b126)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Riftrider (b126) — {U}{R}, 2/2 Human Pirate. Magecraft
+/// self-pump +1/+0 EOT. Aggressive 2-mana magecraft scaler.
+pub fn prismari_riftrider_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Riftrider (b126)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkstudent (b126) — {2}{U}{R}, 3/2 Human Wizard.
+/// Magecraft Treasure mint via the new `magecraft_treasure` shortcut.
+/// 4-mana ramp-on-cast engine — Treasures enable explosive turns.
+pub fn prismari_sparkstudent_b126() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkstudent (b126)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempest-Skipper (b126) — {3}{U}{R}, 3/3 Elemental Wizard
+/// Flying. ETB Seq(Scry 2 + Draw 1). 5-mana evasive smoother + cantrip.
+pub fn prismari_tempest_skipper_b126() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Prismari Tempest-Skipper (b126)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Coil-Caller (b126) — {U}{R} Instant. Seq(DealDamage 1 to
+/// any target + Draw 1). 2-mana cheap shock-with-cantrip.
+pub fn prismari_coil_caller_b126() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Prismari Coil-Caller (b126)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -19,10 +19,84 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1716 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1742 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 125:
+Push (claude/modern_decks branch — current head — **post-batch 126:
+26 more Strixhaven synthesised cards across all five colleges + five
+new shortcut helpers (`dies_ping_any`, `dies_mint_token`,
+`magecraft_draw`, `magecraft_treasure`, `on_attack_loot`):
+
+- **Lorehold (R/W, 6 cards)** — Lorehold Spiritbinder (b126) ({2}{W}
+  2/3 Spirit Cleric, dies → mint 2/2 R/W Spirit token via the new
+  `dies_mint_token` shortcut), Lorehold Cinderscholar (b126) ({1}{R}
+  2/1 Human Wizard magecraft self-pump +1/+0), Lorehold Halfblood
+  (b126) ({3}{R}{W} 4/4 Spirit Soldier Trample — vanilla finisher
+  with double-tribal frame), Lorehold Skywatcher (b126) ({2}{W} 1/4
+  Spirit Cleric Flying + Vigilance — double-keyword evasive defender),
+  Lorehold Ember-Mage (b126) ({1}{R} 1/2 Human Wizard magecraft ping
+  any 1 — Prodigal Sorcerer template), Lorehold Sparkscholar (b126)
+  ({2}{R} 2/2 Human Wizard dies → ping 2 any via the new
+  `dies_ping_any` shortcut — Mogg Fanatic parting-shot pattern at a
+  higher P/T).
+- **Silverquill (W/B, 5 cards)** — Silverquill Glyphmage (b126)
+  ({1}{W} 1/3 Human Cleric magecraft Scry 1), Silverquill Pen-Sage
+  (b126) ({2}{W}{B} 3/3 Vampire Cleric ETB drain 2), Inkling Squire
+  (b126) ({1}{B} 2/1 Inkling Knight Flying — aggressive evasive
+  Inkling), Inkling Sigilrider (b126) ({2}{W}{B} 3/3 Inkling Cleric
+  Flying + Lifelink ETB gain 2 life), Silverquill Glyphcaller (b126)
+  ({W}{B} Instant drain 2 + Surveil 1 via the existing
+  `drain_and_surveil` composite).
+- **Witherbloom (B/G, 5 cards)** — Witherbloom Mossgrower (b126)
+  ({2}{B}{G} 3/3 Plant Druid dies → mint Pest token), Witherbloom
+  Toxinscholar (b126) ({1}{G} 2/2 Plant Druid magecraft GainLife 2),
+  Pest Pyrechewer (b126) ({1}{B} 1/2 Pest dies-drain 1), Witherbloom
+  Sapcaster (b126) ({3}{B}{G} 4/4 Plant Warlock ETB drain 3 — 6-life
+  race-breaker), Witherbloom Vinerunner (b126) ({2}{G} 3/3 Plant
+  Warrior Trample ETB GainLife 2).
+- **Prismari (U/R, 5 cards)** — Prismari Cinderscholar (b126)
+  ({1}{R} 2/1 Human Wizard Haste magecraft Loot), Prismari Riftrider
+  (b126) ({U}{R} 2/2 Human Pirate magecraft self-pump +1/+0),
+  Prismari Sparkstudent (b126) ({2}{U}{R} 3/2 Human Wizard magecraft
+  mints a Treasure via the new `magecraft_treasure` shortcut),
+  Prismari Tempest-Skipper (b126) ({3}{U}{R} 3/3 Elemental Wizard
+  Flying ETB Seq(Scry 2 + Draw 1)), Prismari Coil-Caller (b126)
+  ({U}{R} Instant DealDamage 1 + Draw 1 — cheap shock cantrip).
+- **Quandrix (G/U, 5 cards)** — Quandrix Mistshaper (b126) ({1}{U}
+  1/3 Merfolk Wizard magecraft Draw 1 via the new `magecraft_draw`
+  shortcut), Fractal Skyrunner (b126) ({2}{G} 0/0 Fractal with
+  `enters_with_counters = 3` — 3-mana base 3/3 Fractal), Quandrix
+  Riftcraftsman (b126) ({2}{G}{U} 3/3 Elf Druid ETB +1/+1 counter on
+  target Fractal + magecraft Loot), Quandrix Forecaster-Adept (b126)
+  ({G}{U} 1/2 Elf Druid magecraft Scry 1), Fractal Petalcaller (b126)
+  ({2}{G}{U} Sorcery — mint a Fractal then put 3 +1/+1 counters on it
+  via `Selector::LastCreatedToken`).
+
+Engine bonuses (batch 126):
+- Five new shortcut helpers in `effect::shortcut`:
+  `dies_ping_any(amount)` — on-death DealDamage to any target via
+  `target_filtered(Creature ∨ Player ∨ Planeswalker)`;
+  `dies_mint_token(definition, count)` — on-death mint a token
+  (self-replacing bodies + death-spirit cycles);
+  `magecraft_draw(amount)` — magecraft Draw 1 (Archmage Emeritus
+  template);
+  `magecraft_treasure()` — magecraft mints a Treasure (Prismari
+  Inventor template);
+  `on_attack_loot()` — attack-trigger Seq[Draw 1, Discard 1]
+  (Prismari Stormbearer template). Each helper has a lock-in test
+  that asserts the trigger event + scope + body shape. Used across
+  10 of the 26 new cards (Lorehold Spiritbinder/Sparkscholar,
+  Witherbloom Mossgrower, Quandrix Mistshaper, Prismari Sparkstudent,
+  and four more).
+
+Tests: 3656 → 3687 (26 card tests + 5 helper shortcut lock-in tests =
+31 new tests for batch 126).**
+
+Prior push: 21 Strixhaven synthesised cards across all five colleges +
+three attack-trigger shortcut helpers (`on_attack_drain`,
+`on_attack_gain_life`, `on_attack_ping_any`):
+
+**post-batch 125:
 21 more Strixhaven synthesised cards across all five colleges + three
 new attack-trigger shortcut helpers (`on_attack_drain`,
 `on_attack_gain_life`, `on_attack_ping_any`):

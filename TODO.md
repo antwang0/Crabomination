@@ -1214,6 +1214,66 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
+- 🟡 **CR 401 — Library** (push claude/modern_decks batch 126 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt` lines 1984–1998): The library zone
+  framework — what a library is, how cards are ordered in it, and how
+  positional / counted operations resolve.
+  (a) **401.1** "Deck becomes library at game start" — ✅
+  (`build_game_state` in `crabomination::game::types` initialises
+  `Player.library: Vec<CardInstance>` from the configured deck before
+  the opening hand is drawn; the first card drawn comes off the
+  vector's front via `Player::draw_one`).
+  (b) **401.2** "Single face-down pile, players can't look at or
+  reorder it" — ✅ (the `ClientView.library_size` projection sends only
+  the **count** to clients, never the cards; the server-side
+  `Player.library` is the single source of truth. The engine has no
+  "peek arbitrary library card" API; `Effect::LookAtTop`,
+  `Effect::Scry`, `Effect::Surveil`, and `Effect::RevealUntilFind` all
+  funnel through controlled-look + controlled-reorder paths so only
+  the legal "look at top N" operations are exposed).
+  (c) **401.3** "Any player may count cards remaining in any library"
+  — ✅ (`Player.library.len()` is exposed via the public `ClientView`;
+  used by `Predicate::ValueAtLeast(LibrarySizeOf, _)` for empty-library
+  gates).
+  (d) **401.4** "If multiple cards are put into a library at the same
+  position simultaneously, owner picks the order" — 🟡 (the engine
+  treats each `Move(library)` as a single-card insertion at the top
+  or bottom; multi-card simultaneous inserts collapse to sequence
+  order. Mass `ShuffleGraveyardIntoLibrary` randomises so 401.4 is
+  trivially satisfied; multi-card scry / Surveil walks pre-selects
+  the order via `DecisionAnswer::Scry` before any insertion, so the
+  decider-side resolves the 401.4 picking via `Decision::Scry`.
+  Engine-wide ⏳ for general "put these N cards on top in any order"
+  cases where the decider doesn't already do the picking).
+  (e) **401.5** "Play with top of library revealed; recompute if top
+  changes mid-cast" — 🟡 (the engine has no `play_with_top_revealed`
+  flag yet; cards like Future Sight, Vance's Blasting Cannons, Bolas's
+  Citadel are doc-tracked in CUBE_FEATURES.md. The simpler subset —
+  "look at the top card" abilities resolve immediately and don't span
+  a cast — already works via `Effect::LookAtTop`. The cast-time
+  recompute rider is unobservable today since no catalog card exposes
+  the "top of library is your hand" play pattern).
+  (f) **401.6** "Top card stops being revealed → new object on
+  re-reveal" — ⏳ (no `play_with_top_revealed` to begin with, so the
+  CR 400.7 zone-change-new-object semantic doesn't have a hook yet).
+  (g) **401.7** "Put a card 'Nth from the top' with fewer than N → goes
+  on bottom" — 🟡 (the engine has no `LibraryPosition::FromTop(n)`
+  primitive yet — Approach of the Second Sun's "seventh from top"
+  collapses to `Move → Graveyard` per the catalog comment. The
+  `Player::add_to_library_top` / `add_to_library_bottom` helpers cover
+  the two boundary positions, and `shuffle_library` is the canonical
+  randomiser. Adding a generalised `add_to_library_at(n)` with the
+  fewer-than-N → bottom guard would unblock Approach of the Second
+  Sun's true behavior and any future "Nth from top" effect).
+  Tests: `lookup_resolves_a_basic_land` exercises library-resident
+  deserialization; `approach_of_the_second_sun_*` tests cover the
+  "library positioning is approximated" path; library-size predicates
+  are covered by `empty_library_draw_loses_game`. Promote to ✅ when
+  401.5 (cast-time top-of-library recompute) and 401.7 (LibraryPosition
+  primitive) land. The two are independently engine-wide ⏳ and not
+  blocked by current catalog cards.
+
 - ✅ **CR 406 — Exile** (push claude/modern_decks batch 120 audit,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt` lines 2058–2078): The exile zone
