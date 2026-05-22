@@ -734,7 +734,7 @@ pub fn update_attack_all_visibility(
     use crabomination::card::Keyword;
     let has_attackers = cv.battlefield.iter().any(|c| {
         c.owner == your_seat
-            && !c.is_land()
+            && c.is_creature()
             && !c.tapped
             && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
             && !c.keywords.contains(&Keyword::Defender)
@@ -918,7 +918,7 @@ pub fn update_opponent_panel_tint(
         .iter()
         .filter(|c| {
             c.owner != cv.your_seat
-                && !c.is_land()
+                && c.is_creature()
                 && !c.tapped
                 && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
                 && !c.keywords.contains(&Keyword::Defender)
@@ -2460,7 +2460,7 @@ pub fn auto_advance_p0(
         let any_attacker = cv.battlefield.iter().any(|c| c.attacking);
         let any_blocker = cv.battlefield.iter().any(|c| {
             c.owner == your_seat
-                && !c.is_land()
+                && c.is_creature()
                 && !c.tapped
                 && !c.keywords.contains(&Keyword::Defender)
         });
@@ -2635,7 +2635,7 @@ pub fn handle_game_input(
             {
                 if owner.0 == your_seat {
                     let already_assigned = blocking.assignments.iter().any(|(b, _)| *b == game_id.0);
-                    let is_creature = cv.battlefield.iter().any(|c| c.id == game_id.0 && !c.is_land());
+                    let is_creature = cv.battlefield.iter().any(|c| c.id == game_id.0 && c.is_creature());
                     if is_creature && !already_assigned {
                         blocking.selected_blocker = Some(game_id.0);
                     }
@@ -2955,7 +2955,7 @@ pub fn handle_game_input(
                 .iter()
                 .filter(|c| {
                     c.owner == your_seat
-                        && !c.is_land()
+                        && c.is_creature()
                         && !c.tapped
                         && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
                         && !c.keywords.contains(&Keyword::Defender)

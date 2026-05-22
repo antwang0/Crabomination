@@ -325,6 +325,10 @@ impl PermanentView {
     pub fn is_land(&self) -> bool {
         self.card_types.contains(&CardType::Land)
     }
+
+    pub fn is_creature(&self) -> bool {
+        self.card_types.contains(&CardType::Creature)
+    }
 }
 
 /// One item on the stack, as visible to a specific seat. `Hidden` covers
