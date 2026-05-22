@@ -69,6 +69,68 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   pumps_and_grants_indestructible` exercises combined layer 6
   (keyword grant) + layer 7c (P/T pump) on a single target.
 
+- 🟡 **CR 208 — Power/Toughness** (push claude/modern_decks batch 122
+  — audit against `MagicCompRules_20260417.txt` lines 1535–1568). How
+  the engine reads, sets, and modifies creature power and toughness.
+  (a) **208.1 — Power and toughness** "A creature card has two
+  numbers separated by a slash printed in its lower right corner. The
+  first number is its power (the amount of damage it deals in combat);
+  the second is its toughness (the amount of damage needed to destroy
+  it)." — ✅ (`CardDefinition.power: i32` / `toughness: i32`;
+  `CardInstance.power()` / `toughness()` apply layered modifications;
+  `apply_combat_damage_to_creature` uses toughness to compute lethal).
+  (b) **208.2 — Star power/toughness (CDA)** "Some creature cards have
+  power and/or toughness that includes a star (\*)." — ✅
+  (`DynamicPt::*` variants in `compute_battlefield` cover Tarmogoyf-
+  class CDAs: `BasePlusCardsTypesInGy`, `BasePlusLandsInAllGraveyards`,
+  `BasePlusCountOfFilter`, `BasePlusCardsInExile`, etc. The "if the
+  ability needs to use a number that can't be determined, use 0
+  instead" CR 208.2a rule lives in `count_or_zero` clamps inside the
+  resolvers.).
+  (c) **208.3 — Noncreature P/T** "A noncreature permanent has no
+  power or toughness, even if it's a card with a power and toughness
+  printed on it (such as a Vehicle)." — 🟡 (`power()` /
+  `toughness()` always return the printed value, even on noncreature
+  permanents like Vehicles. Today no card checks "noncreature power"
+  vs "creature power" so the gap is unobservable; the engine should
+  reject any *combat* assignment from a noncreature permanent, which
+  it does via the "is creature" gate before declaring attackers.
+  Engine-wide 🟡 for the literal API observability difference; play-
+  observable 🟡 for the Vehicle-without-Crew case (today Vehicles
+  attack at their printed P/T since Crew isn't wired).).
+  (d) **208.4 — Base P/T** "Some effects refer to a creature's 'base
+  power,' 'base toughness,' or 'base power and toughness.'" — ✅
+  (`Effect::SetBasePT` routes through `Layer::Pt7b`, which only sets
+  the *base* P/T leaving Layer 7c +1/+1 counter modifications intact;
+  the layer order matches CR 613.4b/c. Used by Heavenly Blademaster
+  / Cleric of Life's Bond / Mirror Mockery and the SOS Strixhaven
+  set-base-PT primitives.).
+  (e) **208.4b — base P/T checks** "Some effects check a creature's
+  base power and/or toughness. These effects see that creature's
+  characteristics after applying any characteristic-defining
+  abilities and abilities that set power and/or toughness, ignoring
+  any effects and counters that modify power and/or toughness
+  without setting them." — 🟡 (the engine has no first-class
+  `BasePowerOf(_)` value; `Value::PowerOf(_)` reads the layered
+  modified P/T including counters. No STX/SOS card today checks
+  base-P/T-only — engine-wide 🟡 for completeness on cards like
+  Glassdust Hulk and Crystalline Crawler.).
+  (f) **208.5 — Missing P/T defaults to 0** "If a creature somehow
+  has no value for its power, its power is 0." — ✅ (`power()` /
+  `toughness()` never panic; the helpers return `i32` from a base
+  `definition.base_power() + power_bonus + +1/+1 counters − -1/-1
+  counters`, so a default-constructed card reads 0/0. The lethal-
+  damage / SBA check in `is_dead` uses `damage >= toughness()` which
+  routes the 0-toughness creature straight to graveyard.).
+  Tests: `pest_brewmaster_b122_etb_mints_two_pests` exercises base
+  P/T 1/1; `inkling_glyphwarden_b122_is_flying_lifelink_two_four`
+  reads layered P/T (2/4) on a Flying+Lifelink frame; existing
+  `silverquill_verdict_b122_destroys_creature_and_gains_life_equal_
+  to_power` reads `Value::PowerOf(Target(0))` on a 4/4 Serra Angel
+  for the gain-life-equal-to-power half. Cosmogoyf / Tarmogoyf /
+  Knight of the Reliquary tests (in cube + stx::iconic) cover the
+  `DynamicPt::*` CDA paths.
+
 - ✅ **CR 701.21 — Sacrifice** (push modern_decks batch 51,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). The sacrifice primitive — how
@@ -3689,6 +3751,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ✅ **`effect::shortcut::magecraft_add_counter_to_friendly()` helper**
+  (push claude/modern_decks batch 122 done). Wraps the canonical
+  Quandrix "magecraft → +1/+1 counter on target friendly creature"
+  body (`magecraft(Effect::AddCounter { what: target_filtered(Creature
+  ∧ ControlledByYou), kind: PlusOnePlusOne, amount: Const(1) })`) in
+  one helper call. Refactor target for ~5 inline callsites in
+  `stx::quandrix` (Quandrix Coursemage, Quandrix Mathematician
+  variants, etc.). New card using the helper: Quandrix Coursemage
+  (b122, {1}{G}{U} 2/2 Human Wizard). Lock-in test
+  `shortcut_magecraft_add_counter_to_friendly_rejects_opp_creatures`
+  verifies the helper correctly filters to controlled creatures. A
+  future cleanup pass can sweep the remaining inline bodies in
+  `stx::quandrix` and `stx::extras` onto the helper.
 
 - ✅ **"Sacrifice a different creature as activation cost" primitive**
   (push claude/modern_decks batch 120 done). The new

@@ -2987,6 +2987,26 @@ pub mod shortcut {
         })
     }
 
+    /// Magecraft-add-+1/+1-counter-to-friendly shortcut: "Whenever you
+    /// cast or copy an instant or sorcery spell, put a +1/+1 counter on
+    /// target creature you control." Wraps [`magecraft`] with an
+    /// `AddCounter` body targeting a friendly creature via
+    /// `target_filtered(Creature ∧ ControlledByYou)`. The auto-target
+    /// picker picks any controlled creature at trigger-resolve time.
+    /// Used by Quandrix Coursemage (b122) and any other "magecraft fans
+    /// counters" payoff. Refactor target for ~5 quandrix.rs callsites.
+    pub fn magecraft_add_counter_to_friendly() -> TriggeredAbility {
+        use crate::card::{CounterType, SelectionRequirement};
+        magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })
+    }
+
     /// ETB-Surveil shortcut: "When this creature enters, surveil
     /// `amount`." Wraps [`etb`] with the canonical surveil body. Used
     /// by ~5 STX/SOS Witherbloom / Silverquill surveil creatures

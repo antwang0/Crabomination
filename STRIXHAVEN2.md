@@ -19,10 +19,63 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1643 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1665 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 121:
+Push (claude/modern_decks branch — current head — **post-batch 122:
+22 brand-new Strixhaven synthesised cards across all five colleges,
+plus a new CR 208 (Power/Toughness) audit row in TODO.md:
+
+- **Witherbloom (B/G, 8 cards)** — Pest Cultcaller ({1}{B}{G} 2/2 with
+  `{B}, sac another: drain 1`), Witherbloom Bloodgrafter ({2}{B}{G} 3/3
+  ETB drain 2 + sacrifice-payoff +1/+1 counter), Witherbloom Composter
+  ({1}{B}{G} 2/2 with `{1}, sac another: draw + lose 1 life`), Pest
+  Swarmcaller ({3}{B}{G} sorcery mints 2 Pests + drains 2), Witherbloom
+  Sapdrainer ({3}{B}{G} 4/3 Lifelink + ETB drain 2), Witherbloom
+  Necrotutor ({2}{B} 2/2 magecraft reanimates target creature to
+  library top), Witherbloom Spinecaster ({1}{B} 1/3 with ETB shrink
+  -1/-1 EOT), Pest Brewmaster ({2}{B}{G} 1/1 ETB mints 2 Pests +
+  `another Pest dies → +1 life` payoff).
+- **Silverquill (W/B, 5 cards)** — Inkling Quillstrike ({1}{W}{B} 2/2
+  Flying ETB -2/-2 to opp creature), Silverquill Mentor ({2}{W} 2/3
+  ETB gain 2 + magecraft pump friendly +1/+1), Silverquill Verdict
+  ({3}{W}{B} sorcery destroy creature + gain life equal to its power),
+  Inkling Glyphwarden ({3}{W}{B} 2/4 Flying+Lifelink), Silverquill
+  Reverence ({W}{B} instant drain 1 + cantrip).
+- **Lorehold (R/W, 3 cards)** — Lorehold Pyroscholar ({R}{W} 2/2
+  magecraft ping any 1), Lorehold Reliquaer ({3}{R}{W} sorcery 2 Spirit
+  tokens + 1 damage each opp), Lorehold Battlescryer ({2}{R}{W} 3/3
+  Haste + attack-trigger ping any 1).
+- **Prismari (U/R, 3 cards)** — Prismari Loresage ({1}{U}{R} 2/3 ETB
+  loot), Prismari Inferno ({3}{R} sorcery 4 damage + cantrip), Prismari
+  Sparkmage ({1}{R} 1/2 magecraft ping creature 1).
+- **Quandrix (G/U, 3 cards)** — Fractal Multiplier ({2}{G}{U} 3/3 ETB
+  +1/+1 counter on friendly), Quandrix Coursemage ({1}{G}{U} 2/2
+  magecraft counter rain on friendly), Quandrix Expansion ({2}{G}{U}
+  sorcery mints Fractal with X +1/+1 counters where X = lands).
+
+All 22 cards use only existing engine primitives — no new engine work
+required for cards. Engine bonus: new
+`effect::shortcut::magecraft_add_counter_to_friendly()` helper landed
+in `effect.rs` — wraps `magecraft(Effect::AddCounter { what:
+target_filtered(Creature ∧ ControlledByYou), kind: +1/+1, amount: 1 })`
+in a one-liner drop-in for ~5 quandrix.rs callsites that inline the
+same body. Quandrix Coursemage (b122) uses the new helper; future
+cards in the Quandrix counter-fan archetype can also drop in. Lock-
+in test `shortcut_magecraft_add_counter_to_friendly_rejects_opp_
+creatures` verifies the helper picks a controlled creature even when
+the only opponent target exists.
+
+CR 208 (Power/Toughness) audit row added to TODO.md — covers all six
+sub-rules (208.1 through 208.5), with 208.3 (noncreature P/T API
+observability) and 208.4b (base-P/T-only introspection) flagged as 🟡
+for unaddressed engine gaps that don't affect any current STX/SOS/
+cube card.
+
+Tests: 3568 → 3594 (25 new b122 card tests + 1 new shortcut lock-in
+test).**
+
+Prior push (claude/modern_decks branch — post-batch 121:
 new `sac_other_filter` activated-ability primitive lands, plus 6 new
 sacrifice-as-cost cards across Silverquill/Witherbloom:
 - **Witherbloom Cultivator (b120)** — {1}{B}{G} 1/3 Plant Warlock with
