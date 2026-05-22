@@ -15,8 +15,8 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_gain_life, magecraft_ping_any,
-    magecraft_self_pump, target_filtered,
+    etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
+    magecraft_gain_life, magecraft_ping_any, magecraft_self_pump, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -3116,11 +3116,7 @@ pub fn lorehold_pyresinger() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

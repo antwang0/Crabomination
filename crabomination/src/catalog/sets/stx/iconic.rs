@@ -9,7 +9,7 @@ use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
     Subtypes, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, target_filtered};
+use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered};
 use crate::effect::PlayerRef;
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -1110,11 +1110,7 @@ pub fn witherbloom_neophyte() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
