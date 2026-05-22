@@ -2343,6 +2343,7 @@ pub fn inkling_inkrider() -> CardDefinition {
 /// Cruelties on a clean defensive frame; pairs with Stun-counter cards
 /// for a permanent lock.
 pub fn silverquill_lawkeeper() -> CardDefinition {
+    use crate::effect::shortcut::etb_tap_opp_creature;
     CardDefinition {
         name: "Silverquill Lawkeeper",
         cost: cost(&[generic(1), w()]),
@@ -2357,15 +2358,7 @@ pub fn silverquill_lawkeeper() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Tap {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                ),
-            },
-        }],
+        triggered_abilities: vec![etb_tap_opp_creature()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
