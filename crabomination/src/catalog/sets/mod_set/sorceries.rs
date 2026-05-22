@@ -412,9 +412,14 @@ pub fn big_score() -> CardDefinition {
 /// Windfall — {2}{U} Sorcery. Each player discards their hand, then draws
 /// cards equal to the greatest number of cards a player discarded.
 ///
-/// Approximation: each player draws 7 (the typical opening-hand count
-/// after discarding a full hand) — the dynamic "max discarded" yield is
-/// collapsed to a constant. Identical pattern to Wheel of Fortune.
+/// Push (modern_decks batch 115): the "draws equal to the greatest
+/// number of cards a player discarded this way" half is now wired
+/// faithfully via the new `Value::MaxCardsDiscardedThisEffectByAnyPlayer`
+/// primitive. The Discard step bumps a per-player counter
+/// (`cards_discarded_per_player_this_resolution`); the follow-up Draw
+/// step reads the max across all players. Identical pattern usable by
+/// future Wheel of Fortune / Jace's Archivist-class effects that share
+/// the "discard, then draw based on what was discarded" shape.
 pub fn windfall() -> CardDefinition {
     CardDefinition {
         name: "Windfall",
@@ -433,7 +438,7 @@ pub fn windfall() -> CardDefinition {
             },
             Effect::Draw {
                 who: Selector::Player(PlayerRef::EachPlayer),
-                amount: Value::Const(7),
+                amount: Value::MaxCardsDiscardedThisEffectByAnyPlayer,
             },
         ]),
         activated_abilities: no_abilities(),

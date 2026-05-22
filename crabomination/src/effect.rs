@@ -261,6 +261,15 @@ pub enum Value {
     /// between independent resolutions, so a `Seq([Discard, Draw])`
     /// reads exactly the discards from this resolution.
     CardsDiscardedThisEffect,
+    /// Maximum, across all players, of cards discarded so far within
+    /// the current effect resolution. Reads from
+    /// `state.cards_discarded_per_player_this_resolution`. Used by
+    /// Windfall's printed "draws cards equal to the greatest number of
+    /// cards a player discarded this way" — a `Seq([Discard(EachPlayer,
+    /// 100), Draw(EachPlayer, MaxCardsDiscardedThisEffectByAnyPlayer)])`
+    /// produces the correct dynamic yield instead of the prior flat 7.
+    /// Reset to 0 between independent resolutions.
+    MaxCardsDiscardedThisEffectByAnyPlayer,
     /// Number of *creature* cards discarded so far within the current
     /// effect resolution. Bumped alongside `CardsDiscardedThisEffect`
     /// whenever the discarded card has `CardType::Creature`. Used by

@@ -276,6 +276,7 @@ impl GameState {
         // mode 1's "draw cards equal to the number discarded this way").
         self.cards_discarded_this_resolution = 0;
         self.creature_cards_discarded_this_resolution = 0;
+        self.cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
@@ -623,6 +624,9 @@ impl GameState {
                             self.players[p].graveyard.push(card);
                             events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
                             self.cards_discarded_this_resolution += 1;
+                            *self.cards_discarded_per_player_this_resolution
+                                .entry(p)
+                                .or_insert(0) += 1;
                             self.discarded_card_ids_this_resolution.push(cid);
                             if was_creature {
                                 self.creature_cards_discarded_this_resolution += 1;
@@ -1597,6 +1601,9 @@ impl GameState {
                                 self.players[affected_controller].graveyard.push(card);
                                 self.cards_discarded_this_resolution =
                                     self.cards_discarded_this_resolution.saturating_add(1);
+                                *self.cards_discarded_per_player_this_resolution
+                                    .entry(affected_controller)
+                                    .or_insert(0) += 1;
                                 self.discarded_card_ids_this_resolution.push(card_id);
                             }
                             true

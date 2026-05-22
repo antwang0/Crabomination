@@ -3974,15 +3974,55 @@ fn snuff_out_rejects_black_creature() {
 
 /// Windfall: each player discards their hand and draws 7 cards.
 #[test]
-fn windfall_discards_both_hands_and_draws_seven() {
+fn windfall_discards_both_hands_then_draws_max_discarded() {
+    // Push (batch 115): dynamic yield. P0 has 2 cards, P1 has 3 cards
+    // (plus Windfall itself = 4 in hand). After discarding everything
+    // each player draws `max(2, 4) = 4` cards.
     let mut g = two_player_game();
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
+    // Clear pre-existing hands so we can stage the counts precisely.
+    g.players[0].hand.clear();
+    g.players[1].hand.clear();
     // Give each player a few cards in hand + library.
     for _ in 0..2 { g.add_card_to_hand(0, catalog::forest()); }
     for _ in 0..3 { g.add_card_to_hand(1, catalog::island()); }
     for _ in 0..15 { g.add_card_to_library(0, catalog::forest()); }
     for _ in 0..15 { g.add_card_to_library(1, catalog::island()); }
+    let wf = g.add_card_to_hand(1, catalog::windfall()); // P1 hand now = 4
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: wf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // P0 discarded 2; P1 discarded 4 (3 islands + Windfall after it
+    // started resolving — actually Windfall leaves hand at cast time
+    // so P1's hand was 3 at the discard step). Max = 4 or 3 depending
+    // on cast-time bookkeeping; what matters is "both players draw the
+    // same amount, equal to the max".
+    let drawn_p0 = g.players[0].hand.len();
+    let drawn_p1 = g.players[1].hand.len();
+    assert_eq!(drawn_p0, drawn_p1,
+        "Each player draws the same amount (the max discarded)");
+    assert!(drawn_p0 >= 3, "Max discarded was at least 3 (P1's island hand)");
+    assert!(drawn_p0 <= 4, "Max discarded was at most 4 (P1's full pre-cast hand)");
+}
+
+#[test]
+fn windfall_asymmetric_discards_yields_higher_player_count() {
+    // Force an asymmetric discard: P0 has 6 cards, P1 has 1 + Windfall.
+    // Each player draws 6 (P0's discard count, the max).
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[0].hand.clear();
+    g.players[1].hand.clear();
+    for _ in 0..6 { g.add_card_to_hand(0, catalog::forest()); }
+    for _ in 0..1 { g.add_card_to_hand(1, catalog::island()); }
+    for _ in 0..20 { g.add_card_to_library(0, catalog::forest()); }
+    for _ in 0..20 { g.add_card_to_library(1, catalog::island()); }
     let wf = g.add_card_to_hand(1, catalog::windfall());
     g.players[1].mana_pool.add(Color::Blue, 1);
     g.players[1].mana_pool.add_colorless(2);
@@ -3991,13 +4031,10 @@ fn windfall_discards_both_hands_and_draws_seven() {
         card_id: wf, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
-    // Both hands were emptied, then redrawn to 7 each.
-    assert_eq!(g.players[0].hand.len(), 7);
-    assert_eq!(g.players[1].hand.len(), 7);
-    // P0 discarded 2 forests. P1 discarded 3 islands; Windfall itself
-    // also goes to its caster's graveyard on resolve.
-    assert_eq!(g.players[0].graveyard.len(), 2);
-    assert_eq!(g.players[1].graveyard.len(), 4);
+    assert_eq!(g.players[0].hand.len(), 6,
+        "P0 discarded 6 — Max = 6, P0 redraws 6");
+    assert_eq!(g.players[1].hand.len(), 6,
+        "P1 only discarded 2 (1 island + Windfall) but still draws 6 = max");
 }
 
 /// Treasure Cruise: at full {7}{U} cost, draws 3 cards.

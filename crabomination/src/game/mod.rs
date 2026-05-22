@@ -240,6 +240,16 @@ pub struct GameState {
     /// Reset to 0 between independent resolutions.
     #[serde(skip)]
     pub(crate) creature_cards_discarded_this_resolution: u32,
+    /// Transient: per-player count of cards discarded within the current
+    /// effect resolution, indexed by player seat. Bumped alongside the
+    /// flat `cards_discarded_this_resolution` whenever a discard event
+    /// fires, so a follow-up step in the same `Effect::Seq` can read the
+    /// *greatest* count across players. Used by Windfall's printed
+    /// "draws cards equal to the greatest number of cards a player
+    /// discarded this way" via `Value::MaxCardsDiscardedThisEffectByAnyPlayer`.
+    /// Reset to empty between independent resolutions.
+    #[serde(skip)]
+    pub(crate) cards_discarded_per_player_this_resolution: std::collections::HashMap<usize, u32>,
     /// Transient: the `CardId`s of cards discarded within the current
     /// effect resolution. Populated alongside the count fields above. Used
     /// by Mind Roots's "Put up to one land card discarded this way onto
@@ -394,6 +404,7 @@ impl Clone for GameState {
             last_moved_cards: self.last_moved_cards.clone(),
             cards_discarded_this_resolution: self.cards_discarded_this_resolution,
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
+            cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
@@ -456,6 +467,7 @@ impl GameState {
             last_moved_cards: Vec::new(),
             cards_discarded_this_resolution: 0,
             creature_cards_discarded_this_resolution: 0,
+            cards_discarded_per_player_this_resolution: HashMap::new(),
             discarded_card_ids_this_resolution: Vec::new(),
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
@@ -2462,6 +2474,9 @@ impl GameState {
                             card_id,
                         });
                         self.cards_discarded_this_resolution += 1;
+                        *self.cards_discarded_per_player_this_resolution
+                            .entry(target_player)
+                            .or_insert(0) += 1;
                         self.discarded_card_ids_this_resolution.push(card_id);
                         if was_creature {
                             self.creature_cards_discarded_this_resolution += 1;
