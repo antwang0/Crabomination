@@ -2549,6 +2549,45 @@ pub mod shortcut {
         })
     }
 
+    /// Magecraft-Drain-Target shortcut: "Magecraft — Whenever you cast or
+    /// copy an instant or sorcery spell, target player loses N life and
+    /// you gain N life." Mirrors `magecraft_drain_each_opp` but with a
+    /// per-target slot rather than fan-out across each opponent — used by
+    /// cards like Promising Duskmage, Inkling Coursebinder, Inkling
+    /// Confessor, Inkling Pamphleteer where the picker selects a specific
+    /// opponent (matters in multiplayer; equivalent in 2-player).
+    pub fn magecraft_drain_target(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Drain {
+            from: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Player,
+            },
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// ETB-Pump-Each-with-Type shortcut: "When this creature enters,
+    /// put a +1/+1 counter on each creature you control of the given
+    /// type." Used by Inkling Sigilbearer, Pest Bannerer, Fractal
+    /// Mascot-class tribal anthems. Replaces the recurring 10-line
+    /// ForEach body in tribal payoff factories.
+    pub fn etb_pump_each_with_type(creature_type: crate::card::CreatureType) -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(creature_type))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })
+    }
+
     /// Strixhaven Quandrix "spell with `{X}` in its mana cost" trigger:
     /// fires on any spell cast by the controller whose printed cost
     /// contains an `{X}` symbol. Powered by `Predicate::CastSpellHasX`.

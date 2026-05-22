@@ -46182,3 +46182,140 @@ fn quandrix_lecturer_creates_fractal_with_creature_counters() {
     assert_eq!(fractals[0].counter_count(CounterType::PlusOnePlusOne), 3);
 }
 
+// ── batch 103 (continued): shortcut-driven cards ───────────────────────────
+
+#[test]
+fn silverquill_confessor_magecraft_drains_target_player() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let conf = g.add_card_to_battlefield(0, catalog::silverquill_confessor());
+    g.clear_sickness(conf);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt: -3 to p1. Magecraft drain target picks p1 by auto: -1, +1.
+    assert_eq!(g.players[1].life, life1_before - 4);
+    assert_eq!(g.players[0].life, life0_before + 1);
+}
+
+#[test]
+fn witherbloom_toxicpath_b103_etb_drain_and_scry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_toxicpath_b103());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1_before - 2);
+    assert_eq!(g.players[0].life, life0_before + 2);
+}
+
+#[test]
+fn inkling_sigilbearer_b103_pumps_each_inkling() {
+    let mut g = two_player_game();
+    // Use existing Inkling minter (Eager Glyphmage ETB → 1/1 inkling token).
+    let glyph = g.add_card_to_hand(0, catalog::eager_glyphmage());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, glyph);
+    // One Inkling minted. Now play Sigilbearer which puts +1/+1 on each
+    // Inkling (including itself).
+    let id = g.add_card_to_hand(0, catalog::inkling_sigilbearer_b103());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    // The newly-minted Inkling token + the Sigilbearer (which is also
+    // Inkling) both have a counter.
+    let inklings: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .collect();
+    let with_counters = inklings.iter()
+        .filter(|c| c.counter_count(CounterType::PlusOnePlusOne) == 1)
+        .count();
+    assert!(with_counters >= 2,
+        "At least 2 Inklings got +1/+1 (token + sigilbearer)");
+}
+
+#[test]
+fn pest_bannerlord_pumps_each_pest_on_etb() {
+    let mut g = two_player_game();
+    // Cast Witherbloom Pestcaller (batch 103) to mint a Pest token.
+    let caller = g.add_card_to_hand(0, catalog::witherbloom_pestcaller_b103());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, caller);
+    let pests_before: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .map(|c| c.id)
+        .collect();
+    assert!(!pests_before.is_empty(), "Pestcaller minted a Pest");
+    // Now play Pest Bannerlord which puts +1/+1 on each Pest.
+    let id = g.add_card_to_hand(0, catalog::pest_bannerlord());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    for p_id in &pests_before {
+        let p = g.battlefield_find(*p_id).expect("pest alive");
+        assert_eq!(p.counter_count(CounterType::PlusOnePlusOne), 1,
+            "Each pre-existing Pest got +1/+1 counter");
+    }
+}
+
+#[test]
+fn spirit_of_counterpoint_pumps_each_spirit_on_etb() {
+    let mut g = two_player_game();
+    // Play Lorehold Apprentice (a Spirit-tribal aside) — actually we
+    // need a Spirit. Use Spirit of Counterpoint and assert it pumps
+    // itself if no other Spirits exist.
+    let id = g.add_card_to_hand(0, catalog::spirit_of_counterpoint());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    let sp = g.battlefield_find(id).expect("Spirit on bf");
+    // The Spirit of Counterpoint is itself a Spirit, so it should
+    // pump itself.
+    assert_eq!(sp.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn fractal_conductor_pumps_each_fractal_on_etb() {
+    let mut g = two_player_game();
+    // First play Quandrix Summoner to mint a Fractal.
+    let summoner = g.add_card_to_hand(0, catalog::quandrix_summoner());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, summoner);
+    let fractals_before: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .map(|c| c.id)
+        .collect();
+    assert!(!fractals_before.is_empty(), "Quandrix Summoner minted a Fractal");
+    // Now play Fractal Conductor to pump each Fractal.
+    let id = g.add_card_to_hand(0, catalog::fractal_conductor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let counters_before: Vec<_> = fractals_before.iter()
+        .map(|fid| g.battlefield_find(*fid).unwrap().counter_count(CounterType::PlusOnePlusOne))
+        .collect();
+    cast(&mut g, id);
+    for (fid, c_before) in fractals_before.iter().zip(counters_before.iter()) {
+        let f = g.battlefield_find(*fid).expect("Fractal alive");
+        assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), c_before + 1,
+            "Fractal got +1 +1/+1 counter from Conductor's ETB");
+    }
+}
+

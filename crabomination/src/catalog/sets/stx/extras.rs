@@ -33376,6 +33376,214 @@ pub fn quandrix_numeromancer() -> CardDefinition {
     }
 }
 
+// ── modern_decks batch 103 (continued): additional shortcuts users ──────────
+
+/// Silverquill Confessor — {2}{B}, 2/2 Inkling Cleric Flying. Magecraft
+/// drain-target rider.
+///
+/// Synthesised: "Flying. Magecraft — Whenever you cast or copy an
+/// instant or sorcery spell, target opponent loses 1 life and you
+/// gain 1 life." Uses the new `magecraft_drain_target` shortcut.
+pub fn silverquill_confessor() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain_target;
+    CardDefinition {
+        name: "Silverquill Confessor",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_target(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxicpath (batch 103) — {2}{B}{G}, 3/3 Plant Warlock.
+/// ETB drain-and-scry combo.
+///
+/// Synthesised: "When this creature enters, each opponent loses 2
+/// life, you gain 2 life, then scry 1." Uses the existing
+/// `etb_drain_and_scry` shortcut.
+pub fn witherbloom_toxicpath_b103() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_scry;
+    CardDefinition {
+        name: "Witherbloom Toxicpath (Batch 103)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_scry(2, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Sigilbearer (batch 103) — {3}{W}{B}, 3/3 Inkling Cleric.
+/// Tribal anthem rider via the new `etb_pump_each_with_type` shortcut.
+///
+/// Synthesised: "When this creature enters, put a +1/+1 counter on
+/// each Inkling creature you control."
+pub fn inkling_sigilbearer_b103() -> CardDefinition {
+    use crate::effect::shortcut::etb_pump_each_with_type;
+    CardDefinition {
+        name: "Inkling Sigilbearer (Batch 103)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_pump_each_with_type(CreatureType::Inkling)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Bannerlord — {3}{B}{G}, 3/3 Plant Warrior. Pest tribal
+/// anthem via the `etb_pump_each_with_type` shortcut.
+///
+/// Synthesised: "When this creature enters, put a +1/+1 counter on
+/// each Pest creature you control."
+pub fn pest_bannerlord() -> CardDefinition {
+    use crate::effect::shortcut::etb_pump_each_with_type;
+    CardDefinition {
+        name: "Pest Bannerlord",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_pump_each_with_type(CreatureType::Pest)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Spirit of Counterpoint — {3}{R}{W}, 3/3 Spirit Knight. Spirit
+/// tribal anthem via the `etb_pump_each_with_type` shortcut.
+///
+/// Synthesised: "Flying. When this creature enters, put a +1/+1
+/// counter on each Spirit creature you control."
+pub fn spirit_of_counterpoint() -> CardDefinition {
+    use crate::effect::shortcut::etb_pump_each_with_type;
+    CardDefinition {
+        name: "Spirit of Counterpoint",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_pump_each_with_type(CreatureType::Spirit)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Conductor — {3}{G}{U}, 3/3 Elf Druid. Fractal tribal
+/// anthem via the `etb_pump_each_with_type` shortcut.
+///
+/// Synthesised: "When this creature enters, put a +1/+1 counter on
+/// each Fractal creature you control."
+pub fn fractal_conductor() -> CardDefinition {
+    use crate::effect::shortcut::etb_pump_each_with_type;
+    CardDefinition {
+        name: "Fractal Conductor",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_pump_each_with_type(CreatureType::Fractal)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Lecturer — {1}{G}{U} Sorcery.
 ///
 /// Synthesised: "Create a 0/0 green-and-blue Fractal creature token,
