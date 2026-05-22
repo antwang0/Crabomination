@@ -6123,10 +6123,7 @@ pub fn witherbloom_spireling() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -7016,7 +7013,7 @@ pub fn pest_disciple() -> CardDefinition {
 /// Witherbloom Lifescribe — {1}{B}{G}, 2/3 Human Druid. ETB drain 1
 /// + magecraft gain 1 life. 3-mana scaling lifegain body.
 pub fn witherbloom_lifescribe() -> CardDefinition {
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::etb_drain;
     CardDefinition {
         name: "Witherbloom Lifescribe",
         cost: cost(&[generic(1), b(), g()]),
@@ -7032,11 +7029,7 @@ pub fn witherbloom_lifescribe() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            etb(Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
-            }),
+            etb_drain(1),
             magecraft_gain_life(1),
         ],
         static_abilities: vec![],

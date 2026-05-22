@@ -6795,10 +6795,7 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(3),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(3)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

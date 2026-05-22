@@ -11782,7 +11782,7 @@ pub fn silverquill_quillthane() -> CardDefinition {
 /// Silverquill Pentor — {1}{W}, 2/2 Human Cleric. ETB Seq(GainLife 2 +
 /// magecraft Scry 1). 2-mana defensive lifegain body + on-cast smoother.
 pub fn silverquill_pentor_b61() -> CardDefinition {
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::etb_gain_life;
     CardDefinition {
         name: "Silverquill Pentor",
         cost: cost(&[generic(1), w()]),
@@ -11798,10 +11798,7 @@ pub fn silverquill_pentor_b61() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            etb(Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            }),
+            etb_gain_life(2),
             crate::effect::shortcut::magecraft_scry(1),
         ],
         static_abilities: vec![],
