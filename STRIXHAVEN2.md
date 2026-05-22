@@ -19,10 +19,52 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1562 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1587 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 103:
+Push (claude/modern_decks branch — current head — **post-batch 104:
+both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
+batch ships 25 brand-new Strixhaven synthesised cards across all five
+colleges (5 per college):
+
+- **Silverquill (W/B)** — Silverquill Inkblade (lifelink magecraft drain),
+  Inkling Loremaster (flying attack drain 2), Silverquill Anointment
+  (+1/+1 + indestructible EOT trick), Inkling Crusader (flying vigilance
+  with ETB gain 2 life), Silverquill Anthemcaster (2 Inkling tokens +
+  team anthem EOT).
+- **Witherbloom (B/G)** — Witherbloom Pestbrood (deathtouch 3/3 + 2
+  Pests), Pest Bloodscribe (`EventKind::CreatureSacrificed/YourControl`
+  payoff that pumps +1/+1 EOT), Witherbloom Mireseer (ETB mill 2 each
+  opp + gain 1), Pest Engorger (trampler that mints a Pest on death),
+  Witherbloom Cultmaster (sorcery that mints a Pest, mills 3 each opp,
+  and cantrips).
+- **Lorehold (R/W)** — Lorehold Pyromancer (magecraft pings each opp 1),
+  Spirit of the Archive (3/4 flying vigilance + reanimate-to-hand on
+  ETB), Lorehold Fireseer (1-CMC red ETB ping any), Lorehold
+  Battlecaster (Spirit token mint + magecraft self-pump), Lorehold
+  Sparkstrike (sorcery: 3 damage + Spirit token).
+- **Prismari (U/R)** — Prismari Pyromage (magecraft 1 to creature +
+  scry), Prismari Elementalist (4/3 ETB draw + Treasure mint), Prismari
+  Sparkcaller (magecraft self-pump + haste EOT), Prismari Stormburst
+  (3 to any target + cantrip), Prismari Crackleburst (sorcery: 2 to
+  creature + Treasure).
+- **Quandrix (G/U)** — Quandrix Theorist (magecraft fans +1/+1 counters
+  on all your Fractals), Fractal Whelp (vanilla 2/2 Fractal + ETB
+  counter target friendly), Quandrix Mathematician (mints a Fractal
+  with two +1/+1 counters), Fractal Bloom (two Fractals with three
+  +1/+1 counters distributed 2+1), Quandrix Symmetrist (ETB
+  doubles +1/+1 counters on target via `Value::CountersOn`).
+
+All 25 cards use only existing engine primitives — no new engine work
+required. Tests: 3463 → 3488 (25 new tests, one per new card).
+
+CR 613 (Interaction of Continuous Effects) audit row added to TODO.md,
+verifying the layer system and timestamp rules are correctly observed
+by Quandrix Symmetrist's "double counters" path (the layer-7c +1/+1
+counter additions stack via `add_counters` and re-evaluate live on
+every `compute_battlefield` pass).**
+
+Prior push (claude/modern_decks branch — post-batch 103:
 both Strixhaven sets remain at 100% ✅ catalog fidelity (255 SOS / 1551
 STX). Headline this batch ships 25 brand-new Strixhaven synthesised
 cards across all five colleges (5 per college: Silverquill, Witherbloom,
@@ -30,7 +72,7 @@ Lorehold, Prismari, Quandrix) PLUS 10 cube-expansion cards (1-2 per
 color plus colorless artifacts). New `CreatureType::Otter` and
 `::Detective` variants for Lonis Genetics Expert / Loot the Pathfinder.
 CR 701.13 (Exile) audit row promoted to ✅ in TODO.md. Tests:
-3417 → 3452 (35 new tests).**
+3417 → 3452 (35 new tests).
 
 **Prior push (post-batch 102)**: Headline ships 23 brand-new cube cards
 across all five colors plus colorless: 5 multicolor planeswalkers (Sorin Grim

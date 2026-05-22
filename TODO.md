@@ -12,6 +12,63 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 613 — Interaction of Continuous Effects** (push
+  claude/modern_decks batch 104 — audit against
+  `MagicCompRules_20260417.txt` lines 2946–3041). The layer system
+  governs how multiple continuous effects combine to produce an
+  object's final characteristics.
+  (a) **613.1 — Layer order** "rules and effects are applied in a
+  series of layers" — ✅ (`game/layers.rs::Layer` enum spans Layer1
+  through Layer7; `compute_battlefield` walks layers in CR order and
+  applies modifications per-layer).
+  (b) **613.1a–g — Sublayers** — ✅ (Layer 7a/7b/7c/7d sublayers
+  exist as distinct `Layer::Pt7a`/`Pt7b`/`Pt7c`/`Pt7d` variants;
+  layer 1a copy effects are wired for token / clone primitives).
+  (c) **613.3 — CDA-first ordering** "characteristic-defining
+  abilities … first, then all other effects in timestamp order" — 🟡
+  (the engine applies static effects in registration order; CDA
+  flagging exists but isn't yet a separate pre-pass within a layer.
+  In practice the dependency rule applies to layer 4 / 7a only, and
+  no STX/SOS/cube card today has a CDA that conflicts with a
+  non-CDA effect in the same layer, so the behavior matches CR).
+  (d) **613.4b — Layer 7b (base P/T set)** "effects that set
+  power and/or toughness to a specific number" — ✅ (`Modification::
+  SetPowerToughness` + the new `Effect::SetBasePT` primitive route
+  through Layer7b; Cosmogoyf / Tarmogoyf / Cruel Somnophage's
+  dynamic-P/T scaling lands here via `DynamicPt::*` variants in
+  `compute_battlefield`).
+  (e) **613.4c — Layer 7c (P/T modify)** "effects and counters
+  that modify P/T (but don't set)" — ✅ (`Modification::ModifyPower
+  Toughness` + `+1/+1 / -1/-1 counter` accumulation route through
+  Layer7c; Quandrix Symmetrist's "double counters" payoff in
+  batch 104 stacks at this layer correctly).
+  (f) **613.7 — Timestamps** "an effect with an earlier timestamp
+  is applied before an effect with a later timestamp" — 🟡 (the
+  engine threads a monotonic `next_timestamp: u64` and stamps
+  `ContinuousEffect.timestamp` on every effect creation; conflicts
+  within a layer use timestamp order via the `apply_in_layer`
+  walk. CR 613.7c (counter timestamps) and 613.7d (zone-entry
+  timestamps) are wired. Aura/Equipment re-stamp (613.7e) is
+  partial — Equipment attachment re-stamps the equip, but the
+  Aura re-stamp on enchant is doc-tracked).
+  (g) **613.8 — Dependency** "if a dependency exists, it overrides
+  timestamp order" — ⏳ (no engine-wide dependency analyzer; the
+  current static-effect application is purely linear in timestamp.
+  No STX/SOS card today exhibits a dependency loop, so this is
+  unobservable in current play. Engine-wide ⏳ for general
+  correctness on edge cases like Conspiracy + Opalescence /
+  Humility + Opalescence.).
+  (h) **613.11 — Game-rule effects** "effects on game rules
+  applied after object characteristics" — 🟡 (cost-reduction
+  effects use CR 601.2f ordering; hand-size / sorcery-timing
+  restrictions are wired (Teferi Time Raveler, Damping Sphere); a
+  general "modify the rules" framework hasn't been carved out, but
+  the specific game-rule modifiers we need are wired.).
+  Tests: `quandrix_symmetrist_b104_doubles_counters_on_target`
+  exercises layer 7c counter-doubling; `silverquill_anointment_b104_
+  pumps_and_grants_indestructible` exercises combined layer 6
+  (keyword grant) + layer 7c (P/T pump) on a single target.
+
 - ✅ **CR 701.21 — Sacrifice** (push modern_decks batch 51,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). The sacrifice primitive — how
@@ -3551,6 +3608,34 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ⏳ **`effect::shortcut::mint_pests(count)` / `mint_inklings(count)` /
+  `mint_spirits(count)` helpers** (push claude/modern_decks batch 104 —
+  new suggestion). Many cards in `stx::extras` / `stx::silverquill` /
+  `stx::witherbloom` / `stx::lorehold` mint Pest / Inkling / Spirit
+  tokens inline via `Effect::CreateToken { count, definition: <token>() }`.
+  A `mint_pests(count)` helper that wraps the `stx_pest_token()` reference
+  + `Effect::CreateToken { who: You, count, definition: stx_pest_token() }`
+  would shrink the catalog ~80 lines and centralise the token-mint shape
+  for future tweaks.
+
+- ⏳ **Vehicle / Crew primitive** (push claude/modern_decks batch 104 —
+  new suggestion). Strixhaven has Strixhaven Skycoach (currently
+  approximated as a free-attacking Construct), and the cube has
+  Smuggler's Copter / Esika's Chariot. A general
+  `Effect::Crew { tap_count_at_least: Value }` primitive that turns a
+  noncreature Vehicle into a creature EOT once enough power has tapped
+  would unblock all three plus future vehicles. Engine-wide ⏳.
+
+- ⏳ **`Effect::CreateCopyToken { source, who, count, modifiers }`
+  primitive** (push claude/modern_decks batch 104 — re-emphasised).
+  Five+ cube/STX cards need this (Phantasmal Image, Helm of the Host,
+  Saheeli Rai's -2, Mockingbird, Applied Geometry); only Saheeli Rai
+  has a partial implementation today (token mint without copying the
+  source's printed characteristics). A dedicated copy-token primitive
+  with optional modifier list (e.g. "except it's also a Fractal" /
+  "except its base P/T is 4/4") would unblock all of them in one
+  engine landing.
 
 - 🟡 **CR 602 — Activating Activated Abilities** (push
   claude/modern_decks — audit against `MagicCompRules_20260417.txt`).
