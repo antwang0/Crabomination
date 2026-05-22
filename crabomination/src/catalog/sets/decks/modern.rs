@@ -6550,7 +6550,6 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
         toughness: 2,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: ManaCost::default(),
             effect: Effect::Search {
                 who: PlayerRef::You,
                 filter: SelectionRequirement::Land,
@@ -6559,15 +6558,8 @@ pub fn knight_of_the_reliquary() -> CardDefinition {
                     tapped: false,
                 },
             },
-            once_per_turn: false,
-            sorcery_speed: false,
             sac_cost: true,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -6605,16 +6597,13 @@ pub fn goblin_rabblemaster() -> CardDefinition {
                     name: "Goblin".into(),
                     power: 1,
                     toughness: 1,
-                    keywords: vec![],
                     card_types: vec![CardType::Creature],
                     colors: vec![Color::Red],
-                    supertypes: vec![],
                     subtypes: Subtypes {
                         creature_types: vec![CreatureType::Goblin],
                         ..Default::default()
                     },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
+                    ..Default::default()
                 },
             },
         }],
@@ -8714,22 +8703,13 @@ pub fn stillmoon_cavalier() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::Duration;
     let activated = |mana: ManaCost, kw: Keyword| ActivatedAbility {
-        tap_cost: false,
         mana_cost: mana,
         effect: Effect::GrantKeyword {
             what: Selector::This,
             keyword: kw,
             duration: Duration::EndOfTurn,
         },
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-        life_cost: 0,
-        from_graveyard: false,
-        exile_self_cost: false,
-        exile_other_filter: None,
-        self_counter_cost_reduction: None,
+        ..Default::default()
     };
     CardDefinition {
         name: "Stillmoon Cavalier",
@@ -8773,7 +8753,6 @@ pub fn wishclaw_talisman() -> CardDefinition {
         enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: ManaCost::default(),
             effect: Effect::Seq(vec![
                 Effect::RemoveCounter {
                     what: Selector::This,
@@ -8786,15 +8765,8 @@ pub fn wishclaw_talisman() -> CardDefinition {
                     to: ZoneDest::Hand(PlayerRef::You),
                 },
             ]),
-            once_per_turn: false,
             sorcery_speed: true,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            ..Default::default()
         }],
         ..Default::default()
     }

@@ -2151,7 +2151,7 @@ pub struct TriggeredAbility {
     pub effect: Effect,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct ActivatedAbility {
     pub tap_cost: bool,
     pub mana_cost: crate::mana::ManaCost,

@@ -11,19 +11,11 @@ use crate::mana::{Color, ManaCost};
 pub fn tap_add(color: Color) -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::Colors(vec![color]),
         },
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+        ..Default::default()
     }
 }
 
@@ -33,20 +25,11 @@ pub fn tap_add(color: Color) -> ActivatedAbility {
 pub fn tap_add_any_color() -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::AnyOneColor(Value::Const(1)),
         },
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-        life_cost: 0,
-        from_graveyard: false,
-        exile_self_cost: false,
-        exile_other_filter: None,
-            self_counter_cost_reduction: None,
+        ..Default::default()
     }
 }
 
@@ -56,19 +39,11 @@ pub fn tap_add_any_color() -> ActivatedAbility {
 pub fn tap_add_colorless() -> ActivatedAbility {
     ActivatedAbility {
         tap_cost: true,
-        mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
             who: PlayerRef::You,
             pool: ManaPayload::Colorless(Value::Const(1)),
         },
-        once_per_turn: false,
-        sorcery_speed: false,
-        sac_cost: false,
-        condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+        ..Default::default()
     }
 }
 
