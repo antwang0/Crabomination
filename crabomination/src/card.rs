@@ -70,6 +70,9 @@ pub enum CreatureType {
     // Multicolor creature subtypes added with the modern_decks cube
     // expansion (Lord Xander, Korvold, etc.).
     Noble, Fae,
+    // modern_decks batch 103 cube expansion (Lonis Genetics Expert,
+    // Loot the Pathfinder).
+    Otter, Detective,
 }
 
 /// Land subtypes (basic land types + others).

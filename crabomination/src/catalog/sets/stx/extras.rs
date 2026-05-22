@@ -32420,3 +32420,1002 @@ pub fn strixhaven_skylancer() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── modern_decks batch 103: 25 new Strixhaven synthesised cards ─────────────
+//
+// A batch of fresh Strixhaven-themed synthesised cards across all five
+// colleges, expanding the existing per-college pools with new common /
+// uncommon shapes. Each card is built on the existing engine
+// primitives (magecraft, etb, drain, treasure mint, pest mint, spirit
+// mint, fractal mint) — no new engine work required.
+//
+// The batch breaks down 5 cards per college: Silverquill (W/B),
+// Witherbloom (B/G), Lorehold (R/W), Prismari (U/R), Quandrix (G/U).
+
+// ── Silverquill (W/B) — 5 new cards ─────────────────────────────────────────
+
+/// Silverquill Ledgerkeeper — {2}{W}{B}, 2/3 Inkling Cleric Flying.
+///
+/// Synthesised: "Flying. When this creature enters, each opponent
+/// loses 2 life and you gain 2 life."
+pub fn silverquill_ledgerkeeper() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ledgerkeeper",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Aerospread — {3}{W}{B}, 3/3 Inkling Soldier Flying.
+///
+/// Synthesised: "Flying. When this creature enters, create a 1/1
+/// white-and-black Inkling creature token with flying."
+pub fn inkling_aerospread() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Inkling Aerospread",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Brushmage — {1}{W}, 2/1 Human Cleric.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +1/+1 until end of turn."
+pub fn silverquill_brushmage() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Brushmage",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Glaivemaster — {2}{B}, 2/2 Inkling Wizard.
+///
+/// Synthesised: "Whenever this creature attacks, each opponent loses
+/// 1 life and you gain 1 life."
+pub fn inkling_glaivemaster() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Inkling Glaivemaster",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lecturer (batch 103) — {1}{W} Sorcery.
+///
+/// Synthesised: "Each opponent loses 2 life and you gain 2 life."
+/// Simple drain spell built on the existing `Effect::Drain` primitive.
+pub fn silverquill_lecturer_b103() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lecturer (Batch 103)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Witherbloom (B/G) — 5 new cards ─────────────────────────────────────────
+
+/// Witherbloom Necromage — {2}{B}{G}, 2/3 Human Warlock.
+///
+/// Synthesised: "When this creature enters, create a 1/1 black-and-
+/// green Pest creature token with 'When this creature dies, you gain
+/// 1 life.' When this creature dies, each opponent loses 2 life and
+/// you gain 2 life."
+pub fn witherbloom_necromage() -> CardDefinition {
+    use super::shared::stx_pest_token;
+    use crate::effect::shortcut::{dies_drain, etb};
+    CardDefinition {
+        name: "Witherbloom Necromage",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            }),
+            dies_drain(2),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxinsage — {1}{B}{G}, 2/2 Plant Warlock.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, each opponent loses 1 life and you gain 1 life."
+pub fn witherbloom_toxinsage() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxinsage",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Wildmage — {3}{B}{G}, 3/4 Human Warlock.
+///
+/// Synthesised: "When this creature enters, you gain 3 life.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// scry 1."
+pub fn witherbloom_wildmage() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry;
+    CardDefinition {
+        name: "Witherbloom Wildmage",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3), magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestcaller (batch 103) — {2}{B}, 2/2 Human Warlock.
+///
+/// Synthesised: "When this creature enters, create a 1/1 black-and-
+/// green Pest creature token with 'When this creature dies, you gain
+/// 1 life.'"
+pub fn witherbloom_pestcaller_b103() -> CardDefinition {
+    use super::shared::stx_pest_token;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Witherbloom Pestcaller (Batch 103)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: stx_pest_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lecturer — {1}{B}{G} Sorcery.
+///
+/// Synthesised: "Each opponent loses 3 life and you gain 3 life."
+pub fn witherbloom_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lecturer",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Lorehold (R/W) — 5 new cards ────────────────────────────────────────────
+
+/// Lorehold Battlemage (batch 103) — {2}{R}{W}, 2/3 Human Wizard.
+///
+/// Synthesised: "When this creature enters, it deals 2 damage to any
+/// target. Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, create a 2/2 red-and-white Spirit creature token."
+pub fn lorehold_battlemage_b103() -> CardDefinition {
+    use super::lorehold::lorehold_spirit_token;
+    use crate::effect::shortcut::{etb, magecraft};
+    CardDefinition {
+        name: "Lorehold Battlemage (Batch 103)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            }),
+            magecraft(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embertusk — {3}{R}{W}, 3/3 Spirit Beast.
+///
+/// Synthesised: "When this creature enters, it deals 1 damage to each
+/// opponent and you create a 2/2 red-and-white Spirit creature token."
+pub fn lorehold_embertusk() -> CardDefinition {
+    use super::lorehold::lorehold_spirit_token;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Embertusk",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::Player(PlayerRef::EachOpponent),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrescholar (batch 103) — {2}{R}, 2/2 Human Wizard.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to any target."
+pub fn lorehold_pyrescholar_b103() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Lorehold Pyrescholar (Batch 103)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit Reclaimer — {3}{W}, 2/3 Spirit Cleric.
+///
+/// Synthesised: "When this creature enters, return target creature
+/// card from your graveyard to your hand."
+pub fn lorehold_spirit_reclaimer() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Spirit Reclaimer",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                },
+                Value::Const(1),
+            ),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Lecturer — {1}{R}{W} Sorcery.
+///
+/// Synthesised: "Deal 2 damage to any target. Create a 2/2 red-and-
+/// white Spirit creature token."
+pub fn lorehold_lecturer() -> CardDefinition {
+    use super::lorehold::lorehold_spirit_token;
+    CardDefinition {
+        name: "Lorehold Lecturer",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Prismari (U/R) — 5 new cards ────────────────────────────────────────────
+
+/// Prismari Sparkblade — {1}{U}{R}, 2/2 Elemental Wizard.
+///
+/// Synthesised: "When this creature enters, create a Treasure token.
+/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// scry 1."
+pub fn prismari_sparkblade() -> CardDefinition {
+    use crate::effect::shortcut::{etb, magecraft_scry};
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Sparkblade",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            }),
+            magecraft_scry(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Aetherweaver — {3}{U}{R}, 3/3 Elemental Wizard.
+///
+/// Synthesised: "When this creature enters, draw a card, then discard
+/// a card. Magecraft — Whenever you cast or copy an instant or sorcery
+/// spell, this creature deals 1 damage to any target."
+pub fn prismari_aetherweaver() -> CardDefinition {
+    use crate::effect::shortcut::{etb, magecraft_ping_any};
+    CardDefinition {
+        name: "Prismari Aetherweaver",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ])),
+            magecraft_ping_any(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkpoet — {1}{R}, 2/1 Human Wizard.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to any target."
+pub fn prismari_sparkpoet() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Sparkpoet",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tidemage — {2}{U}, 1/3 Human Wizard.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, draw a card, then discard a card."
+pub fn prismari_tidemage() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_loot;
+    CardDefinition {
+        name: "Prismari Tidemage",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Lecturer — {1}{U}{R} Sorcery.
+///
+/// Synthesised: "Deal 2 damage to any target. Draw a card."
+pub fn prismari_lecturer() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Lecturer",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Quandrix (G/U) — 5 new cards ────────────────────────────────────────────
+
+/// Quandrix Aetherist (batch 103) — {1}{G}{U}, 1/1 Elf Druid.
+///
+/// Synthesised: "When this creature enters, create a 0/0 green-and-
+/// blue Fractal creature token, then put two +1/+1 counters on it."
+pub fn quandrix_aetherist_b103() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Aetherist (Batch 103)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Cycloid — {2}{G}{U}, 2/2 Elemental.
+///
+/// Synthesised: "When this creature enters, put a +1/+1 counter on
+/// each creature you control."
+pub fn quandrix_cycloid() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::{each_your_creature, etb};
+    CardDefinition {
+        name: "Quandrix Cycloid",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: each_your_creature(),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Symmetrybard — {2}{G}, 2/3 Elf Druid.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, put a +1/+1 counter on this creature."
+pub fn quandrix_symmetrybard() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Quandrix Symmetrybard",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Numeromancer — {2}{U}, 2/2 Vedalken Wizard.
+///
+/// Synthesised: "When this creature enters, scry 2, then draw a
+/// card."
+pub fn quandrix_numeromancer() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Quandrix Numeromancer",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Lecturer — {1}{G}{U} Sorcery.
+///
+/// Synthesised: "Create a 0/0 green-and-blue Fractal creature token,
+/// then put X +1/+1 counters on it, where X is the number of
+/// creatures you control."
+pub fn quandrix_lecturer() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::{count, each_your_creature};
+    CardDefinition {
+        name: "Quandrix Lecturer",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: count(each_your_creature()),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -10085,3 +10085,159 @@ fn goblin_rabblemaster_attack_creates_a_goblin_token() {
         c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Goblin)
     ), "Goblin token present");
 }
+
+// ── modern_decks batch 103: new cube-expansion card tests ───────────────────
+
+#[test]
+fn death_greeters_champion_drains_opp_on_attack() {
+    use crate::card::Keyword;
+    use crate::game::types::{AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::death_greeters_champion());
+    g.clear_sickness(attacker);
+    let life1_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attacker declared");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 1, "opp loses 1 life on attack");
+    // Haste keyword check.
+    let champ = catalog::death_greeters_champion();
+    assert!(champ.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn glaring_fleshraker_etb_pings_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::glaring_fleshraker());
+    g.players[0].mana_pool.add_colorless(3);
+    let life1_before = g.players[1].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1_before - 2, "ETB pings for 2");
+}
+
+#[test]
+fn detectives_phoenix_dies_schedules_delayed_return() {
+    let mut g = two_player_game();
+    let phoenix = g.add_card_to_battlefield(0, catalog::detectives_phoenix());
+    g.clear_sickness(phoenix);
+    let dt_before = g.delayed_triggers.len();
+    g.remove_to_graveyard_with_triggers(phoenix);
+    drain_stack(&mut g);
+    // A delayed-return trigger should be scheduled (matches Goryo's
+    // shape — at next end step the body fires).
+    assert!(g.delayed_triggers.len() > dt_before,
+        "Delayed return trigger scheduled");
+}
+
+#[test]
+fn lonis_genetics_expert_creates_clue_when_other_creature_enters() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    let lonis = g.add_card_to_battlefield(0, catalog::lonis_genetics_expert());
+    g.clear_sickness(lonis);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, bear);
+    let clues: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
+        .collect();
+    assert_eq!(clues.len(), 1, "Lonis mints a Clue when another creature enters");
+}
+
+#[test]
+fn loot_the_pathfinder_etb_creates_map_approximation() {
+    use crate::card::ArtifactSubtype;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::loot_the_pathfinder());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, id);
+    let clues: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Clue))
+        .collect();
+    assert_eq!(clues.len(), 1, "Loot mints a Clue (Map approximation) on ETB");
+}
+
+#[test]
+fn brightglass_gearhulk_etb_scries_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::brightglass_gearhulk());
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, id);
+    // -1 cast + 1 draw = 0 net delta on hand.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    assert!(g.battlefield_find(id).is_some(), "Gearhulk on bf");
+}
+
+#[test]
+fn mossborn_hydra_enters_with_x_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::mossborn_hydra());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: Some(3),
+    }).expect("Mossborn castable at X=3");
+    drain_stack(&mut g);
+    let hydra = g.battlefield_find(id).expect("Hydra on bf");
+    assert_eq!(hydra.counter_count(CounterType::PlusOnePlusOne), 3,
+        "Mossborn enters with X +1/+1 counters");
+}
+
+#[test]
+fn mai_scornful_striker_drains_opp_on_attack() {
+    use crate::card::Keyword;
+    use crate::game::types::{AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::mai_scornful_striker());
+    g.clear_sickness(attacker);
+    let mai = g.battlefield_find(attacker).expect("Mai on bf");
+    assert!(mai.has_keyword(&Keyword::Menace), "Has menace");
+    let life1_before = g.players[1].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attacker declared");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 1, "opp -1 life on attack");
+}
+
+#[test]
+fn tempest_angler_etb_scries_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::tempest_angler());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    use crate::card::Keyword;
+    let angler = g.battlefield_find(id).expect("Angler on bf");
+    assert!(angler.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn carnage_interpreter_etb_makes_each_opp_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::carnage_interpreter());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let opp_hand_before = g.players[1].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
+        "Opp discards one card on ETB");
+}

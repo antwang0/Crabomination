@@ -2209,6 +2209,39 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Test of Endurance, Felidar Sovereign, Mortal Combat, Helix
   Pinnacle.
 
+- ✅ **CR 701.13 — Exile** (push modern_decks batch 103 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt`): "To exile an object, move it to the
+  exile zone from wherever it is. See rule 406, 'Exile.'" (701.13a).
+  The engine wires Exile via two pathways depending on the source zone:
+  (a) **701.13a** from battlefield → `Effect::Exile` resolves the
+  selector to a `CardId`, fires LTB triggers, then moves the card to
+  `GameState.exile` via `remove_from_battlefield_to_exile` in
+  `game/stack.rs:1151`. Replacement effects on `PermanentExiled` are
+  consulted at the standard hook site.
+  (b) **701.13a** from other zones (graveyard, hand, library, stack) →
+  `Effect::Exile` accepts both `EntityRef::Permanent` (battlefield)
+  AND `EntityRef::Card` (cards in any other zone) via the dispatch in
+  `resolve_effect`'s Exile arm. Cards routed through this path go to
+  `GameState.exile` directly without firing LTB triggers (since LTB
+  fires on leaving the battlefield, per CR 603.6c).
+  (c) **Self-targeting exile** — works correctly: a card on the
+  battlefield exiling itself fires its own LTB triggers BEFORE the
+  zone change, then moves to exile. Same shape as Banishing Light /
+  Oblivion Ring template (currently the "return on LTB" half is
+  engine-wide ⏳ pending an `Effect::ExileUntilLTB` primitive).
+  Used by ~80 catalog cards: Path to Exile, Swords to Plowshares,
+  Anguished Unmaking, Despark, Cremate, Ghost Vacuum, Soul-Guide
+  Lantern, Practiced Scrollsmith, Pull from the Grave, Cling to
+  Dust, every "exile target card from a graveyard" card. Tests:
+  implicit across the entire suite — every Exile cast/activation
+  test exercises the framework. `ghost_vacuum_exiles_target_card_from_graveyard`
+  exercises (b). `cremate_exiles_graveyard_card_and_draws` exercises
+  (b) chained with a draw. Promote to 🟡 when an `Effect::ExileUntilLTB`
+  primitive lands for Banishing Light / Detention Sphere / Oblivion
+  Ring-class cards. The pure 701.13a "move object to exile zone"
+  pipeline is end-to-end ✅.
+
 - ✅ **CR 701.16 — Investigate** (push modern_decks batch 21 audit,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): "'Investigate' means 'Create a Clue

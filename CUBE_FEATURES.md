@@ -101,7 +101,7 @@ still ⏳.
 | Bitterbloom Bearer | ✅ | {1}{B} 1/2 Faerie Wizard with Flying. Self-source ETB creates a 1/1 black Faerie creature token with flying via `Effect::CreateToken` + a one-off `TokenDefinition`. Test: `bitterbloom_bearer_etb_creates_a_faerie_token`. |
 | Bloodghast | ✅ | {B}{B} 2/1 Vampire Spirit. Wired via the new `EventScope::FromYourGraveyard`: a `LandPlayed` + `FromYourGraveyard` trigger fires off the graveyard copy and `Move`s `Selector::This` back to the battlefield. The "haste while opp ≤ 10 life" rider is omitted (no conditional-keyword static). Tests: `bloodghast_returns_from_graveyard_when_you_play_a_land`, `bloodghast_has_landfall_return_trigger`. |
 | Golgari Thug | ⏳ | Dredge 4. Needs Dredge primitive. |
-| Mai, Scornful Striker | ⏳ | New creature — abilities TBD. |
+| Mai, Scornful Striker | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{B} 2/1 Human Rogue with Menace. Attack trigger drains 1 life from each opponent. Test: `mai_scornful_striker_drains_opp_on_attack`. |
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
 | Silversmote Ghoul | ✅ | {1}{B} 2/1 Zombie. `LifeGained` + `FromYourGraveyard` trigger returns Selector::This from graveyard to battlefield. Test: `silversmote_ghoul_returns_from_graveyard_on_lifegain`. |
 | Ichorid | 🟡 | {B} 3/1 Horror with Haste. `StepBegins(Upkeep)` + `FromYourGraveyard` trigger returns Selector::This to the battlefield, then schedules a `NextEndStep` delayed exile (reuses Goryo's reanimate-then-exile pattern). The "opponent's graveyard contains a black creature" gate is omitted (no graveyard-color trigger filter yet). Test: `ichorid_returns_at_upkeep_then_exiles_at_end_step`. |
@@ -154,8 +154,8 @@ still ⏳.
 | Magda, Brazen Outlaw | ⏳ | Treasure-on-tap + tutor. |
 | Robber of the Rich | ⏳ | Cast-from-opp-library. Big primitive. |
 | Anje's Ravager | ⏳ | Madness payoff. |
-| Death-Greeter's Champion | ⏳ | Aggressive creature. |
-| Detective's Phoenix | ⏳ | Recurring Phoenix variant. |
+| Death-Greeter's Champion | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{R} 2/2 Human Warrior with Haste. Attack trigger drains 1 life from a target opponent. Test: `death_greeters_champion_drains_opp_on_attack`. |
+| Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
 | Simian Spirit Guide | 🟡 | `{2}{R}` 2/2 Ape Spirit. Body wired; the alt-cost "exile from hand to add {R}" half is still ⏳ — the existing `AlternativeCost` path replaces the entire spell's resolution, so an alt-cost mana ability would need a new "alt cast = mana ability" mode. Available in any red pool. |
 | Arclight Phoenix | ⏳ | Three-spell-cast trigger from graveyard. Needs spells-cast-this-turn count + recursion. |
 | Goldspan Dragon | 🟡 | 4/4 Flying Haste; attack-trigger Treasure (using the now-functional Treasure mana ability). "Becomes target of a spell" trigger and the Treasure-2-mana static rider are omitted. |
@@ -202,7 +202,7 @@ still ⏳.
 | Elvish Spirit Guide | 🟡 | {2}{G} 2/2 Elf Spirit body wired. The "exile from hand: add {G}" alt-mana ability needs a hand-activated-ability primitive (`activate_ability` only walks the battlefield today); promote to ✅ once that lands. Test: `elvish_spirit_guide_is_a_two_two_elf_spirit`. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
-| Mossborn Hydra | ⏳ | Hydra +1/+1 counter scaling. |
+| Mossborn Hydra | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {X}{G} 0/0 Hydra. Enters with X +1/+1 counters via `enters_with_counters: Some((PlusOnePlusOne, XFromCost))`. The "double counters if X ≥ 4" rider is collapsed (no counter-multiplier-on-cast primitive). Test: `mossborn_hydra_enters_with_x_counters`. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
 | Sentinel of the Nameless City | 🟡 | Vigilance + attack-trigger 1/1 green Citizen token. Ward 2 omitted (keyword exists but not enforced at targeting time); Plant subtype dropped (no `Plant` in `CreatureType`). |
 | Tireless Tracker | 🟡 | Filtered ETB-other trigger: when a land enters under your control, investigate (create a Clue). Sac-Clue +1/+1 ability omitted (no sac-of-other-permanent activation primitive). |
@@ -249,7 +249,7 @@ still ⏳.
 |---|---|---|
 | Ornithopter | ✅ | {0} Artifact creature 0/2 with Flying. |
 | Ornithopter of Paradise | ✅ | {1} Artifact creature 0/2 Flying; {T}: Add one mana of any color. |
-| Glaring Fleshraker | ⏳ | TBD. |
+| Glaring Fleshraker | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {3} Artifact Creature — Construct 3/3. ETB deals 2 damage to any target. Test: `glaring_fleshraker_etb_pings_target`. |
 | Tezzeret, Cruel Captain | 🟡 | {3}{B} 4-loyalty walker. **+1**: target creature gets -2/-2 EOT. **-2**: drain 2 life from each opponent (you gain 2). Ult is collapsed; the "your artifact creatures get +1/+1" static is dropped. Tests: `tezzeret_minus_two_drains_each_opponent_for_two`, `tezzeret_plus_one_shrinks_target_creature`. |
 | Karn, Scion of Urza | 🟡 | {4} 5-loyalty Karn. **+1**: Draw 1 + mill 1 (the opp-pile-split is information-only at this engine fidelity). **-1**: ForEach Construct creature you control + AddCounter(+1/+1). **-2**: Create a 1/1 Construct artifact creature token (artifact-count scaling rider collapses). Tests: `karn_scion_of_urza_minus_two_creates_a_construct_token`, `karn_plus_one_draws_a_card_and_mills_one`. |
 | Kozilek's Command | ⏳ | Modal Eldrazi instant. |
@@ -298,14 +298,14 @@ still ⏳.
 | Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |
 | Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
-| Carnage Interpreter | ⏳ | TBD. |
+| Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
 | Kolaghan's Command | 🟡 | Push (claude/modern_decks batch 102): {1}{B}{R} Instant. Modal — `ChooseMode([discard+reanimate, ping+destroy-artifact, discard+ping])`. The printed "choose two of four" multi-mode picker (CR 700.2d) collapses to three bundled pairs. AutoDecider picks mode 0. Test: `kolaghans_command_mode_zero_discard_plus_reanimate`. |
 | Master of Cruelties | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 1/4 First Strike Deathtouch Demon. Attack trigger sets the defending player's life to 1 (via `Effect::SetLifeTotal`). The "can attack only alone" combat restriction and "deals no combat damage this turn" rider are dropped (no engine primitives) — combined with the deathtouch ping, the net play pattern matches the printed kill condition. Test: `master_of_cruelties_attack_sets_opp_life_to_one`. |
 | Territorial Kavu | ✅ | Push (claude/modern_decks batch 102): {2}{R}{G} 3/2 Kavu. `LandPlayed` + `OpponentControl` trigger → `AddCounter(+1/+1, Self)`. Test: `territorial_kavu_grows_when_opponent_plays_a_land`. |
 | Bloodbraid Challenger | ⏳ | Cascade. |
 | Qasali Pridemage | ⏳ | Exalted + sac to destroy artifact/enchantment. |
 | Knight of the Reliquary | ⏳ | Sac-land tutor scaling P/T. |
-| Brightglass Gearhulk | ⏳ | TBD. |
+| Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Growing Ranks | ⏳ | Populate token-copy on upkeep. |
 | Torsten, Founder of Benalia | ⏳ | TBD. |
 | Tidehollow Sculler | 🟡 | {W}{B} 2/2 Zombie. ETB picks a nonland card from a target opponent's hand and sends it to their graveyard (approximation of "exile until this leaves"). The "return when this leaves" clause is omitted (no exile-until-LTB primitive yet). Reuses `DiscardChosen`. Test: `tidehollow_sculler_etb_takes_an_opponent_card`. |
@@ -316,7 +316,7 @@ still ⏳.
 | Talisman of Creativity | ✅ | UR mana rock — see Artifacts row. |
 | Pinnacle Emissary | ⏳ | TBD. |
 | Saheeli Rai | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent for 1 (the "and each PW they control" half drops — no `EachOpponentsPlaneswalker` selector). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
-| Tempest Angler | ⏳ | TBD. |
+| Tempest Angler | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {2}{U} 2/2 Merfolk Wizard with Flying. ETB scries 2. Test: `tempest_angler_etb_scries_two`. |
 | Abrupt Decay | ⏳ | BG removal: destroy nonland with mana value ≤ 3, can't be countered. |
 | Assassin's Trophy | ⏳ | BG removal — opp searches for basic. |
 | Broodspinner | ⏳ | TBD. |
@@ -327,7 +327,7 @@ still ⏳.
 | Wear // Tear | 🟡 | Push (claude/modern_decks batch 102): {1}{R} Sorcery, single-spell approximation that destroys target artifact OR enchantment. The Split-Card primitive (CR 709) is engine-wide ⏳ — both halves collapse to a single faithful effect at the Wear cost. Fuse mode is dropped. Test: `wear_tear_destroys_target_artifact`. |
 | Zirda, the Dawnwaker | ⏳ | Companion + activated-cost reduction. Needs Companion primitive. |
 | Talisman of Curiosity | ✅ | GU mana rock — see Artifacts row. |
-| Lonis, Genetics Expert | ⏳ | Investigate + Clue draw. |
+| Lonis, Genetics Expert | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {1}{G}{U} Legendary 2/2 Otter Detective. ETB trigger on other creatures you control creates a Clue token (the printed "investigate" rider via `clue_token()`). The "Sacrifice X Clues: target opp reveals top X cards" activated ability is engine-wide ⏳ (no per-activation X-cost prompt yet). Test: `lonis_genetics_expert_creates_clue_when_other_creature_enters`. |
 | Tamiyo, Collector of Tales | 🟡 | Push (claude/modern_decks batch 102): {2}{G}{U} 4-loyalty Planeswalker. **-2**: Return target card from gy → hand. **-3**: Search library → hand (the "same name as a card in target opponent's graveyard" filter is engine-wide ⏳ — falls back to `Any`). **-7**: Draw 4 (the "distinct nonland types in gy" scaling drops). The static "spells your opps control can't make you discard or sac" is engine-wide ⏳. Test: `tamiyo_collector_minus_two_returns_card_from_graveyard`. |
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
 | Koma, Cosmos Serpent | ⏳ | Token-on-upkeep + sac counters. |
@@ -339,7 +339,7 @@ still ⏳.
 | Lord Xander, the Collector | 🟡 | Push (claude/modern_decks batch 102): {3}{U}{B}{R} 6/6 Flying Legendary Vampire Demon Noble. ETB makes target opp discard 3 (`DiscardChosen`). Attack trigger mills each opp 8 (the "half their library" scaling collapses to a fixed midgame value). Die trigger makes each opp sacrifice 3 nonland permanents (the "half their permanents" scaling collapses). Test: `lord_xander_the_collector_etb_makes_opponent_discard_three`. |
 | Korvold, Fae-Cursed King | ✅ | Push (claude/modern_decks batch 102): {2}{B}{R}{G} 4/4 Flying Legendary Dragon Noble. `PermanentSacrificed` + `YourControl` trigger → AddCounter(+1/+1, This) + Draw 1. The new `EventKind::PermanentSacrificed` / `GameEvent::PermanentSacrificed` (CR 701.16) ships alongside this card and fires for every sacrifice resolution regardless of card type — so Korvold catches Treasure-sac / Clue-sac / Food-sac / land-sac / creature-sac uniformly. Tests: `korvold_fae_cursed_king_triggers_on_sacrifice`, `korvold_fae_cursed_king_triggers_on_artifact_sacrifice_via_permanent_event`. |
 | Temur Ascendancy | 🟡 | Filtered ETB trigger (creatures w/ power ≥ 4 entering under your control → Draw 1). Static "creatures you control have haste" currently grants haste to all your creatures rather than only ≥ 4 power (selector-decomposer doesn't yet thread `PowerAtLeast` into static-effect targeting). |
-| Loot, the Pathfinder | ⏳ | TBD. |
+| Loot, the Pathfinder | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {1}{G}{W} Legendary 2/3 Otter Scout with Vigilance. ETB creates a Clue token (Map token primitive — CR 111.10s explore-token — is engine-wide ⏳; the Clue approximation gives the same "sac for value" pattern via the existing primitive). Test: `loot_the_pathfinder_etb_creates_map_approximation`. |
 | Dragonback Assault | ⏳ | TBD. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |

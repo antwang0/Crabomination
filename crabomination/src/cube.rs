@@ -238,6 +238,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         // trinisphere   — 🟡 minimum-cost static omitted; ships as a
         //                  vanilla 3-mana artifact body.
         trinisphere,
+        // ── modern_decks batch 103: colorless cube expansion ──
+        glaring_fleshraker,
+        brightglass_gearhulk,
     ]
 }
 
@@ -451,6 +454,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blue_elemental_blast,
         tales_end,
         stroke_of_genius,
+        // ── modern_decks batch 103 (mono-blue cube expansion) ──
+        tempest_angler,
         // ── SOS (Secrets of Strixhaven) ──
         chase_inspiration,
         banishing_betrayal,
@@ -611,6 +616,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         phyrexian_reclamation,
         ophiomancer,
         black_suns_zenith,
+        // ── modern_decks batch 103 (mono-black cube expansion) ──
+        mai_scornful_striker,
         // ── modern_decks batch 102: cube expansion ──
         // murderous_cut — 🟡 Delve cost-reduction omitted; castable at
         //                  full {5}{B}. Promote to ✅ when Delve lands.
@@ -661,6 +668,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(kolaghans_command);
         v.push(master_of_cruelties);
         v.push(geyadrone_dihada);
+        // ── modern_decks batch 103 (BR cube expansion) ──
+        v.push(carnage_interpreter);
     }
     if pair_contains(pair, Color::White) {
         v.push(mourning_thrull);
@@ -795,6 +804,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         hellrider,
         etali_primal_storm,
         goblin_rabblemaster,
+        // ── modern_decks batch 103 (cube expansion) ──
+        death_greeters_champion,
+        detectives_phoenix,
         // ── modern_decks-15 ──
         strangle,
         // ── SOS (Secrets of Strixhaven) ──
@@ -929,6 +941,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         channel,
         sylvan_library,
         green_suns_zenith,
+        // ── modern_decks batch 103 (mono-green cube expansion) ──
+        mossborn_hydra,
         // ── modern_decks-14 ──
         harrow,
         // ── modern_decks-15 ──
@@ -965,6 +979,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 102 (GW cube expansion) ──
         v.push(heroic_intervention);
         v.push(knight_of_the_reliquary);
+        // ── modern_decks batch 103 (GW cube expansion) ──
+        v.push(loot_the_pathfinder);
     }
     if pair_contains(pair, Color::Red) {
         v.push(ghor_clan_rampager);
@@ -989,6 +1005,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(tam_observant_sequencer);
         // ── modern_decks batch 102 (GU cube expansion) ──
         v.push(tamiyo_collector_of_tales);
+        // ── modern_decks batch 103 (GU cube expansion) ──
+        v.push(lonis_genetics_expert);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);
@@ -1180,6 +1198,18 @@ mod tests {
             "Brain Maggot",
             "Bond of Discipline",
             "Sudden Edict",
+            // modern_decks batch 103: cube expansion. Listed so the
+            // prefetch test catches any that slip out of the pool.
+            "Glaring Fleshraker",
+            "Brightglass Gearhulk",
+            "Death-Greeter's Champion",
+            "Detective's Phoenix",
+            "Mossborn Hydra",
+            "Mai, Scornful Striker",
+            "Tempest Angler",
+            "Carnage Interpreter",
+            "Lonis, Genetics Expert",
+            "Loot, the Pathfinder",
         ] {
             if !names.contains(&name) {
                 missing.push(name);

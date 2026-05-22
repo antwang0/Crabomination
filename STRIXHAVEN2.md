@@ -19,13 +19,21 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1526 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1551 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 102:
-both Strixhaven sets remain at 100% ✅ catalog fidelity (255 SOS / 1526
-STX). Headline this batch ships 23 brand-new cube cards across all
-five colors plus colorless: 5 multicolor planeswalkers (Sorin Grim
+Push (claude/modern_decks branch — current head — **post-batch 103:
+both Strixhaven sets remain at 100% ✅ catalog fidelity (255 SOS / 1551
+STX). Headline this batch ships 25 brand-new Strixhaven synthesised
+cards across all five colleges (5 per college: Silverquill, Witherbloom,
+Lorehold, Prismari, Quandrix) PLUS 10 cube-expansion cards (1-2 per
+color plus colorless artifacts). New `CreatureType::Otter` and
+`::Detective` variants for Lonis Genetics Expert / Loot the Pathfinder.
+CR 701.13 (Exile) audit row promoted to ✅ in TODO.md. Tests:
+3417 → 3452 (35 new tests).**
+
+**Prior push (post-batch 102)**: Headline ships 23 brand-new cube cards
+across all five colors plus colorless: 5 multicolor planeswalkers (Sorin Grim
 Nemesis, Saheeli Rai, Ashiok Nightmare Weaver, Tamiyo Collector of
 Tales, Geyadrone Dihada); 8 multicolor / 3-color creatures (Korvold
 Fae-Cursed King, Lord Xander the Collector, Master of Cruelties,

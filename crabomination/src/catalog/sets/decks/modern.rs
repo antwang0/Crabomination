@@ -8790,4 +8790,304 @@ pub fn murderous_cut() -> CardDefinition {
     }
 }
 
+// ── modern_decks batch 103: cube expansion cards ─────────────────────────────
 
+/// Death-Greeter's Champion — {1}{R} Creature — Human Warrior. 2/2 with
+/// Haste. "When this creature attacks, target opponent loses 1 life."
+///
+/// Synthesised body for the ⏳ cube row. Aggressive R two-drop with a
+/// faux-poke trigger.
+pub fn death_greeters_champion() -> CardDefinition {
+    use crate::effect::shortcut::{lose_life, on_attack};
+    CardDefinition {
+        name: "Death-Greeter's Champion",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_attack(lose_life(
+            1,
+            crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
+        ))],
+        ..Default::default()
+    }
+}
+
+/// Glaring Fleshraker — {3} Artifact Creature — Construct. 3/3. "When
+/// this creature enters, it deals 2 damage to any target."
+///
+/// Synthesised body for the ⏳ cube row. Colorless artifact body with
+/// an ETB ping.
+pub fn glaring_fleshraker() -> CardDefinition {
+    use crate::effect::shortcut::{etb, target_filtered};
+    CardDefinition {
+        name: "Glaring Fleshraker",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Detective's Phoenix — {2}{R} Creature — Phoenix. 2/2 Flying Haste.
+/// "When this creature dies, return it to its owner's hand at the
+/// beginning of the next end step."
+///
+/// Synthesised body for the ⏳ cube row. Approximation of the printed
+/// Phoenix recursion: rather than a "return from gy at end step"
+/// trigger, the simpler "dies → bounce to hand at NextEndStep" rider
+/// uses the existing `DelayUntil` primitive.
+pub fn detectives_phoenix() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    use crate::effect::{DelayedTriggerKind, ZoneDest};
+    CardDefinition {
+        name: "Detective's Phoenix",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![on_dies(Effect::DelayUntil {
+            kind: DelayedTriggerKind::NextEndStep,
+            body: Box::new(Effect::Move {
+                what: Selector::This,
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+            }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Lonis, Genetics Expert — {1}{G}{U} Legendary Creature — Otter
+/// Detective. 2/2. "Whenever a creature you control enters, investigate."
+///
+/// Synthesised body for the ⏳ cube row. Investigates via the
+/// existing `clue_token()` helper. The "Sacrifice X Clues: target
+/// opponent reveals top X cards" activated ability is collapsed as a
+/// future polish item (no per-activation X prompt for clue scaling).
+pub fn lonis_genetics_expert() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::effect::Predicate;
+    use crate::game::effects::clue_token;
+    CardDefinition {
+        name: "Lonis, Genetics Expert",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Detective],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::EntersBattlefield,
+                EventScope::AnotherOfYours,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature,
+            }),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: clue_token(),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
+/// 2/3 with Vigilance. "When this creature enters, create a Map token."
+///
+/// Synthesised body for the ⏳ cube row. The Map token primitive isn't
+/// wired (CR 111.10s explore-token), so we ship a faux Clue token
+/// equivalent (also exiles for {2} + sac → draw, gameplay-relevant
+/// approximation of "use a Map to explore"). Vigilance keyword is
+/// honored.
+pub fn loot_the_pathfinder() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::effect::shortcut::etb;
+    use crate::game::effects::clue_token;
+    CardDefinition {
+        name: "Loot, the Pathfinder",
+        cost: cost(&[generic(1), g(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: clue_token(),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Brightglass Gearhulk — {4} Artifact Creature — Construct. 4/4.
+/// "When this creature enters, scry 2, then draw a card."
+///
+/// Synthesised body for the ⏳ cube row. A vanilla 4-mana colorless
+/// big-body cantripping artifact creature.
+pub fn brightglass_gearhulk() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Brightglass Gearhulk",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Mossborn Hydra — {X}{G} Creature — Hydra. 0/0. "This creature
+/// enters with X +1/+1 counters on it."
+///
+/// Synthesised body for the ⏳ cube row. Reuses the existing
+/// `enters_with_counters` field with a Value::XFromCost reader so the
+/// counters scale with the X paid at cast time. The "double counters
+/// if X ≥ 4" rider is collapsed.
+pub fn mossborn_hydra() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Mossborn Hydra",
+        cost: ManaCost::new(vec![
+            ManaSymbol::X,
+            ManaSymbol::Colored(Color::Green),
+        ]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Hydra],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..Default::default()
+    }
+}
+
+/// Mai, Scornful Striker — {1}{B} Creature — Human Rogue. 2/1 with
+/// Menace. "Whenever this creature attacks, each opponent loses 1
+/// life."
+///
+/// Synthesised body for the ⏳ cube row. Menace evasion + life-drip
+/// payoff fills the 2-drop curve in B aggro shells.
+pub fn mai_scornful_striker() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Mai, Scornful Striker",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![on_attack(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Tempest Angler — {2}{U} Creature — Merfolk Wizard. 2/2 Flying.
+/// "When this creature enters, scry 2."
+///
+/// Synthesised body for the ⏳ cube row. A flying scry tempo creature
+/// in U shells.
+pub fn tempest_angler() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Tempest Angler",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Scry {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Carnage Interpreter — {2}{B}{R} Creature — Vampire. 4/3 with Trample.
+/// "When this creature enters, each opponent discards a card."
+///
+/// Synthesised body for the ⏳ cube row. A BR aggressive body that
+/// strips a card on entry, fitting Rakdos sacrifice/discard shells.
+pub fn carnage_interpreter() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Carnage Interpreter",
+        cost: cost(&[generic(2), b(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: true,
+        })],
+        ..Default::default()
+    }
+}
