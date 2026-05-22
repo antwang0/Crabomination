@@ -6884,6 +6884,76 @@ fn coalition_relic_taps_for_one_mana_of_any_color() {
 }
 
 #[test]
+fn coalition_relic_taps_to_add_charge_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None })
+    .expect("Coalition Relic's charge-counter ability");
+    drain_stack(&mut g);
+    let relic = g.battlefield_find(id).expect("relic still on battlefield");
+    assert_eq!(relic.counter_count(CounterType::Charge), 1,
+        "Activating ability #1 deposits one charge counter");
+    assert!(relic.tapped, "tap-cost activated abilities tap the source");
+}
+
+#[test]
+fn coalition_relic_removes_three_charge_counters_for_wubrg() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
+    // Pre-seed three charge counters (skip the three turn cycles a real
+    // game would need to deposit them).
+    {
+        let relic = g.battlefield_find_mut(id).expect("relic on battlefield");
+        relic.add_counters(CounterType::Charge, 3);
+    }
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None, x_value: None })
+    .expect("Coalition Relic's WUBRG burst ability");
+    drain_stack(&mut g);
+    let relic = g.battlefield_find(id).expect("relic still on battlefield");
+    assert_eq!(relic.counter_count(CounterType::Charge), 0,
+        "All three charge counters consumed by the burst");
+    assert_eq!(g.players[0].mana_pool.total(), 5,
+        "WUBRG = one mana of each of the five colors");
+}
+
+#[test]
+fn coalition_relic_wubrg_burst_rejects_activation_without_three_counters() {
+    // The activation must be rejected at the gate, not silently resolve
+    // to zero mana — the `condition: ValueAtLeast(CountersOn(Charge), 3)`
+    // on ability #2 prevents the activation from ever reaching the
+    // stack when the counter pool is empty.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None, x_value: None });
+    assert!(result.is_err(),
+        "WUBRG burst rejected at activation gate without 3 charge counters");
+    assert_eq!(g.players[0].mana_pool.total(), 0,
+        "No mana produced — burst never resolved");
+}
+
+#[test]
+fn coalition_relic_wubrg_burst_rejects_with_two_charge_counters() {
+    // Boundary check: even one shy of three counters, the activation
+    // gate must reject — strict `≥ 3` semantics.
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::coalition_relic());
+    {
+        let relic = g.battlefield_find_mut(id).expect("relic on battlefield");
+        relic.add_counters(CounterType::Charge, 2);
+    }
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 2, target: None, x_value: None });
+    assert!(result.is_err(),
+        "Two charge counters is one short of the gate — activation rejected");
+}
+
+#[test]
 fn ghost_vacuum_auto_target_picks_graveyard_card_when_present() {
     // Without the `prefers_graveyard_target` heuristic, the bot walks the
     // battlefield first and Ghost Vacuum (filter `Any`) would auto-target

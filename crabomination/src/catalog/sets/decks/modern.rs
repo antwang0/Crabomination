@@ -5180,34 +5180,98 @@ pub fn rustvale_bridge() -> CardDefinition {
 
 // ── Utility artifacts ────────────────────────────────────────────────────────
 
-/// Coalition Relic — {3} Artifact. {T}: Add one mana of any color. (The
-/// charge-counter rider — "{T}: Put a charge counter; you may remove three
-/// to add WUBRG" — is omitted, no charge-counter→mana-burst primitive yet.)
+/// Coalition Relic — {3} Artifact.
 ///
-/// Functionally Sphere of the Suns at +0 life cost without the four-color-
-/// burst payoff: a clean three-mana fixer for any color pair.
+/// Printed Oracle (now fully wired):
+/// - `{T}: Add one mana of any color.`
+/// - `{T}: Put a charge counter on Coalition Relic.`
+/// - `Remove three charge counters from Coalition Relic: Add {W}{U}{B}{R}{G}.`
+///
+/// The charge-counter→WUBRG burst payoff models on the Pentad Prism shape:
+/// a `Seq([RemoveCounter(Charge, 3), AddMana(Colors(WUBRG))])` body
+/// where the "no counters → can't activate" gate is enforced by the
+/// engine's counter-removal failing when the pool is empty (which kicks
+/// the ability out of the activation candidate list).
 pub fn coalition_relic() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::{ActivatedAbility, CounterType};
     CardDefinition {
         name: "Coalition Relic",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false, exile_other_filter: None,
+                self_counter_cost_reduction: None,
             },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
-        }],
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false, exile_other_filter: None,
+                self_counter_cost_reduction: None,
+            },
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Seq(vec![
+                    Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::Charge,
+                        amount: Value::Const(3),
+                    },
+                    Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Colors(vec![
+                            Color::White,
+                            Color::Blue,
+                            Color::Black,
+                            Color::Red,
+                            Color::Green,
+                        ]),
+                    },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                // Activation gate: source must have ≥ 3 charge counters.
+                // Without this, the engine would let the activation onto
+                // the stack and then resolve the AddMana even though
+                // RemoveCounter silently no-ops when the pool is empty.
+                condition: Some(crate::card::Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
+                    },
+                    Value::Const(3),
+                )),
+                life_cost: 0,
+                from_graveyard: false,
+                exile_self_cost: false, exile_other_filter: None,
+                self_counter_cost_reduction: None,
+            },
+        ],
         ..Default::default()
     }
 }

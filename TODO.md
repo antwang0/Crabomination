@@ -5080,7 +5080,7 @@ Strixhaven coverage push). Remaining gaps:
 | Windfall | draws flat 7 | draw equal to most cards discarded |
 | Dark Confidant | fixed 2 life loss | lose life = CMC of revealed card |
 | ~~Biorhythm~~ | (~~drain opponents to 0~~) | **resolved push modern_decks** — now `SetLifeTotal` to creature count per side (CR 119.5) |
-| Coalition Relic | tap for 1 of any color | tap + charge counter → burst WUBRG |
+| ~~Coalition Relic~~ | (~~tap for 1 of any color only~~) | **resolved push modern_decks batch 110** — three activated abilities now wired: mana ability, `{T}: charge counter` ability, and the `Remove 3 charge counters: WUBRG` burst (gated by `condition: ValueAtLeast(CountersOn(Charge), 3)` so the activation rejects without 3+ counters). Five lock-in tests cover the mana ability, counter-add, burst, and both rejection paths. |
 | Fellwar Stone | tap for 1 of any color | tap for a color an opponent's land produces |
 | Static Prison | ETB taps target | also suppresses untap while stun counters exist |
 | Rofellos | flat {G}{G} | {G} per Forest you control |
