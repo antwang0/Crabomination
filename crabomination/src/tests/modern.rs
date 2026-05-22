@@ -9378,6 +9378,68 @@ fn sylvan_library_offers_draw_in_exchange_for_four_life() {
     assert!(g.players[0].hand.len() > hand_before, "Drew the extra card");
 }
 
+// ── Dark Confidant — "lose life equal to CMC" trigger ────────────────────────
+
+#[test]
+fn dark_confidant_loses_life_equal_to_revealed_card_cmc() {
+    // Seeds the library with a 5-CMC Serra Angel on top; on upkeep, Dark
+    // Confidant's trigger reveals + draws it and the controller loses 5
+    // life (not the old approximated flat 2).
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    // Use add_to_library_top to control ordering — the *last* call to
+    // add_to_library_top is the top of the library.
+    {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::grizzly_bears()); // 2-CMC filler
+    }
+    {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::serra_angel()); // 5-CMC on top
+    }
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    let dc = g.add_card_to_battlefield(0, catalog::dark_confidant());
+    g.clear_sickness(dc);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Dark Confidant drew exactly one card");
+    let drawn_name = g.players[0].hand.last().map(|c| c.definition.name).unwrap_or("");
+    assert_eq!(drawn_name, "Serra Angel",
+        "The on-top card (Serra Angel) was drawn into hand");
+    let life_lost = (life_before - g.players[0].life) as u32;
+    assert_eq!(life_lost, 5,
+        "Life lost equals Serra Angel's mana value (CMC 5), not the old flat 2");
+}
+
+#[test]
+fn dark_confidant_loses_zero_life_for_zero_cmc_card_on_top() {
+    // Zero-CMC card (Black Lotus is the canonical {0} cost) → no life loss.
+    // Tests the "0 mana value" corner of the new ManaValueOf wiring.
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    {
+        let cid = g.next_id();
+        g.players[0].add_to_library_top(cid, catalog::black_lotus());
+    }
+    let life_before = g.players[0].life;
+    let dc = g.add_card_to_battlefield(0, catalog::dark_confidant());
+    g.clear_sickness(dc);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before,
+        "0-CMC revealed card → no life lost");
+}
+
 #[test]
 fn ophiomancer_mints_a_snake_each_upkeep() {
     use crate::card::CreatureType;

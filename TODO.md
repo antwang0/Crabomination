@@ -5078,12 +5078,12 @@ Strixhaven coverage push). Remaining gaps:
 | Card / Feature | Current Approximation | Correct Behaviour |
 |---|---|---|
 | Windfall | draws flat 7 | draw equal to most cards discarded |
-| Dark Confidant | fixed 2 life loss | lose life = CMC of revealed card |
+| ~~Dark Confidant~~ | (~~fixed 2 life loss~~) | **resolved push modern_decks batch 111** — `LoseLife(ManaValueOf(TopOfLibrary))` evaluated *before* the Draw step so the life loss reads the live top of library, then the draw moves that same card to hand. Tests: `dark_confidant_loses_life_equal_to_revealed_card_cmc` (5-CMC Serra Angel → 5 life lost), `dark_confidant_loses_zero_life_for_zero_cmc_card_on_top` (Black Lotus → 0 life lost). |
 | ~~Biorhythm~~ | (~~drain opponents to 0~~) | **resolved push modern_decks** — now `SetLifeTotal` to creature count per side (CR 119.5) |
 | ~~Coalition Relic~~ | (~~tap for 1 of any color only~~) | **resolved push modern_decks batch 110** — three activated abilities now wired: mana ability, `{T}: charge counter` ability, and the `Remove 3 charge counters: WUBRG` burst (gated by `condition: ValueAtLeast(CountersOn(Charge), 3)` so the activation rejects without 3+ counters). Five lock-in tests cover the mana ability, counter-add, burst, and both rejection paths. |
 | Fellwar Stone | tap for 1 of any color | tap for a color an opponent's land produces |
 | Static Prison | ETB taps target | also suppresses untap while stun counters exist |
-| Rofellos | flat {G}{G} | {G} per Forest you control |
+| ~~Rofellos, Llanowar Emissary~~ | (~~flat {G}{G}~~) | **resolved push modern_decks** — `{T}: Add {G}{G} for each Forest you control` wired via `ManaPayload::OfColor(Green, Times(Const(2), CountOf(Forest ∧ ControlledByYou)))`. Cube variant scales 2× per Forest. Tests: `rofellos_taps_for_two_green_per_forest`, `rofellos_taps_for_zero_with_no_forests`. |
 | Spectral Procession | {3}{W}{W}{W} | {2/W}{2/W}{2/W} hybrid (CMC 6) |
 | Grim Lavamancer | {R}{T}: 2 damage | must exile 2 cards as additional cost |
 | Ichorid | no graveyard gate | requires opponent to have a black creature in GY |

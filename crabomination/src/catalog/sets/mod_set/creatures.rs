@@ -58,11 +58,14 @@ pub fn thalia_guardian_of_thraben() -> CardDefinition {
 
 /// Dark Confidant — {1}{B}, 2/1 Human Wizard. At the beginning of your
 /// upkeep, reveal the top card of your library and put it into your hand.
-/// You lose life equal to its mana value. We approximate the "lose life
-/// equal to CMC" with a flat 2 — average modern deck CMC. The reveal step
-/// is collapsed into a draw.
-/// TODO: when an `Effect::DrawAndPayLifeEqualToCMC` primitive lands, replace
-/// the body here.
+/// You lose life equal to its mana value.
+///
+/// Push (modern_decks batch 110): the "lose life equal to CMC" half is now
+/// wired correctly via `LoseLife(ManaValueOf(TopOfLibrary))` *before* the
+/// draw. Ordering matters: the life loss reads the live top of library at
+/// resolution time, then the draw moves that same card to hand. Without
+/// this ordering the `ManaValueOf` would see the *new* top card after the
+/// draw.
 pub fn dark_confidant() -> CardDefinition {
     CardDefinition {
         name: "Dark Confidant",
@@ -84,8 +87,17 @@ pub fn dark_confidant() -> CardDefinition {
                 EventScope::YourControl,
             ),
             effect: Effect::Seq(vec![
+                // Read CMC from top of library *before* drawing — otherwise
+                // the Draw moves the card to hand and `ManaValueOf(TopOfLibrary)`
+                // would resolve against the *next* card.
+                Effect::LoseLife {
+                    who: Selector::You,
+                    amount: Value::ManaValueOf(Box::new(Selector::TopOfLibrary {
+                        who: PlayerRef::You,
+                        count: Value::Const(1),
+                    })),
+                },
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
             ]),
         }],
         static_abilities: vec![],
