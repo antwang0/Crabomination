@@ -583,7 +583,7 @@ pub fn putrid_imp() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -756,7 +756,7 @@ pub fn karakas() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             // {T}: Return target legendary creature to its owner's hand.
             ActivatedAbility {
@@ -776,7 +776,7 @@ pub fn karakas() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1098,7 +1098,7 @@ pub fn lotus_petal() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1150,7 +1150,7 @@ pub fn tormods_crypt() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1208,7 +1208,7 @@ pub fn mishras_bauble() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1306,7 +1306,7 @@ pub fn qasali_pridemage() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1369,7 +1369,7 @@ pub fn greater_good() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1438,7 +1438,7 @@ pub fn bojuka_bog() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![etb],
         static_abilities: vec![],
@@ -1529,7 +1529,7 @@ pub fn goblin_bombardment() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1580,7 +1580,7 @@ pub fn wasteland() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1598,7 +1598,7 @@ pub fn wasteland() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1645,7 +1645,7 @@ pub fn strip_mine() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1660,7 +1660,7 @@ pub fn strip_mine() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -2096,7 +2096,7 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2187,7 +2187,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2371,7 +2371,7 @@ pub fn talisman_of_progress() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
     };
     CardDefinition {
         name: "Talisman of Progress",
@@ -2399,7 +2399,7 @@ pub fn talisman_of_progress() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             make_color(Color::White),
             make_color(Color::Blue),
@@ -2439,7 +2439,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
     };
     CardDefinition {
         name: "Talisman of Dominance",
@@ -2466,7 +2466,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             make_color(Color::Blue),
             make_color(Color::Black),
@@ -2549,7 +2549,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
     };
     CardDefinition {
         name,
@@ -2576,7 +2576,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             make_color(c1),
             make_color(c2),
@@ -4431,7 +4431,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4498,7 +4498,7 @@ pub fn elvish_mystic() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4853,7 +4853,7 @@ pub fn wild_mongrel() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4941,7 +4941,7 @@ pub fn glimmerpost() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![
             modern_etb_tap(),
@@ -4982,7 +4982,7 @@ pub fn cloudpost() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -5029,7 +5029,7 @@ pub fn lotus_field() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![etb],
         ..Default::default()
@@ -5067,7 +5067,7 @@ pub fn evolving_wilds() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -5111,7 +5111,7 @@ fn bridge_land(
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -5213,7 +5213,7 @@ pub fn coalition_relic() -> CardDefinition {
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -5230,7 +5230,7 @@ pub fn coalition_relic() -> CardDefinition {
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: false,
@@ -5269,7 +5269,7 @@ pub fn coalition_relic() -> CardDefinition {
                 life_cost: 0,
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         ..Default::default()
@@ -5456,7 +5456,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -5580,7 +5580,7 @@ pub fn ghost_vacuum() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6038,7 +6038,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6088,7 +6088,7 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6353,7 +6353,7 @@ pub fn pentad_prism() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6920,7 +6920,7 @@ pub fn mortuary_mire() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6954,7 +6954,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -6977,7 +6977,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         ..Default::default()
@@ -7642,7 +7642,7 @@ pub fn pernicious_deed() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -7694,7 +7694,7 @@ pub fn wall_of_roots() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -7789,7 +7789,7 @@ pub fn phyrexian_reclamation() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }
@@ -7964,7 +7964,7 @@ pub fn yavimaya_elder() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         ..Default::default()
     }

@@ -3690,17 +3690,29 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
-- ⏳ **"Sacrifice a different creature as activation cost" primitive**
-  (push claude/modern_decks batch 119 — new suggestion). The engine's
-  current `ActivatedAbility.sac_cost: bool` always sacrifices the
-  source permanent. Several printed activations call for sacrificing a
-  *different* creature (or any matching permanent the activator
-  controls) — Greater Good, Korlash's "{B}, sacrifice a creature: …",
-  Sneak Attack-style cards. New batch 119 Witherbloom Harvester
-  approximates this by sacrificing self; a real
-  `sac_other_filter: Option<(SelectionRequirement, u32)>` slot
-  (mirroring `exile_other_filter`) would let Harvester sacrifice an
-  arbitrary friendly creature instead. Engine-wide ⏳.
+- ✅ **"Sacrifice a different creature as activation cost" primitive**
+  (push claude/modern_decks batch 120 done). The new
+  `ActivatedAbility.sac_other_filter: Option<(SelectionRequirement,
+  u32)>` field mirrors `exile_other_filter` but sacrifices battlefield
+  permanents the activator controls (excluding the source) rather than
+  exiling graveyard cards. Pre-flight gate in `activate_ability`
+  (`game/actions.rs`) rejects with `SelectionRequirementViolated` when
+  fewer than `count` matching permanents exist. The auto-picker takes
+  the lowest-power matching creature so the activator keeps higher-
+  value creatures alive. Cost payment order: tap → mana → life →
+  sac_cost (source) → sac_other (filter picks) → exile_other →
+  exile_self. Both `CreatureSacrificed` (for creatures) and
+  `PermanentSacrificed` events fire per CR 701.16. New card using the
+  primitive: Witherbloom Cultivator (Batch 120) ({1}{B}{G} 1/3 Plant
+  Warlock with `{1}, Sacrifice another creature: drain 1`). Lock-in
+  tests: `witherbloom_cultivator_b120_sacrifices_another_creature_for
+  _drain` (positive path with a Lions fodder),
+  `witherbloom_cultivator_b120_rejects_activation_without_fodder`
+  (negative — clean rejection, no mana / tap consumed). Future cards
+  that unlock with this primitive: Greater Good (`{0}, Sacrifice a
+  creature: Draw cards = sacrificed creature's power`), Korlash, Heir
+  to Blackblade (`{B}, Sacrifice a Swamp: Regenerate this`), Witherbloom
+  Harvester variants. Engine-wide ✅.
 
 - ✅ **`effect::shortcut::drain_and_draw/scry/surveil/etb_tap_opp_creature`
   helpers** (push claude/modern_decks batch 120 done). Three composite

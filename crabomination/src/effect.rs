@@ -2276,6 +2276,32 @@ pub struct ActivatedAbility {
     /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub self_counter_cost_reduction: Option<crate::card::CounterType>,
+    /// Optional cost: sacrifice a *different* permanent the activator
+    /// controls matching this filter. Mirrors `exile_other_filter` but
+    /// for sacrifice rather than exile. Used by activated abilities
+    /// whose printed cost line reads "Sacrifice a [filter]:" where the
+    /// sacrifice is **not** the source — for example Greater Good's
+    /// `{0}, Sacrifice a creature: Draw cards equal to the sacrificed
+    /// creature's power.` and Korlash, Heir to Blackblade's `{B},
+    /// Sacrifice a Swamp: Regenerate this creature.` The `u32` count
+    /// (defaults to 1 when constructing via bare-filter helpers) is the
+    /// number of permanents that must be sacrificed.
+    ///
+    /// The sacrifice is applied after tap / mana / life payments succeed
+    /// but **before** the effect resolves, mirroring `sac_cost` /
+    /// `exile_other_filter`. If no controlled permanent matches,
+    /// activation is rejected with
+    /// `GameError::SelectionRequirementViolated`. The auto-picker
+    /// takes the lowest-power matching creature (or the first matching
+    /// non-creature) so the activator keeps higher-value creatures
+    /// alive.
+    ///
+    /// Defaults to None via `#[serde(default)]`. When set together with
+    /// `sac_cost: true`, both the source AND the filter-matched
+    /// permanents are sacrificed (rare but allowed for cost-stacking
+    /// shapes).
+    #[serde(default)]
+    pub sac_other_filter: Option<(SelectionRequirement, u32)>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

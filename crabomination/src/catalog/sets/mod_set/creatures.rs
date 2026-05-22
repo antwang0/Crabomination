@@ -142,7 +142,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -308,7 +308,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -467,7 +467,7 @@ pub fn cathar_commando() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -520,7 +520,7 @@ pub fn haywire_mite() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -923,7 +923,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -983,7 +983,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             exile_self_cost: false,
             // Additional cost: exile two cards from your graveyard.
             exile_other_filter: Some((SelectionRequirement::Any, 2)),
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -1170,7 +1170,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target

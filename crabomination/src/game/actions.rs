@@ -540,7 +540,7 @@ impl GameState {
                 from_graveyard: false,
                 exile_self_cost: false,
                 exile_other_filter: None,
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             });
             card.definition.activated_abilities = kept;
         }
@@ -2323,7 +2323,7 @@ impl GameState {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         })
     }
 
@@ -2537,6 +2537,32 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight sacrifice-other gate: confirm `count` battlefield
+        // permanents the activator controls match the cost's filter
+        // (excluding the source itself, since activating from the
+        // battlefield can pair this with `sac_cost: true` for the source).
+        // Picks the lowest-power matching permanents (so the activator
+        // keeps higher-value creatures alive). If fewer than `count`
+        // match, reject cleanly so tap/mana aren't burned.
+        let sac_other_picks: Vec<CardId> = if let Some((filter, count)) =
+            ability.sac_other_filter.as_ref()
+        {
+            let count = *count as usize;
+            let mut picks: Vec<(CardId, i32)> = self.battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .map(|c| (c.id, c.power()))
+                .collect();
+            if picks.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            picks.sort_by_key(|(_, pow)| *pow);
+            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
+        } else {
+            Vec::new()
+        };
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -2669,6 +2695,39 @@ impl GameState {
             // creatures.
             events.push(GameEvent::PermanentSacrificed { card_id, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
+            events.append(&mut die_evs);
+        }
+
+        // Sacrifice-another-from-bf-as-cost: with tap/mana/life paid,
+        // sacrifice each cost-picked battlefield permanent (already
+        // validated to exist via the pre-flight `sac_other_picks`
+        // lookup). Used by cards like Greater Good's `{0}, Sacrifice a
+        // creature: …`, Korlash, Heir to Blackblade's `{B}, Sacrifice a
+        // Swamp: …`, Witherbloom Harvester-style "sac another creature
+        // for an effect" activations.
+        for other_cid in sac_other_picks {
+            let is_creature = self
+                .battlefield_find(other_cid)
+                .map(|c| c.definition.is_creature())
+                .unwrap_or(false);
+            let sac_who = self
+                .battlefield_find(other_cid)
+                .map(|c| c.controller)
+                .unwrap_or(p);
+            if is_creature {
+                let snap_pt = self
+                    .battlefield_find(other_cid)
+                    .map(|c| (c.power(), c.toughness(), c.clone()));
+                if let Some((p_val, t_val, snap)) = snap_pt {
+                    self.sacrificed_power = Some(p_val);
+                    self.sacrificed_toughness = Some(t_val);
+                    self.died_card_snapshots.insert(other_cid, snap);
+                }
+                events.push(GameEvent::CreatureSacrificed { card_id: other_cid, who: sac_who });
+                events.push(GameEvent::CreatureDied { card_id: other_cid });
+            }
+            events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
+            let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
         }
 

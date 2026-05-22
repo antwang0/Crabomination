@@ -47968,3 +47968,53 @@ fn shortcut_etb_tap_opp_creature_taps_opponent_target() {
     }
 }
 
+#[test]
+fn witherbloom_cultivator_b120_sacrifices_another_creature_for_drain() {
+    let mut g = two_player_game();
+    let cult = g.add_card_to_battlefield(0, catalog::witherbloom_cultivator_b120());
+    g.clear_sickness(cult);
+    // Fodder creature (Lions: 2/1). Cultivator's auto-picker will choose
+    // the lowest-power creature, but Lions are 2 power and Cultivator
+    // itself is 1 power — Cultivator is excluded from the pick list, so
+    // the only candidate is Lions.
+    let fodder = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.clear_sickness(fodder);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cult,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    }).expect("activation");
+    drain_stack(&mut g);
+    // Cultivator survives — only the fodder was sacrificed.
+    assert!(g.battlefield_find(cult).is_some(), "Cultivator survives");
+    assert!(g.battlefield_find(fodder).is_none(), "Fodder sacrificed");
+    // Drain 1 lands on resolution.
+    assert_eq!(g.players[0].life, life0_before + 1);
+    assert_eq!(g.players[1].life, life1_before - 1);
+}
+
+#[test]
+fn witherbloom_cultivator_b120_rejects_activation_without_fodder() {
+    // No fodder creature on the battlefield — only Cultivator itself.
+    // The pre-flight gate should reject the activation cleanly (no mana
+    // burned, no tap consumed since this ability has no tap cost).
+    let mut g = two_player_game();
+    let cult = g.add_card_to_battlefield(0, catalog::witherbloom_cultivator_b120());
+    g.clear_sickness(cult);
+    g.players[0].mana_pool.add_colorless(1);
+    let mana_before = g.players[0].mana_pool.colorless_amount();
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: cult,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "Activation rejected with no fodder");
+    // Mana not consumed — clean rejection.
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), mana_before);
+}
+

@@ -410,7 +410,7 @@ pub fn witherbloom_pledgemage() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -663,7 +663,7 @@ pub fn witherbloom_pestkeeper() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2001,7 +2001,7 @@ pub fn witherbloom_pestbroker() -> CardDefinition {
                     duration: crate::effect::Duration::EndOfTurn,
                 },
             ]),
-                    self_counter_cost_reduction: None,
+                    self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
@@ -3685,7 +3685,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Black]),
                 },
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             },
             ActivatedAbility {
                 mana_cost: ManaCost::default(),
@@ -3702,7 +3702,7 @@ pub fn witherbloom_mireguide() -> CardDefinition {
                     who: PlayerRef::You,
                     pool: ManaPayload::Colors(vec![Color::Green]),
                 },
-                self_counter_cost_reduction: None,
+                self_counter_cost_reduction: None, sac_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -4428,7 +4428,7 @@ pub fn witherbloom_pestwarden() -> CardDefinition {
                 to: Selector::You,
                 amount: Value::Const(1),
             },
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![etb_drain(2)],
         static_abilities: vec![],
@@ -7564,7 +7564,7 @@ pub fn pest_conservator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
             // Sacrifice a Pest you control as the activated ability's
             // first step; if no Pest is available the resolver no-ops the
             // sac and the draw still resolves (resolve-time picker vs

@@ -653,7 +653,7 @@ mod tests {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -675,7 +675,7 @@ mod tests {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -701,7 +701,7 @@ mod tests {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -721,7 +721,7 @@ mod tests {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),
