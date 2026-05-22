@@ -1329,14 +1329,16 @@ pub fn bloodghast() -> CardDefinition {
 /// return Ichorid to the battlefield. If you do, exile Ichorid at the
 /// beginning of the next end step."
 ///
-/// Approximation: simplified to "at the beginning of your upkeep,
-/// return any creature card in your graveyard to the battlefield, then
-/// schedule a delayed exile at the next end step." The "opponent has a
-/// black creature in their graveyard" gate is omitted (no graveyard-
-/// color triggered-ability filter yet). Reuses Goryo's reanimate-then-
-/// exile pattern.
+/// Push (modern_decks batch 112): the "opponent has a black creature
+/// card in their graveyard" gate is now wired via
+/// `EventSpec::with_filter(SelectorExists(opp's GY ∩ Creature ∩ Black))`.
+/// The trigger only fires when at least one of your opponents' graveyards
+/// contains a black creature card — so Ichorid stays in your graveyard
+/// (rather than free-recurring every turn) until an opponent loses a
+/// black creature.
 pub fn ichorid() -> CardDefinition {
-    use crate::effect::DelayedTriggerKind;
+    use crate::card::{Predicate, Zone};
+    use crate::mana::Color;
     CardDefinition {
         name: "Ichorid",
         cost: cost(&[generic(3), b()]),
@@ -1352,7 +1354,13 @@ pub fn ichorid() -> CardDefinition {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::Upkeep),
                 EventScope::FromYourGraveyard,
-            ),
+            )
+            .with_filter(Predicate::SelectorExists(Selector::CardsInZone {
+                who: PlayerRef::EachOpponent,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasColor(Color::Black)),
+            })),
             effect: Effect::Seq(vec![
                 Effect::Move {
                     what: Selector::This,

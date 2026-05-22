@@ -4502,6 +4502,10 @@ fn bloodghast_returns_from_graveyard_when_you_play_a_land() {
 
 #[test]
 fn ichorid_returns_at_upkeep_then_exiles_at_end_step() {
+    // Pre-batch-112 this trigger fired unconditionally. Now it's gated on
+    // an opponent having a black creature in their graveyard (printed
+    // Oracle text), so the test seeds Black Knight in p1's graveyard
+    // before walking to upkeep.
     let mut g = two_player_game();
     g.step = TurnStep::Cleanup;
     let id = g.add_card_to_library(0, catalog::ichorid());
@@ -4512,6 +4516,8 @@ fn ichorid_returns_at_upkeep_then_exiles_at_end_step() {
         .map(|pos| g.players[0].library.remove(pos))
         .unwrap();
     g.players[0].graveyard.push(card);
+    // Seed an opp black creature in their graveyard so the new gate opens.
+    g.add_card_to_graveyard(1, catalog::black_knight());
 
     // Walk Cleanup → Untap → Upkeep so the trigger fires.
     for _ in 0..30 {
@@ -4525,6 +4531,38 @@ fn ichorid_returns_at_upkeep_then_exiles_at_end_step() {
     assert!(g.delayed_triggers.iter().any(|t|
         t.kind == crate::game::types::DelayedKind::NextEndStep),
         "Reanimation should register an end-step exile delayed trigger");
+}
+
+#[test]
+fn ichorid_stays_in_graveyard_when_no_opp_black_creature_in_gy() {
+    // Negative test for the batch-112 gate: with no black creature in
+    // any opp's graveyard, the upkeep trigger predicate fails and
+    // Ichorid stays in the graveyard.
+    let mut g = two_player_game();
+    g.step = TurnStep::Cleanup;
+    let id = g.add_card_to_library(0, catalog::ichorid());
+    let card = g.players[0]
+        .library
+        .iter()
+        .position(|c| c.id == id)
+        .map(|pos| g.players[0].library.remove(pos))
+        .unwrap();
+    g.players[0].graveyard.push(card);
+    // Seed a non-black creature in opp's graveyard (Grizzly Bears is
+    // green) — the predicate must still fail.
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+
+    // Walk past Cleanup → Untap → Upkeep.
+    for _ in 0..10 {
+        if g.step == TurnStep::Draw { break; }
+        let _ = g.perform_action(GameAction::PassPriority);
+    }
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == id),
+        "Ichorid should NOT reanimate — opp has no black creature in graveyard");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Ichorid still sits in p0's graveyard");
 }
 
 #[test]
