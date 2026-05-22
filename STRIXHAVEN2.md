@@ -19,10 +19,40 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1612 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1637 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 119:
+Push (claude/modern_decks branch — current head — **post-batch 120:
+both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
+batch ships 25 brand-new Strixhaven synthesised cards across all five
+colleges (5 per college):
+
+- **Silverquill (W/B)** — Inkling Lawscribe (2/2 Vigilance + ETB gain 1
+  life), Silverquill Devotee (2/2 Lifelink with magecraft each-opp
+  loses 2), Silverquill Censurer (instant exile ≤3-power + gain 2),
+  Inkling Battlescribe (2/3 Flying+Lifelink with ETB drain 1),
+  Silverquill Verdict (sorcery destroy creature + Inkling token).
+- **Witherbloom (B/G)** — Witherbloom Apprentice (2/2 magecraft target
+  friendly +1/+1 EOT), Pest Brooder (3/3 on-death mints 2 Pests),
+  Witherbloom Saprooter (sorcery drain 2 + Pest), Witherbloom Grafter
+  (2/3 Reach + ETB scry 1), Pest Reaper (4/4 Deathtouch+Trample).
+- **Lorehold (R/W)** — Lorehold Tactician (3/2 First Strike Warrior),
+  Lorehold Loreseeker (2/3 magecraft ping any 1), Lorehold Bondbreaker
+  (sorcery 3 damage + Spirit token), Spirit Stonewright (1/4 Vigilance+
+  Lifelink Spirit), Lorehold Flameherald (2/1 Haste + ETB ping any 1).
+- **Prismari (U/R)** — Prismari Apprentice (2/2 magecraft scry 1),
+  Prismari Pyrocaster (3/2 magecraft drains each opp 1), Prismari Tempest
+  (instant 4 damage + cantrip), Prismari Stormwright (2/3 Flying + ETB
+  loot), Prismari Crucible (sorcery Treasure + ping any 2).
+- **Quandrix (G/U)** — Quandrix Apprentice (2/2 magecraft +1/+1 counter
+  on self), Fractal Brood (3/3 Fractal), Quandrix Equation (instant
+  +1/+1 counter + cantrip), Quandrix Tutor (1/2 ETB draw 1), Fractal
+  Bloomwright (sorcery 0/0 Fractal + 4 counters).
+
+All 25 cards use only existing engine primitives — no new engine work
+required. Tests: 3532 → 3557 (25 new tests).**
+
+Prior push (claude/modern_decks branch — post-batch 119:
 both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
 batch ships 25 brand-new Strixhaven synthesised cards across all five
 colleges (5 per college):

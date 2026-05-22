@@ -1013,6 +1013,58 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   test exercises stack ordering. Promote to ✅ after 405.3's AP-vs-NAP
   ordering for simultaneous triggers lands.
 
+- ✅ **CR 406 — Exile** (push claude/modern_decks batch 120 audit,
+  claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt` lines 2058–2078): The exile zone
+  framework — what exile is, how cards reach it, face-up vs face-down
+  exile, and linked-ability pile-tracking for "exiled with this".
+  Audit:
+  (a) **406.1** "Exile is a holding area for objects" — ✅
+  (`Player.exile: Vec<CardInstance>` plus `Effect::Move { to:
+  ZoneDest::Exile }` and `Effect::Exile { what }` are the routing
+  primitives; exile is just another zone on `Player` like graveyard).
+  (b) **406.2** "Exiling means putting into exile from the current
+  zone" — ✅ (the `move_card` helper in `game/effects/movement.rs`
+  walks every zone — battlefield, graveyard, hand, library, stack —
+  to find the source, then pushes onto `exile`; emits a `CardExiled`
+  event for trigger consumers).
+  (c) **406.3** "Exiled cards are face up and may be examined" — ✅
+  (`Player.exile` is a public-zone Vec, the snapshot/wire layer
+  serializes the full card definitions for the client. Face-down exile
+  is ⏳: no `face_down: bool` flag on exile residents; foretell /
+  Sanguine Brushstroke-class face-down exile is out of scope and the
+  current set's catalog never asks for it).
+  (d) **406.3a/b** "Cast face-down from exile" — ⏳ (no morph / face-
+  down-cast pipeline; the `cast_spell` path requires a known
+  `card_id` with a face-up `definition`. Casting from exile
+  via the may-play permission path works for face-up cards —
+  Mavinda Students' Advocate, Maelstrom Wanderer, foreboding-style
+  cascade all work — but not for face-down).
+  (e) **406.5** "Pile separation for return-tracking" — ✅ (the
+  `exile_after: bool` flag on may-play permissions tracks "if cast
+  from exile, exile again on resolve" — wired for Mavinda and
+  similar cards. The `linked_exile_pile: Vec<CardId>` field on
+  `CardInstance` (added in the Linked Abilities work) holds the
+  "exiled with this" pile for cards like Misthollow Griffin /
+  Sword of Hearth and Home's linked-exile-pile referent).
+  (f) **406.6** "Linked abilities (one ability exiles, another refers
+  to 'the exiled cards')" — ✅ (the `linked_exile_pile` field links
+  the two abilities; `Selector::ExiledWithThis` reads back the pile
+  for the dependent ability. Wired by Stonebinder's Familiar's
+  per-cast trigger gates and by the imprint primitive on artifact
+  cards in the cube pool).
+  (g) **406.7** "An object exiled from exile becomes a new object" —
+  ✅ (the `move_card` helper unconditionally creates a fresh
+  `CardInstance` shell each time the card moves zones; existing
+  counters / continuous effects don't follow per CR 400.7).
+  Tests: `silverquill_indictment_exiles_low_mv_creature` (basic Move
+  to Exile path); `mavinda_activation_exiles_gy_is_card_and_grants_
+  may_play` (exile + may-play permission); `imprint_*` tests
+  (linked-exile-pile read-back); `closing_statement_exiles_target_
+  permanent` (X-cost exile body). Already promoted to ✅ — face-down
+  exile (406.3) is the only ⏳ piece and is gated on a Morph
+  primitive landing engine-wide.
+
 - 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 48/63 audit,
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): Stale ⏳
   row promoted to 🟡; see the higher-level CR 705 row above for the
@@ -3649,6 +3701,23 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `sac_other_filter: Option<(SelectionRequirement, u32)>` slot
   (mirroring `exile_other_filter`) would let Harvester sacrifice an
   arbitrary friendly creature instead. Engine-wide ⏳.
+
+- ✅ **`effect::shortcut::drain_and_draw/scry/surveil/etb_tap_opp_creature`
+  helpers** (push claude/modern_decks batch 120 done). Three composite
+  raw-effect shortcuts collapse the recurring
+  `Seq([Drain(n), {Draw/Scry/Surveil}])` body to one-liners for
+  drain+select sorceries — Silverquill Heartrender now ships
+  `drain_and_scry(3, 1)`, Silverquill Quillsweep (b119) ships
+  `drain_and_draw(3)`, Silverquill Chronicle uses the `drain(2)` raw
+  helper. The `etb_tap_opp_creature()` shortcut wraps the
+  Silverquill-Lawkeeper / Inkling-Hush "ETB tap target opp creature"
+  pattern for future tempo cards. Lock-in tests:
+  `shortcut_drain_and_draw_drains_and_draws`,
+  `shortcut_drain_and_scry_drains_and_scrys`,
+  `shortcut_drain_and_surveil_drains_and_surveils`,
+  `shortcut_etb_tap_opp_creature_taps_opponent_target`. A future
+  refactor pass can sweep the ~25 remaining inline drain-and-* bodies
+  across `stx::*` modules onto these helpers.
 
 - ⏳ **Damage-source choice primitive (CR 120.7)** (push
   claude/modern_decks batch 119 — new suggestion, paired with the new

@@ -3127,4 +3127,55 @@ pub mod shortcut {
         let token = crate::catalog::lorehold_spirit_token();
         mint_token(token, count)
     }
+
+    /// Drain-and-Draw composite: `Seq([Drain(amount), Draw(1)])` as a
+    /// raw `Effect` (not wrapped in a trigger). Used by Silverquill
+    /// drain+cantrip sorceries (Silverquill Quillsweep, Silverquill
+    /// Chronicle, Defend the Inkwell-style spells) to collapse the
+    /// recurring 7-line `Seq` body to a one-liner.
+    pub fn drain_and_draw(amount: i32) -> Effect {
+        Effect::Seq(vec![drain(amount), draw(1)])
+    }
+
+    /// Drain-and-Scry composite: `Seq([Drain(amount), Scry(scry)])` as
+    /// a raw `Effect` (not wrapped in a trigger). Companion to
+    /// `etb_drain_and_scry` for sorceries / instants where the drain
+    /// fires at spell resolution rather than ETB.
+    pub fn drain_and_scry(amount: i32, scry: i32) -> Effect {
+        Effect::Seq(vec![
+            drain(amount),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(scry),
+            },
+        ])
+    }
+
+    /// Drain-and-Surveil composite: `Seq([Drain(amount), Surveil(N)])`
+    /// as a raw `Effect`. Used by Witherbloom / Silverquill drain +
+    /// graveyard-select sorceries (Silverquill Conviction, Silverquill
+    /// Inkletter, Witherspell Witness-template cards).
+    pub fn drain_and_surveil(amount: i32, surveil: i32) -> Effect {
+        Effect::Seq(vec![
+            drain(amount),
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(surveil),
+            },
+        ])
+    }
+
+    /// ETB-Tap-Opp-Creature shortcut: "When this creature enters, tap
+    /// target creature an opponent controls." Wraps [`etb`] with the
+    /// canonical "tempo tap" body. Used by Silverquill Lawkeeper-style
+    /// "ETB tap a creature" Soldiers / Wizards.
+    pub fn etb_tap_opp_creature() -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        etb(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })
+    }
 }

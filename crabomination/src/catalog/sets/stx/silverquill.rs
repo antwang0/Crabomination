@@ -1666,6 +1666,7 @@ pub fn silverquill_pen_pusher() -> CardDefinition {
 /// Light of Promise, Inkling Bloodscribe) and the return gives the
 /// chronicle a "rebuy" upside.
 pub fn silverquill_chronicle() -> CardDefinition {
+    use crate::effect::shortcut::drain as drain_eff;
     CardDefinition {
         name: "Silverquill Chronicle",
         cost: cost(&[generic(3), w(), b()]),
@@ -1676,11 +1677,7 @@ pub fn silverquill_chronicle() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
-            },
+            drain_eff(2),
             Effect::Move {
                 what: Selector::one_of(Selector::CardsInZone {
                     who: PlayerRef::You,
@@ -2136,6 +2133,7 @@ pub fn silverquill_castigant() -> CardDefinition {
 /// alone) trading the green pip for the scry. Pairs with Sanguine
 /// Bond / Witherbloom Apprentice for snowball boards.
 pub fn silverquill_heartrender() -> CardDefinition {
+    use crate::effect::shortcut::drain_and_scry;
     CardDefinition {
         name: "Silverquill Heartrender",
         cost: cost(&[generic(2), b()]),
@@ -2145,17 +2143,7 @@ pub fn silverquill_heartrender() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(3),
-            },
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: drain_and_scry(3, 1),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
