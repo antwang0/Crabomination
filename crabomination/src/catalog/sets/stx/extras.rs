@@ -38679,3 +38679,398 @@ pub fn fractal_pondlord_b123() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Batch 124 — 10 more Strixhaven cards rounding out Lorehold/Prismari/Quandrix
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// 4 Lorehold (R/W), 3 Prismari (U/R), 3 Quandrix (G/U).
+// All cards use existing engine primitives — no new engine work.
+
+// ── Lorehold (R/W) ─────────────────────────────────────────────────────────
+
+/// Lorehold Pyromancer (batch 124) — {2}{R}, 2/3 Human Wizard.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to any target." A
+/// 3-mana Spellslinger ping body.
+pub fn lorehold_pyromancer_b124() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Lorehold Pyromancer (Batch 124)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skydefender (batch 124) — {3}{W}, 2/4 Spirit Soldier.
+///
+/// Synthesised: "Flying / When this creature enters, you gain 3
+/// life." A 4-mana flyer with life-recovery.
+pub fn lorehold_skydefender_b124() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skydefender (Batch 124)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Champion (batch 124) — {2}{R}{W}, 3/3 Human Warrior.
+///
+/// Synthesised: "Vigilance / Whenever you cast or copy an instant or
+/// sorcery spell, this creature gets +2/+0 until end of turn." A
+/// midrange magecraft attacker.
+pub fn lorehold_champion_b124() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Champion (Batch 124)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cremate (batch 124) — {R}{W} Sorcery.
+///
+/// Synthesised: "This spell deals 3 damage to target creature.
+/// Create a 2/2 red and white Spirit creature token." Combat trick
+/// + token mint.
+pub fn lorehold_cremate_b124() -> CardDefinition {
+    use crate::effect::shortcut::mint_lorehold_spirits;
+    CardDefinition {
+        name: "Lorehold Cremate (Batch 124)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            mint_lorehold_spirits(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Prismari (U/R) ─────────────────────────────────────────────────────────
+
+/// Prismari Stormbreaker (batch 124) — {3}{U}{R}, 4/3 Elemental.
+///
+/// Synthesised: "Trample / When this creature enters, draw a card,
+/// then discard a card." A 5-mana trampler with a loot rider.
+pub fn prismari_stormbreaker_b124() -> CardDefinition {
+    use crate::effect::shortcut::etb_loot;
+    CardDefinition {
+        name: "Prismari Stormbreaker (Batch 124)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Burnmage (batch 124) — {1}{U}{R}, 2/2 Human Wizard.
+///
+/// Synthesised: "Magecraft — Whenever you cast or copy an instant or
+/// sorcery spell, this creature deals 1 damage to any target." A
+/// 3-mana magecraft Spellslinger ping body.
+pub fn prismari_burnmage_b124() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Burnmage (Batch 124)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempest (batch 124) — {2}{U}{R} Sorcery.
+///
+/// Synthesised: "This spell deals 3 damage to any target. Draw a
+/// card." Bolt + cantrip at sorcery speed.
+pub fn prismari_tempest_b124() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tempest (Batch 124)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Quandrix (G/U) ─────────────────────────────────────────────────────────
+
+/// Quandrix Forester (batch 124) — {2}{G}, 3/3 Elf Druid.
+///
+/// Synthesised: "When this creature enters, put a +1/+1 counter on
+/// target creature you control. Whenever this creature attacks, put
+/// a +1/+1 counter on it." A two-trigger growth engine.
+pub fn quandrix_forester_b124() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Forester (Batch 124)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            crate::effect::shortcut::on_attack(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mathematician (batch 124) — {2}{G}{U}, 3/2 Merfolk
+/// Wizard.
+///
+/// Synthesised: "Whenever this creature deals combat damage to a
+/// player, put a +1/+1 counter on it. Magecraft — Whenever you cast
+/// or copy an instant or sorcery spell, put a +1/+1 counter on
+/// target creature you control." Two counter-fan triggers.
+pub fn quandrix_mathematician_b124() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_to_friendly;
+    CardDefinition {
+        name: "Quandrix Mathematician (Batch 124)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::DealsCombatDamageToPlayer,
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+            magecraft_add_counter_to_friendly(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Coursemate (batch 124) — {1}{G}{U}, 0/0 Fractal.
+///
+/// Synthesised: "This creature enters with X +1/+1 counters on it,
+/// where X is twice the number of cards in your hand." Uses the
+/// `enters_with_counters` replacement (CR 614.12) so the counters
+/// land before SBAs check 0/0 toughness — otherwise the Fractal
+/// would die before the ETB trigger resolved.
+pub fn fractal_coursemate_b124() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Coursemate (Batch 124)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((
+            CounterType::PlusOnePlusOne,
+            Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CountOf(Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: SelectionRequirement::Any,
+                }))),
+            ),
+        )),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -19,11 +19,35 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1685 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1695 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 123:
-20 new Strixhaven synthesised cards focused on finishing Witherbloom
+Push (claude/modern_decks branch — current head — **post-batch 124:
+10 more Strixhaven synthesised cards rounding out Lorehold / Prismari /
+Quandrix:
+
+- **Lorehold (R/W, 4 cards)** — Lorehold Pyromancer ({2}{R} 2/3
+  magecraft ping any), Lorehold Skydefender ({3}{W} 2/4 Flying ETB gain
+  3), Lorehold Champion ({2}{R}{W} 3/3 Vigilance magecraft self-pump
+  +2/+0), Lorehold Cremate ({R}{W} sorcery 3 damage + mint Spirit).
+- **Prismari (U/R, 3 cards)** — Prismari Stormbreaker ({3}{U}{R} 4/3
+  Trample ETB loot), Prismari Burnmage ({1}{U}{R} 2/2 magecraft ping
+  any), Prismari Tempest ({2}{U}{R} sorcery 3 damage + cantrip).
+- **Quandrix (G/U, 3 cards)** — Quandrix Forester ({2}{G} 3/3 ETB
+  counter + on-attack growth), Quandrix Mathematician ({2}{G}{U} 3/2
+  combat-damage growth + magecraft counter fan), Fractal Coursemate
+  ({1}{G}{U} 0/0 Fractal with `enters_with_counters` equal to twice
+  cards in hand).
+
+All 10 cards use only existing engine primitives — no new engine work
+required. The Fractal Coursemate test specifically exercises CR 614.12
+(replacement-effect counter entry) by leaning on `enters_with_counters`
+to dodge the 0/0-dies-to-SBA edge case (an `etb` AddCounter trigger
+would have lost the race against SBA's toughness check).
+
+Tests: 3617 → 3627 (10 new b124 card tests).**
+
+Prior push: 20 new Strixhaven synthesised cards focused on finishing Witherbloom
 + two new engine helpers + new CR 704 (State-Based Actions) audit row:
 
 - **Witherbloom (B/G, 9 cards)** — Pest Marrowfeast ({2}{B}{G} 3/2 ETB
