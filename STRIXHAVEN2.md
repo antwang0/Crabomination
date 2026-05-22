@@ -19,7 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1551 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1562 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
 Push (claude/modern_decks branch — current head — **post-batch 103:

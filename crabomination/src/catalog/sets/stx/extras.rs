@@ -33584,6 +33584,216 @@ pub fn fractal_conductor() -> CardDefinition {
     }
 }
 
+// ── Additional batch 103 cards (sweep-effects + utility) ────────────────────
+
+/// Silverquill Maelstrom — {3}{W}{B} Sorcery.
+///
+/// Synthesised: "Each opponent loses 4 life and you gain 4 life. Then
+/// each opponent discards a card." A big-impact W/B finisher.
+pub fn silverquill_maelstrom() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Maelstrom",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: true,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Brewmage — {1}{B}{G}, 2/2 Human Warlock.
+///
+/// Synthesised: "When this creature enters, you gain 2 life and each
+/// opponent loses 2 life."
+pub fn witherbloom_brewmage_b103() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain;
+    CardDefinition {
+        name: "Witherbloom Brewmage (Batch 103)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Resurrectionist (batch 103) — {2}{W}, 2/2 Spirit Cleric.
+///
+/// Synthesised: "When this creature enters, return target creature
+/// card with mana value 2 or less from your graveyard to the
+/// battlefield."
+pub fn lorehold_resurrectionist_b103() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Resurrectionist (Batch 103)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                },
+                Value::Const(1),
+            ),
+            to: crate::effect::ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyrocaster (batch 103) — {3}{R}, 3/3 Human Wizard.
+///
+/// Synthesised: "When this creature enters, it deals 2 damage to
+/// each opponent."
+pub fn prismari_pyrocaster_b103() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Prismari Pyrocaster (Batch 103)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::Player(PlayerRef::EachOpponent),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(2),
+            }),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calculator — {3}{G}{U}, 3/3 Elf Druid.
+///
+/// Synthesised: "When this creature enters, draw a card and put a
+/// +1/+1 counter on each other creature you control."
+pub fn quandrix_calculator_b103() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::{each_your_creature, etb};
+    CardDefinition {
+        name: "Quandrix Calculator (Batch 103)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::ForEach {
+                selector: each_your_creature(),
+                body: Box::new(Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Lecturer — {1}{G}{U} Sorcery.
 ///
 /// Synthesised: "Create a 0/0 green-and-blue Fractal creature token,

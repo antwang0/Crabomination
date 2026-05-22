@@ -46290,6 +46290,78 @@ fn spirit_of_counterpoint_pumps_each_spirit_on_etb() {
 }
 
 #[test]
+fn silverquill_maelstrom_drains_four_and_makes_opp_discard() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::silverquill_maelstrom());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    let opp_hand_before = g.players[1].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1_before - 4);
+    assert_eq!(g.players[0].life, life0_before + 4);
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1);
+}
+
+#[test]
+fn witherbloom_brewmage_b103_etb_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_brewmage_b103());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1_before - 2);
+    assert_eq!(g.players[0].life, life0_before + 2);
+}
+
+#[test]
+fn lorehold_resurrectionist_b103_returns_low_cmc_creature_from_gy() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_resurrectionist_b103());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, id);
+    // Bear (cmc 2) should be returned to battlefield.
+    let bear_on_bf = g.battlefield_find(bear);
+    assert!(bear_on_bf.is_some(), "Bear returned to battlefield");
+}
+
+#[test]
+fn prismari_pyrocaster_b103_etb_pings_each_opp() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_pyrocaster_b103());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life1_before = g.players[1].life;
+    cast(&mut g, id);
+    assert_eq!(g.players[1].life, life1_before - 2);
+}
+
+#[test]
+fn quandrix_calculator_b103_draws_and_pumps_creatures_on_etb() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_calculator_b103());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    cast(&mut g, id);
+    // Cast (-1) + Draw (+1) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    let b = g.battlefield_find(b1).expect("bear alive");
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
 fn fractal_conductor_pumps_each_fractal_on_etb() {
     let mut g = two_player_game();
     // First play Quandrix Summoner to mint a Fractal.

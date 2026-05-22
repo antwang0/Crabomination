@@ -1252,6 +1252,7 @@ impl GameState {
     /// `cast_via_flashback` so the resolver exiles it (CR 702.34d),
     /// emit `CardLeftGraveyard` + `SpellCast{Flashback}`, and thread the
     /// rest through `finalize_cast`.
+    #[allow(clippy::too_many_arguments)]
     fn finalize_flashback_cast(
         &mut self,
         p: usize,
