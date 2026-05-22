@@ -318,12 +318,15 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
         parts.push("Exile this from gy".into());
     }
     // Lorehold Pledgemage / Postmortem Professor — "Exile a card from
-    // your graveyard" as an additional cost. We don't yet describe the
-    // filter granularly in the cost label (the engine picks the
-    // lowest-CMC matching card automatically); the bare "Exile a card
-    // from gy" string communicates the requirement cleanly.
-    if ability.exile_other_filter.is_some() {
-        parts.push("Exile a card from gy".into());
+    // your graveyard" as an additional cost (count 1). Grim Lavamancer —
+    // "Exile two cards from your graveyard" (count 2). The bare label
+    // pluralises off the exile count.
+    if let Some((_, n)) = ability.exile_other_filter.as_ref() {
+        if *n == 1 {
+            parts.push("Exile a card from gy".into());
+        } else {
+            parts.push(format!("Exile {n} cards from gy"));
+        }
     }
     if parts.is_empty() { "0".into() } else { parts.join(", ") }
 }

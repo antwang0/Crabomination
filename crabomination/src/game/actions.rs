@@ -2506,14 +2506,17 @@ impl GameState {
             return Err(GameError::InsufficientLife);
         }
 
-        // Pre-flight exile-other-from-gy gate: confirm a graveyard card
-        // matching the cost's filter exists, *excluding* the source itself
-        // for graveyard activations where source_in_gy is true. Picks the
-        // lowest-CMC matching card. If none, reject cleanly so tap/mana
-        // aren't burned. The actual exile happens after payment succeeds.
-        let exile_other_pick: Option<CardId> = if let Some(filter) =
+        // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
+        // cards matching the cost's filter exist, *excluding* the source
+        // itself for graveyard activations where source_in_gy is true.
+        // Picks the lowest-CMC matching cards (so the activator keeps
+        // higher-value cards in their graveyard). If fewer than `count`
+        // match, reject cleanly so tap/mana aren't burned. The actual
+        // exile happens after payment succeeds.
+        let exile_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.exile_other_filter.as_ref()
         {
+            let count = *count as usize;
             let mut picks: Vec<(CardId, i32)> = self.players[p]
                 .graveyard
                 .iter()
@@ -2521,13 +2524,13 @@ impl GameState {
                 .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
                 .map(|c| (c.id, c.definition.cost.cmc() as i32))
                 .collect();
-            picks.sort_by_key(|(_, cmc)| *cmc);
-            match picks.first().copied() {
-                Some((cid, _)) => Some(cid),
-                None => return Err(GameError::SelectionRequirementViolated),
+            if picks.len() < count {
+                return Err(GameError::SelectionRequirementViolated);
             }
+            picks.sort_by_key(|(_, cmc)| *cmc);
+            picks.into_iter().take(count).map(|(cid, _)| cid).collect()
         } else {
-            None
+            Vec::new()
         };
 
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
@@ -2654,29 +2657,32 @@ impl GameState {
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile
-        // the cost-picked graveyard card (already validated to exist via
-        // the pre-flight `exile_other_pick` lookup). Used by cards like
+        // each cost-picked graveyard card (already validated to exist via
+        // the pre-flight `exile_other_picks` lookup). Used by cards like
         // Postmortem Professor's `{1}{B}, Exile an instant or sorcery
-        // card from your graveyard: …` and Lorehold Pledgemage's
-        // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`.
-        if let Some(other_cid) = exile_other_pick
-            && let Some(idx) = self.players[p]
+        // card from your graveyard: …` (count 1), Lorehold Pledgemage's
+        // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
+        // (count 1), and Grim Lavamancer's `{R}, {T}, Exile two cards
+        // from your graveyard` (count 2).
+        for other_cid in exile_other_picks {
+            if let Some(idx) = self.players[p]
                 .graveyard
                 .iter()
                 .position(|c| c.id == other_cid)
-        {
-            let card = self.players[p].graveyard.remove(idx);
-            self.exile.push(card);
-            self.players[p].cards_exiled_this_turn = self.players[p]
-                .cards_exiled_this_turn
-                .saturating_add(1);
-            events.push(GameEvent::CardLeftGraveyard {
-                player: p,
-                card_id: other_cid,
-            });
-            self.players[p].cards_left_graveyard_this_turn = self.players[p]
-                .cards_left_graveyard_this_turn
-                .saturating_add(1);
+            {
+                let card = self.players[p].graveyard.remove(idx);
+                self.exile.push(card);
+                self.players[p].cards_exiled_this_turn = self.players[p]
+                    .cards_exiled_this_turn
+                    .saturating_add(1);
+                events.push(GameEvent::CardLeftGraveyard {
+                    player: p,
+                    card_id: other_cid,
+                });
+                self.players[p].cards_left_graveyard_this_turn = self.players[p]
+                    .cards_left_graveyard_this_turn
+                    .saturating_add(1);
+            }
         }
 
         // Exile-self-as-cost (graveyard activations): with tap/mana/life

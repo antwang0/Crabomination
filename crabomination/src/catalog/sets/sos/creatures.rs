@@ -3027,10 +3027,11 @@ pub fn postmortem_professor() -> CardDefinition {
             life_cost: 0,
             from_graveyard: true,
             exile_self_cost: false,
-            exile_other_filter: Some(
+            exile_other_filter: Some((
                 SelectionRequirement::HasCardType(CardType::Instant)
                     .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-            ),
+                1,
+            )),
             self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -5164,7 +5165,7 @@ pub fn rubble_rouser() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
-            exile_other_filter: Some(SelectionRequirement::Any),
+            exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![TriggeredAbility {

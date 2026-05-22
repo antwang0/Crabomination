@@ -942,23 +942,14 @@ pub fn sylvan_safekeeper() -> CardDefinition {
 /// your graveyard: Grim Lavamancer deals 2 damage to any target.
 ///
 /// The "exile two cards from your graveyard" cost is approximated by a
-/// `Sacrifice`-style fold-in step: at resolution we run
-/// `Repeat(2, Move(EachCard in your graveyard → Exile))`. Since
-/// `Sacrifice` only handles battlefield permanents, we instead use
-/// `ForEach` over a graveyard selector but the engine doesn't yet
-/// support EachCardInGraveyard. We compromise: the cost is simply
-/// `Effect::Mill` on yourself two times — wrong direction (mill puts
-/// cards into the graveyard) — so we use a real exile path via
-/// `RevealUntilFind` over the graveyard? That's not quite right either.
-///
-/// Simpler: drop the cost and ship as `{R}, {T}: 2 damage`. The
-/// graveyard-exile cost is documented as 🟡 in CUBE_FEATURES. For an
-/// honest gameplay model the bot-AI and decision flow rarely care
-/// about whether 2 cards are exiled (the gating is "do I have 2+ cards
-/// in my graveyard?" which the human can self-enforce).
-///
-/// TODO: when an `Effect::ExileNFromYourGraveyard` primitive lands,
-/// fold it back into the activation as the first step of the seq.
+/// Push (modern_decks batch 114): the "exile two cards from your
+/// graveyard" additional cost is now wired via the extended
+/// `exile_other_filter: Some((SelectionRequirement, u32))` shape —
+/// the `u32` field carries the count (2 here). The pre-flight check
+/// at activation time confirms the player has ≥ 2 other cards in
+/// their graveyard; if not, activation is rejected without burning
+/// tap/mana. The two exiled cards are auto-picked by lowest-CMC so the
+/// activator keeps higher-value cards.
 pub fn grim_lavamancer() -> CardDefinition {
     use crate::card::ActivatedAbility;
     use crate::effect::shortcut::target_filtered;
@@ -989,7 +980,9 @@ pub fn grim_lavamancer() -> CardDefinition {
             condition: None,
             life_cost: 0,
             from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
+            exile_self_cost: false,
+            // Additional cost: exile two cards from your graveyard.
+            exile_other_filter: Some((SelectionRequirement::Any, 2)),
             self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],

@@ -140,8 +140,8 @@ pub fn lorehold_pledgemage() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
-            // "Exile a card from your graveyard" — any card.
-            exile_other_filter: Some(SelectionRequirement::Any),
+            // "Exile a card from your graveyard" — any card (count 1).
+            exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],

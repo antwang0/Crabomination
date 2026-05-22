@@ -2664,6 +2664,9 @@ fn grim_lavamancer_activated_ability_deals_two_damage() {
     let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
     g.clear_sickness(lava);
     g.players[0].mana_pool.add(Color::Red, 1);
+    // Batch 114: activation now requires 2 cards in graveyard to exile.
+    let _fodder_a = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let _fodder_b = g.add_card_to_graveyard(0, catalog::shock());
     let life_before = g.players[1].life;
 
     g.perform_action(GameAction::ActivateAbility {
@@ -2676,6 +2679,10 @@ fn grim_lavamancer_activated_ability_deals_two_damage() {
     assert_eq!(g.players[1].life, life_before - 2);
     let card = g.battlefield_find(lava).unwrap();
     assert!(card.tapped, "Tap-cost ability should leave the source tapped");
+    // Both gy fodder cards should now be in exile (the exile-2 cost).
+    assert_eq!(g.players[0].graveyard.len(), 0,
+        "Both graveyard cards were exiled as the activation cost");
+    assert!(g.exile.len() >= 2, "Exile zone gained both cost-paid cards");
 }
 
 /// Zuran Orb sacrifices a land to gain 2 life.
@@ -8870,31 +8877,60 @@ fn fellwar_stone_taps_for_any_color() {
     );
 }
 
-/// Tarfire (Kindred Goblin Instant) is in the red pool. Verify the
-/// 2-damage payload resolves cleanly. Kindred subtype is preserved on
-/// the type-line even though no tribal payoff card consumes it today.
-/// Grim Lavamancer's `{R}, {T}, Exile two from your gy:` activated
-/// ability is approximated by the engine's `exile_other_filter` (which
-/// exiles exactly one matching gy card). Verify activation still pings
-/// 2 damage to a target creature when there's a gy card to exile.
+/// Grim Lavamancer's `{R}, {T}, Exile two cards from your gy:` deals
+/// 2 damage to any target. Push (batch 114): the exile-two cost is
+/// now wired faithfully via the extended `exile_other_filter:
+/// Some((filter, 2))` shape. Verify activation pings 2 damage to a
+/// target creature when there are ≥ 2 gy cards to exile.
 #[test]
 fn grim_lavamancer_pings_creature_with_gy_card_to_exile() {
     let mut g = two_player_game();
     let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
     g.battlefield_find_mut(lava).unwrap().summoning_sick = false;
-    // Seed a graveyard card for the exile-from-gy cost.
-    let _fodder = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // Seed two graveyard cards for the exile-2-from-gy cost.
+    let _fodder_a = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let _fodder_b = g.add_card_to_graveyard(0, catalog::shock());
     // Need a creature target on the battlefield (opponent's bear).
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: lava, ability_index: 0,
         target: Some(Target::Permanent(bear)), x_value: None })
-    .expect("Lavamancer can activate with R + gy fodder");
+    .expect("Lavamancer can activate with R + 2 gy fodder");
     drain_stack(&mut g);
     // Bear (2/2) takes 2 damage and dies.
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "Grim Lavamancer should ping the bear for 2 (now dead)");
+}
+
+#[test]
+fn grim_lavamancer_rejects_activation_with_only_one_gy_card() {
+    // Batch 114 negative test: with only 1 card in graveyard the
+    // exile-2 cost can't be paid → activation rejects cleanly without
+    // burning tap/mana.
+    let mut g = two_player_game();
+    let lava = g.add_card_to_battlefield(0, catalog::grim_lavamancer());
+    g.clear_sickness(lava);
+    let _fodder = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+    let pool_before = g.players[0].mana_pool.total();
+    let tapped_before = g.battlefield_find(lava).map(|c| c.tapped).unwrap_or(false);
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: lava, ability_index: 0,
+        target: Some(Target::Player(1)), x_value: None });
+    assert!(result.is_err(),
+        "Only 1 card in gy — activation must reject the exile-2 cost");
+    assert_eq!(g.players[1].life, life_before, "No damage was dealt");
+    assert_eq!(g.players[0].mana_pool.total(), pool_before,
+        "Mana wasn't burned on the rejected activation");
+    let tapped_after = g.battlefield_find(lava).map(|c| c.tapped).unwrap_or(false);
+    assert_eq!(tapped_before, tapped_after,
+        "Tap wasn't burned on the rejected activation");
+    // Single gy fodder card is still in the graveyard.
+    assert_eq!(g.players[0].graveyard.len(), 1,
+        "GY fodder still in place — cost wasn't partially paid");
 }
 
 // ── Guardian Scalelord (M15 / cube card) ────────────────────────────────────

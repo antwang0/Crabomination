@@ -2237,9 +2237,13 @@ pub struct ActivatedAbility {
     /// auto-picker takes the lowest-CMC matching card so the activator
     /// keeps higher-value cards in their graveyard.
     ///
-    /// Defaults to None via `#[serde(default)]`.
+    /// Defaults to None via `#[serde(default)]`. The `u32` count
+    /// (defaults to 1 when constructing via the bare-filter helpers) is
+    /// the number of graveyard cards that must be exiled to activate.
+    /// Used at count 2 for Grim Lavamancer's "exile two cards from
+    /// your graveyard as an additional cost".
     #[serde(default)]
-    pub exile_other_filter: Option<SelectionRequirement>,
+    pub exile_other_filter: Option<(SelectionRequirement, u32)>,
     /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
     /// activation's generic mana cost is reduced by one for each counter
     /// of `kind` on the source permanent (clamped at the printed generic
