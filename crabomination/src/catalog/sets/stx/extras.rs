@@ -35111,9 +35111,11 @@ pub fn witherbloom_cradlemage_b119() -> CardDefinition {
 /// Pest Hivewatcher (batch 119) — {1}{B}, 1/2 Pest Warlock.
 ///
 /// Synthesised: "Whenever another creature you control dies, you gain
-/// 1 life." Uses the existing `CreatureDied / AnotherOfYours` event
-/// scope — the source-itself death case is excluded by the scope.
+/// 1 life." Uses the new `on_other_dies` shortcut, which threads the
+/// `CreatureDied / AnotherOfYours` event scope — the source-itself
+/// death case is excluded by the scope.
 pub fn pest_hivewatcher_b119() -> CardDefinition {
+    use crate::effect::shortcut::on_other_dies;
     CardDefinition {
         name: "Pest Hivewatcher (Batch 119)",
         cost: cost(&[generic(1), b()]),
@@ -35128,13 +35130,10 @@ pub fn pest_hivewatcher_b119() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: vec![on_other_dies(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

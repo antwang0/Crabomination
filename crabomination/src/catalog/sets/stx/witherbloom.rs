@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_self_pump, target_filtered,
+    magecraft_gain_life, magecraft_self_pump, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -3044,14 +3044,11 @@ pub fn pest_cultist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
-            effect: Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
+        triggered_abilities: vec![on_other_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

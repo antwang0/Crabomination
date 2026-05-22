@@ -2390,6 +2390,19 @@ pub mod shortcut {
         }
     }
 
+    /// On-other-dies shortcut: "Whenever another creature you control
+    /// dies, `effect`." Wraps the `CreatureDied / AnotherOfYours` event
+    /// scope, which excludes the source's own death. Used by Pest
+    /// Hivewatcher (batch 119), Inkling Confessor's lifegain rider,
+    /// Felisa Fang of Silverquill, and any future "another creature
+    /// dies" payoff that doesn't need a creature-type filter.
+    pub fn on_other_dies(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect,
+        }
+    }
+
     /// ETB-Drain shortcut: "When this creature enters, each opponent loses
     /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
     /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /

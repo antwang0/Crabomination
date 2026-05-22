@@ -47450,6 +47450,25 @@ fn quandrix_calculus_b119_adds_counter_and_cantrips() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
+// ── batch 119 helper shortcut lock-in test ──────────────────────────────────
+
+#[test]
+fn shortcut_on_other_dies_uses_another_of_yours_scope() {
+    // Lock in that the new on_other_dies helper builds a
+    // `CreatureDied/AnotherOfYours` event spec so future refactors
+    // can't accidentally regress it to SelfSource (which would silently
+    // make every "whenever another creature dies" trigger ignore other
+    // deaths).
+    use crate::effect::EventScope;
+    use crate::effect::shortcut::on_other_dies;
+    let trig = on_other_dies(Effect::GainLife {
+        who: crate::effect::Selector::You,
+        amount: crate::effect::Value::Const(1),
+    });
+    assert_eq!(trig.event.kind, crate::effect::EventKind::CreatureDied);
+    assert!(matches!(trig.event.scope, EventScope::AnotherOfYours));
+}
+
 #[test]
 fn fractal_hatchling_b119_grows_via_activated_ability() {
     let mut g = two_player_game();
