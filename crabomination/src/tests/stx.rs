@@ -562,8 +562,7 @@ fn quandrix_pledgemage_grows_via_activated_ability() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pm, ability_index: 0, target: None,
-    })
+        card_id: pm, ability_index: 0, target: None, x_value: None })
     .expect("Quandrix Pledgemage activatable for {1}{G}{U}");
     drain_stack(&mut g);
     let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
@@ -651,8 +650,7 @@ fn witherbloom_pledgemage_taps_for_mana_at_life_cost() {
     let life_before = g.players[0].life;
     let pool_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pm, ability_index: 0, target: None,
-    })
+        card_id: pm, ability_index: 0, target: None, x_value: None })
     .expect("Witherbloom Pledgemage tap activatable");
     drain_stack(&mut g);
     // Pay 1 life, gain 1 mana.
@@ -822,8 +820,7 @@ fn galazeth_prismari_grants_tap_for_any_color_to_artifacts() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: skycoach,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Galazeth grant: {T}: Add one mana of any color");
 
     let pool_after = g.players[0].mana_pool.total();
@@ -849,8 +846,7 @@ fn galazeth_prismari_grant_requires_galazeth_in_play() {
         .perform_action(GameAction::ActivateAbility {
             card_id: skycoach,
             ability_index: 0,
-            target: None,
-        })
+            target: None, x_value: None })
         .expect_err("no Galazeth → no grant → rejected");
     assert!(
         matches!(err, GameError::AbilityIndexOutOfBounds),
@@ -898,8 +894,7 @@ fn lorehold_pledgemage_gy_exile_cost_pumps_self() {
     let p_before = g.battlefield_find(pledge).unwrap().power();
     let t_before = g.battlefield_find(pledge).unwrap().toughness();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None,
-    })
+        card_id: pledge, ability_index: 0, target: None, x_value: None })
     .expect("Pledgemage activation with bolt in gy");
     drain_stack(&mut g);
 
@@ -925,8 +920,7 @@ fn lorehold_pledgemage_rejects_activation_with_empty_graveyard() {
     let pool_before = g.players[0].mana_pool.total();
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None,
-    });
+        card_id: pledge, ability_index: 0, target: None, x_value: None });
     assert!(r.is_err(),
         "Empty graveyard should reject the exile-other cost");
     assert_eq!(g.players[0].mana_pool.total(), pool_before,
@@ -946,8 +940,7 @@ fn beledros_witherbloom_pay_ten_life_untaps_all_lands() {
 
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: beledros, ability_index: 0, target: None,
-    })
+        card_id: beledros, ability_index: 0, target: None, x_value: None })
     .expect("Beledros activatable as sorcery");
     drain_stack(&mut g);
 
@@ -964,8 +957,7 @@ fn beledros_witherbloom_rejects_activation_with_insufficient_life() {
     g.players[0].life = 5; // not enough for the 10-life cost.
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: beledros, ability_index: 0, target: None,
-    });
+        card_id: beledros, ability_index: 0, target: None, x_value: None });
     assert!(r.is_err(), "Activation rejected when life < 10");
     assert_eq!(g.players[0].life, 5, "Life unchanged on rejection");
 }
@@ -1081,8 +1073,7 @@ fn witherbloom_pledgemage_is_a_mana_ability_per_cr_605() {
     let mana_before = g.players[0].mana_pool.total();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None,
-    })
+        card_id: pledge, ability_index: 0, target: None, x_value: None })
     .expect("Pledgemage mana ability activatable");
 
     // CR 605.4a: mana abilities don't go on the stack. Stack length should
@@ -1113,8 +1104,7 @@ fn witherbloom_pledgemage_rejects_activation_with_zero_life() {
     g.players[0].life = 0;
 
     let r = g.perform_action(GameAction::ActivateAbility {
-        card_id: pledge, ability_index: 0, target: None,
-    });
+        card_id: pledge, ability_index: 0, target: None, x_value: None });
     assert!(r.is_err(), "Should reject when life < 1");
     // Source not tapped (rolled back).
     assert!(!g.battlefield_find(pledge).unwrap().tapped,
@@ -1525,8 +1515,7 @@ fn spell_satchel_tap_adds_one_colorless() {
 
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: satchel, ability_index: 0, target: None,
-    })
+        card_id: satchel, ability_index: 0, target: None, x_value: None })
     .expect("Spell Satchel mana ability activatable");
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1,
         "Spell Satchel should add 1 colorless");
@@ -1546,8 +1535,7 @@ fn spell_satchel_sacrifice_returns_low_cmc_spell_from_graveyard() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: Some(Target::Permanent(bolt)),
-    })
+        target: Some(Target::Permanent(bolt)), x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -1575,8 +1563,7 @@ fn spell_satchel_returns_multiple_low_mv_instants_within_cap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -1601,8 +1588,7 @@ fn spell_satchel_picks_bolt_and_cancel_at_exactly_four_total() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -1627,8 +1613,7 @@ fn spell_satchel_skips_cards_that_would_overflow_cap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -1661,8 +1646,7 @@ fn spell_satchel_greedy_walk_still_fits_smaller_after_skipping_bigger() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -1688,8 +1672,7 @@ fn spell_satchel_filters_to_instants_and_sorceries() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: satchel,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Spell Satchel grave-return activation");
     drain_stack(&mut g);
 
@@ -2215,8 +2198,7 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
 
     let c_before = g.players[0].mana_pool.colorless_amount();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None,
-    }).expect("Hall {T}: Add {C}");
+        card_id: land, ability_index: 0, target: None, x_value: None }).expect("Hall {T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
 
     if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == land) {
@@ -2224,8 +2206,7 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
     }
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(wiz)),
-    }).expect("Hall {2},{T}: +1/+1");
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(wiz)), x_value: None }).expect("Hall {2},{T}: +1/+1");
     drain_stack(&mut g);
 
     let wiz_c = g.battlefield.iter().find(|c| c.id == wiz).unwrap();
@@ -2342,8 +2323,7 @@ fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
     g.clear_sickness(letter_id);
     let c_before = g.players[0].mana_pool.colorless_amount();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 0, target: None,
-    }).expect("{T}: Add {C}");
+        card_id: letter_id, ability_index: 0, target: None, x_value: None }).expect("{T}: Add {C}");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
 
     // Untap, then sac to draw.
@@ -2354,8 +2334,7 @@ fn letter_of_acceptance_etb_gain_life_then_sac_to_draw() {
     g.add_card_to_library(0, catalog::island());
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: letter_id, ability_index: 1, target: None,
-    }).expect("{2},{T},Sac: Draw");
+        card_id: letter_id, ability_index: 1, target: None, x_value: None }).expect("{2},{T},Sac: Draw");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -2544,8 +2523,7 @@ fn dragonsguard_elite_magecraft_adds_counter_and_pumps_x_equal_to_power() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: dge, ability_index: 0, target: None,
-    }).expect("{3}{G}: +X/+X");
+        card_id: dge, ability_index: 0, target: None, x_value: None }).expect("{3}{G}: +X/+X");
     drain_stack(&mut g);
 
     let d2 = g.battlefield.iter().find(|c| c.id == dge).unwrap();
@@ -2772,8 +2750,7 @@ fn reckless_amplimancer_activates_for_plus_three() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Reckless Amplimancer activates");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Reckless Amplimancer activates");
     drain_stack(&mut g);
 
     let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
@@ -2997,8 +2974,7 @@ fn soothsayer_adept_activates_surveil_one() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Surveil 1 activates");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Surveil 1 activates");
     drain_stack(&mut g);
 
     // Surveil 1 either leaves card on top or sends it to graveyard.
@@ -5174,8 +5150,7 @@ fn star_pupils_papers_sac_activation_grants_counter() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: papers,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)),
-    })
+        target: Some(Target::Permanent(bear)), x_value: None })
     .expect("Sac-for-counter activation should be legal");
     drain_stack(&mut g);
 
@@ -5741,8 +5716,7 @@ fn selfless_glyphweaver_sac_grants_indestructible_to_friendlies() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: gw,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Selfless Glyphweaver sac activation");
     drain_stack(&mut g);
 
@@ -5835,8 +5809,7 @@ fn plargg_dean_of_chaos_taps_to_loot() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Plargg activation");
     drain_stack(&mut g);
 
@@ -5865,8 +5838,7 @@ fn plargg_dean_of_chaos_deals_two_damage_when_creature_discarded() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 0,
-        target: Some(Target::Player(1)),
-    })
+        target: Some(Target::Player(1)), x_value: None })
     .expect("Plargg activation");
     drain_stack(&mut g);
 
@@ -5891,8 +5863,7 @@ fn plargg_dean_of_chaos_no_damage_when_noncreature_discarded() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: plargg,
         ability_index: 0,
-        target: Some(Target::Player(1)),
-    })
+        target: Some(Target::Player(1)), x_value: None })
     .expect("Plargg activation");
     drain_stack(&mut g);
 
@@ -5921,8 +5892,7 @@ fn pestilent_cauldron_sac_mills_and_drains() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pc,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Cauldron activation");
     drain_stack(&mut g);
 
@@ -6194,8 +6164,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let bear_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(bear_gy)),
-    }).expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
+        target: Some(Target::Permanent(bear_gy)), x_value: None }).expect("Lorehold Excavation gy-exile activates for {2}{R}{W}, {T}");
     drain_stack(&mut g);
     assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear_gy));
     let spirits: Vec<_> = g.battlefield.iter()
@@ -6211,8 +6180,7 @@ fn lorehold_excavation_exile_creature_mints_spirit_token_non_creature_does_not()
     let doj = g.add_card_to_graveyard(0, catalog::day_of_judgment());
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation, ability_index: 2,
-        target: Some(Target::Permanent(doj)),
-    }).expect("Lorehold Excavation gy-exile activates");
+        target: Some(Target::Permanent(doj)), x_value: None }).expect("Lorehold Excavation gy-exile activates");
     drain_stack(&mut g);
     let spirits = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Spirit" && c.controller == 0)
@@ -6240,8 +6208,7 @@ fn lorehold_excavation_token_scales_with_creature_power() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: excavation,
         ability_index: 2,
-        target: Some(Target::Permanent(angel_gy)),
-    })
+        target: Some(Target::Permanent(angel_gy)), x_value: None })
     .expect("Lorehold Excavation gy-exile activates");
     drain_stack(&mut g);
 
@@ -6915,8 +6882,7 @@ fn manifold_key_grants_unblockable_to_target_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)),
-    })
+        target: Some(Target::Permanent(bear)), x_value: None })
     .expect("Manifold Key {1},{T}: unblockable activatable");
     drain_stack(&mut g);
 
@@ -6953,8 +6919,7 @@ fn manifold_key_untaps_target_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: mk,
         ability_index: 1,
-        target: Some(Target::Permanent(target_artifact)),
-    })
+        target: Some(Target::Permanent(target_artifact)), x_value: None })
     .expect("Manifold Key {T}: untap artifact activatable");
     drain_stack(&mut g);
 
@@ -7163,8 +7128,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     let res_three = g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(
         res_three.is_err(),
         "PoK activation with only 3 charge counters fails"
@@ -7179,8 +7143,7 @@ fn pursuit_of_knowledge_activation_requires_four_charge_counters() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pok,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("PoK activatable with 4+ charge counters");
     drain_stack(&mut g);
 
@@ -7714,8 +7677,7 @@ fn dueling_coach_activation_doubles_counters() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: coach,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Dueling Coach activation works for {2}{W}");
     drain_stack(&mut g);
 
@@ -9984,8 +9946,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("first ability is a mana ability");
 
     // Untap to allow the second activation.
@@ -9997,8 +9958,7 @@ fn heirloom_mirror_tap_for_mana_then_sac_to_draw() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("second ability sacs and draws");
     drain_stack(&mut g);
 
@@ -10331,8 +10291,7 @@ fn strixhaven_stadium_activation_costs_three_charge_counters_and_draws_two() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: stadium,
         ability_index: 0,
-        target: None,
-    }).expect("activation succeeds with 3 charge counters");
+        target: None, x_value: None }).expect("activation succeeds with 3 charge counters");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 2, "drew 2 cards");
@@ -10353,8 +10312,7 @@ fn strixhaven_stadium_activation_rejected_without_enough_charge_counters() {
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: stadium,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(res.is_err(), "activation requires 3 charge counters");
 }
 
@@ -11193,8 +11151,7 @@ fn witchs_cauldron_sac_gains_two_life_and_draws() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: cauldron,
         ability_index: 0,
-        target: None,
-    }).expect("Cauldron activation");
+        target: None, x_value: None }).expect("Cauldron activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
@@ -11237,8 +11194,7 @@ fn tome_of_the_guildpact_activation_draws_a_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: tome,
         ability_index: 0,
-        target: None,
-    }).expect("Tome activation");
+        target: None, x_value: None }).expect("Tome activation");
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew a card");
@@ -11658,8 +11614,7 @@ fn sungrass_egg_sac_adds_two_mana_of_one_color() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: egg,
         ability_index: 0,
-        target: None,
-    }).expect("Egg activation");
+        target: None, x_value: None }).expect("Egg activation");
     drain_stack(&mut g);
 
     // Egg sacrificed off the battlefield.
@@ -11824,8 +11779,7 @@ fn sneaky_snacker_recurs_from_graveyard_to_hand() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    }).expect("Snacker recurs from graveyard");
+        target: None, x_value: None }).expect("Snacker recurs from graveyard");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "snacker in hand");
     assert!(
@@ -11872,8 +11826,7 @@ fn pilgrim_of_the_ages_sac_searches_for_basic_land() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pilgrim,
         ability_index: 0,
-        target: None,
-    }).expect("Pilgrim activation");
+        target: None, x_value: None }).expect("Pilgrim activation");
     drain_stack(&mut g);
     // Pilgrim sacrificed (not on battlefield).
     assert!(!g.battlefield.iter().any(|c| c.id == pilgrim), "pilgrim sacrificed");
@@ -12499,8 +12452,7 @@ fn conjurers_bauble_sac_activation_cantrips() {
     let hand_before = g.players[0].hand.len();
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bauble, ability_index: 0, target: None,
-    }).expect("Bauble activatable");
+        card_id: bauble, ability_index: 0, target: None, x_value: None }).expect("Bauble activatable");
     drain_stack(&mut g);
     // Bauble sacrificed, draw 1.
     assert!(!g.battlefield.iter().any(|c| c.id == bauble), "Bauble sacrificed");
@@ -13525,8 +13477,7 @@ fn lorehold_wand_pings_target_for_two() {
     g.players[0].mana_pool.add_colorless(2);
     let p1_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wand, ability_index: 0, target: Some(Target::Player(1)),
-    }).expect("Wand activation");
+        card_id: wand, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).expect("Wand activation");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_before - 2, "P1 takes 2 from Wand ping");
 }
@@ -13770,8 +13721,7 @@ fn witherbloom_ritualist_pumps_creature_and_gains_life() {
     g.players[0].mana_pool.add_colorless(1);
     let life_before = g.players[0].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wr, ability_index: 0, target: Some(Target::Permanent(bear)),
-    }).expect("Ritualist activation");
+        card_id: wr, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None }).expect("Ritualist activation");
     drain_stack(&mut g);
     let bear_card = g.compute_battlefield().into_iter().find(|c| c.id == bear)
         .expect("bear alive");
@@ -13861,8 +13811,7 @@ fn witherbloom_channeler_taps_for_mana() {
     wc_perm.summoning_sick = false;
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wc, ability_index: 0, target: None,
-    }).expect("Channeler mana activation");
+        card_id: wc, ability_index: 0, target: None, x_value: None }).expect("Channeler mana activation");
     let mana_after = g.players[0].mana_pool.total();
     assert!(mana_after > mana_before, "mana added to pool");
 }
@@ -13884,8 +13833,7 @@ fn conspiracy_theorist_activation_rejected_with_cards_in_hand() {
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: ct,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(res.is_err(),
         "Activation rejected when hand_size > 0; got {:?}", res);
     // CT should not have been tapped (cost rolled back).
@@ -13908,8 +13856,7 @@ fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: ct,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Conspiracy Theorist activates when hand is empty");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1,
@@ -13929,8 +13876,7 @@ fn prismari_bauble_etb_scrys_and_can_sac_for_draw() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pb, ability_index: 0, target: None,
-    }).expect("Bauble sac for draw");
+        card_id: pb, ability_index: 0, target: None, x_value: None }).expect("Bauble sac for draw");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "P0 drew a card");
     // Bauble should now be in graveyard (sacrificed).
@@ -13975,8 +13921,7 @@ fn silverquill_pen_drains_each_opp_on_activation() {
     let p0_before = g.players[0].life;
     let p1_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pen, ability_index: 0, target: None,
-    }).expect("Pen activates");
+        card_id: pen, ability_index: 0, target: None, x_value: None }).expect("Pen activates");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_before - 2, "P1 loses 2");
     assert_eq!(g.players[0].life, p0_before + 2, "P0 gains 2");
@@ -14267,8 +14212,7 @@ fn quandrix_engineer_taps_for_green_or_blue() {
     let qe = g.add_card_to_battlefield(0, catalog::quandrix_engineer());
     // Activate green-mana ability
     g.perform_action(GameAction::ActivateAbility {
-        card_id: qe, ability_index: 0, target: None,
-    }).expect("green tap");
+        card_id: qe, ability_index: 0, target: None, x_value: None }).expect("green tap");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Green) >= 1, "green added");
 }
@@ -14479,8 +14423,7 @@ fn witherbloom_wand_drains_target_player() {
     let p0_before = g.players[0].life;
     let p1_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: wand, ability_index: 0, target: Some(Target::Player(1)),
-    }).expect("Wand activates");
+        card_id: wand, ability_index: 0, target: Some(Target::Player(1)), x_value: None }).expect("Wand activates");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_before - 2);
     assert_eq!(g.players[0].life, p0_before + 2);
@@ -14538,8 +14481,7 @@ fn lorehold_banner_etb_gains_life_and_taps_for_color() {
     assert_eq!(g.players[0].life, life_before + 2, "gains 2");
     // Activate red mana ability
     g.perform_action(GameAction::ActivateAbility {
-        card_id: banner, ability_index: 0, target: None,
-    }).expect("red mana tap");
+        card_id: banner, ability_index: 0, target: None, x_value: None }).expect("red mana tap");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Red) >= 1, "red added");
 }
@@ -14570,8 +14512,7 @@ fn mage_tower_crystal_taps_for_any_color() {
     let mut g = two_player_game();
     let mtc = g.add_card_to_battlefield(0, catalog::mage_tower_crystal());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: mtc, ability_index: 0, target: None,
-    }).expect("rainbow tap");
+        card_id: mtc, ability_index: 0, target: None, x_value: None }).expect("rainbow tap");
     drain_stack(&mut g);
     let total: u32 = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
         .iter()
@@ -14870,8 +14811,7 @@ fn prismari_channeler_taps_for_blue_or_red() {
     let mut g = two_player_game();
     let pc = g.add_card_to_battlefield(0, catalog::prismari_channeler());
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None,
-    }).expect("blue tap");
+        card_id: pc, ability_index: 0, target: None, x_value: None }).expect("blue tap");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Blue) >= 1, "blue added");
 }
@@ -15663,8 +15603,7 @@ fn witherbloom_apothecary_sacs_and_drains() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: apothecary_id,
         ability_index: 0,
-        target: None,
-    }).expect("Apothecary activation works");
+        target: None, x_value: None }).expect("Apothecary activation works");
     drain_stack(&mut g);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == fodder), "fodder went to gy");
     assert_eq!(g.players[1].life, oppbefore - 1, "opp lost 1");
@@ -16642,8 +16581,7 @@ fn quandrix_geologist_can_tap_for_g_or_u() {
     let qg = g.add_card_to_battlefield(0, catalog::quandrix_geologist());
     let pool_g_before = g.players[0].mana_pool.amount(Color::Green);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: qg, ability_index: 0, target: None,
-    }).expect("Tap for G");
+        card_id: qg, ability_index: 0, target: None, x_value: None }).expect("Tap for G");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), pool_g_before + 1, "added G");
 }
@@ -17411,8 +17349,7 @@ fn witherbloom_brewer_taps_for_two_colors_paying_two_life() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Brewer activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 2, "paid 2 life");
@@ -17764,8 +17701,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Sanctum can tap for {C}");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
@@ -17778,8 +17714,7 @@ fn strixhaven_sanctum_taps_for_colorless_and_surveils() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Surveil ability activatable");
     drain_stack(&mut g);
     // Library should either shrink by 1 (surveiled to gy) or be the same.
@@ -17866,8 +17801,7 @@ fn mystic_slate_taps_for_scry_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Slate scry activatable");
     drain_stack(&mut g);
     let bf = g.battlefield_find(id).expect("Slate on bf");
@@ -17997,8 +17931,7 @@ fn lorehold_cathedral_taps_for_red_or_white() {
     let id = g.add_card_to_battlefield(0, catalog::lorehold_cathedral());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("tap for R");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap for R");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red mana");
 }
@@ -18286,8 +18219,7 @@ fn strixhaven_reservoir_taps_for_any_color() {
     let id = g.add_card_to_battlefield(0, catalog::strixhaven_reservoir());
     g.clear_sickness(id);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Reservoir taps for color");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Reservoir taps for color");
     drain_stack(&mut g);
     // AutoDecider picks a color (white by default).
     let mana = &g.players[0].mana_pool;
@@ -18379,8 +18311,7 @@ fn quandrix_loremind_sac_draws_two() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Loremind activatable");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Loremind activatable");
     drain_stack(&mut g);
     // Sacrificed → no longer on bf.
     assert!(g.battlefield_find(id).is_none(), "Loremind sacrificed");
@@ -18710,8 +18641,7 @@ fn lorehold_bookburner_sac_pings_a_creature() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::ActivateAbility {
         card_id: burner, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bear)),
-    }).expect("Activatable");
+        target: Some(crate::game::types::Target::Permanent(bear)), x_value: None }).expect("Activatable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(burner).is_none(), "Burner sacrificed");
     // Bear (2 toughness) takes 2 damage → dies to SBA.
@@ -18778,8 +18708,7 @@ fn quandrix_tessellator_activated_mints_fractal_with_counters() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Activatable");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Activatable");
     drain_stack(&mut g);
     let fractal = g.battlefield.iter().find(|c| {
         c.controller == 0 && c.is_token && c.definition.name == "Fractal"
@@ -18846,8 +18775,7 @@ fn strixhaven_vault_etb_scrys_then_sac_draws() {
     g.players[0].mana_pool.add_colorless(1);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: vault_id, ability_index: 0, target: None,
-    }).expect("Sac activation");
+        card_id: vault_id, ability_index: 0, target: None, x_value: None }).expect("Sac activation");
     drain_stack(&mut g);
     assert!(g.battlefield_find(vault_id).is_none(), "Vault sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew 1 card");
@@ -21112,8 +21040,7 @@ fn strixhaven_initiate_has_reach_and_taps_for_green() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: init,
         ability_index: 0,
-        target: None,
-    }).expect("Mana ability activates");
+        target: None, x_value: None }).expect("Mana ability activates");
     drain_stack(&mut g);
     let green_after = g.players[0].mana_pool.amount(Color::Green);
     assert_eq!(green_after, green_before + 1, "Initiate added Green");
@@ -22830,8 +22757,7 @@ fn inkling_sage_pump_activation_makes_two_two_flier() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sage,
         ability_index: 0,
-        target: None,
-    }).expect("Sage activation");
+        target: None, x_value: None }).expect("Sage activation");
     drain_stack(&mut g);
     let sage = g.battlefield_find(sage).unwrap();
     assert_eq!(sage.power(), 2, "Sage pumped from 1/2 → 2/3");
@@ -22870,8 +22796,7 @@ fn spirit_conduit_taps_for_one_damage() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sc,
         ability_index: 0,
-        target: Some(Target::Player(1)),
-    }).expect("Spirit Conduit activation");
+        target: Some(Target::Player(1)), x_value: None }).expect("Spirit Conduit activation");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 1, "Conduit pings for 1");
     let sc = g.battlefield_find(sc).unwrap();
@@ -22892,8 +22817,7 @@ fn quandrix_aether_adept_taps_target_creature() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: qa,
         ability_index: 0,
-        target: Some(Target::Permanent(bear)),
-    }).expect("Aether Adept activation");
+        target: Some(Target::Permanent(bear)), x_value: None }).expect("Aether Adept activation");
     drain_stack(&mut g);
     let bear = g.battlefield_find(bear).unwrap();
     assert!(bear.tapped, "Bear tapped");
@@ -26851,8 +26775,7 @@ fn lorehold_memorial_taps_for_red_or_white() {
     drain_stack(&mut g);
     // Activate the Red mana ability (index 0).
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Memorial Red mana ability");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Memorial Red mana ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     let body = g.battlefield_find(id).unwrap();
     assert!(body.tapped);
@@ -27094,8 +27017,7 @@ fn witherbloom_mireguide_taps_for_black_or_green() {
     g.clear_sickness(id);
     drain_stack(&mut g);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Mireguide Black ability");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Mireguide Black ability");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
 }
 
@@ -27629,8 +27551,7 @@ fn lorehold_pyromaster_taps_for_three_damage() {
     g.players[0].mana_pool.add_colorless(2);
     let opp_before = g.players[1].life;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: Some(crate::game::types::Target::Player(1)),
-    }).expect("Pyromaster activated");
+        card_id: id, ability_index: 0, target: Some(crate::game::types::Target::Player(1)), x_value: None }).expect("Pyromaster activated");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 3);
 }
@@ -28772,8 +28693,7 @@ fn strixhaven_banner_taps_for_any_color() {
     drain_stack(&mut g);
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Banner mana ability");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Banner mana ability");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), mana_before + 1);
 }
@@ -28787,8 +28707,7 @@ fn strixhaven_banner_sac_to_draw_a_card() {
     drain_stack(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None,
-    }).expect("Banner sac-draw ability");
+        card_id: id, ability_index: 1, target: None, x_value: None }).expect("Banner sac-draw ability");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == id), "banner sacrificed");
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw 1");
@@ -28838,8 +28757,7 @@ fn strixhaven_pupil_activated_scry_and_draw() {
     drain_stack(&mut g);
     let hand_before = g.players[0].hand.len();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Pupil activated");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Pupil activated");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "draw 1");
 }
@@ -35489,8 +35407,7 @@ fn strixhaven_crucible_activation_drains_one() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: Some(crate::game::types::Target::Player(1)),
-    })
+        target: Some(crate::game::types::Target::Player(1)), x_value: None })
     .expect("Crucible activatable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 1);
@@ -38745,8 +38662,7 @@ fn pest_conservator_sac_a_pest_draws() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: pc, ability_index: 0, target: None,
-    }).expect("Conservator activatable");
+        card_id: pc, ability_index: 0, target: None, x_value: None }).expect("Conservator activatable");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == pest),
         "Pest should be sacrificed");
@@ -44853,8 +44769,7 @@ fn quandrix_mistwarden_taps_to_scry_one() {
     assert!(view.has_keyword(&Keyword::Defender));
     // Activate the scry ability
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("Scry activatable");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Scry activatable");
     drain_stack(&mut g);
     // Tapped after activation
     let view = g.battlefield_find(id).expect("Mistwarden still on bf");
@@ -45827,8 +45742,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bolt_id)),
-    }).expect("Mavinda activation (cost {0})");
+        target: Some(crate::game::types::Target::Permanent(bolt_id)), x_value: None }).expect("Mavinda activation (cost {0})");
     drain_stack(&mut g);
 
     let exiled = g.exile.iter().find(|c| c.id == bolt_id)
@@ -45844,8 +45758,7 @@ fn mavinda_activation_exiles_gy_is_card_and_grants_may_play() {
     g.players[0].graveyard.push(bolt2);
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: mavinda, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(bolt2_id)),
-    });
+        target: Some(crate::game::types::Target::Permanent(bolt2_id)), x_value: None });
     assert!(result.is_err(),
         "Second Mavinda activation in same turn should be rejected (once-per-turn)");
 }

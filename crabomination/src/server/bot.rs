@@ -144,6 +144,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: 0,
             target: None,
+            x_value: None,
         };
         if state.would_accept(action.clone()) {
             return action;
@@ -160,6 +161,7 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
             card_id: id,
             ability_index: idx,
             target: None,
+            x_value: None,
         };
         if state.would_accept(action.clone()) {
             return action;

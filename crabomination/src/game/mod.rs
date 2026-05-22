@@ -1570,7 +1570,8 @@ impl GameState {
                 card_id,
                 ability_index,
                 target,
-            } => self.activate_ability(card_id, ability_index, target),
+                x_value,
+            } => self.activate_ability(card_id, ability_index, target, x_value),
             GameAction::ActivateLoyaltyAbility {
                 card_id,
                 ability_index,

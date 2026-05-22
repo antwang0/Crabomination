@@ -354,8 +354,7 @@ fn burrog_banemaker_pump_ability_works() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: banemaker,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Banemaker pump activatable for {1}{B}");
     drain_stack(&mut g);
 
@@ -670,8 +669,7 @@ fn noxious_newt_taps_for_green() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: newt,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Noxious Newt {T} mana ability activatable");
     drain_stack(&mut g);
 
@@ -699,8 +697,7 @@ fn mindful_biomancer_etb_gains_one_life_and_pump_is_once_per_turn() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: bio, ability_index: 0, target: None,
-    })
+        card_id: bio, ability_index: 0, target: None, x_value: None })
     .expect("Pump activatable for {2}{G}");
     drain_stack(&mut g);
 
@@ -712,8 +709,7 @@ fn mindful_biomancer_etb_gains_one_life_and_pump_is_once_per_turn() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
     let again = g.perform_action(GameAction::ActivateAbility {
-        card_id: bio, ability_index: 0, target: None,
-    });
+        card_id: bio, ability_index: 0, target: None, x_value: None });
     assert!(again.is_err(),
         "Mindful Biomancer pump should be activatable only once each turn");
 }
@@ -879,8 +875,7 @@ fn charging_strifeknight_loots_with_tap() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: knight,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Strifeknight tap-loot ability activatable");
     drain_stack(&mut g);
 
@@ -924,8 +919,7 @@ fn shattered_acolyte_sac_destroys_artifact() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: acolyte,
         ability_index: 0,
-        target: Some(Target::Permanent(mind_stone)),
-    })
+        target: Some(Target::Permanent(mind_stone)), x_value: None })
     .expect("Shattered Acolyte sac-and-destroy castable");
     drain_stack(&mut g);
 
@@ -2451,8 +2445,7 @@ fn hardened_academic_discard_grants_lifelink_eot() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: academic,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Discard ability should activate");
     drain_stack(&mut g);
 
@@ -3168,8 +3161,7 @@ fn diary_of_dreams_activation_costs_five_with_no_page_counters() {
     let res = g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(res.is_err(), "0-Page Diary activation needs {{5}}, only 4 available");
     let d = g.battlefield.iter().find(|c| c.id == diary).unwrap();
     assert!(!d.tapped, "Diary should not tap on a failed payment");
@@ -3192,8 +3184,7 @@ fn diary_of_dreams_page_counters_reduce_cost_by_one_each() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Diary activates at {2} with 3 page counters");
     drain_stack(&mut g);
     assert_eq!(
@@ -3222,8 +3213,7 @@ fn diary_of_dreams_page_counters_clamp_at_printed_generic() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: diary,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Diary should activate at {{0}} with 8 page counters");
     drain_stack(&mut g);
     assert_eq!(
@@ -5285,8 +5275,7 @@ fn ark_of_hunger_mill_activation() {
     let gy_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ark, ability_index: 0, target: None,
-    })
+        card_id: ark, ability_index: 0, target: None, x_value: None })
     .expect("Ark of Hunger {T}: Mill activation");
     drain_stack(&mut g);
 
@@ -5668,8 +5657,7 @@ fn topiary_lecturer_taps_for_g_equal_to_power() {
     }
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lec, ability_index: 0, target: None,
-    })
+        card_id: lec, ability_index: 0, target: None, x_value: None })
     .expect("Topiary Lecturer {T}: Add G mana ability");
     drain_stack(&mut g);
 
@@ -6151,8 +6139,7 @@ fn rubble_rouser_activation_exiles_gy_card_pings_opp_and_adds_red() {
     let opp_life_before = g.players[1].life;
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    })
+        card_id: id, ability_index: 0, target: None, x_value: None })
     .expect("Rubble Rouser activation w/ gy card to exile");
     drain_stack(&mut g);
 
@@ -6176,8 +6163,7 @@ fn rubble_rouser_activation_rejected_with_empty_graveyard() {
     assert!(g.players[0].graveyard.is_empty());
 
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    });
+        card_id: id, ability_index: 0, target: None, x_value: None });
     assert!(res.is_err(),
         "Activation rejected when gy is empty; got {:?}", res);
     assert!(!g.battlefield_find(id).unwrap().tapped,
@@ -6253,8 +6239,7 @@ fn petrified_hamlet_taps_for_colorless() {
         c.tapped = false;
     }
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lid, ability_index: 0, target: None,
-    })
+        card_id: lid, ability_index: 0, target: None, x_value: None })
     .expect("Petrified Hamlet {T}: Add C");
     drain_stack(&mut g);
 
@@ -6930,8 +6915,7 @@ fn resonating_lute_draw_blocked_when_hand_below_seven() {
     g.add_card_to_library(0, catalog::lightning_bolt());
 
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: lute, ability_index: 0, target: None,
-    });
+        card_id: lute, ability_index: 0, target: None, x_value: None });
     assert!(res.is_err(),
         "Resonating Lute should reject activation with hand size < 7");
     assert!(g.players[0].hand.is_empty(),
@@ -6953,8 +6937,7 @@ fn resonating_lute_draw_succeeds_at_seven_in_hand() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: lute, ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Resonating Lute should activate when hand size ≥ 7");
     drain_stack(&mut g);
 
@@ -6972,8 +6955,7 @@ fn potioners_trove_lifegain_blocked_without_spell_cast() {
 
     // Lifegain ability index 1 (mana ability is index 0).
     let res = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None,
-    });
+        card_id: trove, ability_index: 1, target: None, x_value: None });
     assert!(res.is_err(),
         "Potioner's Trove lifegain should reject without IS-cast this turn");
     assert!(!g.battlefield_find(trove).unwrap().tapped,
@@ -6991,8 +6973,7 @@ fn potioners_trove_lifegain_succeeds_after_spell_cast() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None,
-    })
+        card_id: trove, ability_index: 1, target: None, x_value: None })
     .expect("Potioner's Trove lifegain should activate when a spell was cast");
     drain_stack(&mut g);
 
@@ -7379,8 +7360,7 @@ fn page_loose_leaf_taps_for_colorless() {
 
     let mana_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    })
+        card_id: id, ability_index: 0, target: None, x_value: None })
     .expect("Page, Loose Leaf {T}: Add {C} should activate");
     drain_stack(&mut g);
 
@@ -7400,8 +7380,7 @@ fn page_loose_leaf_grandeur_rejected_without_another_page_in_hand() {
     drain_stack(&mut g);
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None,
-    });
+        card_id: id, ability_index: 1, target: None, x_value: None });
     assert!(result.is_err(),
         "Grandeur rejected without another Page in hand");
 }
@@ -7431,8 +7410,7 @@ fn page_loose_leaf_grandeur_with_another_page_reveals_is_card() {
     drain_stack(&mut g);
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None,
-    });
+        card_id: id, ability_index: 1, target: None, x_value: None });
     assert!(result.is_ok(),
         "Grandeur should activate when another Page is in hand");
     drain_stack(&mut g);
@@ -7851,8 +7829,7 @@ fn ward_counters_opp_activated_ability_when_payer_cannot_afford() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sorcerer,
         ability_index: 0,
-        target: Some(Target::Permanent(demo)),
-    })
+        target: Some(Target::Permanent(demo)), x_value: None })
     .expect("Activation legal at the cost line — Ward fires after the ability is queued");
     drain_stack(&mut g);
 
@@ -7876,8 +7853,7 @@ fn ward_allows_opp_activated_ability_when_payer_can_afford() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: sorcerer,
         ability_index: 0,
-        target: Some(Target::Permanent(demo)),
-    })
+        target: Some(Target::Permanent(demo)), x_value: None })
     .expect("Activation legal");
     drain_stack(&mut g);
 
@@ -8892,8 +8868,7 @@ fn potioners_trove_lifegain_rejects_after_creature_cast_only() {
     g.players[0].instants_or_sorceries_cast_this_turn = 0;
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None,
-    });
+        card_id: trove, ability_index: 1, target: None, x_value: None });
     assert!(matches!(result, Err(GameError::AbilityConditionNotMet)),
         "Should reject without IS cast (got {:?})", result);
 }
@@ -8929,8 +8904,7 @@ fn great_hall_taps_for_colorless() {
     let mp_before_c = g.players[0].mana_pool.colorless_amount();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    })
+        card_id: id, ability_index: 0, target: None, x_value: None })
     .expect("Great Hall {T}: Add {C}");
 
     assert_eq!(g.players[0].mana_pool.colorless_amount(), mp_before_c + 1);
@@ -8946,8 +8920,7 @@ fn great_hall_pay_one_life_taps_for_any_color() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Black)]));
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 1, target: None,
-    })
+        card_id: id, ability_index: 1, target: None, x_value: None })
     .expect("Great Hall pay-1-life mana ability");
 
     assert_eq!(g.players[0].life, life_before - 1);
@@ -9296,8 +9269,7 @@ fn sundering_archaic_two_mana_bottoms_graveyard_card() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: archaic_id,
         ability_index: 0,
-        target: Some(Target::Permanent(bolt_id)),
-    })
+        target: Some(Target::Permanent(bolt_id)), x_value: None })
     .expect("Sundering Archaic {2} ability activatable");
     drain_stack(&mut g);
     // Bolt should be at the bottom of player 1's library, not in their gy.
@@ -9339,8 +9311,7 @@ fn summoned_dromedary_returns_from_graveyard_to_hand() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: drome,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Dromedary activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -9362,8 +9333,7 @@ fn summoned_dromedary_activation_rejected_during_opponent_priority() {
     let _ = g.perform_action(GameAction::ActivateAbility {
         card_id: drome,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect_err("opponent shouldn't be able to activate a graveyard card belonging to player 0");
 }
 
@@ -9381,8 +9351,7 @@ fn teachers_pest_returns_from_graveyard_to_battlefield_tapped() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: pest,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Teacher's Pest activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -9404,8 +9373,7 @@ fn stone_docent_exiles_self_and_gains_life() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: docent,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Stone Docent activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -9429,8 +9397,7 @@ fn eternal_student_exiles_self_and_creates_two_inklings() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: student,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Eternal Student activation from gy must succeed");
     drain_stack(&mut g);
 
@@ -9456,8 +9423,7 @@ fn stone_docent_rejected_at_instant_speed() {
     let err = g.perform_action(GameAction::ActivateAbility {
         card_id: docent,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(err.is_err(), "Stone Docent should reject upkeep activation (sorcery-speed)");
 }
 
@@ -9556,8 +9522,7 @@ fn postmortem_professor_returns_from_graveyard_by_exiling_instant_or_sorcery() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: prof_id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Postmortem Professor gy-activation should be legal with bolt in gy");
     drain_stack(&mut g);
 
@@ -9587,8 +9552,7 @@ fn postmortem_professor_rejects_activation_without_eligible_gy_card() {
     let result = g.perform_action(GameAction::ActivateAbility {
         card_id: prof_id,
         ability_index: 0,
-        target: None,
-    });
+        target: None, x_value: None });
     assert!(result.is_err(),
         "Activation must reject when no IS card is in the graveyard");
     // Mana should be untouched (pre-flight gate rejected before payment).
@@ -10058,8 +10022,7 @@ fn skycoach_waypoint_taps_for_colorless() {
     let c_before = g.players[0].mana_pool.colorless_amount();
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 0, target: None,
-    })
+        card_id: land, ability_index: 0, target: None, x_value: None })
     .expect("{T}: Add {C} activatable");
 
     assert_eq!(g.players[0].mana_pool.colorless_amount(), c_before + 1);
@@ -10085,8 +10048,7 @@ fn skycoach_waypoint_prepare_activation_adds_prepared_counter() {
     );
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-    })
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None })
     .expect("Skycoach Waypoint {3}, {T}: prepare activation");
     drain_stack(&mut g);
 
@@ -10109,8 +10071,7 @@ fn skycoach_waypoint_prepare_rejected_without_three_mana() {
     // No mana in pool — activation should be rejected.
 
     let result = g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-    });
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None });
     assert!(
         result.is_err(),
         "prepare activation should fail without {{3}} in pool"
@@ -10177,8 +10138,7 @@ fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)),
-    })
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None })
     .expect("Skycoach Waypoint prepare activation");
     drain_stack(&mut g);
 
@@ -11048,8 +11008,7 @@ fn potioners_trove_lifegain_requires_is_cast_this_turn() {
     // Ability index 1 = lifegain activation. With 0 IS casts, the
     // condition rejects.
     let err = g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None,
-    });
+        card_id: trove, ability_index: 1, target: None, x_value: None });
     assert!(err.is_err(), "Lifegain activation should be rejected without an IS cast this turn");
     assert_eq!(g.players[0].life, life_before, "No life gained on rejected activation");
 
@@ -11066,8 +11025,7 @@ fn potioners_trove_lifegain_requires_is_cast_this_turn() {
 
     // Now the lifegain activation succeeds.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: trove, ability_index: 1, target: None,
-    })
+        card_id: trove, ability_index: 1, target: None, x_value: None })
     .expect("Lifegain activation should succeed after casting an IS spell");
     drain_stack(&mut g);
     assert_eq!(
@@ -11497,8 +11455,7 @@ fn ark_of_hunger_mill_activation_grants_may_play() {
     }
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: ark_id, ability_index: 0, target: None,
-    }).expect("Ark mill activation");
+        card_id: ark_id, ability_index: 0, target: None, x_value: None }).expect("Ark mill activation");
     drain_stack(&mut g);
 
     let milled = g.players[0].graveyard.iter().find(|c| c.id == top_id)
@@ -11929,8 +11886,7 @@ fn nita_forum_conciliator_activation_exiles_and_grants_may_play() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: nita, ability_index: 0,
-        target: Some(crate::game::types::Target::Permanent(sac)),
-    }).expect("Nita activation");
+        target: Some(crate::game::types::Target::Permanent(sac)), x_value: None }).expect("Nita activation");
     drain_stack(&mut g);
 
     // Bolt should now be in exile with may_play stamped + exile_after.

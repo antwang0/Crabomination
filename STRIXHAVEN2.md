@@ -22,7 +22,22 @@ Two adjacent catalogs:
 | STX (327 cards) | 1526 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (modern_decks, claude/modern_decks branch — latest revision —
+Push (claude/modern_decks branch — current head — **post-batch 101:
+both Strixhaven sets remain at 100% ✅ catalog fidelity (255 SOS / 1526
+STX). Headline engine work this batch lands `GameAction::ActivateAbility.
+x_value: Option<u32>` so X-cost activated abilities (Pernicious Deed,
+future Walking Ballista-style `{X}: deal X damage`) bind X at activation
+time — the value rides on `StackItem::Trigger.x_value` and is consumed
+via `Value::XFromCost` at resolution. CR 602.2b audit row added to
+TODO.md. Card-side: 23 brand-new Modern-supplement cards (Snapcaster
+Mage, Pyroblast/REB/Hydroblast/BEB, Tale's End, Wall of Omens, Wall of
+Roots, Toxic Deluge, Pernicious Deed, Demonic Consultation, Phyrexian
+Reclamation, Sylvan Library, Howling Mine, Ophiomancer, Yavimaya Elder,
+Channel, Three Visits, Stroke of Genius, Green/Red/White/Black Sun's
+Zenith, plus the Rofellos Forest-count-scaling promotion). Tests:
+3358 → 3386.**
+
+Prior push (modern_decks, batch 101):
 **batch 101 (final 🟡 sweep): the last three 🟡 cards promoted to ✅:
 Moment of Reckoning (doc-sync; "choose up to 4 with repeats" multi-
 mode rider engine-wide ⏳, ChooseMode covers "pick one" path),

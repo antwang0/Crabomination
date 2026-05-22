@@ -1371,7 +1371,7 @@ impl GameState {
                 let mut extra_types = def.subtypes.creature_types.clone();
                 for t in extra_creature_types.iter() {
                     if !extra_types.contains(t) {
-                        extra_types.push(t.clone());
+                        extra_types.push(*t);
                     }
                 }
                 def.subtypes.creature_types = extra_types;
@@ -2804,7 +2804,7 @@ impl GameState {
             }
             Selector::TopOfLibraryUntilMvAtLeast { who, threshold } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return vec![]; };
-                let cap = self.evaluate_value(threshold, ctx).max(0) as i32;
+                let cap = self.evaluate_value(threshold, ctx).max(0);
                 let mut sum: i32 = 0;
                 let mut out: Vec<EntityRef> = Vec::new();
                 for c in self.players[p].library.iter() {

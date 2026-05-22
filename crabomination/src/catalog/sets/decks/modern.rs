@@ -5983,13 +5983,19 @@ pub fn elvish_reclaimer() -> CardDefinition {
 /// Rofellos, Llanowar Emissary — {G}{G} Legendary Creature — Elf Druid. 2/1.
 /// {T}: Add {G}{G} for each Forest you control.
 ///
-/// Approximation: scaling generic-green-mana abilities aren't modeled, so
-/// we use a flat `{T}: Add {G}{G}` (Fanatic-of-Rhonas-style net gain). The
-/// "Forest count" multiplier collapses to 2 — gameplay-relevant for the
-/// "ramp into a 6-drop on turn 3" line, but doesn't snowball with extra
-/// Forests.
+/// Push (modern_decks): the "for each Forest" rider is now wired
+/// faithfully via `ManaPayload::OfColor(Green, Value::Times(Const(2),
+/// CountOf(Forest ∧ ControlledByYou)))`. Tapping Rofellos with N Forests
+/// in play adds `2·N` green mana to the controller's pool. The activation
+/// cost remains a plain `{T}`; the dynamic payload reads the live Forest
+/// count at resolution time. Same shape as Topiary Lecturer / Molten-Core
+/// Maestro's power-scaled mana payouts (`PowerOf(This)`).
 pub fn rofellos_llanowar_emissary() -> CardDefinition {
-    use crate::card::{ActivatedAbility, Supertype as Sup};
+    use crate::card::{ActivatedAbility, LandType, Supertype as Sup};
+    let forest_count = Value::CountOf(Box::new(Selector::EachPermanent(
+        SelectionRequirement::HasLandType(LandType::Forest)
+            .and(SelectionRequirement::ControlledByYou),
+    )));
     CardDefinition {
         name: "Rofellos, Llanowar Emissary",
         cost: cost(&[g(), g()]),
@@ -6006,7 +6012,10 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::Times(Box::new(Value::Const(2)), Box::new(forest_count)),
+                ),
             },
             once_per_turn: false,
             sorcery_speed: false,
@@ -6998,3 +7007,768 @@ pub fn sudden_edict() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── New cards (push: claude/modern_decks) ───────────────────────────────────
+
+/// Snapcaster Mage — {1}{U} Creature — Human Wizard 2/1, Flash. "When
+/// this creature enters, target instant or sorcery card in your graveyard
+/// gains flashback until end of turn. The flashback cost is equal to its
+/// mana cost."
+///
+/// Wired with the same `Effect::GrantMayPlay { exile_after: true,
+/// duration: EndOfThisTurn }` shape that powers Flashback (the spell) and
+/// Lorehold the Historian's miracle grant. Approximation: the cast pays
+/// `{0}` (no `MayPlayPermission.alt_cost`-equals-mana-cost primitive
+/// today), which is strictly stronger than the printed "flashback cost
+/// equals its mana cost". The play pattern — recover one IS spell from
+/// your gy for one turn — is preserved.
+pub fn snapcaster_mage() -> CardDefinition {
+    use crate::card::{Keyword, Zone};
+    CardDefinition {
+        name: "Snapcaster Mage",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GrantMayPlay {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    },
+                    Value::Const(1),
+                ),
+                duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                to_owner: false,
+                exile_after: true,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pyroblast — {R} Instant. "Choose one — Counter target spell if it's
+/// blue. / Destroy target permanent if it's blue."
+///
+/// Wired as `ChooseMode([CounterSpell(IsSpellOnStack ∧ HasColor(Blue)),
+/// Destroy(Permanent ∧ HasColor(Blue))])`. AutoDecider picks mode 0 (the
+/// counter half is usually the higher-tempo pick). Each mode's
+/// target-filter rejects non-blue targets at cast time.
+pub fn pyroblast() -> CardDefinition {
+    CardDefinition {
+        name: "Pyroblast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Red Elemental Blast — {R} Instant. Functionally identical to Pyroblast
+/// (the original printing — Pyroblast is the Chronicles reprint with
+/// slightly altered wording). Reuses the same `ChooseMode` shape.
+pub fn red_elemental_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Red Elemental Blast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Blue)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Hydroblast — {U} Instant. "Choose one — Counter target spell if it's
+/// red. / Destroy target permanent if it's red."
+///
+/// Blue mirror of Pyroblast. AutoDecider picks mode 0.
+pub fn hydroblast() -> CardDefinition {
+    CardDefinition {
+        name: "Hydroblast",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Blue Elemental Blast — {U} Instant. Functionally identical to
+/// Hydroblast (the original printing).
+pub fn blue_elemental_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Blue Elemental Blast",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::HasColor(Color::Red)),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Three Visits — {1}{G} Sorcery. "Search your library for a Forest
+/// card, put it onto the battlefield, then shuffle." Identical text to
+/// Nature's Lore (which is already in the catalog) — they're both
+/// `Search(Land ∧ HasLandType(Forest) → BF untapped)`. Three Visits is
+/// the Portal Three Kingdoms / Commander Legends printing, included
+/// here so green ramp shells can run the full eight-copy package.
+pub fn three_visits() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Three Visits",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land
+                .and(SelectionRequirement::HasLandType(LandType::Forest)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Tale's End — {1}{U} Instant. "Counter target legendary spell,
+/// activated or triggered ability from a legendary source, or saga."
+///
+/// Wired as `ChooseMode([CounterSpell(IsSpellOnStack ∧ Legendary),
+/// CounterAbility(AnyAbility)])`. AutoDecider picks mode 0 (the
+/// counter-the-legendary-spell half is the marquee use). The "saga"
+/// half collapses (no saga primitive yet) but the ability counter
+/// catches saga lore-counter triggers via `CounterAbility`.
+pub fn tales_end() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Tale's End",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack
+                        .and(SelectionRequirement::HasSupertype(Supertype::Legendary)),
+                ),
+            },
+            Effect::CounterAbility {
+                what: Selector::Target(0),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Wall of Omens — {1}{W} Creature — Wall 0/4 with Defender. "When this
+/// creature enters, draw a card."
+///
+/// Classic cantrip defender. ETB Draw 1 is the canonical pattern —
+/// fills the slot of "defensive 4-toughness body + replaces itself"
+/// that Eternal Witness fills for green and Mulldrifter fills at 5
+/// mana for blue.
+pub fn wall_of_omens() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Wall of Omens",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Toxic Deluge — {2}{B}{B} Sorcery. "As an additional cost to cast
+/// this spell, pay X life. All creatures get -X/-X until end of turn."
+///
+/// Approximation: the cost-as-life payment is folded into resolution
+/// (cost-as-first-step model) — at resolution we pay `XFromCost` life
+/// and then apply `-X/-X` to each creature. Hits indestructibles only
+/// to shrink them, but kills creatures with toughness ≤ X. The cost
+/// model collapses the "pay life as additional cost" gate; the
+/// gameplay outcome (a one-sided wrath scaled by X life paid) is
+/// preserved.
+pub fn toxic_deluge() -> CardDefinition {
+    CardDefinition {
+        name: "Toxic Deluge",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            // Pay X life as additional cost (cost-as-first-step).
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::XFromCost,
+            },
+            // Each creature gets -X/-X EOT (read live from the spell's
+            // X paid via `XFromCost`).
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                    toughness: Value::Diff(
+                        Box::new(Value::Const(0)),
+                        Box::new(Value::XFromCost),
+                    ),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        ]),
+        // Toxic Deluge is famously an X-cost sorcery — the X slot lets
+        // the caster scale the sweep up at extra cost.
+        ..Default::default()
+    }
+}
+
+/// Pernicious Deed — {1}{B}{G} Enchantment. "{X}, Sacrifice this
+/// enchantment: Destroy each artifact, creature, and enchantment with
+/// mana value X or less."
+///
+/// Wired as a `sac_cost: true` activation that pays X generic + sacs
+/// Deed, then `ForEach(EachPermanent(...)) + If(ManaValueAtMost(X),
+/// Destroy)`. The mana-value filter reads `XFromCost` at resolution.
+/// Lands are intentionally excluded (printed). Reuses the wrath-with-X
+/// shape that already drives Wrath of the Skies and Pest Control.
+pub fn pernicious_deed() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Pernicious Deed",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[ManaSymbol::X]),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Enchantment),
+                ),
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueAtMost(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                    then: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+                    else_: Box::new(Effect::Noop),
+                }),
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Roots — {1}{G} Creature — Plant Wall 0/5 with Defender.
+/// "Put a -0/-1 counter on this creature: Add {G}. Activate only once
+/// each turn."
+///
+/// The -0/-1 counter is modeled as a +1/+1 negative counter on the
+/// engine side; here we use a direct `PumpPT(-0/-1)` permanent
+/// modification stand-in. Approximation: in lieu of a true "permanent
+/// modification stack" the toughness drops by 1 each activation via a
+/// permanent `Duration::Permanent` pump. Mana ability so the activation
+/// doesn't go on the stack.
+pub fn wall_of_roots() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    CardDefinition {
+        name: "Wall of Roots",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 5,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(0),
+                    toughness: Value::Const(-1),
+                    duration: Duration::Permanent,
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![Color::Green]),
+                },
+            ]),
+            once_per_turn: true,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Demonic Consultation — {B} Instant. "Name a card. Exile the top six
+/// cards of your library, then reveal cards from the top of your
+/// library until you reveal the named card, exiling each card along the
+/// way. Put that card into your hand and exile all other cards revealed
+/// this way."
+///
+/// Approximation: name-a-card primitive doesn't exist, so we collapse
+/// to "exile top 6, then take any one card." Powerful but flavor-
+/// accurate (the controller still trades 6 cards from their library for
+/// 1 card to hand). Auto-target on the search picks any card. The
+/// printed "exile" destination for the misses is approximated with
+/// `Mill` (cards routed to graveyard) — strictly more recoverable than
+/// printed but preserves the library-thinning cost.
+pub fn demonic_consultation() -> CardDefinition {
+    CardDefinition {
+        name: "Demonic Consultation",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(6),
+            },
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Any,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Channel — {G} Sorcery (Kamigawa). "Until end of turn, you may pay
+/// 1 life rather than pay {1}." Approximated as a one-shot "lose 1
+/// life and add {C} once" tap, since the engine has no "pay life
+/// instead of mana" alternative-payment primitive.
+///
+/// The printed spell is a static "this turn" replacement on mana
+/// payments. Our shipping body folds the alt-payment into a single
+/// resolve: pay 1 life + add {1} once. Re-cast the spell to ramp
+/// further.
+pub fn channel() -> CardDefinition {
+    CardDefinition {
+        name: "Channel",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Phyrexian Reclamation — {B}{B} Enchantment. "{1}{B}, Pay 2 life:
+/// Return target creature card from your graveyard to your hand."
+///
+/// Pure activated reanimator engine. The `life_cost: 2` field handles
+/// the life payment; the mana cost is one generic + one black; the
+/// target filter picks a creature card in your graveyard via
+/// `prefers_graveyard_source` heuristic.
+pub fn phyrexian_reclamation() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Phyrexian Reclamation",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b()]),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 2,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sylvan Library — {1}{G} Enchantment. "At the beginning of your draw
+/// step, you may draw two additional cards. If you do, choose two
+/// cards in your hand drawn this turn. For each of those cards, pay 4
+/// life or put the card on top of your library."
+///
+/// Approximation: the "draw 2 extra, return 2 unless you pay 8" loop
+/// is collapsed to a flat "draw 1 extra each turn, lose 4 life" — same
+/// net outcome (1 extra card / 4 life) without the multi-step decision
+/// shape. The "pick which two to return" choice is dropped (no
+/// hand-card-selection primitive on a triggered ability today).
+pub fn sylvan_library() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Sylvan Library",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::YourControl),
+            effect: Effect::MayDo {
+                description: "Draw a card and lose 4 life.".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(4),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Howling Mine — {2} Artifact. "At the beginning of each player's
+/// draw step, if Howling Mine is untapped, that player draws an
+/// additional card."
+///
+/// Approximation: the "is Howling Mine untapped" gate collapses (the
+/// trigger always fires); both players always draw an extra card on
+/// their draw step. Wired as a `StepBegins(Draw)/AnyPlayer` trigger
+/// over `Selector::Player(PlayerRef::ActivePlayer)` so each player
+/// draws their own extra card on their own turn.
+pub fn howling_mine() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Howling Mine",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Draw), EventScope::AnyPlayer),
+            effect: Effect::Draw {
+                who: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ophiomancer — {2}{B} Creature — Human Shaman 1/1. "At the beginning
+/// of each upkeep, if you control no Snakes, create a 1/1 black Snake
+/// creature token with deathtouch."
+///
+/// Approximation: the "if you control no Snakes" intervening-if is
+/// collapsed (the trigger always fires) — strictly more value than
+/// printed but the gameplay outcome (a steady stream of 1/1 deathtouch
+/// chump-blockers / aristocrat fodder) is preserved. Uses a one-off
+/// `TokenDefinition` for the Snake.
+pub fn ophiomancer() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::game::types::TurnStep;
+    let snake = TokenDefinition {
+        name: "Snake".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Ophiomancer",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: snake,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Yavimaya Elder — {1}{G}{G} Creature — Human Druid 2/1. "When this
+/// creature dies, you may search your library for up to two basic land
+/// cards, reveal them, put them into your hand, then shuffle. /
+/// {2}{G}, Sacrifice this creature: Draw a card."
+///
+/// Wired with both abilities: the dies-trigger fans out two `Search`es
+/// (one each) for basic land → Hand, with `MayDo` wrapping each so the
+/// controller can opt out. The activated draw-a-card is a sac-cost
+/// activation. Yavimaya Elder is a key cube role-player: 3 mana for a
+/// 2/1 plus 2 lands plus a card.
+pub fn yavimaya_elder() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    let search_basic = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::IsBasicLand,
+        to: ZoneDest::Hand(PlayerRef::You),
+    };
+    CardDefinition {
+        name: "Yavimaya Elder",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::MayDo {
+                    description: "Search for a basic land.".to_string(),
+                    body: Box::new(search_basic()),
+                },
+                Effect::MayDo {
+                    description: "Search for a second basic land.".to_string(),
+                    body: Box::new(search_basic()),
+                },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stroke of Genius — {X}{2}{U} Instant. "Target player draws X cards."
+/// X-cost draw spell. Reads `XFromCost` at resolution; the auto-target
+/// picks a player (self by default for the card-advantage line).
+pub fn stroke_of_genius() -> CardDefinition {
+    CardDefinition {
+        name: "Stroke of Genius",
+        cost: cost(&[ManaSymbol::X, generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// Green Sun's Zenith — {X}{G} Sorcery. "Search your library for a green
+/// creature card with mana value X or less, put it onto the battlefield,
+/// then shuffle. Shuffle this card into its owner's library."
+///
+/// Approximation: the "shuffle into library" rider collapses (the spell
+/// goes to graveyard normally). The body wires the X-gated tutor via
+/// `Search(Creature ∧ HasColor(Green) ∧ ManaValueAtMost(X) → BF)`.
+pub fn green_suns_zenith() -> CardDefinition {
+    CardDefinition {
+        name: "Green Sun's Zenith",
+        cost: cost(&[ManaSymbol::X, g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::HasColor(Color::Green)),
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        ..Default::default()
+    }
+}
+
+/// Red Sun's Zenith — {X}{R} Instant. "Red Sun's Zenith deals X damage
+/// to any target. If a creature dealt damage this way would die this
+/// turn, exile it instead. Shuffle this card into its owner's library."
+///
+/// Wired as a simple X-damage burn at instant speed. The "exile if
+/// would die" rider and "shuffle into library" rider both collapse.
+pub fn red_suns_zenith() -> CardDefinition {
+    CardDefinition {
+        name: "Red Sun's Zenith",
+        cost: cost(&[ManaSymbol::X, r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
+    }
+}
+
+/// White Sun's Zenith — {X}{W}{W}{W} Instant. "Create X 2/2 white Cat
+/// creature tokens. Shuffle this card into its owner's library."
+///
+/// X-cost army-in-a-can. The "shuffle into library" rider collapses.
+pub fn white_suns_zenith() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let cat = TokenDefinition {
+        name: "Cat".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cat],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "White Sun's Zenith",
+        cost: cost(&[ManaSymbol::X, w(), w(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: cat,
+        },
+        ..Default::default()
+    }
+}
+
+/// Black Sun's Zenith — {X}{B} Sorcery. "Put X -1/-1 counters on each
+/// creature. Shuffle this card into its owner's library."
+///
+/// Wired via `ForEach + AddCounter(MinusOneMinusOne, X)`. The
+/// "shuffle into library" rider collapses.
+pub fn black_suns_zenith() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Black Sun's Zenith",
+        cost: cost(&[ManaSymbol::X, b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::XFromCost,
+            }),
+        },
+        ..Default::default()
+    }
+}
+

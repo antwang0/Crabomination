@@ -232,6 +232,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         potioners_trove,
         // ── SOS push XV ──
         great_hall_of_the_biblioplex,
+        // ── modern_decks (claude/modern_decks) — new colorless ──
+        howling_mine,
     ]
 }
 
@@ -297,6 +299,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         celestial_purge,
         // ── modern_decks-15 ──
         bond_of_discipline,
+        // ── modern_decks (claude/modern_decks) — new W cards ──
+        wall_of_omens,
+        white_suns_zenith,
         // ── SOS (Secrets of Strixhaven) ──
         eager_glyphmage,
         erode,
@@ -432,6 +437,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         visions_of_beyond,
         strategic_planning,
         echoing_truth,
+        // ── modern_decks (claude/modern_decks) — new U cards ──
+        snapcaster_mage,
+        hydroblast,
+        blue_elemental_blast,
+        tales_end,
+        stroke_of_genius,
         // ── SOS (Secrets of Strixhaven) ──
         chase_inspiration,
         banishing_betrayal,
@@ -582,6 +593,12 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ravenous_rats,
         brain_maggot,
         sudden_edict,
+        // ── modern_decks (claude/modern_decks) — new B cards ──
+        toxic_deluge,
+        demonic_consultation,
+        phyrexian_reclamation,
+        ophiomancer,
+        black_suns_zenith,
         // ── SOS (Secrets of Strixhaven) ──
         sneering_shadewriter,
         burrog_banemaker,
@@ -744,6 +761,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         fiery_impulse,
         searing_blood,
         crumble_to_dust,
+        // ── modern_decks (claude/modern_decks) — new R cards ──
+        pyroblast,
+        red_elemental_blast,
+        red_suns_zenith,
         // ── modern_decks-15 ──
         strangle,
         // ── SOS (Secrets of Strixhaven) ──
@@ -862,9 +883,20 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wild_mongrel,
         carnage_tyrant,
         // elvish_reclaimer         — 🟡 Threshold pump (+3/+2 with 7+ in graveyard) omitted
-        // rofellos_llanowar_emissary — 🟡 Forest-count multiplier collapsed to flat {G}{G}
+        // rofellos_llanowar_emissary ✅ (was 🟡) — push (claude/modern_decks):
+        // Forest-count multiplier now wired via
+        // `ManaPayload::OfColor(Green, Value::Times(2, CountOf(Forest)))`.
+        rofellos_llanowar_emissary,
         // biorhythm                — 🟡 "set life total to" collapsed to fixed drain
         lumra_bellow_of_the_woods,
+        // ── modern_decks (claude/modern_decks) — new G cards ──
+        three_visits,
+        wall_of_roots,
+        pernicious_deed,
+        yavimaya_elder,
+        channel,
+        sylvan_library,
+        green_suns_zenith,
         // ── modern_decks-14 ──
         harrow,
         // ── modern_decks-15 ──

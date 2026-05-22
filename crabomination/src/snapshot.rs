@@ -463,8 +463,7 @@ mod tests {
         g.perform_action(GameAction::ActivateAbility {
             card_id: bio,
             ability_index: 0,
-            target: None,
-        })
+            target: None, x_value: None })
         .expect("Mindful Biomancer pump activatable");
         // Drain the stack so the activation commits.
         while !g.stack.is_empty() {

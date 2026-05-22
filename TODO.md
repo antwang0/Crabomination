@@ -3466,6 +3466,61 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- 🟡 **CR 602 — Activating Activated Abilities** (push
+  claude/modern_decks — audit against `MagicCompRules_20260417.txt`).
+  How the engine puts activated abilities on the stack and pays their
+  costs. CR 602.1a is the costs/effect split (the colon).
+  (a) **602.1a** "The activation cost is everything before the colon"
+  — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`, `sac_cost`,
+  `life_cost`, `exile_self_cost`, `exile_other_filter` between them
+  cover the full cost vocabulary; tap/mana/life/sac are all paid in
+  `activate_ability` before the effect goes on stack).
+  (b) **602.1b** "Some text after the colon states activation
+  instructions" — 🟡 (`ActivatedAbility.condition` covers per-ability
+  predicate gates ("Activate only if …"); `once_per_turn` /
+  `sorcery_speed` / `from_graveyard` cover the canonical instructions.
+  Per-opponent control restrictions ("Activate only if a player
+  controls a Snow permanent") have no first-class slot but can be
+  expressed as `condition: Predicate::…` for most.).
+  (c) **602.2** "To activate an ability is to put it onto the stack
+  and pay its costs" — ✅ (`activate_ability` pushes a
+  `StackItem::Trigger` for non-mana abilities; mana abilities resolve
+  immediately per CR 605.3).
+  (d) **602.2b** "An activated ability's analog to a spell's mana
+  cost is its activation cost" — ✅ (push claude/modern_decks: added
+  `GameAction::ActivateAbility.x_value: Option<u32>` so X-cost
+  activations bind X at activation time. The cost-payment path
+  (`activate_ability` in `actions.rs`) walks `mana_cost.has_x()` and
+  calls `with_x_value(x)` to expand the X symbol into N generic pips
+  before payment, mirroring `cast_spell`'s X handling. The X value
+  is stashed on `StackItem::Trigger.x_value` so the body reads
+  `Value::XFromCost` at resolution. Wired by Pernicious Deed's
+  `{X}, Sacrifice this: destroy each permanent with MV ≤ X`. CR
+  602.2b is now fully observed in the activation path for non-mana
+  abilities; mana abilities never use X today).
+  (e) **602.5a** "A creature's activated ability with the tap symbol …
+  can't be activated unless the creature has been under its
+  controller's control since the start of their most recent turn" —
+  ✅ (the `summoning_sick` flag + `tap_cost: true` activation gate
+  reject taps while sick; haste bypasses via `Keyword::Haste` check).
+  (f) **602.5b** "If an activated ability has a restriction on its
+  use, the restriction continues to apply" — ✅
+  (`once_per_turn_used` is per-card, persists across controller
+  changes; the cleanup step resets it on the active player's untap).
+  (g) **602.5d** "Activate only as a sorcery" — ✅
+  (`sorcery_speed: true` consults `can_cast_sorcery_speed`).
+  Tests: `pernicious_deed_destroys_low_cmc_permanents` covers
+  X-cost activation end-to-end.
+
+- ✅ **`GameAction::ActivateAbility.x_value`** (push claude/modern_decks
+  done): Activated abilities can now declare an X value at activation
+  time. Threaded through `activate_ability` (mana-payment expansion
+  via `with_x_value`) and `StackItem::Trigger.x_value` (effect
+  resolution reads via `Value::XFromCost`). Unblocks Pernicious Deed
+  (`{X}, Sacrifice: destroy each MV≤X permanent`), future Walking
+  Ballista-style `{X}: deal X damage`, and any X-cost activated
+  ability. Tests: `pernicious_deed_destroys_low_cmc_permanents`.
+
 - ⏳ **`effect::shortcut::etb_drain_each_opp(amount)` shortcut** — Many
   STX cards print "ETB drain N" as `etb(Seq(LoseLife N each opp, GainLife
   N you))`. Today batch 67's `silverquill_drainscribe` calls

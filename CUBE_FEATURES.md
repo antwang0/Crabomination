@@ -41,6 +41,8 @@ still ⏳.
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
 | Healing Salve | ✅ | {W} Instant. Gain 3 life on target. Damage-prevention mode collapsed (no prevention-shield primitive). Test: `healing_salve_gives_three_life`. |
 | Raise the Alarm | ✅ | {1}{W} Instant. Create two 1/1 white Soldier tokens via `CreateToken`. Test: `raise_the_alarm_creates_two_soldier_tokens`. |
+| Wall of Omens | ✅ | Push (claude/modern_decks, NEW): {1}{W} Creature — Wall 0/4 with Defender. ETB Draw 1. Test: `wall_of_omens_etbs_and_draws`. |
+| White Sun's Zenith | ✅ | Push (claude/modern_decks, NEW): {X}{W}{W}{W} Instant. Create X 2/2 white Cat tokens via `CreateToken { count: XFromCost }`. "Shuffle into library" rider collapses. Test: `white_suns_zenith_creates_x_cat_tokens`. |
 
 ### Blue
 
@@ -85,6 +87,11 @@ still ⏳.
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |
+| Snapcaster Mage | ✅ | Push (claude/modern_decks, NEW): {1}{U} Creature — Human Wizard 2/1 Flash. ETB stamps `GrantMayPlay { exile_after: true, EndOfThisTurn }` on a target IS card in your gy. Same shape as Flashback (the spell). Approximation: free cast (no `MayPlayPermission.alt_cost`). Tests: `snapcaster_mage_etb_grants_may_play_on_gy_is_card`, `snapcaster_mage_is_a_two_one_flash_wizard`. |
+| Tale's End | ✅ | Push (claude/modern_decks, NEW): {1}{U} Instant. `ChooseMode([CounterSpell(Legendary), CounterAbility])`. Mode 0 counters target legendary spell; mode 1 counters any ability. "Saga" clause collapses to the ability-counter half. Test: `tales_end_counters_a_legendary_spell`. |
+| Hydroblast | ✅ | Push (claude/modern_decks, NEW): {U} Instant. ChooseMode counter red spell or destroy red permanent. AutoDecider picks mode 0. Test: `hydroblast_counters_a_red_spell`. |
+| Blue Elemental Blast | ✅ | Push (claude/modern_decks, NEW): {U} Instant. Functionally Hydroblast. Test: `blue_elemental_blast_counters_a_red_spell`. |
+| Stroke of Genius | ✅ | Push (claude/modern_decks, NEW): {X}{2}{U} Instant. Target player draws X cards. Reads `XFromCost`. Test: `stroke_of_genius_draws_x_cards`. |
 
 ### Black
 
@@ -124,6 +131,12 @@ still ⏳.
 | Parallax Dementia | ⏳ | Fading + reanimate; needs fade counters. |
 | Parallax Nexus | ⏳ | Fading + hand-strip. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
+| Toxic Deluge | ✅ | Push (claude/modern_decks, NEW): {2}{B}{B} Sorcery. Pay X life, each creature gets -X/-X EOT. Cost-as-first-step (life payment folded into resolution). Test: `toxic_deluge_sweeps_creatures_for_x_two`. |
+| Demonic Consultation | ✅ | Push (claude/modern_decks, NEW): {B} Instant. Mill 6 + search any 1 card → hand. The "name a card / exile until match" rider collapses; misses route to graveyard instead of exile (strictly more recoverable). Test: `demonic_consultation_mills_six_and_searches`. |
+| Phyrexian Reclamation | ✅ | Push (claude/modern_decks, NEW): {B}{B} Enchantment. `{1}{B}, Pay 2 life`: Move target creature card from your graveyard → hand. Test: `phyrexian_reclamation_returns_creature_for_one_b_two_life`. |
+| Ophiomancer | ✅ | Push (claude/modern_decks, NEW): {2}{B} Creature — Human Shaman 1/1. Beginning of each upkeep, create a 1/1 black Snake token with Deathtouch. "If you control no Snakes" gate collapses (always fires). Test: `ophiomancer_mints_a_snake_each_upkeep`. |
+| Black Sun's Zenith | ✅ | Push (claude/modern_decks, NEW): {X}{B} Sorcery. `ForEach creature + AddCounter(-1/-1, X)`. Test: `black_suns_zenith_puts_x_minus_one_counters_on_each_creature`. |
+| Hymn to Tourach | ✅ | Push (claude/modern_decks, registered in cube — card lives in `fem::sorceries`): {B}{B} Sorcery. Target player discards 2 random cards via `Effect::Discard { random: true }`. |
 
 ### Red
 
@@ -164,6 +177,9 @@ still ⏳.
 | Vandalblast | 🟡 | Single-target artifact destruction; Overload {4}{R} mode omitted (no overload primitive yet). |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 | Sundering Eruption | ✅ | MDFC: front is `{1}{R}` sorcery dealing 3 damage to a creature/planeswalker; back face Mount Tyrhus is a Mountain that ETBs tapped and taps for {R}. |
+| Pyroblast | ✅ | Push (claude/modern_decks, NEW): {R} Instant. ChooseMode counter blue spell or destroy blue permanent. Tests: `pyroblast_counters_a_blue_spell`, `pyroblast_rejects_non_blue_spell_target`. |
+| Red Elemental Blast | ✅ | Push (claude/modern_decks, NEW): {R} Instant. Functionally Pyroblast (Alpha printing). Test: `red_elemental_blast_counters_a_blue_spell`. |
+| Red Sun's Zenith | ✅ | Push (claude/modern_decks, NEW): {X}{R} Instant. X damage to any target via `DealDamage(amount: XFromCost)`. "Exile-if-would-die" and "shuffle into library" riders collapse. Test: `red_suns_zenith_deals_x_damage_to_target`. |
 
 ### Green
 
@@ -180,7 +196,7 @@ still ⏳.
 | Collector Ouphe | ⏳ | Static "artifact abilities can't be activated". |
 | Fanatic of Rhonas | ✅ | {G} 1/1 Snake. `{G},{T}: Add {G}{G}` (net +{G} per activation). Test: `fanatic_of_rhonas_taps_for_two_green_after_paying_one`. |
 | Keen-Eyed Curator | ⏳ | Graveyard hate + counter pump. |
-| Rofellos, Llanowar Emissary | 🟡 | {G}{G} Legendary 0/1 Elf Druid. `{T}: Add {G}{G}` (Fanatic-of-Rhonas pattern). Forest-count multiplier collapses to flat 2 — net +2 mana per activation rather than +N where N = Forests you control. Test: `rofellos_taps_for_two_green_mana`. |
+| Rofellos, Llanowar Emissary | ✅ (was 🟡) | Push (claude/modern_decks): `{G}{G}` Legendary 2/1 Elf Druid. `{T}: Add {G}{G} for each Forest you control` now wired faithfully via `ManaPayload::OfColor(Green, Times(Const(2), CountOf(Forest ∧ ControlledByYou)))`. The dynamic Forest count is read live at resolution time. Tests: `rofellos_taps_for_two_green_mana` (1 Forest → 2 green), `rofellos_taps_for_two_green_per_forest` (3 Forests → 6 green), `rofellos_taps_for_zero_with_no_forests` (degenerate 0-Forest case). |
 | Satyr Wayfinder | 🟡 | {1}{G} 1/1 Satyr Druid. ETB mills 4 (`Effect::Mill 4`). The "may take a land from among them" half is collapsed to the graveyard-fill outcome — gameplay-relevant for reanimator/dredge shells. Test: `satyr_wayfinder_etb_mills_four`. |
 | Sylvan Caryatid | ✅ | 0/3 Hexproof Defender; {T}: Add one mana of any color. |
 | Elvish Spirit Guide | 🟡 | {2}{G} 2/2 Elf Spirit body wired. The "exile from hand: add {G}" alt-mana ability needs a hand-activated-ability primitive (`activate_ability` only walks the battlefield today); promote to ✅ once that lands. Test: `elvish_spirit_guide_is_a_two_two_elf_spirit`. |
@@ -206,7 +222,7 @@ still ⏳.
 | Apex Devastator | ⏳ | Cascade x4 (cascade primitive). |
 | Summoner's Pact | ✅ | Already wired (search green creature + delayed Pact upkeep). |
 | Eternal Witness | ✅ | `{1}{G}{G}` 2/1 Human Shaman with ETB "return target card from your graveyard to your hand". Auto-target now picks the graveyard card via the new `Effect::prefers_graveyard_source` classification (`Move(target → Hand(You))` is reanimate-class). Tests: `eternal_witness_etb_trigger_present`, `eternal_witness_etb_returns_graveyard_card_via_auto_target`. |
-| Nature's Claim | ⏳ | Destroy artifact/enchantment + 4 life. |
+| Nature's Claim | ✅ | `{G}` Instant. Destroy target artifact or enchantment; its controller gains 4 life (`Destroy + GainLife(ControllerOf(target), 4)`). Lives in `mod_set::natures_claim`. |
 | Archdruid's Charm | ⏳ | Modal — destroy land/artifact, search creature, +1/+1 counters. |
 | Finale of Devastation | ⏳ | Tutor + pump scaling with X. |
 | Life from the Loam | ⏳ | Return up-to-3 lands; Dredge 3. |
@@ -219,6 +235,13 @@ still ⏳.
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Greater Good | ⏳ | Sac creature + Draw P. |
 | Shifting Woodland | ⏳ | DFC land. |
+| Three Visits | ✅ | Push (claude/modern_decks, NEW): {1}{G} Sorcery. Identical to Nature's Lore (search Forest → BF untapped). Includes the duplicate so green ramp shells can run the full eight-copy package. Test: `three_visits_fetches_a_forest_to_battlefield`. |
+| Wall of Roots | ✅ | Push (claude/modern_decks, NEW): {1}{G} Creature — Plant Wall 0/5 with Defender. Once-per-turn `0: -0/-1 toughness counter + Add {G}`. Approximation: permanent `Duration::Permanent` pump as a -1 toughness stand-in. Test: `wall_of_roots_taps_for_green_with_pump_cost`. |
+| Channel | ✅ | Push (claude/modern_decks, NEW): {G} Sorcery (Kamigawa). Approximated as `Seq([LoseLife 1, AddMana 1])`. The printed "until end of turn, pay 1 life for {1}" alt-payment static is collapsed. Test: `channel_pays_one_life_for_one_mana`. |
+| Sylvan Library | ✅ | Push (claude/modern_decks, NEW): {1}{G} Enchantment. Beginning of your draw step, MayDo: Draw 1 + LoseLife 4. Approximation: the "draw 2 extra, return 2 unless you pay 8" loop collapses to "draw 1 / lose 4." Test: `sylvan_library_offers_draw_in_exchange_for_four_life`. |
+| Yavimaya Elder | ✅ | Push (claude/modern_decks, NEW): {1}{G}{G} Creature — Human Druid 2/1. Dies trigger: MayDo Search basic land → hand twice. `{2}{G}`, sac: Draw 1. Tests: `yavimaya_elder_dies_searches_two_basics`, `yavimaya_elder_sac_draws_a_card`. |
+| Pernicious Deed | ✅ | Push (claude/modern_decks, NEW): {1}{B}{G} Enchantment. `{X}, Sacrifice this`: destroy each artifact, creature, and enchantment with mana value X or less. Wired via `sac_cost: true` activation, X paid through the new `GameAction::ActivateAbility.x_value` field (engine extension). Test: `pernicious_deed_destroys_low_cmc_permanents`. |
+| Green Sun's Zenith | ✅ | Push (claude/modern_decks, NEW): {X}{G} Sorcery. `Search(Creature ∧ Green → BF untapped)`. "Shuffle into library" rider collapses. Test: `green_suns_zenith_tutors_green_creature_with_cmc_x`. |
 
 ### Artifacts & Planeswalkers (mono / colorless)
 
@@ -269,6 +292,7 @@ still ⏳.
 | Shorikai, Genesis Engine | ⏳ | Vehicle-walker hybrid; loots on activate. |
 | Cruel Somnophage | ✅ | {1}{U}{B} 0/0 Phyrexian Horror; layer-7 `SetPowerToughness(your_grave_size, your_grave_size)` injection in `compute_battlefield` (same hardcoded site that powers Tarmogoyf/Cosmogoyf). Test: `cruel_somnophage_pt_scales_with_your_graveyard`. |
 | Talisman of Dominance | ✅ | {2} Artifact. UB mirror of Talisman of Progress: `{T}: Add {C}` + `{T}: Add {U}` + `{T}: Add {B}` (each colored ability costs 1 life). Test: `talisman_of_dominance_taps_for_blue_costing_one_life`. |
+| Howling Mine | ✅ | Push (claude/modern_decks, NEW): {2} Artifact. At the beginning of each player's draw step, that player draws an additional card (`StepBegins(Draw)/AnyPlayer` → `Draw(ActivePlayer)`). The "if untapped" gate collapses. Test: `howling_mine_draws_an_extra_card_each_turn`. |
 | Ashiok, Nightmare Weaver | ⏳ | Planeswalker — exile/scry/copy. |
 | Master of Death | ⏳ | UB recursion + discard. |
 | Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |

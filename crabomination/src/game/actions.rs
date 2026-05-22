@@ -2247,7 +2247,7 @@ impl GameState {
                 // the right answer.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                let result = self.activate_ability(id, idx, None);
+                let result = self.activate_ability(id, idx, None, None);
                 self.decider = prev_decider;
                 self.players[player].wants_ui = prev_wants_ui;
                 if let Ok(mut evs) = result {
@@ -2265,7 +2265,7 @@ impl GameState {
                     && c.definition.activated_abilities.iter().any(|a| is_mana_ability(&a.effect))
             }).map(|c| c.id);
             let Some(id) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, 0, None) {
+            if let Ok(mut evs) = self.activate_ability(id, 0, None, None) {
                 events.append(&mut evs);
             } else {
                 break;
@@ -2327,6 +2327,7 @@ impl GameState {
         card_id: CardId,
         ability_index: usize,
         target: Option<Target>,
+        x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -2534,7 +2535,16 @@ impl GameState {
         // `ManaCost::reduce_generic`. Only applies when the source is on
         // the battlefield (graveyard-activations skip; the source carries
         // no live counter pool there).
-        let mut effective_mana_cost = ability.mana_cost.clone();
+        let mut effective_mana_cost = if ability.mana_cost.has_x() {
+            // Bind the X value from the action into the printed cost so
+            // the player has to actually pay X generic mana. Used by
+            // Pernicious Deed's `{X}, Sacrifice this: …` activation,
+            // future Walking Ballista-style `{X}` activations.
+            ability.mana_cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            ability.mana_cost.clone()
+        };
+        let activated_x = if ability.mana_cost.has_x() { x_value.unwrap_or(0) } else { 0 };
         if let Some(kind) = ability.self_counter_cost_reduction
             && !source_in_gy
             && let Some(src) = self.battlefield_find(card_id)
@@ -2702,7 +2712,7 @@ impl GameState {
                 effect: Box::new(ability.effect),
                 target,
                 mode: None,
-                x_value: 0,
+                x_value: activated_x,
                 converged_value: 0,
                 trigger_source: None,
                 mana_spent: 0,

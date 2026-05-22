@@ -135,7 +135,19 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    ActivateAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
+    ActivateAbility {
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        /// X value paid to an `{X}` symbol in the activation's mana cost.
+        /// Threaded through to `EffectContext.x_value` so the body can
+        /// read `Value::XFromCost`. Used by Pernicious Deed's
+        /// `{X}, Sacrifice this: destroy each permanent with MV ≤ X`,
+        /// Walking Ballista's `{X}: this creature deals X damage`, and
+        /// other X-cost activated abilities.
+        #[serde(default)]
+        x_value: Option<u32>,
+    },
     /// Declare attackers: each attacker picks a defending player or a
     /// planeswalker controlled by a non-active player.
     DeclareAttackers(Vec<Attack>),

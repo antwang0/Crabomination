@@ -133,8 +133,7 @@ fn tap_forest_adds_green_mana() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 }
@@ -146,15 +145,13 @@ fn cannot_tap_already_tapped_land() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .unwrap();
     let err = g
         .perform_action(GameAction::ActivateAbility {
             card_id: id,
             ability_index: 0,
-            target: None,
-        })
+            target: None, x_value: None })
         .unwrap_err();
     assert_eq!(err, GameError::CardIsTapped(id));
 }
@@ -167,8 +164,7 @@ fn llanowar_elves_tap_for_mana() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 }
@@ -276,7 +272,7 @@ fn mox_ruby_casts_for_free_and_taps_for_red() {
     cast(&mut g, id);
     assert!(g.battlefield.iter().any(|c| c.id == id));
     // Tap immediately (not a creature, so no summoning sickness)
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None, x_value: None })
         .unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
 }
@@ -292,7 +288,7 @@ fn each_mox_taps_for_its_color() {
     for (def, color) in cases {
         let mut g = two_player_game();
         let id = g.add_card_to_battlefield(0, def());
-        g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
+        g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None, x_value: None })
             .unwrap();
         assert_eq!(g.players[0].mana_pool.amount(color), 1, "{color:?} mox should tap for its color");
     }
@@ -303,7 +299,7 @@ fn mox_untaps_each_turn() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::mox_ruby());
     // Tap it
-    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None })
+    g.perform_action(GameAction::ActivateAbility { card_id: id, ability_index: 0, target: None, x_value: None })
         .unwrap();
     assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped);
     // Simulate untap step
@@ -1110,8 +1106,7 @@ fn black_lotus_manual_activation_with_wants_ui_prompts_for_color() {
     // Activating manually should suspend on a ChooseColor decision instead
     // of auto-picking White.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lotus, ability_index: 0, target: None,
-    })
+        card_id: lotus, ability_index: 0, target: None, x_value: None })
     .unwrap();
     let pd = g.pending_decision.as_ref().expect("ChooseColor should suspend");
     assert!(matches!(pd.decision, Decision::ChooseColor { .. }));
@@ -1175,8 +1170,7 @@ fn flooded_strand_fetches_tundra_untapped() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: strand_id,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .unwrap();
     drain_stack(&mut g);
     let fetched = g
@@ -1624,8 +1618,7 @@ fn birds_of_paradise_produces_chosen_color() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: birds_id,
         ability_index: 0,
-        target: None,
-    }).unwrap();
+        target: None, x_value: None }).unwrap();
     assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
 }
 
@@ -1716,8 +1709,7 @@ fn cephalid_coliseum_sacrifices_for_each_player_to_draw_then_discard_three() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: coli,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Cephalid Coliseum's wheel-mini ability should activate");
     drain_stack(&mut g);
 
@@ -1778,8 +1770,7 @@ fn psychic_frog_discard_pumps_until_end_of_turn() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: frog,
         ability_index: 0,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Psychic Frog discard pump should activate");
     drain_stack(&mut g);
 
@@ -1807,8 +1798,7 @@ fn psychic_frog_sacrifice_mills_each_opponent_four() {
     g.perform_action(GameAction::ActivateAbility {
         card_id: frog,
         ability_index: 1,
-        target: None,
-    })
+        target: None, x_value: None })
     .expect("Psychic Frog sacrifice-mill should activate");
     drain_stack(&mut g);
 
@@ -2202,8 +2192,7 @@ fn pathway_front_face_taps_for_front_color_only() {
         "Front face exposes only one mana ability (the front color)");
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("front face taps for {B}");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("front face taps for {B}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0,
         "Front face must not produce {{R}} — that's the back face");
@@ -2225,8 +2214,7 @@ fn pathway_back_face_taps_for_back_color_only() {
     assert_eq!(card.definition.activated_abilities.len(), 1);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("back face taps for {R}");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("back face taps for {R}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
 }
@@ -2270,8 +2258,7 @@ fn gemstone_mine_taps_three_times_then_sacrifices() {
 
     // Tap #1: counter 3 → 2, no sac.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("tap #1 succeeds");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap #1 succeeds");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_some());
     assert_eq!(g.battlefield_find(id).unwrap()
@@ -2280,8 +2267,7 @@ fn gemstone_mine_taps_three_times_then_sacrifices() {
 
     // Tap #2: counter 2 → 1.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("tap #2 succeeds");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap #2 succeeds");
     drain_stack(&mut g);
     assert!(g.battlefield_find(id).is_some());
     assert_eq!(g.battlefield_find(id).unwrap()
@@ -2290,8 +2276,7 @@ fn gemstone_mine_taps_three_times_then_sacrifices() {
 
     // Tap #3: counter 1 → 0, then sacrifice.
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None,
-    }).expect("tap #3 succeeds");
+        card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap #3 succeeds");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == id),
         "Gemstone Mine should sac itself when the last counter is removed");
@@ -3656,8 +3641,7 @@ fn damping_sphere_downgrades_dual_lands_to_colorless() {
     // Activate it — it should produce {C}, not {U} or {B}.
     g.clear_sickness(lands);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: lands, ability_index: 0, target: None,
-    }).expect("the downgraded ability should activate");
+        card_id: lands, ability_index: 0, target: None, x_value: None }).expect("the downgraded ability should activate");
     assert_eq!(g.players[0].mana_pool.colorless_amount(), 1);
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 0);
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
@@ -3754,8 +3738,7 @@ fn damping_sphere_leaves_basic_lands_alone() {
     );
     g.clear_sickness(f);
     g.perform_action(GameAction::ActivateAbility {
-        card_id: f, ability_index: 0, target: None,
-    }).expect("Forest should still tap for {G}");
+        card_id: f, ability_index: 0, target: None, x_value: None }).expect("Forest should still tap for {G}");
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
 }
 
