@@ -19,11 +19,64 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1665 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1685 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 122:
-22 brand-new Strixhaven synthesised cards across all five colleges,
+Push (claude/modern_decks branch — current head — **post-batch 123:
+20 new Strixhaven synthesised cards focused on finishing Witherbloom
++ two new engine helpers + new CR 704 (State-Based Actions) audit row:
+
+- **Witherbloom (B/G, 9 cards)** — Pest Marrowfeast ({2}{B}{G} 3/2 ETB
+  Pest + Pest-dies drain rider), Witherbloom Vinegrowth ({1}{B}{G} 2/3
+  magecraft drain 1 — Apprentice template), Witherbloom Crypttender
+  ({3}{B}{G} 3/4 ETB return creature to hand + dies drain each opp 2),
+  Pest Mawlord ({4}{B}{G} 4/4 ETB 2 Pests + dies drain each opp 2),
+  Witherbloom Bonesplitter ({2}{B} 3/2 Deathtouch + sac-other -1/-1
+  removal), Witherbloom Tombrooter ({2}{B}{G} sorcery reanimate +
+  drain), Witherbloom Beetlecaller ({1}{B}{G} 1/2 ETB Pest + grows on
+  other creature death), Witherbloom Saproot ({B}{G} 2/2 dies drain
+  1), Pest Hivekeeper ({3}{B}{G} sorcery mint 3 Pests).
+- **Silverquill (W/B, 4 cards)** — Inkling Crusader ({2}{W}{B} 3/3
+  Flying+Vigilance ETB gain 2), Silverquill Adjudicator ({3}{W}{B}
+  sorcery exile creature + gain 2), Silverquill Sermonizer ({1}{W} 2/1
+  ETB gain 1 + magecraft gain 1), Inkling Pamphletter ({2}{W}{B} 2/3
+  Flying ETB drain 2).
+- **Lorehold (R/W, 3 cards)** — Lorehold Vanguard ({2}{R}{W} 3/3
+  Haste+First Strike + magecraft self-pump +1/+0), Lorehold Spiritsong
+  ({3}{R}{W} sorcery 2 hasty Spirits), Lorehold Skirmisher ({1}{R} 2/1
+  Haste + attack ping 1).
+- **Prismari (U/R, 2 cards)** — Prismari Tutor ({2}{U}{R} 2/2 ETB
+  draw 2 then discard 1), Prismari Sparkshow ({1}{U}{R} instant 2
+  damage + cantrip).
+- **Quandrix (G/U, 2 cards)** — Quandrix Surveyor ({1}{G}{U} 2/2 ETB
+  +1/+1 counter on friendly + magecraft counter rain), Fractal
+  Pondlord ({3}{G}{U} 3/3 Fractal ETB mint Fractal + +1/+1 counters
+  per creature).
+
+Engine bonuses (batch 123):
+- New `effect::shortcut::dies_lose_life_each_opp(amount)` helper —
+  wraps `on_dies(Effect::LoseLife { who: EachOpponent, … })` for the
+  asymmetric on-death drain pattern. Mirrors `etb_drain_each_opp` for
+  the death trigger. Used by Witherbloom Crypttender and Pest Mawlord.
+- New `effect::shortcut::magecraft_drain(amount)` helper — wraps the
+  symmetric `magecraft(Effect::Drain { from: EachOpponent, to: You,
+  … })` body. Used by Witherbloom Vinegrowth. Distinct from
+  `magecraft_drain_each_opp` (asymmetric) and `magecraft_drain_target`
+  (target-a-single-opp).
+
+CR 704 (State-Based Actions) audit row added to TODO.md — walks the
+27+ enumerated SBAs in CR 704.5a–z plus the 704.6 variant-game
+additions, identifying which the engine wires (player loss to life /
+empty library / poison, +1/+1 counter cancellation, legend rule,
+toughness-zero, lethal damage, deathtouch destruction, planeswalker
+loyalty 0, aura-attachment, token-cease-to-exist) and which remain
+gaps (Saga lore counters 704.5s, dungeon venture 704.5t, battle
+defense 0 704.5v, role count 704.5y, start-your-engines 704.5z).
+
+Tests: 3596 → 3617 (20 new b123 card tests + 2 helper lock-in tests
+for `dies_lose_life_each_opp` and `magecraft_drain`).**
+
+Prior push: 22 brand-new Strixhaven synthesised cards across all five colleges,
 plus a new CR 208 (Power/Toughness) audit row in TODO.md:
 
 - **Witherbloom (B/G, 8 cards)** — Pest Cultcaller ({1}{B}{G} 2/2 with

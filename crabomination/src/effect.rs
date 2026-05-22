@@ -3224,4 +3224,38 @@ pub mod shortcut {
             ),
         })
     }
+
+    /// Dies-Lose-Life-Each-Opp shortcut: "When this creature dies, each
+    /// opponent loses `amount` life." This is the asymmetric variant of
+    /// [`dies_drain`] — opponents lose life on death but you do NOT gain
+    /// any. Used by Pest Mawcrawler (batch 119), Witherbloom Reaper-Hand
+    /// templates, and any future on-death drain body where the printed
+    /// text omits the symmetric you-gain rider.
+    ///
+    /// Push claude/modern_decks batch 123: shipped as part of the
+    /// asymmetric-drain helper family.
+    pub fn dies_lose_life_each_opp(amount: i32) -> TriggeredAbility {
+        on_dies(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// Magecraft-Drain shortcut: "Magecraft — Whenever you cast or copy
+    /// an instant or sorcery spell, each opponent loses `amount` life
+    /// and you gain `amount` life." Wraps [`magecraft`] with the
+    /// canonical symmetric drain body. Distinct from
+    /// [`magecraft_drain_each_opp`] (asymmetric, opp-only) and
+    /// [`magecraft_drain_target`] (target a single opp).
+    ///
+    /// Push claude/modern_decks batch 123: shipped as part of the
+    /// magecraft-drain helper family. Used by Witherbloom Apprentice-
+    /// template magecraft drains across batches 119–123.
+    pub fn magecraft_drain(amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
 }

@@ -12,6 +12,145 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- 🟡 **CR 704 — State-Based Actions** (push claude/modern_decks batch
+  123 — audit against `MagicCompRules_20260417.txt` lines 5443–5524).
+  The SBA framework — game actions that happen automatically when
+  certain conditions are met, checked whenever a player would get
+  priority, applied as a single simultaneous event.
+  (a) **704.1 — Definition** "SBAs are game actions that happen
+  automatically whenever certain conditions are met. SBAs don't use
+  the stack." — ✅ (`check_state_based_actions` in
+  `game/stack.rs:772` is a direct mutator; emits `GameEvent`s but
+  doesn't push to the stack).
+  (b) **704.2 — Continuous** "SBAs are checked throughout the game" —
+  ✅ (SBA check is interleaved with the priority loop and stack
+  resolution; called after every stack item resolves via
+  `perform_action`'s stack-drain path in `mod.rs:2245`).
+  (c) **704.3 — Priority-window loop** "Whenever a player would get
+  priority, the game checks SBAs, then performs all applicable SBAs
+  simultaneously. If any are performed, the check is repeated;
+  otherwise all triggered abilities waiting to be put on the stack
+  are put on the stack, then the check is repeated. Once no SBAs are
+  performed and no triggered abilities are waiting, the appropriate
+  player gets priority." — ✅ (the repeat-until-stable loop is
+  encoded in `pass_priority`'s post-resolve walk; trigger dispatch
+  fans out via `dispatch_triggers_for_events`).
+  (d) **704.4 — Mid-resolution invisibility** "SBAs pay no attention
+  to what happens during the resolution of a spell or ability." — ✅
+  (`check_state_based_actions` is only called between stack items,
+  never inside `resolve_effect`; Maro-class transient toughness
+  changes are unobservable).
+  (e) **704.5a — 0 or less life** "If a player has 0 or less life,
+  that player loses the game." — ✅
+  (`game/stack.rs:1070` consults `effective_life(i)` and sets
+  `players[i].eliminated = true`).
+  (f) **704.5b — Empty-library draw** "Attempted draw from empty
+  library loses the game." — ✅ (per CR 121.4 audit row;
+  `draws_from_empty_library` flag bumped at draw time, checked here).
+  (g) **704.5c — 10 poison counters** "If a player has 10 or more
+  poison counters, that player loses the game." — ✅
+  (`players[i].poison_counters >= 10` check at `stack.rs:1071`).
+  (h) **704.5d — Token off battlefield** "If a token is in a zone
+  other than the battlefield, it ceases to exist." — ✅ (the post-
+  events sweep in `stack.rs:1039` walks every player's graveyard /
+  hand / library and the exile zone, retaining only non-token cards;
+  Dies / leaves-bf triggers fire before this so they observe the
+  token).
+  (i) **704.5e — Copy of spell off-stack** "If a copy of a spell is
+  in a zone other than the stack, it ceases to exist." — 🟡 (no
+  first-class "spell copy" identity tag today; the
+  `Effect::CopySpell` primitive resolves the copy in place rather
+  than placing a distinct copy item that could persist into another
+  zone, so this rule is observable only via the resolve-then-vanish
+  shape which matches printed Oracle).
+  (j) **704.5f — Toughness 0** "If a creature has toughness 0 or
+  less, it's put into its owner's graveyard. Regeneration can't
+  replace this event." — ✅ (the `computed_toughness <= 0` branch in
+  `stack.rs:851` routes through `remove_from_battlefield_to_
+  graveyard` which bypasses the regen replacement framework).
+  (k) **704.5g — Lethal damage** "Toughness > 0 + damage ≥
+  toughness → destroyed. Regeneration can replace this event." — ✅
+  (the `(c.damage as i32) >= computed_toughness` branch in
+  `stack.rs:855` routes through the destroy pipeline which honors
+  regen replacement; Indestructible blocks this branch).
+  (l) **704.5h — Deathtouch damage** "Damage by a deathtouch source
+  destroys, regen can replace." — ✅ (the deathtouch event marker
+  routes through the same destroy pipeline as 704.5g; tested via
+  cube's Deathtouch interaction).
+  (m) **704.5i — Loyalty 0** "Planeswalker with 0 loyalty dies." —
+  ✅ (`pw_dead` walk at `stack.rs:1002` filters
+  `is_planeswalker() && counter_count(Loyalty) == 0`).
+  (n) **704.5j — Legend rule** "Two+ legendaries with same name
+  under same controller → controller chooses one to keep, rest go to
+  graveyard." — ✅ (the `legend_victims` HashMap walk at
+  `stack.rs:803`; defaults to "keep newest" via descending CardId
+  sort, controller-choice prompt engine-wide ⏳ since auto-picker is
+  deterministic).
+  (o) **704.5k — World rule** "Two+ world permanents → keep the one
+  with shortest world-supertype duration." — ⏳ (no World supertype
+  in the catalog; no engine path; Ice Age / Mirage era only).
+  (p) **704.5m — Aura attachment** "Aura attached to illegal object
+  / not attached → graveyard." — ✅ (the `orphaned_auras` walk at
+  `stack.rs:1017` filters auras where `attached_to` is `None` or
+  points to a non-battlefield CardId; Pacifism-class tested).
+  (q) **704.5n — Equipment / Fortification attachment** "Attached
+  to illegal permanent or to a player → becomes unattached, remains
+  on bf." — 🟡 (engine prunes `attached_to` when the host leaves bf
+  via `remove_from_combat`-adjacent paths, but the "remains on bf
+  unattached" half is wired; no Fortification card in the catalog).
+  (r) **704.5p — Battle/creature attached** "Battle or creature
+  attached to anything → unattached." — ⏳ (no Battle card type in
+  the catalog; tracked in TODO.md "Engine — Battle permanent type
+  (CR 110.4) ⏳").
+  (s) **704.5q — +1/+1 vs -1/-1 counter cancellation** "N +1/+1
+  and N -1/-1 counters cancel where N = min." — ✅ (`stack.rs:777`
+  walks each battlefield card and subtracts `cancel = plus.min(
+  minus)` from both counter types; this is the first SBA performed
+  per CR 704.5q's "single event" semantics).
+  (t) **704.5r — Bounded counter caps** "A permanent with an ability
+  capping a counter type at N has counters above N removed." — ⏳ (no
+  card in the catalog uses this; engine has no `Capped(Counter, N)`
+  static effect primitive).
+  (u) **704.5s — Saga sacrifice** "Saga with lore counters ≥ final
+  chapter is sacrificed (unless source of a triggered chapter
+  ability still on stack)." — ⏳ (no Saga card type in the catalog;
+  tracked in CUBE_FEATURES.md "Saga lore counters + DFC ⏳").
+  (v) **704.5t — Dungeon completion** "Venture marker on bottommost
+  room → dungeon removed from game." — ⏳ (no Dungeon card type in
+  the catalog; AFR / Y22 era only).
+  (w) **704.5v / 704.5w / 704.5x — Battle defense / protector** —
+  ⏳ (no Battle card type in the catalog; tracked under CR 110.4).
+  (x) **704.5y — Role count** "Multiple Roles from same player on
+  same permanent → all but newest go to graveyard." — ⏳ (no Role
+  subtype in the catalog; WOE-era only).
+  (y) **704.5z — Speed start** "Permanent with `start your engines!`
+  and player has no speed → speed becomes 1." — ⏳ (no speed
+  primitive in the engine; UFO / MKM-era only).
+  (z) **704.6 — Variant-game additions** "2HG team-life loss /
+  team-poison; Commander 21 commander damage; Archenemy scheme
+  flip; Planechase phenomenon planeswalk." — Mixed: ✅ for 2HG
+  shared-life loss (effective_life consults team), ✅ for Commander
+  21-damage SBA (commander_damage walk at `stack.rs:1066`), ⏳ for
+  Archenemy/Planechase variants (not in the catalog).
+  (aa) **704.7 — Multi-SBA replacement** "If multiple SBAs would
+  have the same result at the same time, one replacement replaces
+  all." — 🟡 (the replacement-effect framework handles single
+  triggers but the "all SBAs collapse into one replacement"
+  semantic for Lich's Mirror-style replacements is doc-tracked; no
+  card in the catalog has both a same-result life-loss + draw-from-
+  empty-library replacement).
+  (bb) **704.8 — LKI on simultaneous SBA** "If an SBA leaves a
+  permanent at the same time as others, its LKI is derived from
+  pre-SBA state." — ✅ (the `died_card_snapshots` HashMap at
+  `stack.rs:830` caches the full `CardInstance` before zone change,
+  consulted by trigger dispatch + filter eval; Undying / Persist's
+  no-counter check reads pre-SBA counter state via this).
+  Tests: pest_mawlord_b123_etb_mints_two_pests_and_dies_drains
+  exercises 704.5g + 704.5d (token cleanup after death); legend
+  rule coverage in `cube`; planeswalker-loyalty-zero death tested
+  via Ral Zarek -2-then-2-then-2 ultimate scenarios. Promote to ✅
+  when Battle / Saga / Role / Dungeon / Speed all land.
+
 - 🟡 **CR 613 — Interaction of Continuous Effects** (push
   claude/modern_decks batch 104 — audit against
   `MagicCompRules_20260417.txt` lines 2946–3041). The layer system
@@ -3751,6 +3890,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ✅ **`effect::shortcut::dies_lose_life_each_opp(amount)` helper**
+  (push claude/modern_decks batch 123 done). Wraps the canonical
+  asymmetric on-death drain body `on_dies(Effect::LoseLife { who:
+  EachOpponent, … })` in a one-liner drop-in. Mirrors
+  `etb_drain_each_opp` for the death trigger. New cards using the
+  helper in batch 123: Witherbloom Crypttender, Pest Mawlord. Lock-
+  in test `shortcut_dies_lose_life_each_opp_drains_only_opponents`
+  verifies the helper keeps the controller's life unchanged
+  (distinguishing from the symmetric `dies_drain`).
+
+- ✅ **`effect::shortcut::magecraft_drain(amount)` helper** (push
+  claude/modern_decks batch 123 done). Wraps the canonical symmetric
+  magecraft drain body `magecraft(Effect::Drain { from: EachOpponent,
+  to: You, … })` in a one-liner drop-in. Distinct from
+  `magecraft_drain_each_opp` (asymmetric — opp loses only) and
+  `magecraft_drain_target` (single-target picker). New card using the
+  helper in batch 123: Witherbloom Vinegrowth ({1}{B}{G} 2/3 Plant
+  Druid with the Apprentice-template drain). Lock-in test
+  `shortcut_magecraft_drain_drains_each_opp_and_gains` verifies both
+  the opp-loses and you-gain halves fire on every IS cast.
 
 - ✅ **`effect::shortcut::magecraft_add_counter_to_friendly()` helper**
   (push claude/modern_decks batch 122 done). Wraps the canonical
