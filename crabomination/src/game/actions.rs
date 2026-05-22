@@ -2636,11 +2636,23 @@ impl GameState {
                 .map(|c| c.controller)
                 .unwrap_or(p);
             if is_creature {
-                // Cache the dying card's snapshot so AnotherOfYours
-                // triggers and type-filter predicates fire off
-                // sacrifices even when the dying card is a token.
-                if let Some(c) = self.battlefield_find(card_id) {
-                    self.died_card_snapshots.insert(card_id, c.clone());
+                // Stamp the sacrificed creature's P/T on the resolution
+                // scratch so downstream `Value::SacrificedPower` /
+                // `Value::SacrificedToughness` reads (Witch's Cauldron's
+                // "gain life equal to the sacrificed creature's
+                // toughness", future Thud-style `sac_cost` activations)
+                // see the right values. Same plumbing as
+                // `Effect::SacrificeAndRemember`.
+                let snap_pt = self
+                    .battlefield_find(card_id)
+                    .map(|c| (c.power(), c.toughness(), c.clone()));
+                if let Some((p_val, t_val, snap)) = snap_pt {
+                    self.sacrificed_power = Some(p_val);
+                    self.sacrificed_toughness = Some(t_val);
+                    // Cache the dying card's snapshot so AnotherOfYours
+                    // triggers and type-filter predicates fire off
+                    // sacrifices even when the dying card is a token.
+                    self.died_card_snapshots.insert(card_id, snap);
                 }
                 // CR 701.16 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });

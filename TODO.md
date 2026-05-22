@@ -5848,36 +5848,38 @@ no new engine features required:
 | Tezzeret, Cruel Captain | Artifact-creature static pump | Low |
 | Karn, Scion of Urza | Artifact-count scaling Construct | Medium |
 
-## Engine — Sacrifice-Distinct Event (push modern_decks audit)
+## Engine — Sacrifice-Distinct Event ✅ DONE
 
-Currently `Effect::Sacrifice` resolves by removing the picked creatures
-into the graveyard and emitting `GameEvent::CreatureDied` per dead
-creature. This collapses "sacrificed" into "dies", which is correct
-for most printed cards but loses information for triggers that read
-specifically "Whenever a player sacrifices a creature" (Mortician
-Beetle, Yahenni, Bone Picker, Solemn Recruit-style triggers). A
-follow-up should:
+~~Currently `Effect::Sacrifice` resolves by removing the picked
+creatures into the graveyard and emitting `GameEvent::CreatureDied`
+per dead creature.~~ Shipped in batch 51: `EventKind::CreatureSacrificed`
++ `GameEvent::CreatureSacrificed { card_id, who }` are emitted by all
+three sacrifice paths (`Effect::Sacrifice`, `Effect::SacrificeGreatestMV`,
+`Effect::SacrificeAndRemember`) and the activated-ability `sac_cost: true`
+path before the standard `CreatureDied`. Mortician Beetle and Pest
+Pestmaster trigger off the sacrifice-specific event; lethal damage
+emits only `CreatureDied`, so the "sacrifice" payoff doesn't fire on
+combat death. See the CR 701.21 audit row in the MagicCompRules
+coverage section for the full event-emission shape. Generic
+`PermanentSacrificed` shipped in batch 102 for non-creature sacrifices
+(Korvold-class payoffs).
 
-1. Add `EventKind::CreatureSacrificed` + `GameEvent::CreatureSacrificed
-   { card_id, who }` (new variants).
-2. Have `Effect::Sacrifice` resolver emit both events in order:
-   first `CreatureSacrificed`, then the standard `CreatureDied`.
-3. Update Mortician Beetle's trigger from `CreatureDied / AnyPlayer`
-   to `CreatureSacrificed / AnyPlayer` — tightening the body for
-   the printed Oracle. **Without this**, Mortician Beetle also fires
-   on lethal combat damage and burn, which is strictly stronger than
-   printed.
+## Engine — `Value::SacrificedToughness` in activation cost path ✅ DONE
 
-## Engine — `Value::SacrificedToughness` in activation cost path
-(push modern_decks audit)
-
-`Value::SacrificedPower` / `Value::SacrificedToughness` are stamped
+~~`Value::SacrificedPower` / `Value::SacrificedToughness` are stamped
 by `Effect::SacrificeAndRemember` but **not** by `sac_cost: true` on
-activated abilities. Witch's Cauldron's "gain life equal to the
-sacrificed creature's toughness" approximates as flat 2 life because
-of this gap. Fix: thread `sacrificed_power` and `sacrificed_toughness`
-into the resolution context when `sac_cost: true` consumes the
-source. Same plumbing as `Effect::SacrificeAndRemember`.
+activated abilities.~~ Shipped in batch 116: the `sac_cost: true`
+activation-cost branch in `actions.rs::activate_ability` now stamps
+`state.sacrificed_power` / `state.sacrificed_toughness` from the
+about-to-be-sacrificed source's `power()` / `toughness()` snapshot,
+mirroring `Effect::SacrificeAndRemember`. Same plumbing — downstream
+`Value::SacrificedPower` / `Value::SacrificedToughness` reads in the
+ability's effect body now see the correct P/T values. Witch's
+Cauldron was already wired correctly via `SacrificeAndRemember` (the
+TODO note above misread the card); the new path unblocks future cards
+that prefer cost-time sacrifice semantics (printed-Oracle Thud-style
+"As an additional cost, sacrifice a creature. ~ deals damage equal to
+the sacrificed creature's power to any target.").
 
 ## New TODO suggestions (push modern_decks)
 
