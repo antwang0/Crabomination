@@ -46874,3 +46874,79 @@ fn quandrix_symmetrist_b104_doubles_counters_on_target() {
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
 }
 
+// ── modern_decks batch 105 (helper shortcuts) tests ───────────────────────
+
+#[test]
+fn shortcut_mint_pests_creates_correct_token_count() {
+    use crate::effect::shortcut::mint_pests;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mint_pests(3), &ctx).expect("mint_pests resolves");
+    drain_stack(&mut g);
+    let pests: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .collect();
+    assert_eq!(pests.len(), 3, "mint_pests(3) creates 3 Pest tokens");
+}
+
+#[test]
+fn shortcut_mint_inklings_creates_w_b_flying_tokens() {
+    use crate::effect::shortcut::mint_inklings;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mint_inklings(2), &ctx).expect("mint_inklings resolves");
+    drain_stack(&mut g);
+    let inklings: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .collect();
+    assert_eq!(inklings.len(), 2);
+    assert!(inklings.iter().all(|c| c.has_keyword(&Keyword::Flying)),
+        "Inkling tokens fly");
+}
+
+#[test]
+fn shortcut_mint_fractals_creates_zero_zero_tokens() {
+    use crate::effect::shortcut::mint_fractals;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mint_fractals(1), &ctx).expect("mint_fractals resolves");
+    drain_stack(&mut g);
+    let fractals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
+        .collect();
+    assert_eq!(fractals.len(), 1);
+}
+
+#[test]
+fn shortcut_mint_treasures_creates_treasure_tokens() {
+    use crate::effect::shortcut::mint_treasures;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mint_treasures(2), &ctx).expect("mint_treasures resolves");
+    drain_stack(&mut g);
+    let treasures: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Treasure")
+        .collect();
+    assert_eq!(treasures.len(), 2);
+}
+
+#[test]
+fn shortcut_mint_lorehold_spirits_creates_r_w_spirits() {
+    use crate::effect::shortcut::mint_lorehold_spirits;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    g.resolve_effect(&mint_lorehold_spirits(1), &ctx).expect("mint_lorehold_spirits resolves");
+    drain_stack(&mut g);
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
+        .collect();
+    assert_eq!(spirits.len(), 1);
+    assert_eq!(spirits[0].power(), 2, "Lorehold Spirit is 2/2");
+    assert_eq!(spirits[0].toughness(), 2);
+}
+

@@ -32471,7 +32471,7 @@ pub fn silverquill_ledgerkeeper() -> CardDefinition {
 /// Synthesised: "Flying. When this creature enters, create a 1/1
 /// white-and-black Inkling creature token with flying."
 pub fn inkling_aerospread() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
+    use crate::effect::shortcut::{etb, mint_inklings};
     CardDefinition {
         name: "Inkling Aerospread",
         cost: cost(&[generic(3), w(), b()]),
@@ -32486,14 +32486,7 @@ pub fn inkling_aerospread() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: inkling_token(),
-            },
-        }],
+        triggered_abilities: vec![etb(mint_inklings(1))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -34002,8 +33995,7 @@ pub fn inkling_crusader_b104() -> CardDefinition {
 /// tokens with flying. Creatures you control get +1/+1 until end of
 /// turn."
 pub fn silverquill_anthemcaster_b104() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
-    use crate::effect::shortcut::each_your_creature;
+    use crate::effect::shortcut::{each_your_creature, mint_inklings};
     CardDefinition {
         name: "Silverquill Anthemcaster (Batch 104)",
         cost: cost(&[generic(3), w(), b()]),
@@ -34014,11 +34006,7 @@ pub fn silverquill_anthemcaster_b104() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: inkling_token(),
-            },
+            mint_inklings(2),
             Effect::PumpPT {
                 what: each_your_creature(),
                 power: Value::Const(1),
@@ -34048,8 +34036,7 @@ pub fn silverquill_anthemcaster_b104() -> CardDefinition {
 /// Synthesised: "Deathtouch. When this creature enters, create two
 /// 1/1 black-and-green Pest creature tokens."
 pub fn witherbloom_pestbrood_b104() -> CardDefinition {
-    use crate::catalog::sets::stx::stx_pest_token;
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::{etb, mint_pests};
     CardDefinition {
         name: "Witherbloom Pestbrood (Batch 104)",
         cost: cost(&[generic(3), b(), g()]),
@@ -34064,11 +34051,7 @@ pub fn witherbloom_pestbrood_b104() -> CardDefinition {
         keywords: vec![Keyword::Deathtouch],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(2),
-            definition: stx_pest_token(),
-        })],
+        triggered_abilities: vec![etb(mint_pests(2))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -34167,9 +34150,11 @@ pub fn witherbloom_mireseer_b104() -> CardDefinition {
 ///
 /// Synthesised: "Trample. When this creature dies, create a 1/1
 /// black-and-green Pest creature token."
+///
+/// Uses the new `mint_pests(count)` shortcut helper (batch 105 engine
+/// helper landing).
 pub fn pest_engorger_b104() -> CardDefinition {
-    use crate::catalog::sets::stx::stx_pest_token;
-    use crate::effect::shortcut::on_dies;
+    use crate::effect::shortcut::{mint_pests, on_dies};
     CardDefinition {
         name: "Pest Engorger (Batch 104)",
         cost: cost(&[generic(2), b(), g()]),
@@ -34184,11 +34169,7 @@ pub fn pest_engorger_b104() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![on_dies(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: stx_pest_token(),
-        })],
+        triggered_abilities: vec![on_dies(mint_pests(1))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -34206,7 +34187,7 @@ pub fn pest_engorger_b104() -> CardDefinition {
 /// Synthesised: "Create a 1/1 black-and-green Pest creature token,
 /// then mill 3 from target opponent and you draw a card."
 pub fn witherbloom_cultmaster_b104() -> CardDefinition {
-    use crate::catalog::sets::stx::stx_pest_token;
+    use crate::effect::shortcut::mint_pests;
     CardDefinition {
         name: "Witherbloom Cultmaster (Batch 104)",
         cost: cost(&[generic(2), b(), g()]),
@@ -34217,11 +34198,7 @@ pub fn witherbloom_cultmaster_b104() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: stx_pest_token(),
-            },
+            mint_pests(1),
             Effect::Mill {
                 who: Selector::Player(PlayerRef::EachOpponent),
                 amount: Value::Const(3),
@@ -34368,8 +34345,7 @@ pub fn lorehold_fireseer_b104() -> CardDefinition {
 /// an instant or sorcery spell, this creature gets +1/+0 until end
 /// of turn."
 pub fn lorehold_battlecaster_b104() -> CardDefinition {
-    use crate::catalog::sets::stx::lorehold_spirit_token;
-    use crate::effect::shortcut::{etb, magecraft_self_pump};
+    use crate::effect::shortcut::{etb, magecraft_self_pump, mint_lorehold_spirits};
     CardDefinition {
         name: "Lorehold Battlecaster (Batch 104)",
         cost: cost(&[generic(2), r(), w()]),
@@ -34389,11 +34365,7 @@ pub fn lorehold_battlecaster_b104() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![
-            etb(Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
-            }),
+            etb(mint_lorehold_spirits(1)),
             magecraft_self_pump(1, 0),
         ],
         static_abilities: vec![],
@@ -34413,8 +34385,7 @@ pub fn lorehold_battlecaster_b104() -> CardDefinition {
 /// Synthesised: "Lorehold Sparkstrike deals 3 damage to any target
 /// and you create a 2/2 red-and-white Spirit creature token."
 pub fn lorehold_sparkstrike_b104() -> CardDefinition {
-    use crate::catalog::sets::stx::lorehold_spirit_token;
-    use crate::effect::shortcut::target_filtered;
+    use crate::effect::shortcut::{mint_lorehold_spirits, target_filtered};
     CardDefinition {
         name: "Lorehold Sparkstrike (Batch 104)",
         cost: cost(&[generic(2), r()]),
@@ -34433,11 +34404,7 @@ pub fn lorehold_sparkstrike_b104() -> CardDefinition {
                 ),
                 amount: Value::Const(3),
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
-            },
+            mint_lorehold_spirits(1),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -34503,8 +34470,7 @@ pub fn prismari_pyromage_b104() -> CardDefinition {
 /// Synthesised: "When this creature enters, draw a card, then create
 /// a Treasure token."
 pub fn prismari_elementalist_b104() -> CardDefinition {
-    use crate::effect::shortcut::etb;
-    use crate::game::effects::treasure_token;
+    use crate::effect::shortcut::{etb, mint_treasures};
     CardDefinition {
         name: "Prismari Elementalist (Batch 104)",
         cost: cost(&[generic(3), u(), r()]),
@@ -34524,11 +34490,7 @@ pub fn prismari_elementalist_b104() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(1),
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
+            mint_treasures(1),
         ]))],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -34635,8 +34597,7 @@ pub fn prismari_stormburst_b104() -> CardDefinition {
 /// Synthesised: "Prismari Crackleburst deals 2 damage to target
 /// creature or planeswalker. Treasure token."
 pub fn prismari_crackleburst_b104() -> CardDefinition {
-    use crate::effect::shortcut::target_filtered;
-    use crate::game::effects::treasure_token;
+    use crate::effect::shortcut::{mint_treasures, target_filtered};
     CardDefinition {
         name: "Prismari Crackleburst (Batch 104)",
         cost: cost(&[generic(1), r()]),
@@ -34653,11 +34614,7 @@ pub fn prismari_crackleburst_b104() -> CardDefinition {
                 ),
                 amount: Value::Const(2),
             },
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: treasure_token(),
-            },
+            mint_treasures(1),
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

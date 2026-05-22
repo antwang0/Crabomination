@@ -3017,4 +3017,65 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// Mint N copies of `token` as a standalone Effect (not wrapped in
+    /// an ETB trigger). Useful as the body of a sorcery / instant or
+    /// inside a `Seq([…])` step. Wraps `Effect::CreateToken` with
+    /// `who: PlayerRef::You`.
+    ///
+    /// Push claude/modern_decks batch 105: shipped as part of the
+    /// `mint_pests`/`mint_inklings`/`mint_spirits` / `mint_fractals` /
+    /// `mint_treasures` family that centralises the canonical token
+    /// mints for STX/SOS catalog cards.
+    pub fn mint_token(token: crate::card::TokenDefinition, count: i32) -> Effect {
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(count),
+            definition: token,
+        }
+    }
+
+    /// Mint N STX Pest tokens. Pest body comes from
+    /// `catalog::stx_pest_token` and includes the standard
+    /// "this creature dies → you gain 1 life" trigger.
+    pub fn mint_pests(count: i32) -> Effect {
+        let token = crate::catalog::stx_pest_token();
+        mint_token(token, count)
+    }
+
+    /// Mint N SOS Inkling tokens (1/1 W/B flying creature).
+    pub fn mint_inklings(count: i32) -> Effect {
+        let token = crate::catalog::inkling_token();
+        mint_token(token, count)
+    }
+
+    /// Mint N SOS Spirit tokens (1/1 W flying creature, from SOS's
+    /// Spirit Mascot template).
+    pub fn mint_spirits(count: i32) -> Effect {
+        let token = crate::catalog::spirit_token();
+        mint_token(token, count)
+    }
+
+    /// Mint N SOS Fractal tokens (0/0 G/U creature; usually paired with
+    /// `Effect::AddCounter` against `Selector::LastCreatedToken` to
+    /// stamp +1/+1 counters on entry).
+    pub fn mint_fractals(count: i32) -> Effect {
+        let token = crate::catalog::fractal_token();
+        mint_token(token, count)
+    }
+
+    /// Mint N Treasure tokens (`{T}, Sacrifice: add one mana of any
+    /// color`). Uses [`crate::game::effects::treasure_token`].
+    pub fn mint_treasures(count: i32) -> Effect {
+        let token = crate::game::effects::treasure_token();
+        mint_token(token, count)
+    }
+
+    /// Mint N Lorehold Spirit tokens (2/2 R/W creature). Used by
+    /// `stx::lorehold::lorehold_excavation`-template cards and the
+    /// `stx::extras::lorehold_*` mint bodies.
+    pub fn mint_lorehold_spirits(count: i32) -> Effect {
+        let token = crate::catalog::lorehold_spirit_token();
+        mint_token(token, count)
+    }
 }
