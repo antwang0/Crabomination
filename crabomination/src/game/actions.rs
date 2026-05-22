@@ -2130,11 +2130,18 @@ impl GameState {
         snapshot: PaymentSnapshot,
     ) -> Result<PaymentReceipt, GameError> {
         let auto_events = self.auto_tap_for_cost(payer, cost);
+        // Snapshot the pool *after* auto-tap so `pool_before` reflects the
+        // mana actually available to `pay()`. Without this, a player who
+        // starts with an empty pool and auto-taps lands to cover the cost
+        // shows mana_spent = 0 (pre-auto-tap 0 → post-pay 0), which silently
+        // breaks Increment / Opus / converge payoffs that read the
+        // difference. The original snapshot is still used for rollback.
+        let pool_after_auto_tap = self.players[payer].mana_pool.clone();
         match self.players[payer].mana_pool.pay(cost) {
             Ok(side_effects) => Ok(PaymentReceipt {
                 auto_events,
                 side_effects,
-                pool_before: snapshot.pool,
+                pool_before: pool_after_auto_tap,
             }),
             Err(e) => {
                 self.restore_payment_state(payer, snapshot);

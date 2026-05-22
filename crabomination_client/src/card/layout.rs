@@ -51,9 +51,14 @@ const BF_LAND_Z: f32 = 8.5;
 
 // ── Pile constants ───────────────────────────────────────────────────────────
 
-const DECK_X: f32 = 11.0;
+// Pile X positions sit far enough from the centre that the rightmost
+// land group (5 basics → group centre at ≈ 9.2 units from origin) still
+// has clearance for a CARD_WIDTH/2 = 1.5-unit-wide card without
+// poking into the deck/graveyard footprint. Previous 11.0 left the
+// deck pile sitting on top of the leftmost land.
+const DECK_X: f32 = 13.5;
 const DECK_Z: f32 = 9.5;
-const GRAVEYARD_X: f32 = 11.0;
+const GRAVEYARD_X: f32 = 13.5;
 const GRAVEYARD_Z: f32 = 4.0;
 /// Command zone sits between the graveyard and the table edge,
 /// closer to the center, so the commander is always visible.

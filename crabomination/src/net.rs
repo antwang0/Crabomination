@@ -314,6 +314,11 @@ pub struct PermanentView {
     pub is_token: bool,
     /// Whether this permanent is currently declared as an attacker.
     pub attacking: bool,
+    /// If this permanent is declared as a blocker, the attacker it is
+    /// blocking. `None` when the permanent isn't a blocker. Exposed so
+    /// the client can animate the blocker toward its attacker.
+    #[serde(default)]
+    pub blocking_attacker: Option<CardId>,
     /// Activated abilities visible to the client.
     pub abilities: Vec<AbilityView>,
     /// Loyalty abilities (only populated for planeswalkers).

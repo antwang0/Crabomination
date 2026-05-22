@@ -11,9 +11,9 @@ pub struct ChangeQuality(pub RenderQuality);
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[allow(dead_code)] // all variants are valid user-selectable quality levels
 pub enum RenderQuality {
+    #[default]
     Low,
     Medium,
-    #[default]
     High,
     Ultra,
 }

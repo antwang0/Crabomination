@@ -2898,6 +2898,47 @@ pub fn handle_game_input(
             }
         }
 
+        // ── Left-click own permanent → activate mana ability ──────────────
+        // Lets the user manually select mana sources before casting (basic
+        // lands, dual lands, mana-rock creatures). When the permanent has
+        // exactly one mana ability that doesn't need a target, fire it
+        // immediately. Multiple mana abilities open the ability menu so
+        // the user can pick which colour. Permanents without any mana
+        // ability fall through (right-click + M still open the non-mana
+        // menu for those). Skips tapped permanents — there's nothing to
+        // activate.
+        if activate
+            && menu_state.card_id.is_none()
+            && !targeting.active
+            && let Some((game_id, owner)) = hovered_bf.iter().next()
+            && owner.0 == your_seat
+            && let Some(perm) = cv.battlefield.iter().find(|c| c.id == game_id.0)
+            && !perm.tapped
+        {
+            let mana_abilities: Vec<&crabomination::net::AbilityView> = perm
+                .abilities
+                .iter()
+                .filter(|a| a.is_mana && !a.needs_target)
+                .collect();
+            match mana_abilities.len() {
+                1 => {
+                    outbox.submit(GameAction::ActivateAbility {
+                        card_id: perm.id,
+                        ability_index: mana_abilities[0].index,
+                        target: None,
+                        x_value: None,
+                    });
+                }
+                n if n > 1 => {
+                    menu_state.card_id = Some(perm.id);
+                    menu_state.spawn_pos = windows.single().ok()
+                        .and_then(|w| w.cursor_position())
+                        .unwrap_or(Vec2::new(400.0, 300.0));
+                }
+                _ => {}
+            }
+        }
+
         // ── Command zone click → cast from CZ ───────────────────────────
         // Phase L: clicking a card in the viewer's own command zone
         // routes through `CastFromCommandZone` so the {2}×N commander
@@ -3034,6 +3075,36 @@ fn cancel_targeting(
     }
 }
 
+/// Highlight the opponent's player-target zone whenever the viewer is in
+/// targeting mode (casting a spell, activating a targeted ability, or
+/// answering a `ChooseTarget` decision). The zone is otherwise an
+/// invisible click pad — without this feedback the user has to remember
+/// where on the table it sits.
+///
+/// Hovered → bright red (high alpha); idle-but-active → subtle outline;
+/// targeting inactive → fully transparent.
+pub fn update_player_target_zone_material(
+    targeting: Res<crate::game::TargetingState>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    zones: Query<
+        (&MeshMaterial3d<StandardMaterial>, Has<CardHovered>),
+        With<PlayerTargetZone>,
+    >,
+) {
+    let active = targeting.active;
+    for (mat_handle, hovered) in &zones {
+        let Some(mat) = materials.get_mut(&mat_handle.0) else { continue };
+        let alpha = if !active {
+            0.0
+        } else if hovered {
+            0.45
+        } else {
+            0.15
+        };
+        mat.base_color = Color::srgba(1.0, 0.15, 0.15, alpha);
+    }
+}
+
 /// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
 pub fn spawn_ability_menu(
     mut commands: Commands,
@@ -3053,9 +3124,11 @@ pub fn spawn_ability_menu(
     let Some(pv) = cv.battlefield.iter().find(|p| p.id == card_id) else { return };
 
     // Project (index, label, used_this_turn) so the menu can grey out
-    // once-per-turn abilities that have already been activated.
+    // once-per-turn abilities that have already been activated. Includes
+    // mana abilities so multi-colour lands surface all the pip choices
+    // when opened via the left-click mana-source picker (see the
+    // `mana_abilities.len() > 1` branch in `handle_game_input`).
     let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
-        .filter(|a| !a.is_mana)
         .map(|a| {
             let label = if a.once_per_turn_used {
                 format!("{}: {} (used)", a.cost_label, a.effect_label)

@@ -6854,6 +6854,34 @@ fn ambitious_augmenter_increments_on_three_mana_cast() {
 }
 
 #[test]
+fn ambitious_augmenter_increments_when_paid_via_auto_tap() {
+    // Regression for the auto-tap path: in actual gameplay the player
+    // casts with an empty floating pool and the engine auto-taps lands to
+    // pay. Previously `pool_before` was captured pre-auto-tap, so
+    // `mana_spent = pool_before(0) - pool_after(0) = 0` and Increment
+    // silently failed. Build a board with two untapped Forests and a
+    // 2-mana spell — auto-tap should produce mana_spent = 2 and the
+    // Augmenter should pick up a +1/+1 counter.
+    let mut g = two_player_game();
+    let aug = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0,
+        "starting pool is empty — Augmenter must rely on auto-tap");
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G} via auto-tapped Forests");
+    drain_stack(&mut g);
+    let aug_after = g.battlefield_find(aug).unwrap();
+    assert_eq!(aug_after.counter_count(CounterType::PlusOnePlusOne), 1,
+        "auto-tapped 2-mana cast should still trigger Increment");
+}
+
+#[test]
 fn ambitious_augmenter_death_with_counters_creates_fractal_with_counters() {
     // CR 122.2 + push (modern_decks) death trigger: when Augmenter dies
     // with N +1/+1 counters on it, create a Fractal token and transfer

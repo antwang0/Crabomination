@@ -1435,6 +1435,13 @@ impl GameState {
         self.attacking.iter().map(|a| a.attacker).collect()
     }
 
+    /// Snapshot of the current blocker → attacker assignments. Lets the
+    /// view layer expose blocks per-permanent without making `block_map`
+    /// public.
+    pub fn block_map_snapshot(&self) -> Vec<(CardId, CardId)> {
+        self.block_map.iter().map(|(b, a)| (*b, *a)).collect()
+    }
+
     /// Look up the attack record for a given attacker id, if any.
     pub fn attack_for(&self, attacker: CardId) -> Option<&Attack> {
         self.attacking.iter().find(|a| a.attacker == attacker)

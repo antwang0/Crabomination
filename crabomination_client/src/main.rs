@@ -35,11 +35,10 @@ use game::{
 };
 use systems::game_ui::FastForward;
 use systems::animate::{
-    adjust_animation_speed, animate_deck_shuffle, animate_draw_card, animate_flip,
-    dispatch_animation_queue,
-    animate_mdfc_flip,
-    animate_hand_slide, animate_hover_lift, animate_play_card, animate_return_to_deck,
-    animate_return_to_hand, animate_reveal_peek, animate_send_to_graveyard, animate_tap,
+    adjust_animation_speed, animate_combat_lurch, animate_deck_shuffle, animate_draw_card,
+    animate_flip, dispatch_animation_queue, animate_mdfc_flip, animate_hand_slide,
+    animate_hover_lift, animate_play_card, animate_return_to_deck, animate_return_to_hand,
+    animate_reveal_peek, animate_send_to_graveyard, animate_tap, update_combat_lurch_targets,
     AnimationSpeed,
 };
 use systems::game_ui::{
@@ -50,8 +49,8 @@ use systems::game_ui::{
     handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_p1_text,
-    update_hint, update_pass_button, update_phase_chart, update_player_text,
-    update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
+    update_hint, update_pass_button, update_phase_chart, update_player_target_zone_material,
+    update_player_text, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
     draw_attacker_overlays, draw_blocking_gizmos, draw_pt_modified_overlays,
@@ -178,7 +177,7 @@ fn main() {
         .init_gizmo_group::<StackGizmos>()
         .init_gizmo_group::<PtModifiedGizmos>()
         .add_systems(Startup, configure_gizmos)
-        .insert_resource(DirectionalLightShadowMap { size: gfx.shadow_map_size })
+        .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
         .insert_resource(gfx)
         .insert_resource(RenderQuality::default())
         .add_message::<ChangeQuality>()
@@ -199,6 +198,7 @@ fn main() {
         .insert_resource(EscConsumed::default())
         .insert_resource(audit::AuditTarget::default())
         .insert_resource(audit::AuditPoolFilter::default())
+        .insert_resource(audit::ShowVerifiedCards::default())
         .insert_resource(audit::load_audited_cards())
         .insert_resource(DecisionUiState::default())
         .insert_resource(systems::debug_console::DebugConsoleState::default())
@@ -224,7 +224,8 @@ fn main() {
         .add_systems(OnExit(AppState::Audit), audit::despawn_audit_picker)
         .add_systems(
             Update,
-            audit::handle_audit_picker.run_if(in_state(AppState::Audit)),
+            (audit::handle_audit_picker, audit::handle_audit_scroll)
+                .run_if(in_state(AppState::Audit)),
         )
         // Audit-mode HUD buttons: sync visibility every frame, handle
         // click → save + return to picker.
@@ -354,6 +355,20 @@ fn main() {
                 .run_if(in_state(AppState::InGame)),
         )
         // Separate add_systems call to stay under Bevy's 20-tuple limit.
+        .add_systems(
+            Update,
+            update_player_target_zone_material.run_if(in_state(AppState::InGame)),
+        )
+        // Combat lurch: read attacker/blocker state, lerp Z forward.
+        // Must run after animate_hover_lift since that system overwrites
+        // transform.translation each frame from `base_translation`.
+        .add_systems(
+            Update,
+            (update_combat_lurch_targets, animate_combat_lurch)
+                .chain()
+                .after(animate_hover_lift)
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(Update, animate_mdfc_flip.run_if(in_state(AppState::InGame)))
         .add_systems(Update, animate_return_to_hand.run_if(in_state(AppState::InGame)))
         // Pop the next queued animation onto an entity once it stops
@@ -571,13 +586,18 @@ fn setup(
         GroundPlane,
     ));
 
-    commands.spawn((
+    let cam = commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 32.0, 14.0).looking_at(Vec3::ZERO, Vec3::Y),
-        Smaa { preset: gfx.smaa_preset.to_bevy() },
         quality.msaa(),
         MainCamera,
-    ));
+    )).id();
+    // Only attach SMAA when the current quality preset asks for it. Low
+    // quality returns `None` here, matching the runtime
+    // `apply_render_quality_change` path.
+    if let Some(preset) = quality.smaa_preset() {
+        commands.entity(cam).insert(Smaa { preset });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]

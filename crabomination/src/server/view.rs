@@ -34,10 +34,11 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
             .collect(),
         battlefield: {
             let attacker_ids = state.attacking_ids();
+            let block_map = state.block_map_snapshot();
             state
                 .battlefield
                 .iter()
-                .map(|c| project_permanent(c, &computed, &attacker_ids))
+                .map(|c| project_permanent(c, &computed, &attacker_ids, &block_map))
                 .collect()
         },
         stack: state
@@ -142,6 +143,7 @@ fn project_permanent(
     card: &CardInstance,
     computed: &[crate::game::layers::ComputedPermanent],
     attacking: &[CardId],
+    block_map: &[(CardId, CardId)],
 ) -> PermanentView {
     let cp = computed.iter().find(|c| c.id == card.id);
     PermanentView {
@@ -166,6 +168,9 @@ fn project_permanent(
         attached_to: card.attached_to,
         is_token: card.is_token,
         attacking: attacking.contains(&card.id),
+        blocking_attacker: block_map
+            .iter()
+            .find_map(|(b, a)| (*b == card.id).then_some(*a)),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
     }

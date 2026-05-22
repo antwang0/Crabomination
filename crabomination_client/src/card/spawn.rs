@@ -82,7 +82,10 @@ pub fn init_shared_assets(
 
     // One clickable target zone per opponent. The viewer doesn't need a
     // self-target zone (spells targeting yourself land on your portrait via
-    // a different code path).
+    // a different code path). The zone is intentionally larger than the
+    // player's portrait so picking it up isn't a pixel-hunting exercise —
+    // see `update_player_target_zone_material` for the targeting-mode
+    // highlight that makes it visible only when a target is needed.
     for seat in 0..n_seats {
         if seat == viewer_seat {
             continue;
@@ -90,7 +93,7 @@ pub fn init_shared_assets(
         let pos = player_target_zone_position(seat, viewer_seat, n_seats);
         commands
             .spawn((
-                Mesh3d(meshes.add(Plane3d::default().mesh().size(8.0, 3.0))),
+                Mesh3d(meshes.add(Plane3d::default().mesh().size(14.0, 6.0))),
                 MeshMaterial3d(materials.add(StandardMaterial {
                     base_color: Color::srgba(1.0, 0.0, 0.0, 0.0),
                     alpha_mode: AlphaMode::Blend,

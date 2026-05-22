@@ -264,6 +264,18 @@ pub struct ValidTarget;
 #[derive(Component)]
 pub struct PlayerTargetZone(pub usize);
 
+/// Combat-animation offset for a battlefield creature. The
+/// `update_combat_lurch_targets` system sets `target_z` from the view's
+/// attacking / blocking_attacker flags; `animate_combat_lurch` lerps
+/// `current_z` toward it each frame and writes the offset onto the
+/// card's transform after the hover-lift system has placed it. Removed
+/// once `target_z` and `current_z` are both zero.
+#[derive(Component, Default, Clone, Copy)]
+pub struct CombatLurch {
+    pub current_z: f32,
+    pub target_z: f32,
+}
+
 /// Animates a card flying to the graveyard pile; despawns the entity on completion.
 #[derive(Component)]
 pub struct SendToGraveyardAnimation {

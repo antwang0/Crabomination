@@ -6,12 +6,12 @@ pub mod spawn;
 
 pub use components::{
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFlipAnimation, CardFrontTexture,
-    CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CommandZoneCard,
-    DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace, FrontFaceMesh,
-    GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom, MdfcFlipAnimation,
-    OpponentHandCard, PileHovered, PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation,
-    ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation, ShufflePhase,
-    StackCard, SwapFrontMaterial, TapAnimation, TapState,
+    CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CombatLurch,
+    CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace,
+    FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,
+    MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation, PlayerTargetZone,
+    RevealPeekAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
+    ShufflePhase, StackCard, SwapFrontMaterial, TapAnimation, TapState,
     ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
 };
 pub use layout::{

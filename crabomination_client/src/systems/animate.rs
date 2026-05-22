@@ -3,10 +3,11 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, Animating, CardFlipAnimation, CardHoverLift, DeckCard,
-    DeckShuffleAnimation, DrawCardAnimation, HandCard, HandSlideAnimation, MdfcFlipAnimation,
-    PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
-    SendToGraveyardAnimation, ShufflePhase, TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
+    hand_card_transform, Animating, BattlefieldCard, CardFlipAnimation, CardHoverLift, CardOwner,
+    CombatLurch, DeckCard, DeckShuffleAnimation, DrawCardAnimation, GameCardId, HandCard,
+    HandSlideAnimation, MdfcFlipAnimation, PlayCardAnimation, ReturnToDeckAnimation,
+    ReturnToHandAnimation, RevealPeekAnimation, SendToGraveyardAnimation, ShufflePhase,
+    TapAnimation, CARD_WIDTH, HOVER_LIFT_SPEED,
 };
 use crate::net_plugin::CurrentView;
 
@@ -53,6 +54,85 @@ pub fn animate_hover_lift(
         let spd = HOVER_LIFT_SPEED * dt;
         lift.current_lift += (lift.target_lift - lift.current_lift) * spd.min(1.0);
         transform.translation = lift.base_translation + Vec3::Y * lift.current_lift;
+    }
+}
+
+/// How far attackers / blockers slide forward (in world units along Z)
+/// when they enter combat. The viewer's side flips the sign, so the
+/// motion always points toward the opposing player's side of the table.
+const COMBAT_ATTACKER_PUSH: f32 = 2.4;
+const COMBAT_BLOCKER_PUSH: f32 = 1.4;
+
+/// How quickly `CombatLurch::current_z` chases its target. Higher =
+/// snappier lurch (units per second of correction in a unit-step lerp).
+const COMBAT_LURCH_SPEED: f32 = 6.0;
+
+/// Drive the per-permanent `CombatLurch.target_z` from the latest
+/// view. Attackers push toward the defender's side of the table;
+/// blockers push toward their assigned attacker. Both retract once the
+/// permanent is no longer in combat. Components are added on demand
+/// and removed by `animate_combat_lurch` once they settle.
+pub fn update_combat_lurch_targets(
+    view: Res<CurrentView>,
+    mut commands: Commands,
+    mut bf_q: Query<
+        (Entity, &GameCardId, &CardOwner, Option<&mut CombatLurch>),
+        With<BattlefieldCard>,
+    >,
+) {
+    let Some(cv) = &view.0 else { return };
+    let viewer = cv.your_seat;
+    for (entity, gid, owner, lurch_opt) in &mut bf_q {
+        let perm = cv.battlefield.iter().find(|p| p.id == gid.0);
+        let attacking = perm.map(|p| p.attacking).unwrap_or(false);
+        let is_blocker = perm.and_then(|p| p.blocking_attacker).is_some();
+        // Viewer side sits at +Z, opponent at −Z. Pushing "forward" into
+        // the opposing side means flipping Z by the side's sign.
+        let sign = if owner.0 == viewer { -1.0 } else { 1.0 };
+        let target = if attacking {
+            sign * COMBAT_ATTACKER_PUSH
+        } else if is_blocker {
+            sign * COMBAT_BLOCKER_PUSH
+        } else {
+            0.0
+        };
+        match lurch_opt {
+            Some(mut l) => l.target_z = target,
+            None if target != 0.0 => {
+                commands.entity(entity).insert(CombatLurch { current_z: 0.0, target_z: target });
+            }
+            None => {}
+        }
+    }
+}
+
+/// Lerp each `CombatLurch.current_z` toward `target_z` and add the
+/// offset to the card's transform. Runs after `animate_hover_lift` so
+/// the lift system's `base_translation` write doesn't overwrite us.
+/// Self-removes when both current and target are ~0.
+#[allow(clippy::type_complexity)]
+pub fn animate_combat_lurch(
+    time: Res<Time>,
+    speed: Res<AnimationSpeed>,
+    mut commands: Commands,
+    mut q: Query<
+        (Entity, &mut Transform, &mut CombatLurch),
+        (
+            Without<DrawCardAnimation>,
+            Without<PlayCardAnimation>,
+            Without<SendToGraveyardAnimation>,
+            Without<ReturnToHandAnimation>,
+        ),
+    >,
+) {
+    let dt = time.delta_secs() * speed.0;
+    let lerp = (COMBAT_LURCH_SPEED * dt).min(1.0);
+    for (entity, mut transform, mut lurch) in &mut q {
+        lurch.current_z += (lurch.target_z - lurch.current_z) * lerp;
+        transform.translation.z += lurch.current_z;
+        if lurch.current_z.abs() < 0.01 && lurch.target_z == 0.0 {
+            commands.entity(entity).remove::<CombatLurch>();
+        }
     }
 }
 

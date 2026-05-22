@@ -147,6 +147,18 @@ pub struct CatalogEntry {
 #[derive(Resource, Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AuditPoolFilter(pub Option<AuditPool>);
 
+/// Whether the picker shows cards that have already been verified.
+/// Defaults to *hidden* — the typical workflow is to clear unverified
+/// cards, so cards already checked off are noise.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ShowVerifiedCards(pub bool);
+
+impl Default for ShowVerifiedCards {
+    fn default() -> Self {
+        Self(false)
+    }
+}
+
 /// Catalog cache: deferred-build because `all_cube_cards` allocates
 /// and we want a fresh list per audit session in case the catalog
 /// grows mid-build.
@@ -320,14 +332,27 @@ pub struct AuditUnverifyRow {
 #[derive(Component)]
 pub struct AuditPoolButton(pub Option<AuditPool>);
 
+/// "Show verified" checkbox toggle.
+#[derive(Component)]
+pub struct AuditShowVerifiedToggle;
+
+/// Marker for the scrollable list node — read by `handle_audit_scroll`
+/// to route mouse-wheel input.
+#[derive(Component)]
+pub struct AuditScrollable;
+
+/// Mouse-wheel scroll speed. One line ≈ this many pixels.
+const AUDIT_SCROLL_LINE_PX: f32 = 60.0;
+
 /// System: spawn the picker on `OnEnter(Audit)`.
 pub fn spawn_audit_picker(
     mut commands: Commands,
     ui_fonts: Res<UiFonts>,
     verified: Res<AuditedCards>,
     filter: Res<AuditPoolFilter>,
+    show_verified: Res<ShowVerifiedCards>,
 ) {
-    build_picker_ui(&mut commands, &ui_fonts, &verified, *filter);
+    build_picker_ui(&mut commands, &ui_fonts, &verified, *filter, *show_verified);
 }
 
 /// Picker-spawning core. Extracted out of `spawn_audit_picker` so the
@@ -338,13 +363,14 @@ fn build_picker_ui(
     ui_fonts: &UiFonts,
     verified: &AuditedCards,
     filter: AuditPoolFilter,
+    show_verified: ShowVerifiedCards,
 ) {
     let tf = |size: f32| ui_fonts.tf(size);
     let all_cards = catalog();
     // Filter the visible rows by the selected pool. `None` keeps
     // everything; counts always reflect the post-filter view so the
     // header reads "x/y verified" within the current scope.
-    let cards: Vec<CatalogEntry> = match filter.0 {
+    let pool_filtered: Vec<CatalogEntry> = match filter.0 {
         None => all_cards.clone(),
         Some(pool) => all_cards
             .iter()
@@ -352,8 +378,19 @@ fn build_picker_ui(
             .cloned()
             .collect(),
     };
-    let total = cards.len();
-    let done = cards.iter().filter(|e| verified.0.contains(&e.name)).count();
+    let total = pool_filtered.len();
+    let done = pool_filtered.iter().filter(|e| verified.0.contains(&e.name)).count();
+    // Visible list: drop verified entries when the toggle is off so the
+    // picker focuses on outstanding work. Header counts still reflect
+    // the full pool so "x/y verified" stays meaningful.
+    let cards: Vec<CatalogEntry> = if show_verified.0 {
+        pool_filtered
+    } else {
+        pool_filtered
+            .into_iter()
+            .filter(|e| !verified.0.contains(&e.name))
+            .collect()
+    };
 
     commands
         .spawn((
@@ -464,6 +501,42 @@ fn build_picker_ui(
                     }
                 });
 
+                // "Show verified" checkbox toggle. Checkbox glyph
+                // doubles as the visual state — ☑ when on, ☐ when off.
+                panel.spawn(Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(6.0),
+                    align_items: AlignItems::Center,
+                    ..default()
+                })
+                .with_children(|row| {
+                    let bg = if show_verified.0 {
+                        Color::srgba(0.18, 0.30, 0.20, 1.0)
+                    } else {
+                        theme::BUTTON_NEUTRAL_BG
+                    };
+                    let glyph = if show_verified.0 { "☑" } else { "☐" };
+                    row.spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                            border_radius: BorderRadius::all(RADIUS_BUTTON),
+                            ..default()
+                        },
+                        BackgroundColor(bg),
+                        HoverTint::new(bg),
+                        AuditShowVerifiedToggle,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new(format!("{glyph}  Show verified")),
+                            tf(12.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            Pickable::IGNORE,
+                        ));
+                    });
+                });
+
                 // Scrollable list.
                 panel.spawn((
                     Node {
@@ -477,6 +550,8 @@ fn build_picker_ui(
                         ..default()
                     },
                     BackgroundColor(theme::PANEL_BG_SUNKEN),
+                    ScrollPosition::default(),
+                    AuditScrollable,
                 ))
                 .with_children(|list| {
                     for entry in &cards {
@@ -609,15 +684,25 @@ pub fn handle_audit_picker(
     mut target: ResMut<AuditTarget>,
     mut verified: ResMut<AuditedCards>,
     mut filter: ResMut<AuditPoolFilter>,
+    mut show_verified: ResMut<ShowVerifiedCards>,
     pick_q: Query<(&Interaction, &AuditPickRow), Changed<Interaction>>,
     back_q: Query<&Interaction, (Changed<Interaction>, With<AuditBackButton>)>,
     unverify_q: Query<(&Interaction, &AuditUnverifyRow), Changed<Interaction>>,
     pool_q: Query<(&Interaction, &AuditPoolButton), Changed<Interaction>>,
+    toggle_q: Query<&Interaction, (Changed<Interaction>, With<AuditShowVerifiedToggle>)>,
     picker_roots: Query<Entity, With<AuditPickerRoot>>,
     ui_fonts: Res<UiFonts>,
 ) {
     if back_q.iter().any(|i| *i == Interaction::Pressed) {
         next_state.set(AppState::Menu);
+        return;
+    }
+    if toggle_q.iter().any(|i| *i == Interaction::Pressed) {
+        show_verified.0 = !show_verified.0;
+        for e in &picker_roots {
+            commands.entity(e).despawn();
+        }
+        build_picker_ui(&mut commands, &ui_fonts, &verified, *filter, *show_verified);
         return;
     }
     for (interaction, btn) in &pool_q {
@@ -626,7 +711,7 @@ pub fn handle_audit_picker(
             for e in &picker_roots {
                 commands.entity(e).despawn();
             }
-            build_picker_ui(&mut commands, &ui_fonts, &verified, *filter);
+            build_picker_ui(&mut commands, &ui_fonts, &verified, *filter, *show_verified);
             return;
         }
     }
@@ -638,7 +723,7 @@ pub fn handle_audit_picker(
             for e in &picker_roots {
                 commands.entity(e).despawn();
             }
-            build_picker_ui(&mut commands, &ui_fonts, &verified, *filter);
+            build_picker_ui(&mut commands, &ui_fonts, &verified, *filter, *show_verified);
             return;
         }
     }
@@ -649,5 +734,49 @@ pub fn handle_audit_picker(
             next_state.set(AppState::InGame);
             return;
         }
+    }
+}
+
+/// Mouse-wheel scrolling for the audit picker's card list. Mirrors the
+/// draft module's handler: aggregate wheel deltas per frame, find the
+/// hovered scrollable, and clamp the lower bound (Bevy's layout
+/// normalises the upper bound).
+pub fn handle_audit_scroll(
+    mut wheel: MessageReader<bevy::input::mouse::MouseWheel>,
+    windows: Query<&Window>,
+    mut scrollables: Query<
+        (&ComputedNode, &GlobalTransform, &mut ScrollPosition),
+        With<AuditScrollable>,
+    >,
+) {
+    use bevy::input::mouse::MouseScrollUnit;
+    let mut delta_px = 0.0f32;
+    for ev in wheel.read() {
+        delta_px += match ev.unit {
+            MouseScrollUnit::Line => -ev.y * AUDIT_SCROLL_LINE_PX,
+            MouseScrollUnit::Pixel => -ev.y,
+        };
+    }
+    if delta_px == 0.0 {
+        return;
+    }
+    let Ok(window) = windows.single() else { return };
+    let Some(cursor) = window.cursor_position() else { return };
+    for (computed, gtf, mut scroll) in &mut scrollables {
+        let size = computed.size();
+        let center = gtf.translation().truncate();
+        let half = size * 0.5;
+        let inside = cursor.x >= center.x - half.x
+            && cursor.x <= center.x + half.x
+            && cursor.y >= center.y - half.y
+            && cursor.y <= center.y + half.y;
+        if !inside {
+            continue;
+        }
+        let new_y = (scroll.0.y + delta_px).max(0.0);
+        if (new_y - scroll.0.y).abs() > f32::EPSILON {
+            scroll.0.y = new_y;
+        }
+        return;
     }
 }
