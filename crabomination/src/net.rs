@@ -534,6 +534,13 @@ pub enum GameEventWire {
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
     /// natural death — useful for replay rewinds and aristocrats payoffs.
     CreatureSacrificed { card_id: CardId, who: usize },
+    /// Wire mirror of `GameEvent::PermanentSacrificed`. Broader-scope
+    /// sibling of `CreatureSacrificed` — fires for non-creature
+    /// sacrifices too (Treasure / Clue / Food / land / planeswalker).
+    /// Surfaced so client UIs can highlight every sacrifice
+    /// regardless of type for replay rewinds and Korvold/Mayhem-Devil
+    /// payoffs.
+    PermanentSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
@@ -625,6 +632,9 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::CreatureSacrificed { card_id, who } => {
                 GameEventWire::CreatureSacrificed { card_id: *card_id, who: *who }
+            }
+            GameEvent::PermanentSacrificed { card_id, who } => {
+                GameEventWire::PermanentSacrificed { card_id: *card_id, who: *who }
             }
             GameEvent::PumpApplied { card_id, power, toughness } => GameEventWire::PumpApplied {
                 card_id: *card_id,
@@ -766,7 +776,10 @@ impl GameEventWire {
             E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),
             E::CreatureDied { card_id } => format!("{} died", name(*card_id)),
             E::CreatureSacrificed { card_id, who } => {
-                format!("P{who} sacrificed {}", name(*card_id))
+                format!("P{who} sacrificed creature {}", name(*card_id))
+            }
+            E::PermanentSacrificed { card_id, who } => {
+                format!("P{who} sacrificed permanent {}", name(*card_id))
             }
             E::PumpApplied {
                 card_id,

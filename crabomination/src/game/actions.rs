@@ -2642,6 +2642,12 @@ impl GameState {
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
             }
+            // Generic permanent-sacrifice event (CR 701.16) — fires for
+            // every sacrificed permanent regardless of type so
+            // "whenever you sacrifice a permanent" payoffs catch
+            // artifact / enchantment / land sacrifices alongside
+            // creatures.
+            events.push(GameEvent::PermanentSacrificed { card_id, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(card_id);
             events.append(&mut die_evs);
         }

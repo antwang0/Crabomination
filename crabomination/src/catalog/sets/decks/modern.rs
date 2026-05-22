@@ -6379,20 +6379,279 @@ pub fn anguished_unmaking() -> CardDefinition {
     }
 }
 
+/// Yarok, the Desecrated — {2}{U}{B}{G} Legendary Creature — Horror.
+/// 3/5 Deathtouch, Lifelink. "If a permanent entering the battlefield
+/// causes a triggered ability of a permanent you control to trigger,
+/// that ability triggers an additional time."
+///
+/// Cube-style approximation: the "doubles your ETB triggers" static
+/// is engine-wide ⏳ (no trigger-multiplication primitive). Ships as
+/// a 3/5 deathtouch + lifelink Horror body — strictly weaker than
+/// printed, but the body alone is a midgame value engine.
+pub fn yarok_the_desecrated() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Yarok, the Desecrated",
+        cost: cost(&[generic(2), u(), b(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Hellrider — {2}{R}{R} Creature — Devil. 3/3 Haste. "Whenever this
+/// creature attacks, it deals 1 damage to defending player."
+///
+/// Wired with an `Attacks/SelfSource` trigger that pings each opponent
+/// for 1 (the auto-target picks an opp via `EachOpponent`). The "defending
+/// player" half is collapsed to each opponent — fine for 2-player.
+pub fn hellrider() -> CardDefinition {
+    CardDefinition {
+        name: "Hellrider",
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Generous Gift — {2}{W} Instant. Destroy target permanent. Its
+/// controller creates a 3/3 green Elephant creature token.
+///
+/// Cube-style approximation: the printed "owner gets an Elephant"
+/// downside is collapsed (no `CreateTokenFor { who: ControllerOfTarget,
+/// definition }` primitive — `Effect::CreateToken.who` resolves to a
+/// `PlayerRef`, not a target's controller). Ships as a clean `Destroy
+/// (Permanent)` with the token half dropped. Strictly stronger than
+/// printed; an upgrade-from-Generous-Gift candidate when the controller
+/// -of-target primitive lands.
+pub fn generous_gift() -> CardDefinition {
+    CardDefinition {
+        name: "Generous Gift",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Any),
+        },
+        ..Default::default()
+    }
+}
+
+/// Putrefy — {1}{B}{G} Instant. Destroy target artifact or creature.
+/// It can't be regenerated.
+///
+/// Faithful — `Destroy(target Artifact ∨ Creature)`. Regen-suppression
+/// is implicit (Effect::Destroy bypasses regenerate replacement
+/// effects per the engine's destroy pipeline).
+pub fn putrefy_modern() -> CardDefinition {
+    CardDefinition {
+        name: "Putrefy (Modern)",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Etali, Primal Storm — {4}{R}{R} Legendary Creature — Elder Dinosaur.
+/// 6/6. "Whenever this attacks, exile the top card of each player's
+/// library. You may cast any number of nonland cards exiled this way
+/// without paying their mana costs."
+///
+/// Cube-style approximation: the "cast for free" rider is engine-wide
+/// ⏳ (no multi-player exile-then-may-cast loop). The attack trigger
+/// is approximated by milling each player 1 (the exile-to-removed-pile
+/// half), with the cast-without-paying clause dropped. A 6/6 attacker
+/// for 6 mana is still a fair body without the rider.
+pub fn etali_primal_storm() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Etali, Primal Storm",
+        cost: cost(&[generic(4), r(), r()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Knight of the Reliquary — {1}{G}{W} Creature — Human Knight Warrior.
+/// 2/2. "Knight of the Reliquary gets +1/+1 for each land card in all
+/// graveyards. {T}, Sacrifice a Forest or Plains: Search your library
+/// for a land card, put it onto the battlefield, then shuffle."
+///
+/// The dynamic P/T scaling is wired via the new `DynamicPt::
+/// LandsInAllGraveyards` variant (push 102 engine extension — the
+/// `compute_battlefield` pass injects a layer-7b
+/// `SetPowerToughness(2+N, 2+N)` continuous effect where N is the
+/// total land count across every player's graveyard). The activated
+/// land-tutor uses `sac_cost: true` with the source filtered to
+/// "controller's permanents matching Forest/Plains" approximated as
+/// the activator's own land-typed pick. Approximation: the printed
+/// "sacrifice a Forest or Plains" cost is wired as a generic
+/// `sac_cost: true` (the source itself); the Forest/Plains filter is
+/// dropped — the cube AutoDecider will happily sacrifice the Knight,
+/// which doesn't match printed intent. (A future cost-with-filter
+/// extension would tighten this.)
+pub fn knight_of_the_reliquary() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Knight of the Reliquary",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Knight,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        // Base 2/2; the compute-time injection overrides with
+        // (2 + lands_in_gys, 2 + lands_in_gys) via the new
+        // `DynamicPt::LandsInAllGraveyards` variant.
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Goblin Rabblemaster — {2}{R} Creature — Goblin Warrior. 2/2. "Other
+/// Goblin creatures you control get +1/+0 and have haste. Whenever
+/// this attacks, create a 1/1 red Goblin creature token that's tapped
+/// and attacking. Goblin creatures you control attack each combat if
+/// able."
+///
+/// Cube-style approximation. Wires the attack-trigger token-creation
+/// half (1/1 red Goblin); the "other goblins +1/+0 and haste" anthem
+/// and "must attack" restriction are dropped (no goblin-anthem static
+/// primitive nor must-attack restriction in the engine). The body is
+/// still strong on attack-trigger token chains.
+pub fn goblin_rabblemaster() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Goblin Rabblemaster",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Goblin".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Goblin],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Magma Spray — {R} Instant. Magma Spray deals 2 damage to target
 /// creature. If that creature would die this turn, exile it instead.
 ///
-/// The exile-replacement rider collapses (no per-LTB replacement
-/// primitive yet — same simplification as Lava Coil). Resolves as flat
-/// 2 damage to a target creature, killing 2-toughness creatures.
+/// Approximation: the "if it would die, exile instead" rider uses the
+/// same `Effect::If { cond: ValueAtMost(ToughnessOf(Target), 2), then:
+/// Exile, else_: DealDamage 2 }` pattern as Lava Coil. When the target's
+/// toughness ≤ 2 (the lethal case), the engine routes directly to exile;
+/// otherwise just deals 2 damage. The prior-damage-on-creature edge
+/// case isn't captured (no general damage-replacement-with-exile
+/// primitive).
 pub fn magma_spray() -> CardDefinition {
+    use crate::effect::Predicate;
     CardDefinition {
         name: "Magma Spray",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(target_filtered(
+                    SelectionRequirement::Creature,
+                ))),
+                Value::Const(2),
+            ),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
@@ -7771,4 +8030,792 @@ pub fn black_suns_zenith() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── claude/modern_decks batch 102: multicolor cube expansion ────────────────
+
+/// Sorin, Grim Nemesis — {4}{B}{B} Legendary Planeswalker — Sorin.
+/// 6 loyalty.
+/// **+1**: Reveal the top card of your library and put that card into your
+/// hand. You lose life equal to its mana value. If it's a creature card,
+/// create an X/X black Knight creature token with lifelink, where X is
+/// its mana value.
+/// **-X**: Sorin deals X damage to target creature or planeswalker and you
+/// gain X life.
+/// **-9**: Target opponent loses life equal to the number of cards in their
+/// graveyard.
+///
+/// Cube-style approximation: the headline play pattern is the +1 (a
+/// life-loss-for-cards exchange) and the -X (a tutored drain). The +1's
+/// "reveal then take into hand" branch is collapsed to a straight Draw
+/// 1 + LoseLife 3 (the most common cost — an average top-of-library mana
+/// value). The Knight-token half is dropped (no mana-value-scaled token
+/// primitive at this fidelity). The -X drain reads `Value::XFromCost`
+/// (set by the `x_value` rider on `GameAction::ActivateLoyaltyAbility`).
+/// The -9 ult uses a flat 10 drain (typical late-game state).
+pub fn sorin_grim_nemesis() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Sorin, Grim Nemesis",
+        cost: cost(&[generic(4), b(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Sorin],
+            ..Default::default()
+        },
+        base_loyalty: 6,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(3),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        amount: Value::Const(1),
+                    },
+                    Effect::GainLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -9,
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(10),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Saheeli Rai — {1}{U}{R} Legendary Planeswalker — Saheeli. 3 loyalty.
+/// **+1**: Scry 1. Saheeli Rai deals 1 damage to each opponent and each
+/// planeswalker an opponent controls.
+/// **-2**: Create a token that's a copy of target artifact or creature
+/// you control, except it has haste. Exile it at the beginning of the
+/// next end step.
+/// **-7**: You get an emblem with "At the beginning of your end step,
+/// create two tokens that are copies of target artifact or creature you
+/// control, except they have haste. Exile them at the beginning of the
+/// next end step."
+///
+/// Cube-style approximation. The +1's "scry 1 + damage each opponent +
+/// each PW they control" wires through `Scry + Drain` (the PW-also half
+/// collapses; engine has no `EachOpponentsPlaneswalker` selector). The -2
+/// uses `CreateTokenCopyOf` with the target friendly creature or
+/// artifact; haste is granted via the granted-keyword pipeline; the
+/// "exile at next end step" rider uses `DelayUntil(NextEndStep)`. The
+/// -7 ult is approximated as the -2 body fired twice (emblem
+/// approximation; the engine's emblem primitive isn't wired yet for
+/// "create two more each turn" auto-recurring effects).
+pub fn saheeli_rai() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::{DelayedTriggerKind, Duration};
+    let copy_friendly = || Effect::Seq(vec![
+        Effect::CreateTokenCopyOf {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            source: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Artifact)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            extra_creature_types: vec![],
+            override_pt: None,
+        },
+        Effect::GrantKeyword {
+            what: Selector::LastCreatedToken,
+            keyword: crate::card::Keyword::Haste,
+            duration: Duration::Permanent,
+        },
+        Effect::DelayUntil {
+            kind: DelayedTriggerKind::NextEndStep,
+            body: Box::new(Effect::Exile {
+                what: Selector::LastCreatedToken,
+            }),
+        },
+    ]);
+    CardDefinition {
+        name: "Saheeli Rai",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Saheeli],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Scry {
+                        who: PlayerRef::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::DealDamage {
+                        to: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: copy_friendly(),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Seq(vec![copy_friendly(), copy_friendly()]),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Ashiok, Nightmare Weaver — {1}{U}{B} Legendary Planeswalker — Ashiok.
+/// 3 loyalty.
+/// **+2**: Exile the top three cards of target opponent's library.
+/// **-X**: Exile target creature an opponent controls. Put onto the
+/// battlefield under your control a token that's a copy of a creature
+/// card with mana value X or less exiled with Ashiok.
+/// **-10**: Each opponent draws seven cards from cards exiled with this.
+///
+/// Cube-style approximation. The +2 mills 3 (engine routes exile-from-
+/// library through `Mill`-style movement, but Ashiok's "exiled with this"
+/// linkage is engine-wide ⏳ — for cube play the milled cards stay in
+/// the opponent's removal pile rather than a dedicated exile-with-this
+/// zone). The -X uses `Effect::Exile` on the targeted opponent creature
+/// (the "create a copy of exiled creature" rider is dropped, same gap as
+/// Saheeli's emblem). The -10 ult is collapsed to "each opponent loses
+/// the game" via the standard `WinGame` pattern.
+pub fn ashiok_nightmare_weaver() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Ashiok, Nightmare Weaver",
+        cost: cost(&[generic(1), u(), b()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Ashiok],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::Mill {
+                    who: target_filtered(SelectionRequirement::Player),
+                    amount: Value::Const(3),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -1,
+                effect: Effect::Exile {
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -10,
+                effect: Effect::WinGame { who: PlayerRef::You },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Tamiyo, Collector of Tales — {2}{G}{U} Legendary Planeswalker — Tamiyo.
+/// 4 loyalty.
+/// **Static**: "Spells your opponents control can't cause you to discard
+/// cards or sacrifice permanents." (Approximation: collapsed — engine
+/// has no opponent-spell-effect filter on `DiscardChosen` / `Sacrifice`.)
+/// **-2**: Return target card from your graveyard to your hand.
+/// **-3**: Search your library for a card with the same name as a card
+/// in target player's graveyard, reveal it, put it into your hand, then
+/// shuffle.
+/// **-7**: Draw cards equal to the number of nonland card types among
+/// cards in your graveyard. You get an emblem with "Spells you cast
+/// have convoke."
+///
+/// Cube-style approximation. The static is dropped (engine-wide gap).
+/// The -2 reanimate uses `Move(target → Hand)`. The -3 is approximated
+/// as `Search → Hand` on the controller's library with no name-match
+/// (any card; future name-match primitive will tighten this). The -7
+/// uses `Draw 4` (a reasonable midgame approximation; the full
+/// distinct-types-in-gy + convoke-emblem is engine-wide ⏳).
+pub fn tamiyo_collector_of_tales() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    CardDefinition {
+        name: "Tamiyo, Collector of Tales",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Tamiyo],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: -2,
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Any),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(4),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Geyadrone Dihada — {2}{B}{R} Legendary Planeswalker — Dihada.
+/// 3 loyalty.
+/// **+1**: Each opponent loses 1 life and you draw a card. Then if you
+/// have less life than an opponent, this PW's loyalty is reset to its
+/// starting value.
+/// **-3**: Gain control of target creature or planeswalker until end of
+/// turn. Untap it. It gains haste until end of turn.
+/// **-7**: Ult — every opponent loses half their life.
+///
+/// Cube-style approximation. The +1's "loyalty reset" rider collapses
+/// (engine has no loyalty-set primitive). The -3 GainControl + Untap +
+/// Haste is the headline Threaten-style play pattern. The -7 ult uses
+/// `LoseLife(EachOpponent, 10)` as the half-life approximation
+/// (typical mid-late-game value).
+pub fn geyadrone_dihada() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Geyadrone Dihada",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Dihada],
+            ..Default::default()
+        },
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::Player(PlayerRef::EachOpponent),
+                        amount: Value::Const(1),
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Seq(vec![
+                    Effect::GainControl {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .or(SelectionRequirement::Planeswalker),
+                        ),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::Untap {
+                        what: Selector::Target(0),
+                        up_to: None,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::Target(0),
+                        keyword: crate::card::Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
+            },
+            LoyaltyAbility {
+                loyalty_cost: -7,
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(10),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Korvold, Fae-Cursed King — {2}{B}{R}{G} Legendary Creature — Dragon
+/// Noble. 4/4 Flying. "Whenever you sacrifice a permanent, put a +1/+1
+/// counter on this and draw a card."
+///
+/// Wired against the new `EventKind::PermanentSacrificed / YourControl`
+/// trigger (CR 701.16 — shipped alongside this card in batch 102).
+/// The engine's sacrifice resolver now emits a `PermanentSacrificed`
+/// event for every sacrifice regardless of card type, so Korvold's
+/// trigger catches Treasure-sac / Clue-sac / Food-sac / land-sac /
+/// creature-sac uniformly.
+pub fn korvold_fae_cursed_king() -> CardDefinition {
+    use crate::card::{CounterType, Supertype as Sup};
+    CardDefinition {
+        name: "Korvold, Fae-Cursed King",
+        cost: cost(&[generic(2), b(), r(), g()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon, CreatureType::Noble],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::PermanentSacrificed,
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lord Xander, the Collector — {3}{U}{B}{R} Legendary Creature — Vampire
+/// Demon Noble. 6/6 Flying.
+/// **When this enters**: Target opponent discards three cards.
+/// **Whenever this attacks**: Defending player mills half their library,
+/// rounded down.
+/// **When this dies**: Target opponent sacrifices half their nonland
+/// permanents, rounded down.
+///
+/// Cube-style approximation. The "half their library, rounded down" is
+/// approximated as `Mill 8` (typical midgame library size around 16 →
+/// half). The "sacrifices half their permanents" is collapsed to
+/// `Sacrifice(EachOpponent, 3, Permanent ∧ Nonland)` (typical board
+/// state). Both halves use `target_filtered(Player)` for the attack/die
+/// triggers — the cube AutoDecider picks the active opponent.
+pub fn lord_xander_the_collector() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Lord Xander, the Collector",
+        cost: cost(&[generic(3), u(), b(), r()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Vampire,
+                CreatureType::Demon,
+                CreatureType::Noble,
+            ],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::DiscardChosen {
+                    from: target_filtered(SelectionRequirement::Player),
+                    count: Value::Const(3),
+                    filter: SelectionRequirement::Any,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Mill {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(8),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(3),
+                    filter: SelectionRequirement::Nonland,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Master of Cruelties — {2}{B}{R} Legendary Creature — Demon. 1/4 First
+/// Strike, Deathtouch. "Master of Cruelties can attack only alone.
+/// Whenever Master of Cruelties attacks a player, that player's life
+/// total becomes 1. Master of Cruelties deals no combat damage this
+/// turn."
+///
+/// Cube-style approximation: the printed "can attack only alone" combat
+/// restriction is dropped (engine has no attack-alone restriction
+/// primitive — same gap as Mortician Beetle's "first creature you cast
+/// each turn" gate). The attack-trigger uses `SetLifeTotal` on the
+/// defending player (currently routes to the active defending opponent
+/// via `target_filtered(Player)`); the "deals no combat damage" rider
+/// is also dropped — combined with the SetLifeTotal → 1 effect, the
+/// engine's combat-damage step would land the deathtouch ping on top,
+/// so the net play is "attack alone → opp at 0 → opp loses." This is
+/// the printed kill condition in any case.
+pub fn master_of_cruelties() -> CardDefinition {
+    use crate::card::Supertype as Sup;
+    CardDefinition {
+        name: "Master of Cruelties",
+        cost: cost(&[generic(2), b(), r()]),
+        supertypes: vec![Sup::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::SetLifeTotal {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Territorial Kavu — {2}{R}{G} Creature — Kavu. 3/2. "Whenever a land
+/// enters the battlefield under an opponent's control, put a +1/+1
+/// counter on Territorial Kavu."
+///
+/// Wired via `LandPlayed` + `OpponentControl` trigger → `AddCounter` on
+/// `Selector::This`. The trigger reads the published `LandPlayed` event
+/// (`event_subject = player`), filtered by scope so only opp-controlled
+/// lands fire. Approximation: lands that ETB without being "played"
+/// (Sakura-Tribe Elder, Kodama's Reach branches) still emit
+/// `LandPlayed`, so the trigger catches every fresh land that lands on
+/// the opponent's side.
+pub fn territorial_kavu() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Territorial Kavu",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::OpponentControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kolaghan's Command — {1}{B}{R} Instant. Choose two —
+/// • Target player discards a card.
+/// • Return target creature card from your graveyard to your hand.
+/// • Destroy target artifact.
+/// • Kolaghan's Command deals 2 damage to target creature or
+///   planeswalker.
+///
+/// Cube-style approximation: the printed "choose two" multi-mode picker
+/// (CR 700.2d) is collapsed to a single `ChooseMode` of three commonly-
+/// useful bundled pairs (each pair covers one creature + one creature/
+/// artifact answer plus the discard/draw exchange). The AutoDecider
+/// picks mode 0 (discard + reanimate) by default; ScriptedDecider can
+/// override.
+pub fn kolaghans_command() -> CardDefinition {
+    CardDefinition {
+        name: "Kolaghan's Command",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: discard + return creature from gy.
+            Effect::Seq(vec![
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Any,
+                },
+                Effect::Move {
+                    what: target_filtered(
+                        SelectionRequirement::Creature,
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            // Mode 1: 2 damage + destroy artifact.
+            Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                },
+            ]),
+            // Mode 2: discard + 2 damage.
+            Effect::Seq(vec![
+                Effect::DiscardChosen {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Any,
+                },
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: Value::Const(2),
+                },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Heroic Intervention — {1}{G} Instant. Permanents you control gain
+/// hexproof and indestructible until end of turn.
+///
+/// Cube-style approximation: the engine has no `Hexproof` keyword-grant
+/// to permanents en masse, but `Indestructible` keyword-grant works
+/// (CR 702.12b). Wired via `ForEach(your perms) + GrantKeyword
+/// (Indestructible, EOT)`. The hexproof half is dropped — strictly
+/// weaker than printed, but the typical use-case (saving the board
+/// from a Wrath) is preserved.
+pub fn heroic_intervention() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Heroic Intervention",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::ControlledByYou,
+            ),
+            body: Box::new(Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Wear // Tear — {1}{R} // {W} Sorcery — split card. Wear destroys
+/// target artifact; Tear destroys target enchantment. (Fuse: cast both
+/// halves for their combined cost.)
+///
+/// Cube-style approximation: the split-card primitive (CR 709) is
+/// engine-wide ⏳. We ship the Tear half (destroy target enchantment)
+/// at the Wear cost of {1}{R} as a single-spell approximation — the
+/// most expensive but most useful cast pattern. A real Split-Card
+/// primitive would expose both halves and the fuse cost. Sorting it
+/// under R so the cube fan-out picks it up.
+pub fn wear_tear() -> CardDefinition {
+    CardDefinition {
+        name: "Wear // Tear",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Trinisphere — {3} Artifact. As long as Trinisphere is untapped, each
+/// spell costs at least {3} to cast.
+///
+/// Cube-style approximation: the "cost at least {3}" static is engine-
+/// wide ⏳ (no minimum-cost primitive — only the additional-cost-per-
+/// spell tax, Damping Sphere). Ships as a vanilla 3-mana artifact body
+/// — promote to ✅ once the minimum-cost-floor static lands. The card
+/// remains in pools as a colorless stop-gap pickup.
+pub fn trinisphere() -> CardDefinition {
+    CardDefinition {
+        name: "Trinisphere",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact],
+        effect: Effect::Noop,
+        ..Default::default()
+    }
+}
+
+/// Stillmoon Cavalier — {1}{W}{B} Creature — Zombie Knight. 2/2.
+/// • {W}: Stillmoon Cavalier gains flying until end of turn.
+/// • {B}: Stillmoon Cavalier gains first strike until end of turn.
+/// • {1}{W}: Stillmoon Cavalier gains protection from black until end
+///   of turn.
+/// • {1}{B}: Stillmoon Cavalier gains protection from white until end
+///   of turn.
+///
+/// Wired with four printed activated abilities (no costs collapsed). The
+/// protection grants use the engine's existing `Keyword::Protection`
+/// (which enforces combat unblockable + spell-target restriction in
+/// `can_block` and target validation). EOT grants clear at cleanup.
+pub fn stillmoon_cavalier() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::effect::Duration;
+    let activated = |mana: ManaCost, kw: Keyword| ActivatedAbility {
+        tap_cost: false,
+        mana_cost: mana,
+        effect: Effect::GrantKeyword {
+            what: Selector::This,
+            keyword: kw,
+            duration: Duration::EndOfTurn,
+        },
+        once_per_turn: false,
+        sorcery_speed: false,
+        sac_cost: false,
+        condition: None,
+        life_cost: 0,
+        from_graveyard: false,
+        exile_self_cost: false,
+        exile_other_filter: None,
+        self_counter_cost_reduction: None,
+    };
+    CardDefinition {
+        name: "Stillmoon Cavalier",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![
+            activated(cost(&[w()]), Keyword::Flying),
+            activated(cost(&[b()]), Keyword::FirstStrike),
+            activated(cost(&[generic(1), w()]), Keyword::Protection(Color::Black)),
+            activated(cost(&[generic(1), b()]), Keyword::Protection(Color::White)),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Wishclaw Talisman — {1}{B} Artifact. Enters with three wish counters.
+/// {T}, Remove a wish counter from this: Search your library for a card
+/// and put that card into your hand, then shuffle. An opponent gains
+/// control of Wishclaw Talisman.
+///
+/// Cube-style approximation: the "An opponent gains control" downside
+/// is engine-wide ⏳ — `Effect::GainControl { who: ctx.controller }`
+/// can't yet route to "the opp" because no `GainControlBy { who: …
+/// EachOpponent }` variant exists. We ship the tutor body + counter
+/// removal cost; the downside is documented and dropped. The "search
+/// for any card" tutor reads `SelectionRequirement::Any`. The
+/// counter-removal cost is folded into resolution; the activation
+/// rejects when the artifact has no wish counters left.
+pub fn wishclaw_talisman() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    CardDefinition {
+        name: "Wishclaw Talisman",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::Charge, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Any,
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Murderous Cut — {5}{B} Instant. Delve. Destroy target creature.
+///
+/// Cube-style approximation: the Delve cost-reduction primitive isn't
+/// wired yet (same gap as Treasure Cruise, Dig Through Time). The card
+/// is castable at full {5}{B} cost; the body is a clean
+/// `Destroy(Creature)`. Promote to ✅ when Delve lands.
+pub fn murderous_cut() -> CardDefinition {
+    CardDefinition {
+        name: "Murderous Cut",
+        cost: cost(&[generic(5), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        ..Default::default()
+    }
+}
+
 

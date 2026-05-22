@@ -610,6 +610,18 @@ pub enum EventKind {
     /// resolver emits both events in order (CreatureSacrificed first,
     /// then CreatureDied) so existing death-triggers still fire.
     CreatureSacrificed,
+    /// Any permanent was sacrificed (creature, artifact, enchantment,
+    /// land, planeswalker). Per CR 701.16, this is the broader-scope
+    /// sibling of `CreatureSacrificed` — "Whenever you sacrifice a
+    /// permanent" payoffs (Korvold, Fae-Cursed King; Mayhem Devil;
+    /// Cruel Celebrant for permanents) want this event so they catch
+    /// Treasure-sac, Clue-sac, Food-sac, and land-sacrifice resolutions
+    /// alongside creature sacrifices. The `Effect::Sacrifice` resolver
+    /// emits this event for every sacrificed permanent, regardless of
+    /// type; for creatures it additionally emits `CreatureSacrificed`
+    /// (creatures fire BOTH events, matching CR 701.16's "every
+    /// sacrifice of a creature is a sacrifice of a permanent" wording).
+    PermanentSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
     /// A card was drawn.

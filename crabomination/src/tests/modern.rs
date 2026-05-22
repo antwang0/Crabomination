@@ -9483,3 +9483,605 @@ fn yavimaya_elder_sac_draws_a_card() {
     assert!(!g.battlefield.iter().any(|c| c.id == elder),
         "Elder sacrificed");
 }
+
+// ── claude/modern_decks batch 102: multicolor cube expansion ────────────────
+
+#[test]
+fn sorin_grim_nemesis_plus_one_draws_and_loses_three_life() {
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_grim_nemesis());
+    g.add_card_to_library(0, catalog::island());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: sorin, ability_index: 0, target: None,
+    }).expect("Sorin +1 castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 3, "Lost 3 life");
+    assert!(g.players[0].hand.len() > hand_before, "Drew a card");
+}
+
+#[test]
+fn sorin_grim_nemesis_minus_nine_drains_each_opponent() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let sorin = g.add_card_to_battlefield(0, catalog::sorin_grim_nemesis());
+    // Pump loyalty so -9 is legal (6 base + 3 = 9).
+    if let Some(s) = g.battlefield_find_mut(sorin) {
+        s.add_counters(CounterType::Loyalty, 3);
+    }
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: sorin, ability_index: 2, target: None,
+    }).expect("Sorin -9 ult");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_life - 10, "Opp lost 10");
+    assert_eq!(g.players[0].life, p0_life + 10, "Gained 10");
+}
+
+#[test]
+fn saheeli_rai_plus_one_pings_each_opponent() {
+    let mut g = two_player_game();
+    let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
+    g.add_card_to_library(0, catalog::island());
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: saheeli, ability_index: 0, target: None,
+    }).expect("Saheeli +1");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_life - 1, "Opp pinged for 1");
+}
+
+#[test]
+fn saheeli_rai_minus_two_creates_haste_copy() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: saheeli,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+    }).expect("Saheeli -2 copies bear");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1, "Copy token entered");
+    let bear_copies = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Grizzly Bears")
+        .count();
+    assert!(bear_copies >= 1, "At least one bear copy token");
+}
+
+#[test]
+fn ashiok_nightmare_weaver_plus_two_mills_opponent_three() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let ashiok = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let yard_before = g.players[1].graveyard.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ashiok,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+    }).expect("Ashiok +2 mills opp 3");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].graveyard.len(), yard_before + 3, "Opp milled 3");
+}
+
+#[test]
+fn ashiok_nightmare_weaver_minus_one_exiles_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let ashiok = g.add_card_to_battlefield(0, catalog::ashiok_nightmare_weaver());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: ashiok,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+    }).expect("Ashiok -1 exiles bear");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "Bear exiled");
+}
+
+#[test]
+fn tamiyo_collector_minus_two_returns_card_from_graveyard() {
+    let mut g = two_player_game();
+    let tamiyo = g.add_card_to_battlefield(0, catalog::tamiyo_collector_of_tales());
+    // Stage a card in the graveyard.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: tamiyo, ability_index: 0,
+        target: Some(crate::game::types::Target::Permanent(bear)),
+    }).expect("Tamiyo -2 reanimate-to-hand");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear returned to hand");
+    assert!(g.players[0].hand.len() >= hand_before,
+        "Hand size sane (got bear back)");
+}
+
+#[test]
+fn geyadrone_dihada_plus_one_drains_each_opponent_for_one() {
+    let mut g = two_player_game();
+    let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
+    g.add_card_to_library(0, catalog::island());
+    let p1_life = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dihada, ability_index: 0, target: None,
+    }).expect("Dihada +1");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, p1_life - 1, "Opp loses 1");
+    assert!(g.players[0].hand.len() > hand_before, "You draw a card");
+}
+
+#[test]
+fn geyadrone_dihada_minus_three_steals_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let dihada = g.add_card_to_battlefield(0, catalog::geyadrone_dihada());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dihada,
+        ability_index: 1,
+        target: Some(Target::Permanent(bear)),
+    }).expect("Dihada -3 threaten");
+    drain_stack(&mut g);
+
+    // Bear is now under your control with haste.
+    let bear_card = g.battlefield_find(bear).expect("Bear still on bf");
+    assert_eq!(bear_card.controller, 0, "Bear now controlled by you");
+}
+
+#[test]
+fn korvold_fae_cursed_king_triggers_on_sacrifice() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let korvold = g.add_card_to_battlefield(0, catalog::korvold_fae_cursed_king());
+    g.clear_sickness(korvold);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+
+    // Fire a Sacrifice on the bear via Effect::Sacrifice. We dispatch
+    // the resulting CreatureSacrificed event into Korvold's trigger
+    // listener after the sacrifice resolves.
+    let sac_effect = crate::card::Effect::Sacrifice {
+        who: crate::card::Selector::You,
+        count: crate::card::Value::Const(1),
+        filter: crate::card::SelectionRequirement::Creature,
+    };
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&sac_effect, &ctx).expect("Sacrifice resolves");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    // Korvold should have a +1/+1 counter and you should have drawn a card.
+    let korvold_card = g.battlefield_find(korvold).expect("Korvold still alive");
+    assert_eq!(korvold_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Korvold gained +1/+1 counter from sacrifice");
+    assert!(g.players[0].hand.len() > hand_before,
+        "Korvold drew a card from sacrifice");
+}
+
+#[test]
+fn korvold_fae_cursed_king_triggers_on_artifact_sacrifice_via_permanent_event() {
+    // PermanentSacrificed catches non-creature sacrifices too —
+    // CR 701.16 generalization shipped with the batch 102 engine work.
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let korvold = g.add_card_to_battlefield(0, catalog::korvold_fae_cursed_king());
+    g.clear_sickness(korvold);
+    // An artifact, not a creature.
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+
+    let sac_effect = crate::card::Effect::Sacrifice {
+        who: crate::card::Selector::You,
+        count: crate::card::Value::Const(1),
+        filter: crate::card::SelectionRequirement::Artifact,
+    };
+    let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let events = g.resolve_effect(&sac_effect, &ctx).expect("Sac resolves");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    let korvold_card = g.battlefield_find(korvold).expect("Korvold alive");
+    assert_eq!(korvold_card.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Korvold grew off non-creature (Mind Stone) sacrifice via PermanentSacrificed");
+    assert!(g.players[0].hand.len() > hand_before,
+        "Korvold drew a card from artifact sacrifice");
+}
+
+#[test]
+fn lord_xander_the_collector_etb_makes_opponent_discard_three() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Stack opp hand
+    for _ in 0..5 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    let hand_before = g.players[1].hand.len();
+    let xander = g.add_card_to_hand(0, catalog::lord_xander_the_collector());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: xander, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Xander castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), hand_before - 3,
+        "Opp discarded 3 from Xander ETB");
+}
+
+#[test]
+fn master_of_cruelties_attack_sets_opp_life_to_one() {
+    let mut g = two_player_game();
+    let master = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+    g.clear_sickness(master);
+    g.players[1].life = 20;
+
+    // Fire the attack trigger directly via event bus.
+    let trig = catalog::master_of_cruelties().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        master, 0, None, 0,
+    );
+    let _ = g.resolve_effect(&trig, &ctx);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 1, "Opp's life set to 1");
+}
+
+#[test]
+fn territorial_kavu_grows_when_opponent_plays_a_land() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let kavu = g.add_card_to_battlefield(0, catalog::territorial_kavu());
+    g.clear_sickness(kavu);
+
+    // Opponent plays a land.
+    let land = g.add_card_to_hand(1, catalog::forest());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = crate::game::types::TurnStep::PreCombatMain;
+    g.perform_action(GameAction::PlayLand(land))
+        .expect("Opp plays a forest");
+    drain_stack(&mut g);
+
+    let k = g.battlefield_find(kavu).expect("Kavu alive");
+    assert_eq!(k.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Kavu grew off opp's land entering");
+}
+
+#[test]
+fn kolaghans_command_mode_zero_discard_plus_reanimate() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // Stage gy reanimation target + opp hand.
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::island());
+    let hand_before = g.players[1].hand.len();
+    let cmd = g.add_card_to_hand(0, catalog::kolaghans_command());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: cmd, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Kolaghan's Command mode 0 castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), hand_before - 1, "Opp discarded 1");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Bear back in hand");
+}
+
+#[test]
+fn heroic_intervention_grants_indestructible_to_your_perms() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hi = g.add_card_to_hand(0, catalog::heroic_intervention());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: hi, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Heroic Intervention castable");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield_find(bear).expect("Bear alive");
+    assert!(bear_card.has_keyword(&crate::card::Keyword::Indestructible),
+        "Bear gained indestructible");
+}
+
+#[test]
+fn wear_tear_destroys_target_artifact() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let mind_stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let wt = g.add_card_to_hand(0, catalog::wear_tear());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: wt, target: Some(Target::Permanent(mind_stone)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wear // Tear castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mind_stone).is_none(),
+        "Mind Stone destroyed");
+}
+
+#[test]
+fn stillmoon_cavalier_grants_flying_eot() {
+    let mut g = two_player_game();
+    let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());
+    g.clear_sickness(cav);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cav, ability_index: 0, target: None, x_value: None,
+    }).expect("Stillmoon {W}: flying");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(cav).expect("Stillmoon alive");
+    assert!(c.has_keyword(&crate::card::Keyword::Flying),
+        "Gained flying EOT");
+}
+
+#[test]
+fn stillmoon_cavalier_grants_protection_from_black_eot() {
+    let mut g = two_player_game();
+    let cav = g.add_card_to_battlefield(0, catalog::stillmoon_cavalier());
+    g.clear_sickness(cav);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cav, ability_index: 2, target: None, x_value: None,
+    }).expect("Stillmoon {1}{W}: pro-black");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(cav).expect("Stillmoon alive");
+    assert!(c.has_keyword(&crate::card::Keyword::Protection(Color::Black)),
+        "Gained protection from black EOT");
+}
+
+#[test]
+fn wishclaw_talisman_enters_with_three_charge_counters() {
+    // Cast the Talisman so the ETB-counters payload fires through the
+    // normal pipeline (rather than add-direct-to-battlefield bypass).
+    let mut g = two_player_game();
+    let wishclaw = g.add_card_to_hand(0, catalog::wishclaw_talisman());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wishclaw, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Wishclaw castable");
+    drain_stack(&mut g);
+    let w = g.battlefield_find(wishclaw).expect("Wishclaw on battlefield");
+    use crate::card::CounterType;
+    assert_eq!(w.counter_count(CounterType::Charge), 3,
+        "Enters with three charge counters");
+}
+
+#[test]
+fn wishclaw_talisman_searches_and_consumes_a_charge_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    let wishclaw = g.add_card_to_battlefield(0, catalog::wishclaw_talisman());
+    // Manually stamp three charge counters — `add_card_to_battlefield`
+    // bypasses the ETB pipeline so `enters_with_counters` doesn't fire.
+    if let Some(w) = g.battlefield_find_mut(wishclaw) {
+        w.add_counters(CounterType::Charge, 3);
+    }
+    g.clear_sickness(wishclaw);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(bear)),
+    ]));
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wishclaw, ability_index: 0, target: None, x_value: None,
+    }).expect("Wishclaw activatable");
+    drain_stack(&mut g);
+
+    // The tutored card is in your hand.
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "Tutored bear into hand");
+    // Charge counter consumed.
+    let w = g.battlefield_find(wishclaw).expect("Wishclaw alive");
+    assert_eq!(w.counter_count(CounterType::Charge), 2,
+        "Charge counter consumed");
+    // Wishclaw stays under your control — the printed "opp gains
+    // control" downside is documented engine-wide gap.
+}
+
+#[test]
+fn murderous_cut_destroys_target_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mc = g.add_card_to_hand(0, catalog::murderous_cut());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: mc, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murderous Cut castable at full cost");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(bear).is_none(), "Bear destroyed");
+}
+
+#[test]
+fn trinisphere_is_a_three_mana_artifact() {
+    let g = two_player_game();
+    let def = catalog::trinisphere();
+    assert_eq!(def.cost.cmc(), 3, "Costs 3");
+    assert!(def.card_types.contains(&CardType::Artifact), "Artifact");
+    let _ = g;
+}
+
+#[test]
+fn magma_spray_exiles_a_low_toughness_creature_via_if_branch() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    // 2-toughness creature: hits exile branch.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ms = g.add_card_to_hand(0, catalog::magma_spray());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: ms, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Magma Spray castable");
+    drain_stack(&mut g);
+
+    // Bear at 2 toughness: should be exiled, not in graveyard.
+    let in_gy = g.players[1].graveyard.iter().any(|c| c.id == bear);
+    let in_exile = g.exile.iter().any(|c| c.id == bear);
+    assert!(in_exile, "Bear exiled");
+    assert!(!in_gy, "Bear NOT in graveyard");
+}
+
+#[test]
+fn yarok_the_desecrated_is_a_three_five_deathtouch_lifelink() {
+    let mut g = two_player_game();
+    let yarok = g.add_card_to_battlefield(0, catalog::yarok_the_desecrated());
+    let y = g.battlefield_find(yarok).expect("Yarok alive");
+    assert_eq!(y.power(), 3);
+    assert_eq!(y.toughness(), 5);
+    assert!(y.has_keyword(&crate::card::Keyword::Deathtouch));
+    assert!(y.has_keyword(&crate::card::Keyword::Lifelink));
+}
+
+#[test]
+fn hellrider_attack_pings_each_opponent_for_one() {
+    let mut g = two_player_game();
+    let hellrider = g.add_card_to_battlefield(0, catalog::hellrider());
+    g.clear_sickness(hellrider);
+    let p1_life = g.players[1].life;
+    let trig = catalog::hellrider().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        hellrider, 0, None, 0,
+    );
+    let _ = g.resolve_effect(&trig, &ctx);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 1, "Opp pinged for 1");
+}
+
+#[test]
+fn generous_gift_destroys_target_permanent() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gg = g.add_card_to_hand(0, catalog::generous_gift());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gg, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Generous Gift castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "Bear destroyed");
+}
+
+#[test]
+fn putrefy_modern_destroys_artifact_or_creature() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let stone = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let p = g.add_card_to_hand(0, catalog::putrefy_modern());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: p, target: Some(Target::Permanent(stone)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Putrefy castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(stone).is_none(), "Mind Stone destroyed");
+}
+
+#[test]
+fn etali_primal_storm_attack_mills_each_player_one() {
+    let mut g = two_player_game();
+    let etali = g.add_card_to_battlefield(0, catalog::etali_primal_storm());
+    g.clear_sickness(etali);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(1, catalog::island());
+    let p0_yard = g.players[0].graveyard.len();
+    let p1_yard = g.players[1].graveyard.len();
+    let trig = catalog::etali_primal_storm().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(etali, 0, None, 0);
+    let _ = g.resolve_effect(&trig, &ctx);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), p0_yard + 1, "P0 milled 1");
+    assert_eq!(g.players[1].graveyard.len(), p1_yard + 1, "P1 milled 1");
+}
+
+#[test]
+fn knight_of_the_reliquary_pt_scales_with_lands_in_graveyards() {
+    let mut g = two_player_game();
+    let knight = g.add_card_to_battlefield(0, catalog::knight_of_the_reliquary());
+    // Base 2/2 with no lands in gys.
+    let c = g.compute_battlefield();
+    let k = c.iter().find(|c| c.id == knight).unwrap();
+    assert_eq!(k.power, 2, "Base power 2");
+    assert_eq!(k.toughness, 2, "Base toughness 2");
+    // Add 3 lands to your graveyard.
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::forest());
+    }
+    // Add 2 lands to opp's graveyard.
+    for _ in 0..2 {
+        g.add_card_to_graveyard(1, catalog::island());
+    }
+    let c = g.compute_battlefield();
+    let k = c.iter().find(|c| c.id == knight).unwrap();
+    assert_eq!(k.power, 2 + 5, "Knight grew to 7/7");
+    assert_eq!(k.toughness, 2 + 5, "Knight is 7/7");
+}
+
+#[test]
+fn goblin_rabblemaster_attack_creates_a_goblin_token() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let rabble = g.add_card_to_battlefield(0, catalog::goblin_rabblemaster());
+    g.clear_sickness(rabble);
+    let bf_before = g.battlefield.len();
+    let trig = catalog::goblin_rabblemaster().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(rabble, 0, None, 0);
+    let _ = g.resolve_effect(&trig, &ctx);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.len(), bf_before + 1, "Goblin token entered");
+    assert!(g.battlefield.iter().any(|c|
+        c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Goblin)
+    ), "Goblin token present");
+}

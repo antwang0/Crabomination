@@ -1039,6 +1039,9 @@ impl GameState {
         // SetPT effect. Adding a new dynamic-P/T card is one row in that
         // table — no engine-side `if name == "..."` branch.
         let goyf_n = self.distinct_card_types_in_all_graveyards() as i32;
+        let lands_in_gys: i32 = self.players.iter()
+            .map(|p| p.graveyard.iter().filter(|c| c.definition.is_land()).count() as i32)
+            .sum();
         for card in &self.battlefield {
             let Some(formula) = dynamic_pt_for_name(card.definition.name) else { continue };
             let (power, toughness) = match formula {
@@ -1048,6 +1051,9 @@ impl GameState {
                 crate::card::DynamicPt::ControllerGraveyardSize => {
                     let n = self.players[card.controller].graveyard.len() as i32;
                     (n, n)
+                }
+                crate::card::DynamicPt::BasePlusLandsInAllGraveyards { base_p, base_t } => {
+                    (base_p + lands_in_gys, base_t + lands_in_gys)
                 }
             };
             all_effects.push(ContinuousEffect {
@@ -2904,6 +2910,9 @@ fn dynamic_pt_for_name(name: &'static str) -> Option<crate::card::DynamicPt> {
     match name {
         "Tarmogoyf" | "Cosmogoyf" => Some(DynamicPt::DistinctTypesInAllGraveyards),
         "Cruel Somnophage" => Some(DynamicPt::ControllerGraveyardSize),
+        "Knight of the Reliquary" => Some(DynamicPt::BasePlusLandsInAllGraveyards {
+            base_p: 2, base_t: 2,
+        }),
         _ => None,
     }
 }

@@ -1071,6 +1071,59 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   "Card — Verdant Mastery alt-cost mode" / Permanent-copy primitive
   rows. Promote to ✅ when `Effect::CreateCopyToken` lands.
 
+- ⏳ **CR 709 — Split Cards** (push claude/modern_decks batch 102
+  audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
+  The split-card primitive — how a single physical card exposes two
+  castable halves with distinct names, costs, and rules text. Audit:
+  (a) **709.1** "Two card faces on a single card" — ⏳ (no `Card
+  Definition.split_face: Option<Box<CardDefinition>>` primitive yet;
+  the engine has `back_face: Option<Box<BackFace>>` for MDFCs but
+  that's wired specifically for double-faced cards on the
+  battlefield-flip pipeline, not the cast-from-hand fork that split
+  cards need).
+  (b) **709.2** "Each split card is one card" (a player who drew a
+  split card has drawn one card) — n/a (cards are one entity in the
+  engine's `CardInstance` model; no double-counting to worry about).
+  (c) **709.3** "Player chooses which half to cast before putting it
+  on the stack" — ⏳ (no `GameAction::CastSplitHalf { card_id, half:
+  Left|Right }` action; no cast-time fork on the spell-cast pipeline
+  that consults the chosen half before validating cost / targets).
+  (d) **709.3a-b** "Only the chosen half's characteristics exist on
+  stack" — ⏳ (no per-half target / cost / type-line resolution on
+  `StackItem::Spell`; both halves would share the on-stack item if
+  naively projected).
+  (e) **709.4** "In every zone except stack, the characteristics are
+  the combined halves" — ⏳ (Cathartic Reunion-style "split card has
+  both names" wouldn't work for `Predicate::SameNamedInZoneAtLeast`).
+  (f) **709.4b** "Mana value is from combined cost" (Fire//Ice has
+  MV 4) — ⏳ (the engine would naively read whichever half's cost is
+  stamped on the `CardDefinition.cost` field).
+  (g) **709.4d** "Fused split spell characteristics are combined" —
+  ⏳ (no Fuse primitive — `Keyword::Fuse` doesn't exist).
+  Affected cards (none in catalog today; one approximation):
+  Wear // Tear (push 102 — single-spell approximation: ships as a
+  {1}{R} Sorcery that destroys an artifact OR enchantment, dropping
+  the split fork and the Fuse mode).
+  Tests: `wear_tear_destroys_target_artifact` (single-half
+  approximation only). No CR 709 enforcement tests exist.
+  Suggested wiring (when landed):
+  ```rust
+  pub struct CardDefinition {
+      ...
+      /// Left/right halves. When Some, the cast path forks on
+      /// `GameAction::CastSpell { mode: Some(0 | 1) }` and stamps
+      /// the chosen half's `cost` / `effect` / `target_filter`
+      /// onto the resulting StackItem::Spell.
+      pub split_halves: Option<(Box<CardDefinition>, Box<CardDefinition>)>,
+      /// True if Fuse is wired — both halves resolve in
+      /// fuse-cost order when `mode == Some(2)` is selected.
+      pub fuse: bool,
+  }
+  ```
+  Promote to 🟡 when the cast-time fork lands; promote to ✅ when
+  Wear // Tear ships at full fidelity (both halves castable, Fuse
+  mode wired, target filters per half).
+
 - ✅ **CR 107 — Numbers and Symbols** (push modern_decks batch 32
   audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
   The number / X / mana-symbol foundation. Audit:
@@ -3603,19 +3656,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Wire mirror added to `GameEventWire::CreatureSacrificed` so client
   UIs can highlight the sacrifice distinctly from a natural death.
 
-- ⏳ **`EventKind::PermanentSacrificed` for non-creature sacrifices**
-  (push modern_decks batch 51 — new suggestion). The just-shipped
-  `EventKind::CreatureSacrificed` only fires for creature sacrifices
-  (the `is_creature` gate in the `Effect::Sacrifice` resolver). A
-  more general `EventKind::PermanentSacrificed` (or extending the
-  existing variant to drop the creature-only gate) would unblock
-  Korlash-, Smokestack-, Zealous Conscripts-style "Whenever a player
-  sacrifices a permanent" payoffs (artifact-sac, land-sac, planeswalker
-  -sac). Wiring shape: emit a parallel event for non-creature
-  sacrifices, or rename the existing variant and split into two via a
-  `PermanentKind` discriminant. No catalog card needs this today; the
-  gap is doc-tracked for future Modern Horizons-style "sacrifice
-  matters" lord cards.
+- ✅ **`EventKind::PermanentSacrificed` for non-creature sacrifices**
+  (push claude/modern_decks batch 102). Shipped. The new
+  `EventKind::PermanentSacrificed` / `GameEvent::PermanentSacrificed
+  { card_id, who }` fires on every sacrifice resolution regardless of
+  card type — emitted by all three sacrifice paths (`Effect::Sacrifice`,
+  `Effect::SacrificeGreatestMV`, `Effect::SacrificeAndRemember`) and
+  the activated-ability `sac_cost: true` cost path. For creature
+  sacrifices both events fire (CreatureSacrificed first per CR 701.16,
+  then PermanentSacrificed), so existing Mortician-style sub-triggers
+  remain order-correct. Wire mirror `GameEventWire::PermanentSacrificed`
+  added for replay rewinds. Korvold, Fae-Cursed King ships in batch
+  102 as the exercise card — tests cover both creature- and artifact-
+  sacrifice payoff paths
+  (`korvold_fae_cursed_king_triggers_on_sacrifice`,
+  `korvold_fae_cursed_king_triggers_on_artifact_sacrifice_via_permanent_event`).
 
 - ⏳ **Transient triggered-ability grant primitive** (push
   modern_decks batch 47 — new suggestion). Several STX/SOS cards

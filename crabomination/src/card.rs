@@ -67,6 +67,9 @@ pub enum CreatureType {
     Elder,
     // Lorehold Sloth subtype (Pestbrood Sloth, Startled Relic Sloth).
     Sloth,
+    // Multicolor creature subtypes added with the modern_decks cube
+    // expansion (Lord Xander, Korvold, etc.).
+    Noble, Fae,
 }
 
 /// Land subtypes (basic land types + others).
@@ -102,6 +105,9 @@ pub enum PlaneswalkerSubtype {
     Tezzeret,
     // SOS Witherbloom Dellian planeswalker subtype (Professor Dellian Fel).
     Dellian,
+    // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
+    // Geyadrone Dihada, Urza Chief Artificer).
+    Saheeli, Tamiyo, Dihada, Urza,
 }
 
 /// All subtype categories collected into one struct for CardDefinition.
@@ -587,6 +593,10 @@ pub enum DynamicPt {
     /// Power = toughness = size of the controller's graveyard. Cruel
     /// Somnophage.
     ControllerGraveyardSize,
+    /// Power = toughness = base + total land cards in all graveyards.
+    /// Knight of the Reliquary (base 2/2; grows +1/+1 per land in any
+    /// player's graveyard).
+    BasePlusLandsInAllGraveyards { base_p: i32, base_t: i32 },
 }
 
 /// An alternative (pitch) cost. Replaces the normal mana cost when the

@@ -234,6 +234,10 @@ fn colorless_pool() -> Vec<CardFactory> {
         great_hall_of_the_biblioplex,
         // ── modern_decks (claude/modern_decks) — new colorless ──
         howling_mine,
+        // ── modern_decks batch 102: cube expansion ──
+        // trinisphere   — 🟡 minimum-cost static omitted; ships as a
+        //                  vanilla 3-mana artifact body.
+        trinisphere,
     ]
 }
 
@@ -302,6 +306,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks (claude/modern_decks) — new W cards ──
         wall_of_omens,
         white_suns_zenith,
+        // ── modern_decks batch 102 (mono-white cube expansion) ──
+        generous_gift,
         // ── SOS (Secrets of Strixhaven) ──
         eager_glyphmage,
         erode,
@@ -356,6 +362,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(vindicate);
         v.push(anguished_unmaking);
         v.push(despark);
+        // ── modern_decks batch 102 (WB Stillmoon Cavalier) ──
+        v.push(stillmoon_cavalier);
         // ── SOS Silverquill (W/B) ──
         v.push(silverquill_charm);
         v.push(killians_confidence);
@@ -501,6 +509,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(visionarys_dance);
         v.push(abstract_paintmage);
         v.push(sanar_unfinished_genius);
+        // ── modern_decks batch 102 (UR cube expansion) ──
+        v.push(saheeli_rai);
     }
     if pair_contains(pair, Color::White) {
         v.push(teferi_time_raveler);
@@ -515,6 +525,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(cruel_somnophage);
         // ── modern_decks-14 (UB cross-pool) ──
         v.push(drown_in_the_loch);
+        // ── modern_decks batch 102 (UB cube expansion) ──
+        v.push(ashiok_nightmare_weaver);
     }
     v
 }
@@ -599,6 +611,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         phyrexian_reclamation,
         ophiomancer,
         black_suns_zenith,
+        // ── modern_decks batch 102: cube expansion ──
+        // murderous_cut — 🟡 Delve cost-reduction omitted; castable at
+        //                  full {5}{B}. Promote to ✅ when Delve lands.
+        murderous_cut,
+        wishclaw_talisman,
         // ── SOS (Secrets of Strixhaven) ──
         sneering_shadewriter,
         burrog_banemaker,
@@ -640,6 +657,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-15 (BR cross-pool removal) ──
         v.push(dreadbore);
         v.push(bedevil);
+        // ── modern_decks batch 102 (BR cube expansion) ──
+        v.push(kolaghans_command);
+        v.push(master_of_cruelties);
+        v.push(geyadrone_dihada);
     }
     if pair_contains(pair, Color::White) {
         v.push(mourning_thrull);
@@ -689,12 +710,17 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(cauldron_of_essence);
         v.push(vicious_rivalry);
         v.push(lluwen_exchange_student);
+        // ── modern_decks batch 102 (BG cube expansion) ──
+        v.push(putrefy_modern);
     }
     if pair_contains(pair, Color::White) {
         // ── modern_decks-14 (WB cross-pool removal) ──
         v.push(vindicate);
         v.push(anguished_unmaking);
         v.push(despark);
+        // ── modern_decks batch 102 (WB cube expansion) ──
+        v.push(sorin_grim_nemesis);
+        v.push(stillmoon_cavalier);
     }
     v
 }
@@ -765,6 +791,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pyroblast,
         red_elemental_blast,
         red_suns_zenith,
+        // ── modern_decks batch 102 (mono-red cube expansion) ──
+        hellrider,
+        etali_primal_storm,
+        goblin_rabblemaster,
         // ── modern_decks-15 ──
         strangle,
         // ── SOS (Secrets of Strixhaven) ──
@@ -835,6 +865,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(commercial_district);
         // ── SOS push XI: Lorehold (R/W) MDFC ──
         v.push(kirol_history_buff);
+        // ── modern_decks batch 102 (RW cube expansion) ──
+        v.push(wear_tear);
     }
     v
 }
@@ -930,11 +962,16 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
+        // ── modern_decks batch 102 (GW cube expansion) ──
+        v.push(heroic_intervention);
+        v.push(knight_of_the_reliquary);
     }
     if pair_contains(pair, Color::Red) {
         v.push(ghor_clan_rampager);
         v.push(slagwoods_bridge);
         v.push(elegant_parlor);
+        // ── modern_decks batch 102 (RG cube expansion) ──
+        v.push(territorial_kavu);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);
@@ -950,6 +987,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(fractal_anomaly);
         v.push(proctors_gaze);
         v.push(tam_observant_sequencer);
+        // ── modern_decks batch 102 (GU cube expansion) ──
+        v.push(tamiyo_collector_of_tales);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);

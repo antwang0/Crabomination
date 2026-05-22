@@ -22,20 +22,59 @@ Two adjacent catalogs:
 | STX (327 cards) | 1526 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 101:
+Push (claude/modern_decks branch — current head — **post-batch 102:
 both Strixhaven sets remain at 100% ✅ catalog fidelity (255 SOS / 1526
-STX). Headline engine work this batch lands `GameAction::ActivateAbility.
-x_value: Option<u32>` so X-cost activated abilities (Pernicious Deed,
-future Walking Ballista-style `{X}: deal X damage`) bind X at activation
-time — the value rides on `StackItem::Trigger.x_value` and is consumed
-via `Value::XFromCost` at resolution. CR 602.2b audit row added to
+STX). Headline this batch ships 23 brand-new cube cards across all
+five colors plus colorless: 5 multicolor planeswalkers (Sorin Grim
+Nemesis, Saheeli Rai, Ashiok Nightmare Weaver, Tamiyo Collector of
+Tales, Geyadrone Dihada); 8 multicolor / 3-color creatures (Korvold
+Fae-Cursed King, Lord Xander the Collector, Master of Cruelties,
+Territorial Kavu, Stillmoon Cavalier, Knight of the Reliquary,
+Yarok the Desecrated, Putrefy); 4 modal / removal spells (Kolaghan's
+Command, Wear // Tear approximation, Heroic Intervention,
+Murderous Cut); 2 mono-red creatures (Hellrider, Etali Primal Storm,
+Goblin Rabblemaster); 1 mono-white removal (Generous Gift); 1
+colorless artifact stub (Trinisphere); 1 black wishful tutor
+(Wishclaw Talisman). Magma Spray promoted to ✅ via the
+Lava-Coil-style `If(ToughnessAtMost(2), Exile, DealDamage 2)` rider.
+
+Engine work this batch:
+- **New `EventKind::PermanentSacrificed` + `GameEvent::Permanent
+  Sacrificed { card_id, who }`** (CR 701.16 generalization). Emitted
+  by all three sacrifice resolvers and the activated-ability sac-cost
+  path. Korvold's "whenever you sacrifice a permanent" trigger now
+  catches Treasure / Clue / Food / land / creature sacrifices
+  uniformly. Wire mirror `GameEventWire::PermanentSacrificed` added.
+- **New `DynamicPt::BasePlusLandsInAllGraveyards { base_p, base_t }`**
+  variant — Knight of the Reliquary's printed "+1/+1 for each land
+  card in all graveyards" P/T scaling now lands as a layer-7b
+  `SetPowerToughness(2 + lands_in_gys, 2 + lands_in_gys)` continuous
+  effect every `compute_battlefield` pass.
+- **New `CreatureType::Noble`, `CreatureType::Fae`** enum variants
+  for Lord Xander / Korvold / Geyadrone.
+- **New `PlaneswalkerSubtype::Saheeli/Tamiyo/Dihada/Urza`** enum
+  variants for the four new planeswalkers.
+
+CR 709 (Split Cards) audit row added to TODO.md. CR 701.16 sac-event
+generalization row promoted from ⏳ → ✅ in TODO.md.
+
+Tests: 3386 → 3417 (31 new tests for the batch 102 cards + promoted
+Magma Spray exile-branch + Korvold-on-artifact-sac PermanentSacrificed
+test).**
+
+Prior push (claude/modern_decks branch — post-batch 101): Headline
+engine work landed `GameAction::ActivateAbility.x_value: Option<u32>`
+so X-cost activated abilities (Pernicious Deed, future Walking
+Ballista-style `{X}: deal X damage`) bind X at activation time — the
+value rides on `StackItem::Trigger.x_value` and is consumed via
+`Value::XFromCost` at resolution. CR 602.2b audit row added to
 TODO.md. Card-side: 23 brand-new Modern-supplement cards (Snapcaster
 Mage, Pyroblast/REB/Hydroblast/BEB, Tale's End, Wall of Omens, Wall of
 Roots, Toxic Deluge, Pernicious Deed, Demonic Consultation, Phyrexian
 Reclamation, Sylvan Library, Howling Mine, Ophiomancer, Yavimaya Elder,
 Channel, Three Visits, Stroke of Genius, Green/Red/White/Black Sun's
 Zenith, plus the Rofellos Forest-count-scaling promotion). Tests:
-3358 → 3386.**
+3358 → 3386.
 
 Prior push (modern_decks, batch 101):
 **batch 101 (final 🟡 sweep): the last three 🟡 cards promoted to ✅:

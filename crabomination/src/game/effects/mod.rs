@@ -1717,6 +1717,13 @@ impl GameState {
                             events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
+                        // Every sacrifice emits a generic
+                        // PermanentSacrificed event (CR 701.16) so
+                        // "Whenever you sacrifice a permanent" payoffs
+                        // (Korvold, Mayhem Devil) catch artifact /
+                        // enchantment / land / planeswalker
+                        // sacrifices alongside creature sacrifices.
+                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die_evs);
                     }
@@ -1771,6 +1778,7 @@ impl GameState {
                             events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
+                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
                         let mut die_evs = self.remove_to_graveyard_with_triggers(id);
                         events.append(&mut die_evs);
                     }
@@ -2004,6 +2012,7 @@ impl GameState {
                         events.push(GameEvent::CreatureSacrificed { card_id: cid, who: p });
                         events.push(GameEvent::CreatureDied { card_id: cid });
                     }
+                    events.push(GameEvent::PermanentSacrificed { card_id: cid, who: p });
                     self.remove_from_battlefield_to_graveyard(cid);
                 }
                 Ok(())

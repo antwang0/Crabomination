@@ -434,6 +434,16 @@ pub enum GameEvent {
     /// triggers (Mortician Beetle, Yahenni-class) see the
     /// sacrifice-specific event first.
     CreatureSacrificed { card_id: CardId, who: usize },
+    /// A permanent (any card type) was sacrificed by `who`. Broader-
+    /// scope sibling of `CreatureSacrificed` — fires for every
+    /// sacrifice resolution; for creature sacrifices the engine emits
+    /// `CreatureSacrificed` first (preserving Mortician-style sub-
+    /// trigger order) and `PermanentSacrificed` second. The two
+    /// events let "whenever you sacrifice a permanent" payoffs
+    /// (Korvold, Mayhem Devil, Yarok) catch Treasure / Clue / Food /
+    /// land sacrifices alongside creature sacrifices, without
+    /// double-firing creature-specific sub-triggers.
+    PermanentSacrificed { card_id: CardId, who: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     CounterAdded { card_id: CardId, counter_type: CounterType, count: u32 },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },

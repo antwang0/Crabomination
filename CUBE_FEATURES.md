@@ -127,7 +127,7 @@ still ⏳.
 | Night's Whisper | ✅ | Pay 2 life + Draw 2 (already in `decks::modern`). |
 | Dread Return | 🟡 | {2}{B}{B} Sorcery. Wired as `Move(target creature card → Battlefield(You))`. The flashback "as an additional cost, sacrifice three creatures" half is omitted (no flashback-with-additional-cost primitive yet) — the regular cast is fully functional. Test: `dread_return_reanimates_target_creature_from_graveyard`. |
 | Blasphemous Edict | ✅ | Each player sacrifices a creature (`Sacrifice` + `EachPlayer`). |
-| Wishclaw Talisman | ⏳ | Wish-style tutor with downside. |
+| Wishclaw Talisman | 🟡 | Push (claude/modern_decks batch 102): {1}{B} Artifact. ETB with 3 charge counters. `{T}, Remove a charge counter: Search your library for a card → hand.` Tutor body + cost wired. The "opp gains control" downside is engine-wide ⏳ (no `GainControlBy { who: opp }` variant — `Effect::GainControl` always uses the activator's controller). Tests: `wishclaw_talisman_enters_with_three_charge_counters`, `wishclaw_talisman_searches_and_consumes_a_charge_counter`. |
 | Parallax Dementia | ⏳ | Fading + reanimate; needs fade counters. |
 | Parallax Nexus | ⏳ | Fading + hand-strip. |
 | Unholy Annex // Ritual Chamber | ⏳ | DFC enchantment land. |
@@ -274,7 +274,7 @@ still ⏳.
 | Monument to Endurance | ⏳ | Graveyard-recursion artifact. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
-| Trinisphere | ⏳ | Static "spells cost at least {3}". Reuses cost-tax static. |
+| Trinisphere | 🟡 | Push (claude/modern_decks batch 102): {3} Artifact body wired as a vanilla 3-mana artifact. The "spells cost at least {3}" minimum-cost static is engine-wide ⏳ (the engine has `AdditionalCostAfterFirstSpell` for cost-tax, but no minimum-cost-floor primitive yet). Ships in the colorless pool. Test: `trinisphere_is_a_three_mana_artifact`. |
 | Helm of the Host | ⏳ | Equipment that token-copies on attack. |
 | The Mightstone and Weakstone | ⏳ | Modal artifact (assemble). |
 | Coveted Jewel | ⏳ | Mana + force-attack control mechanic. |
@@ -293,15 +293,15 @@ still ⏳.
 | Cruel Somnophage | ✅ | {1}{U}{B} 0/0 Phyrexian Horror; layer-7 `SetPowerToughness(your_grave_size, your_grave_size)` injection in `compute_battlefield` (same hardcoded site that powers Tarmogoyf/Cosmogoyf). Test: `cruel_somnophage_pt_scales_with_your_graveyard`. |
 | Talisman of Dominance | ✅ | {2} Artifact. UB mirror of Talisman of Progress: `{T}: Add {C}` + `{T}: Add {U}` + `{T}: Add {B}` (each colored ability costs 1 life). Test: `talisman_of_dominance_taps_for_blue_costing_one_life`. |
 | Howling Mine | ✅ | Push (claude/modern_decks, NEW): {2} Artifact. At the beginning of each player's draw step, that player draws an additional card (`StepBegins(Draw)/AnyPlayer` → `Draw(ActivePlayer)`). The "if untapped" gate collapses. Test: `howling_mine_draws_an_extra_card_each_turn`. |
-| Ashiok, Nightmare Weaver | ⏳ | Planeswalker — exile/scry/copy. |
+| Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Master of Death | ⏳ | UB recursion + discard. |
 | Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |
 | Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
 | Carnage Interpreter | ⏳ | TBD. |
-| Kolaghan's Command | ⏳ | Modal x2. |
-| Master of Cruelties | ⏳ | First-strike + life-to-1 attack trigger. |
-| Territorial Kavu | ⏳ | Color-matters. |
+| Kolaghan's Command | 🟡 | Push (claude/modern_decks batch 102): {1}{B}{R} Instant. Modal — `ChooseMode([discard+reanimate, ping+destroy-artifact, discard+ping])`. The printed "choose two of four" multi-mode picker (CR 700.2d) collapses to three bundled pairs. AutoDecider picks mode 0. Test: `kolaghans_command_mode_zero_discard_plus_reanimate`. |
+| Master of Cruelties | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 1/4 First Strike Deathtouch Demon. Attack trigger sets the defending player's life to 1 (via `Effect::SetLifeTotal`). The "can attack only alone" combat restriction and "deals no combat damage this turn" rider are dropped (no engine primitives) — combined with the deathtouch ping, the net play pattern matches the printed kill condition. Test: `master_of_cruelties_attack_sets_opp_life_to_one`. |
+| Territorial Kavu | ✅ | Push (claude/modern_decks batch 102): {2}{R}{G} 3/2 Kavu. `LandPlayed` + `OpponentControl` trigger → `AddCounter(+1/+1, Self)`. Test: `territorial_kavu_grows_when_opponent_plays_a_land`. |
 | Bloodbraid Challenger | ⏳ | Cascade. |
 | Qasali Pridemage | ⏳ | Exalted + sac to destroy artifact/enchantment. |
 | Knight of the Reliquary | ⏳ | Sac-land tutor scaling P/T. |
@@ -310,12 +310,12 @@ still ⏳.
 | Torsten, Founder of Benalia | ⏳ | TBD. |
 | Tidehollow Sculler | 🟡 | {W}{B} 2/2 Zombie. ETB picks a nonland card from a target opponent's hand and sends it to their graveyard (approximation of "exile until this leaves"). The "return when this leaves" clause is omitted (no exile-until-LTB primitive yet). Reuses `DiscardChosen`. Test: `tidehollow_sculler_etb_takes_an_opponent_card`. |
 | Gift of Orzhova | ⏳ | Aura — flying + lifelink. |
-| Stillmoon Cavalier | ⏳ | Mana abilities for protection toggling. |
-| Sorin, Grim Nemesis | ⏳ | Planeswalker. |
+| Stillmoon Cavalier | ✅ | Push (claude/modern_decks batch 102): {1}{W}{B} 2/2 Zombie Knight with four activated abilities — `{W}: gain flying EOT`, `{B}: gain first strike EOT`, `{1}{W}: gain protection from black EOT`, `{1}{B}: gain protection from white EOT`. All four use `Effect::GrantKeyword(EndOfTurn)`. Tests: `stillmoon_cavalier_grants_flying_eot`, `stillmoon_cavalier_grants_protection_from_black_eot`. |
+| Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
 | Expressive Iteration | ⏳ | UR look-at-top-3 multi-pick. |
 | Talisman of Creativity | ✅ | UR mana rock — see Artifacts row. |
 | Pinnacle Emissary | ⏳ | TBD. |
-| Saheeli Rai | ⏳ | UR planeswalker. |
+| Saheeli Rai | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent for 1 (the "and each PW they control" half drops — no `EachOpponentsPlaneswalker` selector). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
 | Tempest Angler | ⏳ | TBD. |
 | Abrupt Decay | ⏳ | BG removal: destroy nonland with mana value ≤ 3, can't be countered. |
 | Assassin's Trophy | ⏳ | BG removal — opp searches for basic. |
@@ -324,20 +324,20 @@ still ⏳.
 | Wight of the Reliquary | ⏳ | Land-tutor sac variant. |
 | The Gitrog Monster | ⏳ | Land-as-discard / dredge engine. |
 | Talisman of Conviction | ✅ | RW mana rock — see Artifacts row. |
-| Wear // Tear | ⏳ | Split-card; needs Split-card primitive. |
+| Wear // Tear | 🟡 | Push (claude/modern_decks batch 102): {1}{R} Sorcery, single-spell approximation that destroys target artifact OR enchantment. The Split-Card primitive (CR 709) is engine-wide ⏳ — both halves collapse to a single faithful effect at the Wear cost. Fuse mode is dropped. Test: `wear_tear_destroys_target_artifact`. |
 | Zirda, the Dawnwaker | ⏳ | Companion + activated-cost reduction. Needs Companion primitive. |
 | Talisman of Curiosity | ✅ | GU mana rock — see Artifacts row. |
 | Lonis, Genetics Expert | ⏳ | Investigate + Clue draw. |
-| Tamiyo, Collector of Tales | ⏳ | Planeswalker. |
+| Tamiyo, Collector of Tales | 🟡 | Push (claude/modern_decks batch 102): {2}{G}{U} 4-loyalty Planeswalker. **-2**: Return target card from gy → hand. **-3**: Search library → hand (the "same name as a card in target opponent's graveyard" filter is engine-wide ⏳ — falls back to `Any`). **-7**: Draw 4 (the "distinct nonland types in gy" scaling drops). The static "spells your opps control can't make you discard or sac" is engine-wide ⏳. Test: `tamiyo_collector_minus_two_returns_card_from_graveyard`. |
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
 | Koma, Cosmos Serpent | ⏳ | Token-on-upkeep + sac counters. |
 | Kestia, the Cultivator | ⏳ | Aura/enchantment matters. |
 | Messenger Falcons | ⏳ | TBD. |
 | Dakkon, Shadow Slayer | ⏳ | TBD. |
 | Urza, Chief Artificer | ⏳ | Planeswalker / commander. |
-| Geyadrone Dihada | ⏳ | Planeswalker. |
-| Lord Xander, the Collector | ⏳ | ETB / attack / death triggers. |
-| Korvold, Fae-Cursed King | ⏳ | Sac-trigger draw + +1/+1. |
+| Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses 10 (half-life approximation). Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`. |
+| Lord Xander, the Collector | 🟡 | Push (claude/modern_decks batch 102): {3}{U}{B}{R} 6/6 Flying Legendary Vampire Demon Noble. ETB makes target opp discard 3 (`DiscardChosen`). Attack trigger mills each opp 8 (the "half their library" scaling collapses to a fixed midgame value). Die trigger makes each opp sacrifice 3 nonland permanents (the "half their permanents" scaling collapses). Test: `lord_xander_the_collector_etb_makes_opponent_discard_three`. |
+| Korvold, Fae-Cursed King | ✅ | Push (claude/modern_decks batch 102): {2}{B}{R}{G} 4/4 Flying Legendary Dragon Noble. `PermanentSacrificed` + `YourControl` trigger → AddCounter(+1/+1, This) + Draw 1. The new `EventKind::PermanentSacrificed` / `GameEvent::PermanentSacrificed` (CR 701.16) ships alongside this card and fires for every sacrifice resolution regardless of card type — so Korvold catches Treasure-sac / Clue-sac / Food-sac / land-sac / creature-sac uniformly. Tests: `korvold_fae_cursed_king_triggers_on_sacrifice`, `korvold_fae_cursed_king_triggers_on_artifact_sacrifice_via_permanent_event`. |
 | Temur Ascendancy | 🟡 | Filtered ETB trigger (creatures w/ power ≥ 4 entering under your control → Draw 1). Static "creatures you control have haste" currently grants haste to all your creatures rather than only ≥ 4 power (selector-decomposer doesn't yet thread `PowerAtLeast` into static-effect targeting). |
 | Loot, the Pathfinder | ⏳ | TBD. |
 | Dragonback Assault | ⏳ | TBD. |

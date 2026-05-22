@@ -19,6 +19,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::EntersBattlefield, GameEvent::PermanentEntered { .. }) => true,
         (EventKind::CreatureDied, GameEvent::CreatureDied { .. }) => true,
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
+        (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
         (EventKind::CardDrawn, GameEvent::CardDrawn { .. }) => true,
         (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. }) => true,
@@ -72,6 +73,9 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CreatureSacrificed { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            event,
+            GameEvent::PermanentSacrificed { card_id, .. } if *card_id == source.id
         ) || (
             // `Blocks` vs `BecomesBlocked` look at different sides of
             // the same BlockerDeclared event:
@@ -196,6 +200,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // would use AnyPlayer scope; a "whenever an opponent sacrifices"
         // would use OpponentControl.
         GameEvent::CreatureSacrificed { who, .. } => Some(*who),
+        GameEvent::PermanentSacrificed { who, .. } => Some(*who),
         _ => None,
     }
 }
@@ -218,6 +223,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureDied { card_id } => Some(EntityRef::Card(*card_id)),
         GameEvent::CreatureSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
+        GameEvent::PermanentSacrificed { card_id, .. } => Some(EntityRef::Card(*card_id)),
         GameEvent::AttackerDeclared(card_id) => Some(EntityRef::Permanent(*card_id)),
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
             if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
@@ -253,6 +259,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentExiled { card_id }
         | GameEvent::CreatureDied { card_id }
         | GameEvent::CreatureSacrificed { card_id, .. }
+        | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }
         | GameEvent::TokenCreated { card_id }
