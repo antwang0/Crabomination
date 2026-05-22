@@ -6014,11 +6014,7 @@ pub fn witherbloom_ravensoul() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::on_dies(Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::dies_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
