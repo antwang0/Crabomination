@@ -19,10 +19,49 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1587 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1612 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 104:
+Push (claude/modern_decks branch — current head — **post-batch 119:
+both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
+batch ships 25 brand-new Strixhaven synthesised cards across all five
+colleges (5 per college):
+
+- **Silverquill (W/B)** — Inkling Coursecaller (2/1 ETB scry 1 flyer),
+  Silverquill Loresmith (3/2 Lifelink+Vigilance with ETB gain 2),
+  Inkling Vanguard (3/4 flyer with "Other Inklings get +1/+0" static
+  anthem via `StaticEffect::PumpPT` + `OtherThanSource`), Silverquill
+  Embolden (instant +2/+2 + lifelink EOT), Silverquill Quillsweep
+  (sorcery drain 3 + cantrip).
+- **Witherbloom (B/G)** — Witherbloom Cradlemage (2/3 ETB Pest + mill 2
+  each opp), Pest Hivewatcher (1/2 with `CreatureDied/AnotherOfYours`
+  scope → +1 life), Witherbloom Harvester (3/2 with sac-cost-self
+  activated draw), Witherbloom Mulchcaster (sorcery mill 4 + gain 2),
+  Pest Mawcrawler (3/2 trampler with on-death -2 to each opp).
+- **Lorehold (R/W)** — Lorehold Battlescribe (2/2 magecraft self-pump +
+  first strike EOT), Lorehold Spelldrake (4/3 flyer + magecraft ping 2),
+  Lorehold Skirmisher (2/1 haste with ETB ping any 1), Lorehold
+  Reliquary (sorcery reanimate + Spirit token), Spirit Battlecry (instant
+  team +1/+1 EOT).
+- **Prismari (U/R)** — Prismari Tutorgeyst (1/2 with ETB loot via
+  `etb_loot()`), Prismari Flamescholar (3/2 magecraft ping each opp),
+  Prismari Inferno (sorcery 2 damage to creature + 2 damage to player —
+  two distinct target slots), Prismari Magmaweaver (4/3 ETB ping creature 2),
+  Prismari Reshape (instant bounce nonland + scry 2).
+- **Quandrix (G/U)** — Quandrix Polymath (1/2 magecraft self-counter
+  growth), Fractal Spawnmaster (3/3 mints a 3/3 Fractal), Quandrix
+  Druid (2/3 ETB pumps each friendly Fractal via
+  `etb_pump_each_with_type`), Quandrix Calculus (instant +1/+1 counter
+  + cantrip), Fractal Hatchling ({1}{G}{U} activated self-counter).
+
+All 25 cards use only existing engine primitives — no new engine work
+required. CR 120.7 (Source of damage tracking) audit row added to
+TODO.md.
+
+Tests: 3505 → 3531 (26 new tests, 1 extra for the Pest Hivewatcher
+self-death negative case).**
+
+Prior push (claude/modern_decks branch — post-batch 104:
 both Strixhaven sets remain at 100% ✅ catalog fidelity. Headline this
 batch ships 25 brand-new Strixhaven synthesised cards across all five
 colleges (5 per college):

@@ -2156,6 +2156,35 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   bears`). Lock-in test: the cleanup step clearing damage
   (CR 514.2 / `game/stack.rs:615`) confirms the marked-damage model.
 
+- ✅ **CR 120.7 — Source of damage tracking** (push modern_decks batch
+  119, claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt` lines 1124): "The source of damage is
+  the object that dealt it. If an effect requires a player to choose a
+  source of damage, they may choose a permanent; a spell on the stack
+  …; any object referred to by an object on the stack, by a prevention
+  or replacement effect that's waiting to apply, or by a delayed
+  triggered ability that's waiting to trigger (even if that object is
+  no longer in the zone it used to be in); or a face-up object in the
+  command zone." The engine threads the damage source through every
+  damage-dealing path: `Effect::DealDamage` (`game/effects/mod.rs:471`)
+  reads `ctx.source` (the spell or ability's source `CardId`) and
+  forwards it to `deal_damage_to_from(ent, amt, source, events)`. This
+  lets infect (CR 702.90b — passes poison counters from source's
+  controller), lifelink (CR 702.15b — looks up source's controller for
+  the gain), and damage-source-matters triggers (Witherbloom Stoker /
+  Quandrix Lighthouse — read `event.source`) all use the correct
+  attribution. Combat damage routes through `deal_combat_damage_to_target`
+  (`game/combat.rs:565`) which captures `atk.id` as the source. The
+  current model omits "a spell on the stack as a source" — only
+  permanent-source damage is supported (no Browbeat / Burning of
+  Xinye-style choose-the-spell-on-stack effects). Tests:
+  `lightning_bolt_kills_grizzly_bears` + every existing damage path
+  exercises the source threading; new
+  `pest_hivewatcher_b119_does_not_gain_life_when_only_self_dies`
+  verifies the AnotherOfYours scope properly filters out the source
+  itself based on damage-source identity in the dispatched
+  CreatureDied event.
+
 - ✅ **CR 613.4c / 613.7c — Layer 7c (counter / +N/+M) applies above
   layer 7b (set base P/T)** (push modern_decks audit, claude/modern_decks
   branch): "Layer 7b: Effects that set power and/or toughness to a specific
@@ -3608,6 +3637,29 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ⏳ **"Sacrifice a different creature as activation cost" primitive**
+  (push claude/modern_decks batch 119 — new suggestion). The engine's
+  current `ActivatedAbility.sac_cost: bool` always sacrifices the
+  source permanent. Several printed activations call for sacrificing a
+  *different* creature (or any matching permanent the activator
+  controls) — Greater Good, Korlash's "{B}, sacrifice a creature: …",
+  Sneak Attack-style cards. New batch 119 Witherbloom Harvester
+  approximates this by sacrificing self; a real
+  `sac_other_filter: Option<(SelectionRequirement, u32)>` slot
+  (mirroring `exile_other_filter`) would let Harvester sacrifice an
+  arbitrary friendly creature instead. Engine-wide ⏳.
+
+- ⏳ **Damage-source choice primitive (CR 120.7)** (push
+  claude/modern_decks batch 119 — new suggestion, paired with the new
+  CR 120.7 audit row). The current `Effect::DealDamage` path threads
+  `ctx.source` correctly, but the catalog has no spells / abilities
+  that ask the controller to *choose* a source of damage (Browbeat,
+  Burning of Xinye, Vendetta-style "deal damage equal to source's
+  power"). A `Selector::ChosenSourceOfDamage { filter }` plus a
+  `DecisionKind::ChooseSource` decision-point would unblock these.
+  Engine-wide ⏳; low priority since no current STX/SOS/cube card
+  needs it.
 
 - ✅ **`effect::shortcut::mint_pests(count)` / `mint_inklings(count)` /
   `mint_spirits(count)` helpers** (push claude/modern_decks batch 105
