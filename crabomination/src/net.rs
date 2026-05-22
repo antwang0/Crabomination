@@ -447,6 +447,12 @@ pub enum DecisionWire {
     CoinFlip {
         player: usize,
     },
+    /// CR 706 — roll an N-sided die. Decider answers `DieRoll(n)`
+    /// where `1 <= n <= sides`.
+    DieRoll {
+        player: usize,
+        sides: u8,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -507,6 +513,10 @@ impl From<&Decision> for DecisionWire {
                 }
             }
             Decision::CoinFlip { player } => DecisionWire::CoinFlip { player: *player },
+            Decision::DieRoll { player, sides } => DecisionWire::DieRoll {
+                player: *player,
+                sides: *sides,
+            },
         }
     }
 }

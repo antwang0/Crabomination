@@ -97,6 +97,19 @@ pub enum Decision {
         player: usize,
     },
 
+    /// CR 706 — roll an N-sided die. The decider answers with
+    /// `DieRoll(n)` where `1 <= n <= sides`. `AutoDecider` returns the
+    /// die's middle value (deterministic, lets tests assert specific
+    /// branches); `ScriptedDecider` can script any face.
+    /// Used by `Effect::RollDie` (Goblin Goliath, Wand of the Elements,
+    /// future Krark / Aether Sphere Harvester-style cards).
+    DieRoll {
+        /// Player rolling (typically `EffectContext.controller`).
+        player: usize,
+        /// Number of sides on the die (e.g. 6 for d6, 20 for d20).
+        sides: u8,
+    },
+
     /// CR 903.9b — the commander would land in `would_be` from
     /// somewhere; its owner *may* redirect to the command zone
     /// instead. Answered with `DecisionAnswer::Bool` (true = redirect,
@@ -138,6 +151,10 @@ pub enum DecisionAnswer {
     SerumPowder(CardId),
     /// A named creature type (Cavern of Souls).
     CreatureType(crate::card::CreatureType),
+    /// CR 706 — the natural result of a die roll. Must be in
+    /// `1..=sides` where `sides` is the die's face count from the
+    /// matching `Decision::DieRoll { sides, .. }`.
+    DieRoll(u8),
 }
 
 pub trait Decider {
@@ -225,6 +242,15 @@ impl Decider for AutoDecider {
             // tests; a real client would use an rng. ScriptedDecider can
             // override with `DecisionAnswer::Bool(false)` for tails.
             Decision::CoinFlip { .. } => DecisionAnswer::Bool(true),
+            // CR 706 — AutoDecider returns the die's midpoint (rounded
+            // up) so the result is deterministic AND lands on a typical
+            // "middle" result-table band. For a d6 that's 3; for a d20
+            // that's 10. ScriptedDecider can script any specific face
+            // for testing branch coverage of result tables.
+            Decision::DieRoll { sides, .. } => {
+                let midpoint = (*sides as u32).max(1).div_ceil(2);
+                DecisionAnswer::DieRoll(midpoint as u8)
+            }
         }
     }
 }

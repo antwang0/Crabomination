@@ -19,12 +19,73 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1695 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1716 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 124:
-10 more Strixhaven synthesised cards rounding out Lorehold / Prismari /
-Quandrix:
+Push (claude/modern_decks branch — current head — **post-batch 125:
+21 more Strixhaven synthesised cards across all five colleges + three
+new attack-trigger shortcut helpers (`on_attack_drain`,
+`on_attack_gain_life`, `on_attack_ping_any`):
+
+- **Lorehold (R/W, 4 cards)** — Lorehold Bloodrazer (b125) ({2}{R} 3/2
+  Spirit Warrior with on-attack ping 1 any), Lorehold Saintkeeper (b125)
+  ({2}{W} 2/3 Spirit Cleric Vigilance + on-attack GainLife 1), Lorehold
+  Vanguardian (b125) ({2}{R}{W} 3/3 Spirit Soldier + on-attack drain 1),
+  Lorehold Heraldcaller (b125) ({3}{R}{W} 3/4 Spirit Cleric Flying + ETB
+  mint 2 Spirits + GainLife 2).
+- **Quandrix (G/U, 4 cards)** — Quandrix Aetherbinder (b125) ({1}{U}
+  1/3 Merfolk Wizard magecraft Scry 1), Fractal Treewright (b125)
+  ({1}{G} 0/0 Fractal with `enters_with_counters = 2`), Quandrix
+  Mistsage (b125) ({2}{G}{U} 3/3 Elf Druid ETB Scry 1 + magecraft Loot
+  1), Fractal Reflection (b125) ({2}{G}{U} sorcery — add 2 +1/+1
+  counters to target friendly Fractal + draw 1).
+- **Prismari (U/R, 4 cards)** — Prismari Blazewright (b125) ({2}{R} 3/1
+  Human Wizard Haste + magecraft ping any 1), Prismari Riftscholar (b125)
+  ({1}{U} 1/3 Human Wizard ETB Scry 1 + Draw 1), Prismari Sparkshow (b125)
+  ({U}{R} instant — 2 damage to any target + cantrip), Prismari
+  Tempest-Bearer (b125) ({3}{U}{R} 4/4 Elemental Wizard Flying ETB Loot 1).
+- **Witherbloom (B/G, 4 cards)** — Witherbloom Drainstride (b125)
+  ({2}{B}{G} 3/3 Plant Vampire + on-attack drain 1), Witherbloom
+  Lifescribe Elder (b125) ({1}{G} 1/3 Plant Druid magecraft GainLife 2),
+  Pest Cinderpriest (b125) ({2}{B} 2/2 Pest Cleric ETB mint Pest +
+  magecraft drain each opp 1), Witherbloom Reaperscholar (b125) ({3}{B}{G}
+  4/4 Plant Druid Deathtouch + dies drain 2).
+- **Silverquill (W/B, 5 cards)** — Silverquill Stridemage (b125)
+  ({2}{W}{B} 3/3 Vampire Cleric + on-attack drain 1), Inkling Skyhunter
+  (b125) ({2}{W} 2/2 Inkling Soldier Flying + on-attack GainLife 1),
+  Silverquill Soulscholar (b125) ({1}{W} 1/2 Human Cleric Lifelink +
+  magecraft AddCounter(+1/+1, Self)), Inkling Drainsage (b125) ({3}{W}{B}
+  3/4 Inkling Cleric Flying+Lifelink ETB Drain 2), Silverquill
+  Ravenstrike (b125) ({1}{W}{B} sorcery — mint 1 Inkling + GainLife 2).
+
+Engine bonuses (batch 125):
+- Three new attack-trigger shortcut helpers in `effect::shortcut`:
+  `on_attack_drain(amount)` — symmetric attack-trigger drain;
+  `on_attack_gain_life(amount)` — asymmetric you-gain-only;
+  `on_attack_ping_any(amount)` — attack-trigger ping any target. Used
+  by 6 of the 21 new cards (Lorehold Bloodrazer, Saintkeeper,
+  Vanguardian, Witherbloom Drainstride, Silverquill Stridemage, Inkling
+  Skyhunter). Mirrors the `etb_drain` / `dies_drain` /
+  `magecraft_ping_any` families for the Attacks trigger event.
+- **CR 706 — Roll a Die primitive landed**:
+  `Effect::RollDie { sides: u8, count: Value, results:
+  Vec<(u8, u8, Effect)> }` mirrors `Effect::FlipCoin`'s shape for the
+  die-rolling equivalent. Paired with `Decision::DieRoll { player,
+  sides }` and `DecisionAnswer::DieRoll(u8)` for the controller's
+  rolled face. AutoDecider returns the midpoint ((sides+1)/2 — i.e.
+  3 for d6, 10 for d20) for deterministic tests; ScriptedDecider can
+  script any specific face 1..=sides. The resolver walks `results`
+  and runs the FIRST matching `[low, high]` arm; out-of-range rolls
+  run no effect per CR 706.3a's literal "If the result was in this
+  range" semantics. No catalog card uses this yet — the primitive is
+  in place for future Goblin Goliath / Wand of the Elements / AFR
+  Initiative cards. TODO.md's CR 706 audit row promoted ⏳ → 🟡.
+
+Tests: 3628 → 3656 (21 card tests + 3 helper shortcut lock-in tests +
+4 CR 706 primitive tests = 28 new tests for batch 125).**
+
+Prior push: 10 more Strixhaven synthesised cards rounding out Lorehold /
+Prismari / Quandrix:
 
 - **Lorehold (R/W, 4 cards)** — Lorehold Pyromancer ({2}{R} 2/3
   magecraft ping any), Lorehold Skydefender ({3}{W} 2/4 Flying ETB gain

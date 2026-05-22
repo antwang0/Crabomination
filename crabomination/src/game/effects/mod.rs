@@ -361,6 +361,41 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 706 — Roll `count` N-sided dice. For each die, ask the
+            // controller's decider for `Decision::DieRoll { sides }`
+            // (which returns `DecisionAnswer::DieRoll(rolled)`), then
+            // walk `results` and run the FIRST arm whose [low, high]
+            // range covers `rolled`. AutoDecider returns the midpoint;
+            // ScriptedDecider can script any face. Mirrors FlipCoin's
+            // resolver shape.
+            Effect::RollDie { sides, count, results } => {
+                let n = self.evaluate_value(count, ctx).max(0);
+                let sides = (*sides).max(2);
+                for _ in 0..n {
+                    let answer = self.decider.decide(&crate::decision::Decision::DieRoll {
+                        player: ctx.controller,
+                        sides,
+                    });
+                    let rolled = match answer {
+                        crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
+                        // Decider returned the wrong shape — degrade to
+                        // midpoint rather than panicking. Real clients
+                        // should always return DieRoll(n).
+                        _ => (sides as u32).div_ceil(2) as u8,
+                    };
+                    // CR 706.3a — first matching arm fires. If no arm
+                    // matches the roll, the die has no result-table
+                    // effect (per CR 706.3a "If the result was in this
+                    // range, [effect]" — silent on out-of-range rolls).
+                    if let Some((_, _, effect)) =
+                        results.iter().find(|(lo, hi, _)| rolled >= *lo && rolled <= *hi)
+                    {
+                        self.run_effect(effect, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::ChooseMode(modes) => {
                 let idx = ctx.mode;
                 if let Some(m) = modes.get(idx) {

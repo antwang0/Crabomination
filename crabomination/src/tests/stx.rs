@@ -49396,3 +49396,660 @@ fn fractal_coursemate_b124_enters_with_counters_equal_to_twice_hand() {
     assert!(c.power() >= 4, "Coursemate has at least 4 counters worth of power");
 }
 
+
+// ── Batch 125 — 17 new STX cards across all 5 schools ──────────────────────
+
+// ─── Lorehold ─────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_bloodrazer_b125_attack_pings_player() {
+    let mut g = two_player_game();
+    let lb = g.add_card_to_battlefield(0, catalog::lorehold_bloodrazer_b125());
+    g.clear_sickness(lb);
+    g.step = TurnStep::DeclareAttackers;
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lb, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    // On-attack ping deals 1 damage to a player (the default auto-target
+    // for friendly source).
+    assert_eq!(g.players[1].life, l1_before - 1,
+        "Bloodrazer pinged for 1 on attack");
+}
+
+#[test]
+fn lorehold_saintkeeper_b125_attack_gains_one_life() {
+    let mut g = two_player_game();
+    let ls = g.add_card_to_battlefield(0, catalog::lorehold_saintkeeper_b125());
+    g.clear_sickness(ls);
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ls, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0_before + 1,
+        "Saintkeeper gained 1 life on attack");
+    assert!(g.battlefield_find(ls).unwrap().has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn lorehold_vanguardian_b125_attack_drains_one() {
+    let mut g = two_player_game();
+    let lv = g.add_card_to_battlefield(0, catalog::lorehold_vanguardian_b125());
+    g.clear_sickness(lv);
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lv, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1_before - 1,
+        "Vanguardian drained opp for 1 on attack");
+    assert_eq!(g.players[0].life, l0_before + 1,
+        "controller gained 1 life from drain");
+}
+
+#[test]
+fn lorehold_heraldcaller_b125_etb_mints_two_spirits_and_gains_life() {
+    let mut g = two_player_game();
+    let lh = g.add_card_to_hand(0, catalog::lorehold_heraldcaller_b125());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let l_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lh, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Heraldcaller castable");
+    drain_stack(&mut g);
+    let spirit_tokens: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.controller == 0
+            && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
+        .collect();
+    assert_eq!(spirit_tokens.len(), 2, "minted 2 Spirit tokens");
+    assert_eq!(g.players[0].life, l_before + 2, "gained 2 life");
+    assert!(g.battlefield_find(lh).unwrap().has_keyword(&Keyword::Flying));
+}
+
+// ─── Quandrix ─────────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_aetherbinder_b125_magecraft_scrys_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_aetherbinder_b125());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // The Aetherbinder's magecraft fired (Scry 1). We can't observe the
+    // scry result directly, but the trigger fired without error.
+}
+
+#[test]
+fn fractal_treewright_b125_enters_with_two_counters() {
+    let mut g = two_player_game();
+    let ft = g.add_card_to_hand(0, catalog::fractal_treewright_b125());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ft, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Treewright castable");
+    drain_stack(&mut g);
+    let view = g.battlefield_find(ft).expect("Treewright alive (counters keep it from SBA)");
+    assert_eq!(view.power(), 2);
+    assert_eq!(view.toughness(), 2);
+}
+
+#[test]
+fn quandrix_mistsage_b125_etb_scrys_and_magecraft_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let qm = g.add_card_to_hand(0, catalog::quandrix_mistsage_b125());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: qm, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mistsage castable");
+    drain_stack(&mut g);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let h_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Cast Bolt (-1), draw 1 (+1), discard 1 (-1). Net: -1 from h_before.
+    assert_eq!(g.players[0].hand.len(), h_before - 1);
+}
+
+#[test]
+fn fractal_reflection_b125_pumps_target_fractal_and_draws() {
+    let mut g = two_player_game();
+    let f = g.add_card_to_battlefield(0, catalog::fractal_treewright_b125());
+    g.clear_sickness(f);
+    let p_before = g.battlefield_find(f).unwrap().power();
+    let fr = g.add_card_to_hand(0, catalog::fractal_reflection_b125());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let h_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: fr, target: Some(Target::Permanent(f)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reflection castable");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(f).unwrap().power();
+    assert_eq!(p_after, p_before + 2, "Fractal got two +1/+1 counters");
+    // Cast (-1) + draw (+1) = same hand size.
+    assert_eq!(g.players[0].hand.len(), h_before);
+}
+
+// ─── Prismari ─────────────────────────────────────────────────────────────
+
+#[test]
+fn prismari_blazewright_b125_pings_on_magecraft_with_haste() {
+    let mut g = two_player_game();
+    let pb = g.add_card_to_battlefield(0, catalog::prismari_blazewright_b125());
+    // Haste means we don't need to clear sickness for attacking, but magecraft
+    // triggers fire regardless.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + magecraft ping 1 = 4 damage to player.
+    assert_eq!(g.players[1].life, l1_before - 4);
+    assert!(g.battlefield_find(pb).unwrap().has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn prismari_riftscholar_b125_etb_scrys_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let pr = g.add_card_to_hand(0, catalog::prismari_riftscholar_b125());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let h_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Riftscholar castable");
+    drain_stack(&mut g);
+    // Cast -1 + draw +1 = same hand size.
+    assert_eq!(g.players[0].hand.len(), h_before);
+}
+
+#[test]
+fn prismari_sparkshow_b125_deals_two_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let ps = g.add_card_to_hand(0, catalog::prismari_sparkshow_b125());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1_before = g.players[1].life;
+    let h_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: ps, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sparkshow castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1_before - 2);
+    // -1 cast + 1 draw = same.
+    assert_eq!(g.players[0].hand.len(), h_before);
+}
+
+#[test]
+fn prismari_tempest_bearer_b125_etb_loots_and_flies() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::island()); // fodder to discard
+    let pt = g.add_card_to_hand(0, catalog::prismari_tempest_bearer_b125());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let h_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: pt, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tempest-Bearer castable");
+    drain_stack(&mut g);
+    // -1 cast (Tempest-Bearer), +1 draw, -1 discard = -1.
+    assert_eq!(g.players[0].hand.len(), h_before - 1);
+    assert!(g.battlefield_find(pt).unwrap().has_keyword(&Keyword::Flying));
+}
+
+// ─── Witherbloom ──────────────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_drainstride_b125_attack_drains_each_opp() {
+    let mut g = two_player_game();
+    let wd = g.add_card_to_battlefield(0, catalog::witherbloom_drainstride_b125());
+    g.clear_sickness(wd);
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: wd, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1_before - 1, "opp lost 1 on attack drain");
+    assert_eq!(g.players[0].life, l0_before + 1, "you gained 1 from drain");
+}
+
+#[test]
+fn witherbloom_lifescribe_elder_b125_magecraft_gains_two_life() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_lifescribe_elder_b125());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l_before + 2, "gained 2 life on magecraft");
+}
+
+#[test]
+fn pest_cinderpriest_b125_etb_mints_pest_and_magecraft_drains() {
+    let mut g = two_player_game();
+    let pc = g.add_card_to_hand(0, catalog::pest_cinderpriest_b125());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pc, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cinderpriest castable");
+    drain_stack(&mut g);
+    let pest_count = g.battlefield.iter()
+        .filter(|c| c.controller == 0
+            && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
+        .count();
+    assert_eq!(pest_count, 1, "minted 1 Pest token");
+    // Cast Bolt to trigger magecraft → opp loses 1 life.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + magecraft 1 = 4 damage to opp.
+    assert_eq!(g.players[1].life, l1_before - 4);
+}
+
+#[test]
+fn witherbloom_reaperscholar_b125_dies_drains_two() {
+    let mut g = two_player_game();
+    let wr = g.add_card_to_battlefield(0, catalog::witherbloom_reaperscholar_b125());
+    g.clear_sickness(wr);
+    assert!(g.battlefield_find(wr).unwrap().has_keyword(&Keyword::Deathtouch));
+    let l1_before = g.players[1].life;
+    let l0_before = g.players[0].life;
+    // Damage Reaperscholar to lethal (4/4 → 4 damage). SBA destroys it
+    // and the on-dies trigger fires.
+    let card = g.battlefield_find_mut(wr).unwrap();
+    card.damage = 4;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wr).is_none(), "Reaperscholar died");
+    assert_eq!(g.players[1].life, l1_before - 2, "opp lost 2 on death");
+    assert_eq!(g.players[0].life, l0_before + 2, "you gained 2 on death");
+}
+
+// ─── Silverquill ──────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_stridemage_b125_attack_drains_each_opp() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::silverquill_stridemage_b125());
+    g.clear_sickness(ss);
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ss, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1_before - 1);
+    assert_eq!(g.players[0].life, l0_before + 1);
+}
+
+#[test]
+fn inkling_skyhunter_b125_attack_gains_one_life() {
+    let mut g = two_player_game();
+    let is = g.add_card_to_battlefield(0, catalog::inkling_skyhunter_b125());
+    g.clear_sickness(is);
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: is, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0_before + 1);
+    assert!(g.battlefield_find(is).unwrap().has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn silverquill_soulscholar_b125_magecraft_grows_with_counter() {
+    let mut g = two_player_game();
+    let ss = g.add_card_to_battlefield(0, catalog::silverquill_soulscholar_b125());
+    g.clear_sickness(ss);
+    let p_before = g.battlefield_find(ss).unwrap().power();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let p_after = g.battlefield_find(ss).unwrap().power();
+    assert_eq!(p_after, p_before + 1, "Soulscholar grew on magecraft");
+    assert!(g.battlefield_find(ss).unwrap().has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn inkling_drainsage_b125_etb_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::inkling_drainsage_b125());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Drainsage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1_before - 2, "opp lost 2 from ETB drain");
+    assert_eq!(g.players[0].life, l0_before + 2, "you gained 2 from drain");
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Flying));
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn silverquill_ravenstrike_b125_mints_inkling_and_gains_life() {
+    let mut g = two_player_game();
+    let sr = g.add_card_to_hand(0, catalog::silverquill_ravenstrike_b125());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let l_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: sr, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ravenstrike castable");
+    drain_stack(&mut g);
+    let inkling_count = g.battlefield.iter()
+        .filter(|c| c.controller == 0
+            && c.is_token
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
+        .count();
+    assert_eq!(inkling_count, 1, "minted 1 Inkling token");
+    assert_eq!(g.players[0].life, l_before + 2, "gained 2 life");
+}
+
+// ── batch 125 helper shortcut lock-in tests ────────────────────────────────
+
+#[test]
+fn shortcut_on_attack_drain_uses_attacks_self_source_with_drain_body() {
+    // Lock in that on_attack_drain(N) builds an Attacks/SelfSource
+    // trigger whose body is an Effect::Drain. Prevents future refactors
+    // from collapsing the helper onto on_attack_gain_life (which would
+    // silently drop the opp-loses half of the drain).
+    use crate::effect::EventScope;
+    use crate::effect::shortcut::on_attack_drain;
+    let trig = on_attack_drain(2);
+    assert_eq!(trig.event.kind, crate::effect::EventKind::Attacks);
+    assert!(matches!(trig.event.scope, EventScope::SelfSource));
+    assert!(matches!(trig.effect, crate::effect::Effect::Drain { .. }),
+        "body is Effect::Drain, not GainLife / LoseLife");
+}
+
+#[test]
+fn shortcut_on_attack_gain_life_uses_attacks_self_source_with_gainlife_body() {
+    // Lock in that on_attack_gain_life(N) is the asymmetric variant —
+    // an Attacks/SelfSource trigger with a pure GainLife body (no
+    // opp-loses half). Distinguishes it from on_attack_drain.
+    use crate::effect::EventScope;
+    use crate::effect::shortcut::on_attack_gain_life;
+    let trig = on_attack_gain_life(1);
+    assert_eq!(trig.event.kind, crate::effect::EventKind::Attacks);
+    assert!(matches!(trig.event.scope, EventScope::SelfSource));
+    assert!(matches!(trig.effect, crate::effect::Effect::GainLife { .. }),
+        "body is Effect::GainLife (not Drain)");
+}
+
+#[test]
+fn shortcut_on_attack_ping_any_uses_attacks_self_source_with_dealdamage_body() {
+    // Lock in that on_attack_ping_any(N) is an Attacks/SelfSource
+    // trigger whose body is an Effect::DealDamage targeting any
+    // (Creature ∨ Player ∨ Planeswalker).
+    use crate::effect::EventScope;
+    use crate::effect::shortcut::on_attack_ping_any;
+    let trig = on_attack_ping_any(1);
+    assert_eq!(trig.event.kind, crate::effect::EventKind::Attacks);
+    assert!(matches!(trig.event.scope, EventScope::SelfSource));
+    assert!(matches!(trig.effect, crate::effect::Effect::DealDamage { .. }),
+        "body is Effect::DealDamage");
+}
+
+// ── batch 125 — CR 706 (Roll a Die) primitive tests ────────────────────────
+
+/// Test-only fixture: a Sorcery with a d6 results table. 1-2 → gain 1
+/// life; 3-6 → opp loses 3 life. Drives the AutoDecider midpoint test.
+fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll d6 Midpoint",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(1),
+            results: vec![
+                (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
+                (3, 6, Effect::LoseLife {
+                    who: Selector::Player(crate::effect::PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                }),
+            ],
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Test-only fixture: d6 sorcery whose 1-2 arm gains 5 life and 3-6
+/// arm deals 3 damage to opp. Drives the ScriptedDecider branch test.
+fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll d6 Big Gain",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(1),
+            results: vec![
+                (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+                (3, 6, Effect::LoseLife {
+                    who: Selector::Player(crate::effect::PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                }),
+            ],
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Test-only fixture: d6 with only a 1-3 arm. Rolls of 4-6 run no
+/// effect (CR 706.3a — "If the result was in this range").
+fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll d6 Partial Table",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(1),
+            results: vec![
+                (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+                // 4-6 intentionally unmapped.
+            ],
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+#[test]
+fn roll_die_auto_decider_lands_on_midpoint_branch() {
+    // AutoDecider returns the midpoint of an N-sided die. For a d6
+    // that's 3, which falls in the [3, 6] arm — opp loses 3 life.
+    let mut g = two_player_game();
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_midpoint());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_before - 3,
+        "AutoDecider rolled d6 midpoint (3) → 3-6 arm fired");
+}
+
+#[test]
+fn roll_die_scripted_decider_chooses_face_for_specific_branch() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(1),
+    ]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_big_gain());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before + 5,
+        "Scripted rolled 1 → 1-2 arm: gained 5 life");
+}
+
+#[test]
+fn roll_die_with_no_matching_arm_runs_no_effect() {
+    // CR 706.3a: "If the result was in this range, [effect]." A roll
+    // outside every arm runs no effect for that die.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::DieRoll(5),
+    ]));
+    let you_before = g.players[0].life;
+    let opp_before = g.players[1].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_partial_table());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before,
+        "roll 5 falls in no arm — no life change");
+    assert_eq!(g.players[1].life, opp_before);
+}
+
+#[test]
+fn roll_die_serde_round_trip() {
+    // Lock in serde round-trip so snapshot save/restore preserves the
+    // primitive without losing the results table.
+    use crate::effect::{Effect, Selector, Value};
+    let original = Effect::RollDie {
+        sides: 20,
+        count: Value::Const(2),
+        results: vec![
+            (1, 1, Effect::Discard {
+                who: Selector::You, amount: Value::Const(1), random: false,
+            }),
+            (2, 19, Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+            (20, 20, Effect::GainLife { who: Selector::You, amount: Value::Const(20) }),
+        ],
+    };
+    let json = serde_json::to_string(&original).expect("serialize");
+    let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
+    match parsed {
+        Effect::RollDie { sides, count, results } => {
+            assert_eq!(sides, 20);
+            assert!(matches!(count, Value::Const(2)));
+            assert_eq!(results.len(), 3);
+            assert_eq!(results[0].0, 1);
+            assert_eq!(results[1].0, 2);
+            assert_eq!(results[1].1, 19);
+            assert_eq!(results[2].1, 20);
+        }
+        other => panic!("expected RollDie, got {:?}", other),
+    }
+}

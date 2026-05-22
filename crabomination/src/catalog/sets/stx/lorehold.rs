@@ -16,7 +16,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_ping_any, magecraft_self_pump, target_filtered,
+    magecraft_gain_life, magecraft_ping_any, magecraft_self_pump, on_attack_drain,
+    on_attack_gain_life, on_attack_ping_any, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -10822,6 +10823,143 @@ pub fn lorehold_heroic_sage() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 125 (push claude/modern_decks): four new Lorehold cards ──────────
+
+/// Lorehold Bloodrazer — {2}{R}, 3/2 Spirit Warrior. "Whenever this
+/// creature attacks, it deals 1 damage to any target." Attack-trigger
+/// ping engine, uses the new `on_attack_ping_any` shortcut.
+pub fn lorehold_bloodrazer_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bloodrazer (b125)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Saintkeeper — {2}{W}, 2/3 Spirit Cleric Vigilance.
+/// "Whenever this creature attacks, you gain 1 life." Attack-trigger
+/// lifegain via the new `on_attack_gain_life` shortcut.
+pub fn lorehold_saintkeeper_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Saintkeeper (b125)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Vanguardian — {2}{R}{W}, 3/3 Spirit Soldier. "Whenever
+/// this creature attacks, each opponent loses 1 life and you gain 1
+/// life." Attack-trigger drain via the new `on_attack_drain` shortcut.
+pub fn lorehold_vanguardian_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vanguardian (b125)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Heraldcaller — {3}{R}{W}, 3/4 Spirit Cleric Flying.
+/// ETB Seq(mint 2 lorehold Spirit tokens + GainLife 2). 5-mana
+/// go-wide finisher with lifegain rider.
+pub fn lorehold_heraldcaller_b125() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Heraldcaller (b125)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

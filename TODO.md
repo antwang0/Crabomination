@@ -1277,45 +1277,47 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   reroll primitive). Promote the parent row to ✅ when 705.3 lands; this
   stale-row should be removed in a future doc-sweep.
 
-- ⏳ **CR 706 — Rolling a Die** (push modern_decks batch 68 audit,
-  claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
-  die-roll randomization primitive — how a rolled die generates a 1..N
-  outcome, how modifiers / results tables work, and how multi-roll
-  ignored-roll mechanics interact. Audit:
-  (a) **706.1** "An N-sided die has N equally likely outcomes 1..N" — ⏳
-  (no `Effect::RollDie { sides, count }` primitive; no
-  `Decision::DieRoll { sides }` request shape; no `Value::DieResult`
-  accumulator).
-  (b) **706.2** "Natural result vs. final result after modifiers; modifier
-  application order: reroll first, then add/subtract" — ⏳ (no modifier-
-  application layer; no reroll primitive).
-  (c) **706.3** "Result-table abilities ('1: do X, 2-3: do Y, 4+: do Z')"
-  — ⏳ (no result-table primitive in `Effect::`; the equivalent shape
-  would be a `ChooseMode`-style multi-arm dispatch on the `Value`
-  returned from the roll).
-  (d) **706.5** "Doubles rolling (Celebr-8000)" — ⏳ (no two-roll-with-
-  doubles-check predicate).
-  (e) **706.6** "Ignoring a roll causes no triggers to fire from it" —
-  ⏳ (no ignore-roll primitive).
+- 🟡 **CR 706 — Rolling a Die** (push claude/modern_decks batch 125
+  promotion ⏳ → 🟡 — audit against `MagicCompRules_20260417.txt`).
+  The die-roll randomization primitive — how a rolled die generates a
+  1..N outcome, how modifiers / results tables work, and how multi-
+  roll ignored-roll mechanics interact. Audit:
+  (a) **706.1** "An N-sided die has N equally likely outcomes 1..N" —
+  ✅ (`Effect::RollDie { sides, count, results }` in `card.rs` /
+  `effect.rs` and `Decision::DieRoll { sides, player }` in
+  `decision.rs` both shipped in batch 125; `DecisionAnswer::DieRoll(u8)`
+  carries the rolled face. AutoDecider returns the die's midpoint
+  ((sides+1)/2, so 3 for d6, 10 for d20) for deterministic tests;
+  ScriptedDecider can script any face 1..=sides).
+  (b) **706.2** "Natural result vs. final result after modifiers;
+  modifier application order: reroll first, then add/subtract" — ⏳
+  (no modifier-application layer; no reroll primitive. The current
+  primitive treats the natural result AS the final result, which is
+  exact for any card without printed roll modifiers).
+  (c) **706.3** "Result-table abilities ('1: do X, 2-3: do Y, 4+: do
+  Z')" — ✅ (`Effect::RollDie.results: Vec<(u8, u8, Effect)>` encodes
+  the results table; the resolver walks the arms and runs the FIRST
+  matching `[low, high]` band. Out-of-range rolls run no effect for
+  that die per CR 706.3a literal "If the result was in this range"
+  semantics).
+  (d) **706.5** "Doubles rolling (Celebr-8000)" — ⏳ (no two-roll-
+  with-doubles-check predicate; the current primitive rolls each die
+  independently and dispatches per-die without observing pairs).
+  (e) **706.6** "Ignoring a roll causes no triggers to fire from it"
+  — ⏳ (no ignore-roll primitive; the resolver doesn't emit roll
+  events that triggers could observe yet).
   (f) **706.8** "Storing roll results on a permanent (Centaur of
   Attention)" — ⏳ (no `CounterType` representation of stored rolls;
-  would need a new `CardInstance.stored_rolls: Vec<DieResult>` field).
+  would need a new `CardInstance.stored_rolls: Vec<(u8, u8)>` field).
   Affected cards (none in catalog today): Krark, Tribute Brought,
-  Bone Splinters-Variant cards, Aether Sphere Harvester (out-of-set).
-  Tests: no coverage; gates on `Effect::RollDie` primitive landing.
-  Suggested wiring (when landed):
-  ```rust
-  Effect::RollDie {
-      sides: u8,
-      count: Value,
-      then: Box<Effect>,  // body that reads Value::LastRollResult
-  }
-  ```
-  paired with `Decision::DieRoll { sides, count }` for scripted test
-  fixtures and an `Rng`-backed default for live play. Promote to 🟡
-  when the primitive lands; promote to ✅ when at least one card in
-  the catalog (e.g. Goblin Goliath, Wand of the Elements) exercises
-  the primary 706.1 + 706.3 shapes end-to-end.
+  Bone Splinters-Variant cards, Aether Sphere Harvester. Tests:
+  `roll_die_auto_decider_lands_on_midpoint_branch` (706.1 + 706.3a
+  default branch coverage), `roll_die_scripted_decider_chooses_face_
+  for_specific_branch` (low-face arm via scripted decider),
+  `roll_die_with_no_matching_arm_runs_no_effect` (706.3a out-of-range
+  semantics), `roll_die_serde_round_trip` (snapshot/restore for the
+  new variant). Promote to ✅ when a real catalog card (Goblin Goliath,
+  Wand of the Elements, etc.) ships using the primitive end-to-end.
 
 - 🟡 **CR 707 — Copying Objects** (push modern_decks batch 41 audit,
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
@@ -3761,43 +3763,38 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Murder, Vanishing Verse, Witherbloom Withercut, and many more.
   Promote to ✅ when CR 701.19 (Regenerate) lands.
 
-- ⏳ **CR 705/706 — Coin flipping and dice rolling** (push
-  modern_decks batch 61 audit, claude/modern_decks branch — audit
-  against `MagicCompRules_20260417.txt`). The randomization primitives
-  the engine doesn't ship yet.
-  (a) **705.1** "Some cards refer to flipping a coin" — ⏳ (no
-  `Effect::FlipCoin { who }` primitive; no `EventKind::CoinFlipped`
-  event; no `Selector::CoinFlipResult` or `Value::CoinFlipResult`.
-  The only catalog cards exercising this gap today are: SOS Ral
-  Zarek's `-7` planeswalker ult ("Flip five coins. Target opponent
-  skips their next X turns, where X is the number of coins that came
-  up heads") — already doc-tracked under `Ral Zarek, Guest Lecturer`
-  in STRIXHAVEN2.md as the {1}{B}{B} planeswalker; the `-7` ult
-  collapses to a no-op in the catalog.
-  (b) **705.2** "Wins/loses a coin flip" — ⏳ (no
-  `Predicate::WonCoinFlip` or `Predicate::LostCoinFlip` for "if you
-  won this flip, …" / "if you lost the flip, …" mode dispatch).
-  Old cards exercising this gap (not in current catalogs): Karplusan
-  Minotaur, Krark's Thumb (replacement: "you may ignore one and
-  reflip"), Mana Clash, Squee's Toy, Stitch in Time, Boldwyr Heavyweights
-  (each player flips), Goblin Bomb.
+- 🟡 **CR 705/706 — Coin flipping and dice rolling** (push
+  claude/modern_decks batch 125 — promoted to 🟡 from ⏳ via the new
+  `Effect::FlipCoin` (batch ~63) + `Effect::RollDie` (batch 125)
+  primitives). Most catalog gaps now have engine wiring; the remaining
+  ⏳ items are reroll modifiers, doubles detection, and Planechase.
+  (a) **705.1** "Some cards refer to flipping a coin" — ✅
+  (`Effect::FlipCoin { count, on_heads, on_tails }` shipped earlier;
+  used by Ral Zarek's -7, Lorehold Coinflinger).
+  (b) **705.2** "Wins/loses a coin flip" — ✅ (the FlipCoin resolver
+  splits to `on_heads` / `on_tails` arms based on the
+  `Decision::CoinFlip` answer; the "if you won the flip" / "if you
+  lost the flip" semantics is encoded structurally).
   (c) **705.3** "Effect may state coin flip has a certain result" — ⏳
-  (no `Effect::SetCoinFlipResult` primitive; would interact with the
-  same replacement-effect framework as Krark's Thumb's reflip rider).
-  (d) **706.1a** "N-sided die" — ⏳ (no `Effect::RollDie { sides, count }`
-  primitive; no `Value::DieRollResult`; no `EventKind::DieRolled`).
-  Old cards exercising this gap: Game Plan (d20), Sword of Dungeons and
-  Dragons (d20), every Adventures in the Forgotten Realms / Commander
-  Legends: Battle for Baldur's Gate "roll a d20" Initiative card. No
-  STX / SOS card needs this today.
-  (e) **706.2/706.2b** "Modifiers and reroll ordering" — ⏳ (depends on
-  (d); no roll modifier primitive). Old cards: Vedalken Orrery's
-  "you may reroll", Anhelo, the Painter, etc.
-  (f) **706.3** "Results table" — ⏳ (depends on (d); no
-  `Effect::DieRollTable { ranges: Vec<(u8, u8, Effect)> }`
-  primitive). Old cards: every AFR "Class" card's level-up dice,
-  Bag of Holding, Dungeon-Master's Guide.
-  (g) **706.7** "Planar die" — ⏳ (Planechase not modelled; no
+  (no replacement-effect framework for forcing the flip result, e.g.
+  Krark's Thumb).
+  (d) **706.1a** "N-sided die" — ✅ (`Effect::RollDie { sides, count,
+  results }` shipped batch 125; `Decision::DieRoll { sides, player }`
+  + `DecisionAnswer::DieRoll(u8)` carry the rolled face; AutoDecider
+  returns midpoint for deterministic tests).
+  (e) **706.2/706.2b** "Modifiers and reroll ordering" — ⏳ (no
+  roll-modifier layer; the primitive's natural-result IS the final
+  result. Cards with printed roll modifiers (Anhelo, Vedalken Orrery's
+  reroll, etc.) remain ⏳).
+  (f) **706.3** "Results table" — ✅ (`Effect::RollDie.results:
+  Vec<(u8, u8, Effect)>` encodes the result table; the resolver finds
+  the first matching `[low, high]` arm. Out-of-range rolls run no
+  effect per CR 706.3a literal "If the result was in this range"
+  semantics).
+  (g) **706.5** "Doubles (Celebr-8000)" — ⏳ (per-die independent
+  resolution; no pair-detection on multi-die rolls).
+  (h) **706.6** "Ignoring a roll" — ⏳ (no ignore-roll primitive).
+  (i) **706.7** "Planar die" — ⏳ (Planechase not modelled; no
   `Plane` zone; no `EventKind::PlanarDieRolled`). Tracked in
   TODO.md's `## Formats` section under `Planechase`.
   Wiring shape for the future when a coin/dice card surfaces in a
@@ -3890,6 +3887,24 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   identity) and 903.9's optional rider land.
 
 ## Suggested next-up tasks
+
+- ✅ **`effect::shortcut::on_attack_drain` / `on_attack_gain_life` /
+  `on_attack_ping_any` helpers** (push claude/modern_decks batch 125
+  done). Three attack-trigger shortcut helpers landed in `effect.rs`
+  alongside the existing `etb_*` / `dies_*` / `magecraft_*` families:
+  `on_attack_drain(N)` wraps `on_attack(Effect::Drain { from:
+  EachOpponent, to: You, amount: N })`, `on_attack_gain_life(N)` wraps
+  the asymmetric you-gain-only variant, and `on_attack_ping_any(N)`
+  wraps `on_attack(Effect::DealDamage { to: Creature ∨ Player ∨
+  Planeswalker, … })`. Used by Lorehold Bloodrazer (b125), Lorehold
+  Saintkeeper (b125), Lorehold Vanguardian (b125), Witherbloom
+  Drainstride (b125), Silverquill Stridemage (b125), Inkling Skyhunter
+  (b125). Lock-in tests `shortcut_on_attack_drain_uses_attacks_self_
+  source_with_drain_body`, `shortcut_on_attack_gain_life_uses_attacks_
+  self_source_with_gainlife_body`, `shortcut_on_attack_ping_any_uses_
+  attacks_self_source_with_dealdamage_body` verify each helper builds
+  an Attacks/SelfSource event spec with the correct body shape so
+  future refactors can't accidentally collapse them onto each other.
 
 - ✅ **`effect::shortcut::dies_lose_life_each_opp(amount)` helper**
   (push claude/modern_decks batch 123 done). Wraps the canonical

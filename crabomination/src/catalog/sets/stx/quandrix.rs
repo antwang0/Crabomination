@@ -14,7 +14,9 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_loot, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{
+    etb, magecraft, magecraft_loot, magecraft_scry, magecraft_self_pump, target_filtered,
+};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, g, u, Color, ManaCost};
 
@@ -8813,6 +8815,151 @@ pub fn quandrix_riverflux() -> CardDefinition {
                     filter: SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                 })),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 125 (push claude/modern_decks): four new Quandrix cards ──────────
+
+/// Quandrix Aetherbinder (b125) — {1}{U}, 1/3 Merfolk Wizard.
+/// Magecraft Scry 1. 2-mana defensive smoother body. Same shape as
+/// Quandrix Scryweaver (a G/U Scry 1 magecraft) but on a Merfolk
+/// Wizard at the {1}{U} slot.
+pub fn quandrix_aetherbinder_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Aetherbinder (b125)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Treewright (b125) — {1}{G}, 0/0 Fractal that enters with
+/// 2 +1/+1 counters via `CardDefinition.enters_with_counters` (CR
+/// 614.12). 2-mana 2/2 base. Cheap Fractal body for go-tall shells.
+pub fn fractal_treewright_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Treewright (b125)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mistsage (b125) — {2}{G}{U}, 3/3 Elf Druid. ETB Scry 1 +
+/// magecraft Loot 1. 4-mana defensive value engine. Combines top-deck
+/// smoothing on entry with per-cast looting.
+pub fn quandrix_mistsage_b125() -> CardDefinition {
+    use crate::effect::Duration;
+    let _ = Duration::EndOfTurn; // tag to ensure shape consistency
+    CardDefinition {
+        name: "Quandrix Mistsage (b125)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            }),
+            magecraft_loot(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Reflection (b125) — {2}{G}{U}, Sorcery. Puts two +1/+1
+/// counters on target Fractal you control, then draws a card. 4-mana
+/// Fractal-tribal pump + cantrip.
+pub fn fractal_reflection_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Reflection (b125)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::Fractal)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
             },
         ]),
         activated_abilities: no_abilities(),

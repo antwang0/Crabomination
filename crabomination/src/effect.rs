@@ -785,6 +785,30 @@ pub enum Effect {
         on_heads: Box<Effect>,
         on_tails: Box<Effect>,
     },
+    /// CR 706 — roll `count` N-sided dice. For each die, ask the
+    /// controller's decider for `Decision::DieRoll { sides }` (which
+    /// returns `DecisionAnswer::DieRoll(n)` with `1 <= n <= sides`),
+    /// then walk `results` and run the **first** matching arm whose
+    /// `[low, high]` range covers `n`. If no arm matches, no effect
+    /// runs for that die. Mirrors `FlipCoin`'s shape for the die
+    /// equivalent. Used by Goblin Goliath, Wand of the Elements, and
+    /// future Krark / Aether Sphere Harvester-style "roll N dice with
+    /// a results table" cards. CR 706.1 + 706.3 covered; modifiers
+    /// (706.2) and reroll (706.2b) are engine-wide ⏳ — the natural
+    /// result IS the final result in this primitive.
+    RollDie {
+        /// Number of sides on each die (e.g. 6 for d6, 20 for d20).
+        /// Must be at least 2.
+        sides: u8,
+        /// Number of dice to roll. Each die rolls independently and
+        /// runs its own results-table dispatch.
+        count: Value,
+        /// CR 706.3a — the results table. Each arm is `(low, high,
+        /// effect)`; the first arm with `low <= rolled <= high` fires
+        /// for that die. Use `(low, sides, effect)` for an "N+" arm,
+        /// or `(n, n, effect)` for a single-number arm.
+        results: Vec<(u8, u8, Effect)>,
+    },
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
@@ -1488,6 +1512,9 @@ impl Effect {
                     || on_heads.requires_target()
                     || on_tails.requires_target()
             }
+            Effect::RollDie { count, results, .. } => {
+                value_has_target(count) || results.iter().any(|(_, _, e)| e.requires_target())
+            }
             Effect::ChooseMode(modes) => modes.iter().any(|e| e.requires_target()),
             Effect::ChooseN { modes, .. } => modes.iter().any(|e| e.requires_target()),
             Effect::MayDo { body, .. } => body.requires_target(),
@@ -1704,6 +1731,14 @@ impl Effect {
             Effect::FlipCoin { on_heads, on_tails, .. } => on_heads
                 .primary_target_filter()
                 .or_else(|| on_tails.primary_target_filter()),
+            // RollDie: surface the first results arm's filter as the
+            // representative one (mirrors ChooseMode's pattern). The
+            // auto-target picker walks the result-table arm that fires
+            // for the rolled face; we surface the first arm for the
+            // cast prompt.
+            Effect::RollDie { results, .. } => results
+                .iter()
+                .find_map(|(_, _, e)| e.primary_target_filter()),
             _ => None,
         }
     }
@@ -1867,6 +1902,9 @@ impl Effect {
             Effect::FlipCoin { on_heads, on_tails, .. } => {
                 on_heads.accepts_player_target() || on_tails.accepts_player_target()
             }
+            Effect::RollDie { results, .. } => {
+                results.iter().any(|(_, _, e)| e.accepts_player_target())
+            }
             // Conservative default: anything we don't classify is permitted.
             // The legality gate (filter + check_target_legality) still rejects
             // mismatched types, this just changes the heuristic's preference
@@ -1950,6 +1988,9 @@ impl Effect {
                 Effect::FlipCoin { on_heads, on_tails, .. } => {
                     eff_find(on_heads, slot, mode).or_else(|| eff_find(on_tails, slot, mode))
                 }
+                Effect::RollDie { results, .. } => results
+                    .iter()
+                    .find_map(|(_, _, e)| eff_find(e, slot, mode)),
                 Effect::DealDamage { to, .. } => sel_find(to, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
@@ -3255,6 +3296,60 @@ pub mod shortcut {
         magecraft(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// On-Attack-Drain shortcut: "Whenever this creature attacks, each
+    /// opponent loses `amount` life and you gain `amount` life." Wraps
+    /// [`on_attack`] with the canonical symmetric drain body. Used by
+    /// Witherbloom Vinekeeper II-template attack-drain creatures, and
+    /// any Vampire / Inkling whose printed text is "whenever attacks,
+    /// drain N".
+    ///
+    /// Push claude/modern_decks batch 125: shipped as part of the
+    /// attack-trigger drain helper family. Mirrors `etb_drain` /
+    /// `dies_drain` for the attack event.
+    pub fn on_attack_drain(amount: i32) -> TriggeredAbility {
+        on_attack(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// On-Attack-Gain-Life shortcut: "Whenever this creature attacks,
+    /// you gain `amount` life." Wraps [`on_attack`] with the
+    /// canonical gain-life body. Used by lifelink-adjacent attack
+    /// triggers (Lorehold Warrior-Priest template, Spirit Mentor's
+    /// scaling lifegain) where the printed text omits the opp-loses
+    /// half of a drain.
+    ///
+    /// Push claude/modern_decks batch 125: shipped alongside
+    /// [`on_attack_drain`] for asymmetric attack-trigger payoffs.
+    pub fn on_attack_gain_life(amount: i32) -> TriggeredAbility {
+        on_attack(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// On-Attack-Ping shortcut: "Whenever this creature attacks, it
+    /// deals `amount` damage to any target." Wraps [`on_attack`] with
+    /// a `DealDamage` body whose target is `target_filtered(Creature ∨
+    /// Player ∨ Planeswalker)`. Used by Lorehold Pyrostriker-style
+    /// "attack triggers a ping" creatures.
+    ///
+    /// Push claude/modern_decks batch 125: shipped to collapse the
+    /// recurring attack-trigger ping pattern.
+    pub fn on_attack_ping_any(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        on_attack(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
             amount: Value::Const(amount),
         })
     }

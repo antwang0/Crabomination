@@ -15,7 +15,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_self_pump, on_other_dies, target_filtered,
+    magecraft_gain_life, magecraft_self_pump, on_attack_drain, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -10540,6 +10540,142 @@ pub fn witherbloom_toxinbinder() -> CardDefinition {
             toughness: Value::Const(-2),
             duration: Duration::EndOfTurn,
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 125 (push claude/modern_decks): four new Witherbloom cards ──────
+
+/// Witherbloom Drainstride (b125) — {2}{B}{G}, 3/3 Plant Vampire.
+/// "Whenever this creature attacks, each opponent loses 1 life and you
+/// gain 1 life." 4-mana attack-drain body via the new
+/// `on_attack_drain` shortcut.
+pub fn witherbloom_drainstride_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainstride (b125)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifescribe Elder (b125) — {1}{G}, 1/3 Plant Druid.
+/// Magecraft GainLife 2. 2-mana defensive lifegain-on-cast body.
+/// Higher-rate sibling to Witherbloom Vitalcoil's {1}{G} 2/2.
+pub fn witherbloom_lifescribe_elder_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifescribe Elder (b125)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Cinderpriest (b125) — {2}{B}, 2/2 Pest Cleric. ETB mints a
+/// Pest token + magecraft drain 1 each opp. 3-mana double-payoff Pest
+/// engine.
+pub fn pest_cinderpriest_b125() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Pest Cinderpriest (b125)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            }),
+            magecraft_drain_each_opp(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reaperscholar (b125) — {3}{B}{G}, 4/4 Plant Druid
+/// Deathtouch. Dies-trigger Drain 2 via `on_dies(Drain)`. 5-mana
+/// finisher with deathtouch + death-drain rider.
+pub fn witherbloom_reaperscholar_b125() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Witherbloom Reaperscholar (b125)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

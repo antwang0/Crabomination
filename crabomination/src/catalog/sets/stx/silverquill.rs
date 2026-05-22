@@ -26,7 +26,8 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     etb_drain, etb_gain_life, etb_mint_token, magecraft, magecraft_drain_each_opp,
-    magecraft_gain_life, magecraft_self_pump, target_filtered,
+    magecraft_gain_life, magecraft_self_pump, on_attack_drain, on_attack_gain_life,
+    target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, u, w, b, x, ManaCost};
@@ -12895,6 +12896,173 @@ pub fn silverquill_bookmark() -> CardDefinition {
                 ),
                 keyword: Keyword::Lifelink,
                 duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 125 (push claude/modern_decks): five new Silverquill cards ──────
+
+/// Silverquill Stridemage (b125) — {2}{W}{B}, 3/3 Vampire Cleric.
+/// "Whenever this creature attacks, each opponent loses 1 life and you
+/// gain 1 life." Attack-drain via `on_attack_drain`.
+pub fn silverquill_stridemage_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Stridemage (b125)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Skyhunter (b125) — {2}{W}, 2/2 Inkling Soldier Flying.
+/// "Whenever this creature attacks, you gain 1 life." Attack-gain
+/// via `on_attack_gain_life`. 3-mana evasive lifegain trigger.
+pub fn inkling_skyhunter_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Skyhunter (b125)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Soulscholar (b125) — {1}{W}, 1/2 Human Cleric Lifelink.
+/// Magecraft AddCounter(+1/+1, Self). 2-mana magecraft self-grower
+/// with lifelink — snowballs hard in spell-heavy lifegain shells.
+pub fn silverquill_soulscholar_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Soulscholar (b125)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Drainsage (b125) — {3}{W}{B}, 3/4 Inkling Cleric Flying +
+/// Lifelink. ETB drain 2 via `etb_drain(2)`. 5-mana evasive
+/// race-breaker top-end.
+pub fn inkling_drainsage_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Drainsage (b125)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Ravenstrike (b125) — {1}{W}{B}, Sorcery. Mints 1 Inkling
+/// token + gain 2 life. 3-mana Inkling mint with lifegain rider.
+pub fn silverquill_ravenstrike_b125() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ravenstrike (b125)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
             },
         ]),
         activated_abilities: no_abilities(),
