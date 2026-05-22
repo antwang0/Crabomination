@@ -12,7 +12,7 @@ use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_ping_each_opp, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u};
 
@@ -549,17 +549,7 @@ pub fn prismari_storm_caller() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -697,17 +687,7 @@ pub fn prismari_stormcaster() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3481,17 +3461,7 @@ pub fn prismari_spellforge() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             },
-            magecraft(Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ])),
+            magecraft_loot(),
         ],
         static_abilities: vec![],
         base_loyalty: 0,

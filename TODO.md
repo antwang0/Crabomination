@@ -3609,15 +3609,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
-- ⏳ **`effect::shortcut::mint_pests(count)` / `mint_inklings(count)` /
-  `mint_spirits(count)` helpers** (push claude/modern_decks batch 104 —
-  new suggestion). Many cards in `stx::extras` / `stx::silverquill` /
-  `stx::witherbloom` / `stx::lorehold` mint Pest / Inkling / Spirit
-  tokens inline via `Effect::CreateToken { count, definition: <token>() }`.
-  A `mint_pests(count)` helper that wraps the `stx_pest_token()` reference
-  + `Effect::CreateToken { who: You, count, definition: stx_pest_token() }`
-  would shrink the catalog ~80 lines and centralise the token-mint shape
-  for future tweaks.
+- ✅ **`effect::shortcut::mint_pests(count)` / `mint_inklings(count)` /
+  `mint_spirits(count)` helpers** (push claude/modern_decks batch 105
+  done). Landed in `effect.rs` as a family: `mint_token` (base),
+  `mint_pests`, `mint_inklings`, `mint_spirits`, `mint_fractals`,
+  `mint_treasures`, `mint_lorehold_spirits`. Seven catalog factories
+  refactored to the new helpers (Inkling Aerospread, Pest Engorger,
+  Witherbloom Pestbrood, Witherbloom Cultmaster, Silverquill
+  Anthemcaster, Prismari Elementalist, Prismari Crackleburst, Lorehold
+  Battlecaster, Lorehold Sparkstrike). Lock-in tests:
+  `shortcut_mint_pests_creates_correct_token_count`,
+  `shortcut_mint_inklings_creates_w_b_flying_tokens`,
+  `shortcut_mint_fractals_creates_zero_zero_tokens`,
+  `shortcut_mint_treasures_creates_treasure_tokens`,
+  `shortcut_mint_lorehold_spirits_creates_r_w_spirits`.
 
 - ⏳ **Vehicle / Crew primitive** (push claude/modern_decks batch 104 —
   new suggestion). Strixhaven has Strixhaven Skycoach (currently
@@ -3692,27 +3697,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Ballista-style `{X}: deal X damage`, and any X-cost activated
   ability. Tests: `pernicious_deed_destroys_low_cmc_permanents`.
 
-- ⏳ **`effect::shortcut::etb_drain_each_opp(amount)` shortcut** — Many
-  STX cards print "ETB drain N" as `etb(Seq(LoseLife N each opp, GainLife
-  N you))`. Today batch 67's `silverquill_drainscribe` calls
-  `etb_drain(2)` which packages the symmetric (each-opp / you) drain;
-  but for the asymmetric per-opp variant the inline `Seq` shape is used.
-  A future helper `etb_drain_each_opp(amount)` could simplify ~15
-  cards across `stx::silverquill` / `stx::witherbloom` / `stx::lorehold`
-  where the drain is only the opp-loses-N half.
+- ✅ **`effect::shortcut::etb_drain_each_opp(amount)` shortcut** (push
+  claude/modern_decks batch 107 done). Asymmetric drain helper landed
+  in `effect.rs` — wraps `etb(Effect::LoseLife { who: EachOpponent,
+  amount })`. Distinct from the symmetric `etb_drain(amount)` which
+  also gains you N. Refactored Witherbloom Toxinspeaker and Inkling
+  Magistrate onto the helper. Lock-in test:
+  `shortcut_etb_drain_each_opp_drains_only_opponents` verifies the
+  asymmetric body so a future refactor can't accidentally collapse it
+  onto the symmetric `etb_drain` shape.
 
-- ⏳ **`effect::shortcut::magecraft_loot()` callsite reduction** — Batch
-  67's `prismari_stormtide` uses `magecraft_loot()`. The same shape
-  occurs ~12 times across `stx::prismari` / `stx::quandrix` /
-  `stx::extras` inline as `magecraft(Seq(Draw 1, Discard 1))`. A
-  cleanup refactor pass to collapse them onto the existing helper
-  would shrink the catalog ~80 lines.
+- 🟡 **`effect::shortcut::magecraft_loot()` callsite reduction** (push
+  claude/modern_decks batch 107 — partial pass). Eight inline
+  `magecraft(Seq([Draw 1, Discard 1]))` callsites across `stx::prismari`
+  (3) and `stx::quandrix` (5) collapsed onto the existing
+  `magecraft_loot()` helper. Remaining ⏳ inline callsites may still
+  exist in `stx::extras` and other set modules — future cleanup pass
+  can run the same regex sweep there.
 
-- ⏳ **Witherbloom-tribal token Pest helpers** — Most Witherbloom cards
-  in batch 67+ mint a `stx_pest_token()` via inline
-  `Effect::CreateToken`. A `mint_pests(count)` shortcut would simplify
-  the call sites. Same shape for `mint_inklings(count)` (Silverquill)
-  and `mint_spirits(count)` (Lorehold).
+- ✅ **Witherbloom-tribal token Pest helpers** (push claude/modern_decks
+  batch 105 done) — Subsumed by the `mint_pests` / `mint_inklings` /
+  `mint_spirits` shortcut family. See the mint-helper entry above.
 
 - ✅ **`effect::shortcut::etb_ping_any(amount)` /
   `etb_ping_creature(amount)` helpers** (push modern_decks batch 63

@@ -9704,7 +9704,7 @@ pub fn witherbloom_mossrunner() -> CardDefinition {
 /// Witherbloom Toxinspeaker — {1}{B}, 2/2 Human Warlock. ETB target opp
 /// loses 2 life. 2-mana point-drain body.
 pub fn witherbloom_toxinspeaker() -> CardDefinition {
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::etb_drain_each_opp;
     CardDefinition {
         name: "Witherbloom Toxinspeaker",
         cost: cost(&[generic(1), b()]),
@@ -9719,10 +9719,7 @@ pub fn witherbloom_toxinspeaker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![etb(Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![etb_drain_each_opp(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

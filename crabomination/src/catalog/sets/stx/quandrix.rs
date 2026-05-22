@@ -14,7 +14,7 @@ use crate::card::{
     EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
+use crate::effect::shortcut::{magecraft, magecraft_loot, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, g, u, Color, ManaCost};
 
@@ -3686,17 +3686,7 @@ pub fn quandrix_solver() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4555,17 +4545,7 @@ pub fn quandrix_loomweaver() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4678,17 +4658,7 @@ pub fn quandrix_spellseer() -> CardDefinition {
                 who: PlayerRef::You,
                 amount: Value::Const(1),
             }),
-            magecraft(Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-            ])),
+            magecraft_loot(),
         ],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -4721,14 +4691,7 @@ pub fn quandrix_aquamancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -6604,17 +6567,7 @@ pub fn quandrix_cantripper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]))],
+        triggered_abilities: vec![magecraft_loot()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

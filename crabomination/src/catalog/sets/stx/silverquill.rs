@@ -7384,10 +7384,7 @@ pub fn inkling_magistrate() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::LoseLife {
-            who: Selector::Player(PlayerRef::EachOpponent),
-            amount: Value::Const(2),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::etb_drain_each_opp(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

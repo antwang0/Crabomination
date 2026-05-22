@@ -46950,3 +46950,21 @@ fn shortcut_mint_lorehold_spirits_creates_r_w_spirits() {
     assert_eq!(spirits[0].toughness(), 2);
 }
 
+// ── modern_decks batch 107 (etb_drain_each_opp shortcut) test ───────────────
+
+#[test]
+fn shortcut_etb_drain_each_opp_drains_only_opponents() {
+    // Asymmetric drain helper: opponents lose N life, you do NOT gain
+    // any. Locks in the asymmetric body so a future refactor can't
+    // accidentally swap it back to the symmetric `etb_drain` shape.
+    use crate::effect::shortcut::etb_drain_each_opp;
+    use crate::effect::{PlayerRef, Selector, Value};
+    let trig = etb_drain_each_opp(3);
+    // The body must be a LoseLife on EachOpponent of amount 3 — NOT a
+    // Drain (which would also include the you-gain half).
+    match trig.effect {
+        Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(3) } => {}
+        ref other => panic!("expected LoseLife on EachOpponent of 3, got {other:?}"),
+    }
+}
+

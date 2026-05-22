@@ -2430,6 +2430,19 @@ pub mod shortcut {
         })
     }
 
+    /// ETB-Drain-Each-Opp shortcut: "When this creature enters, each
+    /// opponent loses `amount` life." This is the asymmetric variant of
+    /// [`etb_drain`] — opponents lose life but you do *not* gain any.
+    /// Used by point-drain bodies like Witherbloom Toxinspeaker and
+    /// Silverquill Drainscholar where the printed text omits the
+    /// you-gain rider.
+    pub fn etb_drain_each_opp(amount: i32) -> TriggeredAbility {
+        etb(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(amount),
+        })
+    }
+
     /// ETB-Loot shortcut: "When this creature enters, draw a card,
     /// then discard a card." Wraps [`etb`] with the canonical loot
     /// body. Used by ~10 STX/SOS Prismari / Witherbloom loot creatures
