@@ -186,15 +186,23 @@ pub fn ensure_card_images(specs: &[CardImage], assets_dir: &Path) {
 }
 
 /// Convert a card name to a filename: lowercase, spaces to underscores, .png extension.
+/// Path separators (`/`, `\`) are also collapsed to underscores so split-card
+/// names like "Wear // Tear" don't get interpreted as nested directories by
+/// `fs::write` (which panics with NotFound when the implied parent dirs
+/// don't exist).
 pub fn card_filename(name: &str) -> String {
-    format!("{}.png", name.to_lowercase().replace(' ', "_"))
+    format!("{}.png", sanitize_name(name))
 }
 
 /// Filename for an MDFC back-face image. The `_back` suffix avoids
 /// colliding with a stale front-face download for the same name when
 /// the prefetch is upgraded to pass `face=back` to Scryfall.
 pub fn card_back_face_filename(name: &str) -> String {
-    format!("{}_back.png", name.to_lowercase().replace(' ', "_"))
+    format!("{}_back.png", sanitize_name(name))
+}
+
+fn sanitize_name(name: &str) -> String {
+    name.to_lowercase().replace([' ', '/', '\\'], "_")
 }
 
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
@@ -344,6 +352,20 @@ mod tests {
             back: "Timbercrown Pathway",
         };
         assert_eq!(spec.filename(), "timbercrown_pathway_back.png");
+    }
+
+    #[test]
+    fn split_card_name_collapses_path_separators() {
+        // Split cards ("Wear // Tear", "Reduce // Rubble") embed `/` in
+        // their printed names. Without sanitising, `fs::write` interprets
+        // `cards/wear_//_tear.png` as a nested path and panics with
+        // NotFound when the implied parent dirs don't exist.
+        assert_eq!(card_filename("Wear // Tear"), "wear____tear.png");
+        assert_eq!(card_asset_path("Reduce // Rubble"), "cards/reduce____rubble.png");
+        assert_eq!(
+            card_back_face_filename("Foo / Bar"),
+            "foo___bar_back.png",
+        );
     }
 
     #[test]

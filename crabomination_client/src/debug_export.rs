@@ -183,6 +183,8 @@ mod tests {
                 instants_or_sorceries_cast_this_turn: 0,
                 creatures_cast_this_turn: 0,
                 no_maximum_hand_size: false,
+                command: vec![],
+                commanders: vec![],
             }],
             battlefield: vec![],
             stack: vec![],

@@ -2689,7 +2689,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target) });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
                             cancel_targeting(&mut commands, targeting, &valid_targets);
                             return;
                         }
@@ -2714,7 +2714,7 @@ pub fn handle_game_input(
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
-                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target) });
+                            outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
                             cancel_targeting(&mut commands, targeting, &valid_targets);
                             return;
                         }
@@ -3151,6 +3151,7 @@ pub fn handle_ability_menu(
                 card_id: item.card_id,
                 ability_index: item.ability_index,
                 target: None,
+                x_value: None,
             });
         }
 
