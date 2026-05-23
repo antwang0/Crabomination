@@ -14823,6 +14823,95 @@ pub fn inkling_quillforge_b138() -> CardDefinition {
     }
 }
 
+// ── Batch 139 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inkdrinker (b139) — {2}{W}{B} 3/3 Vampire Warlock
+/// Lifelink. ETB drain 2.
+pub fn silverquill_inkdrinker_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkdrinker (b139)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Scribesong (b139) — {2}{W}{B} Sorcery.
+/// Seq(Drain 2 + Surveil 2). Drain + selection.
+pub fn inkling_scribesong_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Scribesong (b139)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_surveil(2, 2),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pearlcaller (b139) — {W} 1/1 Human Cleric. Magecraft
+/// 2 life. High-rate magecraft lifegain at the 1-drop slot.
+pub fn silverquill_pearlcaller_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pearlcaller (b139)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Silverquill Memorialist II (b138) — {1}{W} 1/3 Human Cleric.
 /// Magecraft Gain 1 life. Defensive lifegain-on-cast body.
 pub fn silverquill_memorialist_ii_b138() -> CardDefinition {

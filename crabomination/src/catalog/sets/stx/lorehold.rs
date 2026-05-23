@@ -13311,6 +13311,105 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
     }
 }
 
+// ── Batch 139 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Pyromancer-Adept (b139) — {2}{R} 2/3 Spirit Shaman.
+/// Magecraft 2 damage to target opp creature.
+pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyromancer-Adept (b139)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritwarden (b139) — {3}{R}{W} 4/4 Spirit Soldier
+/// Vigilance + Lifelink. Top-end Lorehold finisher.
+pub fn lorehold_spiritwarden_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritwarden (b139)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle-Witness (b139) — {2}{W} 1/4 Spirit Cleric.
+/// On-attack mints a Lorehold Spirit token.
+pub fn lorehold_battle_witness_b139() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_create_token;
+    CardDefinition {
+        name: "Lorehold Battle-Witness (b139)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Ember-Cleric (b138) — {1}{W} 1/3 Spirit Cleric.
 /// Magecraft gain 1 life. Defensive lifegain-on-cast body.
 pub fn lorehold_ember_cleric_b138() -> CardDefinition {

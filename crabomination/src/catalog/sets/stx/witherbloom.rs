@@ -12697,6 +12697,107 @@ pub fn witherbloom_verdantroot_b138() -> CardDefinition {
     }
 }
 
+// ── Batch 139 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Lifeharvest (b139) — {B}{G} Sorcery.
+/// Seq(GainLife 3 + Surveil 1). 2-mana lifegain + selection.
+pub fn witherbloom_lifeharvest_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifeharvest (b139)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapherder (b139) — {2}{G} 2/3 Plant Druid. ETB mint
+/// 2 Pest tokens.
+pub fn witherbloom_sapherder_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapherder (b139)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Grimsage (b139) — {2}{B} 2/3 Human Warlock.
+/// Dies-trigger Drain 2 + ETB mint 1 Pest.
+pub fn witherbloom_grimsage_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Grimsage (b139)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_mint_token(stx_pest_token(), 1),
+            dies_drain(2),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Pest Bloodscribe (b138) — {1}{B} 2/2 Pest Warlock. Dies-trigger
 /// Drain 1. 2-mana aristocrats trade body.
 pub fn pest_bloodscribe_b138() -> CardDefinition {

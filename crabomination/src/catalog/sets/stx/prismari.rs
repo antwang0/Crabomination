@@ -9905,6 +9905,80 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
     }
 }
 
+// ── Batch 139 ───────────────────────────────────────────────────────────────
+
+/// Prismari Flarewright (b139) — {1}{U}{R} 3/2 Elemental Bard.
+/// Magecraft +1/+1 EOT self-pump (magecraft_self_pump shape).
+pub fn prismari_flarewright_b139() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flarewright (b139)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Shocksinger (b139) — {1}{R} Sorcery. Seq(DealDamage 2
+/// + Treasure mint). 2-mana burn + ramp.
+pub fn prismari_shocksinger_b139() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Shocksinger (b139)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Prismari Glassflinger (b136) — {U}{R} 2/2 Human Wizard. Magecraft
 /// scry 1. Cheap evasion-less Wizard with smoothing on every spell.
 pub fn prismari_glassflinger_b136() -> CardDefinition {

@@ -10477,6 +10477,140 @@ pub fn quandrix_equation_b138() -> CardDefinition {
     }
 }
 
+// ── Batch 139 ───────────────────────────────────────────────────────────────
+
+/// Fractal Initiate (b139) — {G}{U} 1/1 Fractal Wizard. ETB +1/+1
+/// counter on self. Self-pumping 2-mana Fractal.
+pub fn fractal_initiate_b139() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Fractal Initiate (b139)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Stormcaster (b139) — {2}{U} 2/3 Human Wizard. Magecraft
+/// Draw 1. Card advantage scaler.
+pub fn quandrix_stormcaster_b139() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_draw;
+    CardDefinition {
+        name: "Quandrix Stormcaster (b139)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geometrymage (b139) — {1}{G}{U} 2/3 Human Druid. Magecraft
+/// AddCounter(+1/+1, friendly creature). Symmetry Sage's tribal scaler.
+pub fn quandrix_geometrymage_b139() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_to_friendly;
+    CardDefinition {
+        name: "Quandrix Geometrymage (b139)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_to_friendly()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Outgrowth (b139) — {3}{G}{U} Sorcery. Mints a Fractal
+/// with 4 +1/+1 counters. 5-mana big Fractal mint.
+pub fn fractal_outgrowth_b139() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Outgrowth (b139)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: create_token_with_counter(
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            4,
+        ),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Lifestream (b136) — {2}{G}{U} Sorcery. Creates a 0/0
 /// Fractal token with 3 +1/+1 counters and you gain 2 life. Body of
 /// Research mini-version with a defensive lifegain rider.

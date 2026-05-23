@@ -22,7 +22,44 @@ Two adjacent catalogs:
 | STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 138:
+Push (claude/modern_decks branch — current head — **post-batch 139:
+15 more Strixhaven synthesised cards across all five colleges (3 per
+school). All cards use existing primitives — no new shortcut helpers
+required. Tests: 3960 → 3975 (15 new b139 card tests). All tests
+pass; cargo clippy clean.
+
+- **Silverquill (W/B, 3 cards)** — Silverquill Inkdrinker (b139)
+  ({2}{W}{B} 3/3 Vampire Warlock Lifelink ETB drain 2), Inkling
+  Scribesong (b139) ({2}{W}{B} Sorcery — Drain 2 + Surveil 2),
+  Silverquill Pearlcaller (b139) ({W} 1/1 Human Cleric magecraft
+  GainLife 2).
+- **Witherbloom (B/G, 3 cards)** — Witherbloom Lifeharvest (b139)
+  ({B}{G} Sorcery — GainLife 3 + Surveil 1), Witherbloom Sapherder
+  (b139) ({2}{G} 2/3 Plant Druid ETB 2 Pests), Witherbloom Grimsage
+  (b139) ({2}{B} 2/3 Human Warlock ETB Pest + dies drain 2).
+- **Lorehold (R/W, 3 cards)** — Lorehold Pyromancer-Adept (b139)
+  ({2}{R} 2/3 Spirit Shaman magecraft 2 damage to opp creature),
+  Lorehold Spiritwarden (b139) ({3}{R}{W} 4/4 Spirit Soldier
+  Vigilance + Lifelink), Lorehold Battle-Witness (b139) ({2}{W} 1/4
+  Spirit Cleric on-attack Spirit).
+- **Prismari (U/R, 2 cards)** — Prismari Flarewright (b139)
+  ({1}{U}{R} 3/2 Elemental Bard magecraft +1/+1 EOT), Prismari
+  Shocksinger (b139) ({1}{R} Sorcery — DealDamage 2 + Treasure).
+- **Quandrix (G/U, 4 cards)** — Fractal Initiate (b139) ({G}{U} 1/1
+  Fractal Wizard ETB +1/+1 counter on self), Quandrix Stormcaster
+  (b139) ({2}{U} 2/3 Human Wizard magecraft Draw 1), Quandrix
+  Geometrymage (b139) ({1}{G}{U} 2/3 Human Druid magecraft +1/+1
+  counter on target friendly creature), Fractal Outgrowth (b139)
+  ({3}{G}{U} Sorcery — Fractal w/ 4 +1/+1 counters).
+
+Engine: new `LibraryPosition::FromTop(usize)` variant + matching
+`place_card_in_dest` branch implements CR 401.7 precisely. Tests:
+`library_position_from_top_inserts_at_index`,
+`library_position_from_top_with_fewer_cards_goes_to_bottom`,
+`library_position_from_top_zero_is_top`. Promotes the CR 401.7 audit
+row in TODO.md from 🟡 to ✅.
+
+Push (claude/modern_decks branch — post-batch 138:
 22 more Strixhaven synthesised cards across all five colleges
 (5 Silverquill, 5 Witherbloom, 5 Lorehold, 5 Prismari, 3 Quandrix).
 All cards use existing primitives — no new shortcut helpers required.
