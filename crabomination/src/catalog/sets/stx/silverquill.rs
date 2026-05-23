@@ -15079,3 +15079,171 @@ pub fn inkling_quill_knight_b141() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 142 ───────────────────────────────────────────────────────────────
+
+/// Inkling Magistry (b142) — {3}{W}{B} Sorcery. Drain 3 + Surveil 2.
+/// 5-mana drain + selection finisher.
+pub fn inkling_magistry_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Magistry (b142)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_surveil(3, 2),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkmaster (b142) — {2}{W} 2/3 Human Wizard Vigilance.
+/// Magecraft put a +1/+1 counter on target friendly Inkling. Inkling-
+/// tribal magecraft snowball.
+pub fn silverquill_inkmaster_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkmaster (b142)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Decree (b142) — {1}{B} Instant. Target creature gets
+/// -3/-3 EOT and you gain 1 life. 2-mana removal trick.
+pub fn silverquill_decree_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Decree (b142)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Heartbinder (b142) — {2}{W}{B} 2/4 Inkling Cleric Flying +
+/// Lifelink. ETB Scry 2. 4-mana defensive lifelink flyer + smoothing.
+pub fn inkling_heartbinder_b142() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry;
+    CardDefinition {
+        name: "Inkling Heartbinder (b142)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Ledgerward (b142) — {W}{B} 2/2 Vampire Cleric.
+/// ETB Drain 1 + Surveil 1. 2-mana early drain + selection.
+pub fn silverquill_ledgerward_b142() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_surveil;
+    CardDefinition {
+        name: "Silverquill Ledgerward (b142)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_surveil(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

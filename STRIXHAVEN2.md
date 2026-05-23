@@ -19,10 +19,67 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1944 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 141:
+Push (claude/modern_decks branch — current head — **post-batch 142:
+25 more Strixhaven synthesised cards across all five colleges
+(5 Silverquill, 5 Witherbloom, 5 Lorehold, 5 Prismari, 5 Quandrix).
+No new shortcut helpers required — every card reuses existing primitives.
+Tests: 3997 → 4023 (26 new b142 card tests, including two for Pest
+Hivelord's anthem). All tests pass; cargo clippy clean. New TODO.md
+audit row for CR 612 (Text-Changing Effects) added as ⏳ — no
+catalog card exercises this primitive today, but documented for
+future reference.
+
+- **Silverquill (W/B, 5 cards)** — Inkling Magistry (b142) ({3}{W}{B}
+  Sorcery — Drain 3 + Surveil 2 via existing `drain_and_surveil`
+  composite); Silverquill Inkmaster (b142) ({2}{W} 2/3 Human Wizard
+  Vigilance, magecraft → AddCounter +1/+1 on target friendly Inkling);
+  Silverquill Decree (b142) ({1}{B} Instant — -3/-3 EOT to target
+  creature + GainLife 1); Inkling Heartbinder (b142) ({2}{W}{B} 2/4
+  Inkling Cleric Flying + Lifelink, ETB Scry 2); Silverquill Ledgerward
+  (b142) ({W}{B} 2/2 Vampire Cleric, ETB Drain 1 + Surveil 1).
+- **Witherbloom (B/G, 5 cards)** — Witherbloom Toxincaller (b142)
+  ({1}{B} 2/1 Plant Warlock, magecraft mint Pest);
+  Witherbloom Sapsage (b142) ({2}{G} 3/3 Plant Druid, ETB GainLife 2
+  + AddCounter +1/+1 self); Witherbloom Necroleaf (b142) ({1}{B}{G}
+  Sorcery — reanimate target Creature card MV ≤ 3 from your gy);
+  Witherbloom Verdantvine (b142) ({2}{B}{G} 2/4 Plant Druid, magecraft
+  Surveil 1 + Gain 1); Pest Hivelord (b142) ({3}{B}{G} 4/4 Plant
+  Warlock with `StaticEffect::PumpPT` "Other Pest creatures you
+  control get +1/+1" — Pest tribal anthem mirrors Tenured Inkcaster).
+- **Lorehold (R/W, 5 cards)** — Lorehold Pyroscribe (b142) ({2}{R}
+  3/2 Human Wizard, magecraft deal 1 to each opp creature);
+  Lorehold Spiritbond (b142) ({W}{R} Instant — PumpPT +2/+1 EOT +
+  GrantKeyword(Haste) EOT target friendly creature); Lorehold
+  Stoneveil (b142) ({2}{W} 1/4 Human Cleric Vigilance, ETB reanimate
+  ≤2-MV creature card from your gy); Lorehold Spiritmender (b142)
+  ({3}{R}{W} 3/3 Spirit Cleric Flying, ETB Seq(GainLife 4 + Spirit
+  token)); Lorehold Spellfire (b142) ({2}{R} Sorcery — Deal 4 damage
+  to any target).
+- **Prismari (U/R, 5 cards)** — Prismari Surgemage (b142) ({1}{U}{R}
+  2/2 Human Wizard, magecraft draw a card via `magecraft_draw(1)`);
+  Prismari Cinderwave (b142) ({2}{U}{R} Instant — Deal 3 damage to
+  any target + Draw 1); Prismari Tidemaster (b142) ({3}{U}{R} 3/4
+  Elemental Wizard Flying, ETB Treasure via `mint_treasures`);
+  Prismari Pyrocaster (b142) ({1}{R} 2/1 Human Wizard, ETB Loot);
+  Prismari Magmarush (b142) ({3}{R} Sorcery — Deal 5 damage to target
+  creature).
+- **Quandrix (G/U, 5 cards)** — Quandrix Algorithmist (b142)
+  ({1}{G}{U} 2/3 Human Wizard, magecraft Seq(Scry 1 + AddCounter +1/+1
+  self)); Fractal Tendril (b142) ({G}{U} Instant — mint a Fractal with
+  2 +1/+1 counters via `create_token_with_counter`); Quandrix
+  Wavefront (b142) ({2}{G}{U} Sorcery — Draw 2); Quandrix Apex (b142)
+  ({3}{G}{U} 4/4 Fractal Druid Trample, ETB add a +1/+1 counter on
+  self for each other Fractal you control via
+  `Value::count(EachPermanent(Fractal ∧ ControlledByYou ∧ OtherThanSource))`);
+  Fractal Genesis (b142) ({1}{G}{U} 2/2 Fractal Druid, magecraft mint
+  a 0/0 Fractal token — the 0/0 dies to SBA, useful as a sacrifice
+  trigger source or fuel for Quandrix Apex / Quandrix Symmetrist II's
+  Fractal-count scaling).
+
+Push (claude/modern_decks branch — **post-batch 141:
 21 more Strixhaven synthesised cards across all five colleges
 (4 Silverquill, 4 Witherbloom, 5 Lorehold, 4 Prismari, 4 Quandrix).
 3 new shortcut helpers: `dies_ping_creature`, `on_other_dies_mint_token`,

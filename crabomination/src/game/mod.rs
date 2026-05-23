@@ -1309,6 +1309,24 @@ impl GameState {
         id
     }
 
+    /// Drop a token onto the battlefield directly (test fixture). Mirrors
+    /// `add_card_to_battlefield` but uses `CardInstance::new_token` so the
+    /// `is_token` flag is set — required for SBA path 704.5d (tokens not on
+    /// the battlefield cease to exist) and for filters that consult
+    /// `c.is_token`. Used by tribal-anthem and aristocrats tests that need
+    /// a token board state without round-tripping through a spell cast.
+    pub fn add_token_to_battlefield(
+        &mut self,
+        player_idx: usize,
+        token: &crate::card::TokenDefinition,
+    ) -> CardId {
+        let id = self.next_id();
+        let def = crate::game::effects::token_to_card_definition(token);
+        self.battlefield
+            .push(CardInstance::new_token(id, def, player_idx));
+        id
+    }
+
     /// Add a card to the **bottom** of `player_idx`'s library — appends to
     /// the end of the `library` vec. Note: with an empty library the
     /// first call pushes to index 0 (the top of the deck), so test

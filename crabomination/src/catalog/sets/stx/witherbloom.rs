@@ -13005,3 +13005,200 @@ pub fn witherbloom_pestcaller_ii_b141() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 142 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Toxincaller (b142) — {1}{B} 2/1 Plant Warlock.
+/// Magecraft mint a Pest token. Aristocrat go-wide engine on every IS
+/// cast.
+pub fn witherbloom_toxincaller_b142() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_token;
+    CardDefinition {
+        name: "Witherbloom Toxincaller (b142)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapsage (b142) — {2}{G} 3/3 Plant Druid. ETB
+/// Seq(GainLife 2 + AddCounter +1/+1 on self). Self-growing lifegain
+/// midrange body.
+pub fn witherbloom_sapsage_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapsage (b142)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necroleaf (b142) — {1}{B}{G} Sorcery. Reanimate target
+/// creature card with mana value ≤ 3 from your graveyard. Witherbloom's
+/// 3-mana low-curve reanimation.
+pub fn witherbloom_necroleaf_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necroleaf (b142)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            }),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Verdantvine (b142) — {2}{B}{G} 2/4 Plant Druid.
+/// Magecraft Seq(Surveil 1 + GainLife 1). Defensive midrange spellslinger.
+pub fn witherbloom_verdantvine_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Verdantvine (b142)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Hivelord (b142) — {3}{B}{G} 4/4 Plant Warlock. Static "Other
+/// Pest creatures you control get +1/+1." Pest tribal anthem.
+pub fn pest_hivelord_b142() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Pest Hivelord (b142)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Pest creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -10792,3 +10792,185 @@ pub fn fractal_wanderer_b141() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 142 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Algorithmist (b142) — {1}{G}{U} 2/3 Human Wizard.
+/// Magecraft Seq(Scry 1 + AddCounter +1/+1 self). Self-growing
+/// magecraft engine that also smooths draws.
+pub fn quandrix_algorithmist_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Algorithmist (b142)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Tendril (b142) — {G}{U} Instant. Create a Fractal token
+/// with two +1/+1 counters. 2-mana flash-Fractal token body.
+pub fn fractal_tendril_b142() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Tendril (b142)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: create_token_with_counter(
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            2,
+        ),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Wavefront (b142) — {2}{G}{U} Sorcery. Draw 2 cards.
+/// 4-mana raw card draw — Divination at college costs.
+pub fn quandrix_wavefront_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Wavefront (b142)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Apex (b142) — {3}{G}{U} 4/4 Fractal Druid Trample.
+/// ETB adds a +1/+1 counter on this creature for each other Fractal
+/// creature you control. Tribal payoff for go-wide Fractals.
+pub fn quandrix_apex_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Apex (b142)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::count(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            )),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Genesis (b142) — {1}{G}{U} 2/2 Fractal Druid. Magecraft
+/// mint a Fractal token (0/0, no counters — dies to SBA unless other
+/// effects add counters, but acts as a sacrifice / aristocrats fodder
+/// trigger source).
+pub fn fractal_genesis_b142() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::magecraft_mint_token;
+    CardDefinition {
+        name: "Fractal Genesis (b142)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_token(fractal_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

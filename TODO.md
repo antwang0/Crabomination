@@ -12,6 +12,53 @@ Periodic spot-check of the rules document
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
+- ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
+  batch 142 — audit against `MagicCompRules_20260417.txt` lines
+  2922–2939). The "change a word on a card" primitive — Mind Bend,
+  Glamerdye, Spy Kit, Volrath's Shapeshifter, Exchange of Words.
+  (a) **612.1 — Definition** "Some continuous effects change an
+  object's text … generally rules text and/or type line" — ⏳
+  (no engine primitive for `StaticEffect::ReplaceWord` or
+  `Modification::ReplaceCreatureType` exists; nothing in the catalog
+  uses one. Type-line manipulation today goes through the
+  layer-system's `Modification::AddCreatureType` /
+  `RemoveCreatureType` which is a different shape — text-changing
+  effects rewrite the WORDS, not the resolved characteristics).
+  (b) **612.2 — Word-use disambiguation** "only changes words used
+  in the correct way (color word as color, land type as land type,
+  creature type as creature type)" — ⏳ (engine-wide ⏳; no card
+  in the catalog distinguishes "this word is being used as a color
+  word vs as part of a name" — Mind Bend / Glamerdye-class only).
+  (c) **612.2a — Token name shares creature type** "creature-type
+  text in a token-mint clause can be changed because it's used as
+  both type and name" — ⏳ (no use; TokenDefinition.name and
+  TokenDefinition.subtypes.creature_types are stored separately
+  today, no text-rewriting hook on token mint).
+  (d) **612.3 — Ability-add doesn't change text** "granting an
+  ability via static effect doesn't make that ability eligible for
+  text-changing rewrites" — ✅ (the `StaticEffect::GrantKeyword`
+  family adds keyword presence but doesn't synthesize printed text,
+  so 612.3 is naturally satisfied — there's no path to rewrite a
+  granted keyword).
+  (e) **612.4 — Token text is its creator's, eligible for rewrite** —
+  ⏳ (token rules text is defined at mint time via
+  `TokenDefinition.activated_abilities` /
+  `triggered_abilities` and frozen; no rewrite hook).
+  (f) **612.5 — Exchange of Words** (text-box swap) — ⏳ (no card;
+  no `Effect::ExchangeTextBoxes` primitive).
+  (g) **612.6 — Volrath's Shapeshifter** (full-text copy from
+  graveyard top) — ⏳ (no card; would require a continuous "set
+  characteristics to top-of-graveyard's" replacement that re-reads
+  every layer recomputation).
+  (h) **612.7 — Spy Kit** (all nonlegendary creature names) — ⏳ (no
+  card; would require a names registry over the catalog at compute
+  time).
+  No engine work needed for the STX / SOS / cube catalogs — all of
+  Strixhaven / Secrets of Strixhaven shipped with zero text-changing
+  effects. Audit row exists so future card adds can flag the gap
+  when they need a primitive. Tests: none (no cards exercise this
+  rule today).
+
 - 🟡 **CR 704 — State-Based Actions** (push claude/modern_decks batch
   123 — audit against `MagicCompRules_20260417.txt` lines 5443–5524).
   The SBA framework — game actions that happen automatically when

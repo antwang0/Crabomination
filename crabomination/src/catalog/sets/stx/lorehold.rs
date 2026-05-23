@@ -15,7 +15,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    dies_mint_token, dies_ping_any, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    dies_mint_token, dies_ping_any, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
     on_attack_drain, on_attack_gain_life, on_attack_ping_any, target_filtered,
 };
@@ -13602,6 +13602,207 @@ pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_spirit()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 142 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Pyroscribe (b142) — {2}{R} 3/2 Human Wizard. Magecraft
+/// deal 1 damage to each opponent creature. Spellslinger boardwipe-on-
+/// drip.
+pub fn lorehold_pyroscribe_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyroscribe (b142)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritbond (b142) — {W}{R} Instant. Target creature you
+/// control gets +2/+1 EOT and gains Haste EOT. 2-mana combat trick
+/// with haste rider for an end-step alpha strike.
+pub fn lorehold_spiritbond_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritbond (b142)",
+        cost: cost(&[w(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(2),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stoneveil (b142) — {2}{W} 1/4 Human Cleric Vigilance.
+/// ETB reanimate a creature card with mana value ≤ 2 from your
+/// graveyard. 3-mana low-curve recursion body.
+pub fn lorehold_stoneveil_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneveil (b142)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            }),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritmender (b142) — {3}{R}{W} 3/3 Spirit Cleric Flying.
+/// ETB Seq(GainLife 4 + mint Spirit token). 5-mana race breaker top-end.
+pub fn lorehold_spiritmender_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritmender (b142)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spellfire (b142) — {2}{R} Sorcery. Deal 4 damage to any
+/// target. 3-mana burn finisher (Searing Blood-class).
+pub fn lorehold_spellfire_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spellfire (b142)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

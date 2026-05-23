@@ -10145,3 +10145,169 @@ pub fn prismari_embergeist_b141() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 142 ───────────────────────────────────────────────────────────────
+
+/// Prismari Surgemage (b142) — {1}{U}{R} 2/2 Human Wizard. Magecraft
+/// draw a card. Spellslinger card-engine (Archmage Emeritus cousin
+/// at a smaller body).
+pub fn prismari_surgemage_b142() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_draw;
+    CardDefinition {
+        name: "Prismari Surgemage (b142)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Cinderwave (b142) — {2}{U}{R} Instant. Deal 3 damage to
+/// any target + Draw 1. 4-mana burn cantrip.
+pub fn prismari_cinderwave_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Cinderwave (b142)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tidemaster (b142) — {3}{U}{R} 3/4 Elemental Wizard Flying.
+/// ETB create a Treasure token. 5-mana ramp + evasive body.
+pub fn prismari_tidemaster_b142() -> CardDefinition {
+    use crate::effect::shortcut::{etb, mint_treasures};
+    CardDefinition {
+        name: "Prismari Tidemaster (b142)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_treasures(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyrocaster (b142) — {1}{R} 2/1 Human Wizard. ETB Loot
+/// (draw + discard). Tempo body for cards-in-graveyard payoffs.
+pub fn prismari_pyrocaster_b142() -> CardDefinition {
+    use crate::effect::shortcut::etb_loot;
+    CardDefinition {
+        name: "Prismari Pyrocaster (b142)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magmarush (b142) — {3}{R} Sorcery. Deal 5 damage to
+/// target creature. Mid-game hard creature removal.
+pub fn prismari_magmarush_b142() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Magmarush (b142)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
