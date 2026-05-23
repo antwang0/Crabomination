@@ -39078,6 +39078,53 @@ pub fn fractal_coursemate_b124() -> CardDefinition {
 
 // ── Cycling-keyword test card (CR 702.29) ──────────────────────────────────
 
+/// Strixhaven Cycle-Decree (b145) — {5}{B} Sorcery: "All creatures
+/// get -1/-1 until end of turn. / Cycling {3}{B}. / When you cycle
+/// this card, draw 3 cards."
+///
+/// Synthesised filler test card to lock in the cycle-trigger pipeline
+/// (CR 702.29c). On cycle, the source is in graveyard at dispatch
+/// time; the new dispatcher pass walks the cycler's graveyard for
+/// `EventKind::CardCycled` + `EventScope::SelfSource` triggers and
+/// fires them with `source = cycled card id`. Test verifies the
+/// draw-3 fires after cycling.
+pub fn strixhaven_cycle_decree_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Cycle-Decree (b145)",
+        cost: cost(&[generic(5), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Cycling(cost(&[generic(3), b()]))],
+        // Body: minus-one-minus-one to each creature is approximated as
+        // a no-op here so the test focuses on the cycle trigger; the
+        // cycling cost activation is the headline play pattern.
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(
+                crate::card::EventKind::CardCycled,
+                crate::card::EventScope::SelfSource,
+            ),
+            effect: Effect::Draw {
+                who: crate::effect::Selector::You,
+                amount: crate::card::Value::Const(3),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Strixhaven Cycle-Glyph (b143) — {3}{U} Sorcery: "Draw two cards.
 /// / Cycling {1}{U}".
 ///

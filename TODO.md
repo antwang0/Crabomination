@@ -3454,23 +3454,28 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `Keyword::Cycling(cost)`, pays the cost from the active player's
   mana pool, discards the card to graveyard, and draws one. Per
   CR 702.29a "[Cost], Discard this card: Draw a card." Per CR
-  702.29c, the `GameEvent::CardDiscarded` emission happens
-  *after* the discard to graveyard, so "When you cycle this card"
-  / "Whenever a player cycles or discards" triggers fire from the
-  graveyard side of the move. Filler test card
-  `strixhaven_cycle_glyph_b143` exercises the path; lock-in tests
-  `cycling_discards_and_draws_a_card`,
+  702.29c, a distinct `EventKind::CardCycled` (+ `GameEvent::Card
+  Cycled` + `GameEventWire::CardCycled`) event is emitted alongside
+  `CardDiscarded` so cycle-specific triggers don't double-fire on
+  regular hand discards. The dispatcher walks the cycler's
+  graveyard for `EventScope::SelfSource` cycle triggers — "When
+  you cycle this card" lands via the graveyard-walk extension in
+  `dispatch_triggers_for_events` (a SelfSource CardCycled scope on
+  a graveyard-resident source fires with `source = cycled card id`).
+  Filler test cards: `strixhaven_cycle_glyph_b143` (vanilla cycle),
+  `strixhaven_cycle_decree_b145` (cycle → draw 3 trigger).
+  Lock-in tests `cycling_discards_and_draws_a_card`,
   `cycling_rejects_without_mana_to_pay_the_cost`,
-  `cycle_glyph_castable_as_a_sorcery_too`. Remaining ⏳: (a) "When
-  you cycle this card" *dedicated* trigger via a new
-  `EventKind::CycledThis` (or by gating `CardDiscarded` on a
-  `cycle_source` flag), so cycle-specific triggers don't
-  double-fire on regular discards; (b) Typecycling per CR 702.29e
-  ("Mountaincycling" / "Basic landcycling" → discard to tutor a
-  matching land instead of drawing); (c) Cycling-cost reduction
-  (Astral Slide / Lightning Rift activate when you cycle); (d)
-  printed STA cycling reprints (Decree of Pain, Akroma's
-  Vengeance, Mystical Dispute via the mystic-archive split).
+  `cycle_glyph_castable_as_a_sorcery_too`,
+  `cycle_decree_when_cycled_draws_three_cards`. UI: `KnownCard.has
+  _cycling` + `KnownCard.cycling_cost_label` exposed; client adds
+  C keypress to cycle the hovered hand card. Remaining ⏳: (a)
+  Typecycling per CR 702.29e ("Mountaincycling" / "Basic land-
+  cycling" → discard to tutor a matching land instead of drawing);
+  (b) Cycling-cost reduction (Astral Slide / Lightning Rift
+  activate when you cycle); (c) printed STA cycling reprints
+  (Decree of Pain, Akroma's Vengeance, Mystical Dispute via the
+  mystic-archive split).
 - ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for

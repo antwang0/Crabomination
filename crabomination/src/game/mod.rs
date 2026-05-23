@@ -1833,11 +1833,25 @@ impl GameState {
         // Also walk every player's graveyard for triggers scoped
         // `FromYourGraveyard` — recursion creatures (Bloodghast,
         // Ichorid, Silversmote Ghoul) fire from there. The trigger's
-        // effective controller is the card's owner.
+        // effective controller is the card's owner. Per CR 702.29c,
+        // SelfSource cycle triggers ("When you cycle this card") also
+        // fire here — the cycled card is in graveyard at dispatch
+        // time, and the trigger's source matches the cycled card by id.
         for player in &self.players {
             for card in &player.graveyard {
                 for ta in &card.definition.triggered_abilities {
-                    if !matches!(ta.event.scope, crate::effect::EventScope::FromYourGraveyard) {
+                    let from_gy_scope = matches!(
+                        ta.event.scope,
+                        crate::effect::EventScope::FromYourGraveyard
+                    );
+                    let cycle_self = matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::CardCycled
+                    ) && matches!(
+                        ta.event.scope,
+                        crate::effect::EventScope::SelfSource
+                    );
+                    if !from_gy_scope && !cycle_self {
                         continue;
                     }
                     for ev in events {

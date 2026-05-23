@@ -56589,6 +56589,27 @@ fn cycling_rejects_without_mana_to_pay_the_cost() {
 }
 
 #[test]
+fn cycle_decree_when_cycled_draws_three_cards() {
+    // Verifies CR 702.29c — "When you cycle this card" triggers fire
+    // from the graveyard with the cycled card as the source.
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::plains());
+    }
+    let id = g.add_card_to_hand(0, catalog::strixhaven_cycle_decree_b145());
+    // Pay {3}{B} cycling cost.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::Cycle { card_id: id })
+        .expect("Cycle-Decree cycling");
+    drain_stack(&mut g);
+    // -1 hand (discarded Decree) +1 (cycling draw) +3 (cycle trigger) = +3 net
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
+}
+
+#[test]
 fn cycle_glyph_castable_as_a_sorcery_too() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
