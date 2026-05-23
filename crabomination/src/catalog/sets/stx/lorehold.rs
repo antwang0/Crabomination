@@ -13145,3 +13145,38 @@ pub fn lorehold_ember_sprite_b136() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 137 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Spirit-Captain (b137) — {3}{R}{W} 3/3 Spirit Soldier Haste.
+/// Whenever this creature attacks, create a 2/2 R/W Spirit token.
+/// Uses the new `on_attack_create_token` shortcut. Aggressive token
+/// engine.
+pub fn lorehold_spirit_captain_b137() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_create_token;
+    CardDefinition {
+        name: "Lorehold Spirit-Captain (b137)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

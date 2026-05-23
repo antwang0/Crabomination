@@ -54353,6 +54353,84 @@ fn quandrix_fractal_apprentice_b136_adds_counter_on_cast() {
     assert!(c.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) >= 1);
 }
 
+// ── Batch 137 tests + new shortcut helper lock-ins ──────────────────────────
+
+#[test]
+fn shortcut_etb_drain_and_draw_drains_and_draws() {
+    use crate::effect::shortcut::etb_drain_and_draw;
+    use crate::card::{Effect, EventKind, EventScope};
+    let t = etb_drain_and_draw(2);
+    assert_eq!(t.event.kind, EventKind::EntersBattlefield);
+    assert_eq!(t.event.scope, EventScope::SelfSource);
+    // Verify the body is Seq(Drain, Draw)
+    match t.effect {
+        Effect::Seq(ref steps) => {
+            assert_eq!(steps.len(), 2);
+            assert!(matches!(steps[0], Effect::Drain { .. }));
+            assert!(matches!(steps[1], Effect::Draw { .. }));
+        }
+        _ => panic!("expected Seq body"),
+    }
+}
+
+#[test]
+fn shortcut_on_attack_create_token_uses_attacks_self_source() {
+    use crate::effect::shortcut::on_attack_create_token;
+    use crate::card::{Effect, EventKind, EventScope};
+    let t = on_attack_create_token(catalog::inkling_token());
+    assert_eq!(t.event.kind, EventKind::Attacks);
+    assert_eq!(t.event.scope, EventScope::SelfSource);
+    assert!(matches!(t.effect, Effect::CreateToken { .. }));
+}
+
+#[test]
+fn silverquill_pen_master_b137_drains_and_draws_on_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::silverquill_pen_master_b137());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pen-Master castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0_before + 1, "controller gains 1");
+    assert_eq!(g.players[1].life, l1_before - 1, "opponent loses 1");
+    // -1 cast, +1 draw = same hand size
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn inkling_wingmother_b137_has_attack_trigger() {
+    // Verify the card structure rather than running combat (since combat
+    // step-stepping in the test harness is complex). The on_attack_create_token
+    // shortcut is locked-in by shortcut_on_attack_create_token_uses_attacks_self_source.
+    let def = catalog::inkling_wingmother_b137();
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert_eq!(def.triggered_abilities.len(), 1);
+    use crate::card::{EventKind, EventScope};
+    assert_eq!(def.triggered_abilities[0].event.kind, EventKind::Attacks);
+    assert_eq!(def.triggered_abilities[0].event.scope, EventScope::SelfSource);
+}
+
+#[test]
+fn lorehold_spirit_captain_b137_has_attack_trigger() {
+    let def = catalog::lorehold_spirit_captain_b137();
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Haste));
+    assert_eq!(def.triggered_abilities.len(), 1);
+    use crate::card::{EventKind, EventScope};
+    assert_eq!(def.triggered_abilities[0].event.kind, EventKind::Attacks);
+    assert_eq!(def.triggered_abilities[0].event.scope, EventScope::SelfSource);
+}
+
 #[test]
 fn quandrix_lifestream_b136_mints_three_three_fractal_and_gains_two() {
     let mut g = two_player_game();

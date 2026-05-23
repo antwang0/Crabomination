@@ -14580,6 +14580,74 @@ pub fn inkling_battle_scribe_b136() -> CardDefinition {
     }
 }
 
+// ── Batch 137 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Pen-Master (b137) — {2}{W}{B} 2/3 Inkling Wizard Flying.
+/// ETB Drain 1 + Draw a card. Uses the new `etb_drain_and_draw(1)`
+/// shortcut. 4-mana evasive value body.
+pub fn silverquill_pen_master_b137() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_draw;
+    CardDefinition {
+        name: "Silverquill Pen-Master (b137)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Wingmother (b137) — {3}{W}{B} 3/3 Inkling Wizard Flying.
+/// Whenever this creature attacks, create a 1/1 Inkling token. Uses
+/// the new `on_attack_create_token` shortcut. Strong Inkling-tribal
+/// engine — every attack adds a body.
+pub fn inkling_wingmother_b137() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    use crate::effect::shortcut::on_attack_create_token;
+    CardDefinition {
+        name: "Inkling Wingmother (b137)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_create_token(inkling_token())],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Silverquill Pristine Sermon (b136) — {3}{W}{B} Sorcery. Seq
 /// (Drain 3 + Scry 2 + CreateToken 1 Inkling). 5-mana drain finisher
 /// that mints a flyer to push through the table.

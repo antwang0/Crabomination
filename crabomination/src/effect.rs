@@ -3161,6 +3161,41 @@ pub mod shortcut {
         ]))
     }
 
+    /// ETB-Drain-and-Draw shortcut: "When this creature enters, each
+    /// opponent loses `drain` life and you gain `drain` life. Draw a
+    /// card." Wraps [`etb`] with a `Seq([Drain, Draw])` body. Used by
+    /// Silverquill drain-and-cantrip creatures.
+    ///
+    /// Push claude/modern_decks batch 137: shipped to collapse the
+    /// recurring drain+draw ETB pattern.
+    pub fn etb_drain_and_draw(drain: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(drain),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
+
+    /// On-Attack-Create-Token shortcut: "Whenever this creature attacks,
+    /// create a `token`." Wraps [`on_attack`] with a `CreateToken` body.
+    /// Used by Spirit/Pest/Inkling tribal attack-token creators.
+    ///
+    /// Push claude/modern_decks batch 137: shipped to collapse the
+    /// recurring "attack → mint token" pattern.
+    pub fn on_attack_create_token(token: crate::card::TokenDefinition) -> TriggeredAbility {
+        on_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: token,
+        })
+    }
+
     /// Mint N copies of `token` as a standalone Effect (not wrapped in
     /// an ETB trigger). Useful as the body of a sorcery / instant or
     /// inside a `Seq([…])` step. Wraps `Effect::CreateToken` with

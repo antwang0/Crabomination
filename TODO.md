@@ -4014,6 +4014,23 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **STX batches 135 + 136 + 137 — 43 more synthesised cards plus
+  two new shortcut helpers** (push claude/modern_decks batches 135/136/137
+  done). Added 4-per-school cards across batches 135 and 136 (20+20=40
+  cards) plus 3 cards in batch 137 introducing two new shortcut helpers
+  (`etb_drain_and_draw(amount)` and `on_attack_create_token(token)`).
+  Tests: 3881 → 3934 (53 new tests including 2 helper lock-ins). All
+  pass; cargo clippy clean. Notable cards: Inkling Forewing (Ward 1),
+  Witherbloom Bonereader (mill+lifegain ETB), Fractal Beanstalker (4
+  +1/+1 counters Reach), Inkling Wingmother (on-attack Inkling), Lorehold
+  Spirit-Captain (on-attack Spirit token).
+
+- ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
+  candidates are Helix Pinnacle (keyword counter), Walking Ballista
+  (Nth-counter trigger), and cards that exercise CR 122.4 (counter cap)
+  / 122.7 (Nth-counter threshold trigger). Each lands new engine
+  capability tracked in the rules-audit section above.
+
 - ✅ **STX batch 131 — 21 more synthesised cards across all five
   colleges** (push claude/modern_decks batch 131 done). Added 8
   Lorehold + 8 Witherbloom + 4 Silverquill + 3 Prismari + 3 Quandrix

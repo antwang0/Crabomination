@@ -22,7 +22,30 @@ Two adjacent catalogs:
 | STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 136:
+Push (claude/modern_decks branch — current head — **post-batch 137:
+3 more Strixhaven synthesised cards plus two new shortcut helpers
+(`etb_drain_and_draw(amount)` and `on_attack_create_token(token)`).
+Tests: 3929 → 3934 (5 new tests: 3 card tests + 2 helper lock-ins).
+All tests pass; cargo clippy clean.
+
+- **Silverquill (W/B, 2 cards)** — Silverquill Pen-Master (b137)
+  ({2}{W}{B} 2/3 Inkling Wizard Flying ETB Drain 1 + Draw 1 via the
+  new `etb_drain_and_draw(1)`), Inkling Wingmother (b137) ({3}{W}{B}
+  3/3 Inkling Wizard Flying — on-attack mint Inkling via the new
+  `on_attack_create_token(inkling_token())`).
+- **Lorehold (R/W, 1 card)** — Lorehold Spirit-Captain (b137)
+  ({3}{R}{W} 3/3 Spirit Soldier Haste — on-attack mint Lorehold
+  Spirit via the new `on_attack_create_token(lorehold_spirit_token())`).
+
+Engine: two new shortcut helpers —
+- `etb_drain_and_draw(amount)` — `etb(Seq[Drain(amount), Draw(1)])`.
+  Distinct from `etb_drain_and_scry` and `etb_drain_and_surveil` —
+  drains plus a hard cantrip.
+- `on_attack_create_token(token)` — `on_attack(CreateToken(1, token))`.
+  Generic attack-trigger token mint; covers all tribal "attack → mint"
+  patterns.
+
+Push (claude/modern_decks branch — post-batch 136:
 20 more Strixhaven synthesised cards across all five colleges (4 per
 school). All cards use existing primitives — no new shortcut helpers
 required. Tests: 3909 → 3929 (20 new b136 card tests). All tests
