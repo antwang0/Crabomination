@@ -14189,6 +14189,110 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
     }
 }
 
+// ── Batch 145 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Spiritcaller (b145) — {3}{R}{W} 3/3 Spirit Wizard. ETB
+/// returns target Spirit card from your gy → bf.
+pub fn lorehold_spiritcaller_b145() -> CardDefinition {
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Lorehold Spiritcaller (b145)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::HasCreatureType(CreatureType::Spirit),
+            }),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Inferno-Acolyte (b145) — {R} 1/1 Human Cleric.
+/// Magecraft drain 1 (each opp loses 1; you gain 1). 1-drop apprentice.
+pub fn lorehold_inferno_acolyte_b145() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Lorehold Inferno-Acolyte (b145)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Knight-Errant (b145) — {2}{W} 2/3 Spirit Soldier
+/// Vigilance + First Strike. 3-mana defender + combat presence.
+pub fn lorehold_knight_errant_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Knight-Errant (b145)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Embermage (b144) — {1}{R} 2/2 Human Wizard. Cycling {2}.
 pub fn lorehold_embermage_b144() -> CardDefinition {
     CardDefinition {

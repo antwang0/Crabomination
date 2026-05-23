@@ -13691,6 +13691,98 @@ pub fn witherbloom_lifedrip_b144() -> CardDefinition {
     }
 }
 
+// ── Batch 145 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Vinegrower (b145) — {1}{G} 2/2 Plant Druid Reach.
+/// Cycling {1}{G}.
+pub fn witherbloom_vinegrower_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinegrower (b145)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Cycling(cost(&[generic(1), g()]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Acolyte (b145) — {1}{B} 1/1 Pest Cleric Lifelink. Magecraft
+/// gain 1 life. Compact aristocrats lifegain body.
+pub fn pest_acolyte_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Acolyte (b145)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vipergrove (b145) — {3}{B}{G} 4/5 Plant Snake.
+/// 5-mana big body — Deathtouch + Trample.
+pub fn witherbloom_vipergrove_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vipergrove (b145)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Deathtouch, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Necromage (b144) — {3}{B} 3/3 Vampire Wizard. ETB
 /// returns target creature card from your gy → bf tapped.
 pub fn witherbloom_necromage_b144() -> CardDefinition {

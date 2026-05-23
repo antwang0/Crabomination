@@ -10548,6 +10548,69 @@ pub fn prismari_ember_cantor_b144() -> CardDefinition {
     }
 }
 
+// ── Batch 145 ───────────────────────────────────────────────────────────────
+
+/// Prismari Frosthand (b145) — {1}{U} 1/3 Human Wizard. ETB tap target
+/// opp creature. Defensive tempo body.
+pub fn prismari_frosthand_b145() -> CardDefinition {
+    use crate::effect::shortcut::etb_tap_opp_creature;
+    CardDefinition {
+        name: "Prismari Frosthand (b145)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_tap_opp_creature()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magmasplitter (b145) — {2}{R}{R} Sorcery. Deal 4 damage to
+/// target creature. 4-mana burn finisher.
+pub fn prismari_magmasplitter_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Magmasplitter (b145)",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Prismari Wavecraft (b144) — {3}{U}{R} 4/3 Elemental Wizard Flying.
 /// Magecraft loot. 5-mana race-breaker + selection.
 pub fn prismari_wavecraft_b144() -> CardDefinition {

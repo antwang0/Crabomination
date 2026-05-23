@@ -11201,6 +11201,76 @@ pub fn quandrix_mage_adept_b144() -> CardDefinition {
     }
 }
 
+// ── Batch 145 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Treetender (b145) — {2}{G} 2/3 Human Druid. Cycling {2}{G}.
+pub fn quandrix_treetender_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Treetender (b145)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2), g()]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Apex-Mage (b145) — {3}{G}{U} 4/4 Fractal Wizard. ETB +1/+1
+/// counter on this creature for each other Fractal you control.
+pub fn fractal_apex_mage_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Apex-Mage (b145)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::count(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            )),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Fractal Bookbearer (b144) — {1}{G} 2/2 Fractal Druid. Cycling {2}.
 pub fn fractal_bookbearer_b144() -> CardDefinition {
     CardDefinition {

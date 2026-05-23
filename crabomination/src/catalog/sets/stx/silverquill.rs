@@ -15762,3 +15762,181 @@ pub fn silverquill_ascension_b144() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 145 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Hexbearer (b145) — {1}{B} 2/2 Inkling Wizard. ETB target
+/// opp discards 1 + Drain 1. Compact 2-mana disruption + drain.
+pub fn silverquill_hexbearer_b145() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Silverquill Hexbearer (b145)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Spellbearer (b145) — {2}{W}{B} 2/4 Inkling Cleric Vigilance.
+/// Static: Other Inkling creatures you control have lifelink.
+pub fn silverquill_spellbearer_b145() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Silverquill Spellbearer (b145)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control have lifelink.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sage (b145) — {3}{W} 2/4 Human Cleric Vigilance.
+/// Cycling {W}. Defensive cycle-trigger anchor.
+pub fn silverquill_sage_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sage (b145)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Cycling(cost(&[w()]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Heartmender (b145) — {1}{W} Sorcery. Gain 4 life.
+/// 2-mana cheap heal.
+pub fn silverquill_heartmender_b145() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Heartmender (b145)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Wraith (b145) — {2}{B} 2/2 Inkling Spirit Flying.
+/// Dies → each opp loses 2 life. Aristocrat-style death-drain.
+pub fn inkling_wraith_b145() -> CardDefinition {
+    use crate::effect::shortcut::dies_lose_life_each_opp;
+    CardDefinition {
+        name: "Inkling Wraith (b145)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_lose_life_each_opp(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
