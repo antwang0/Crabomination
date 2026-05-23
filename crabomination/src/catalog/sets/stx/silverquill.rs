@@ -13421,3 +13421,228 @@ pub fn silverquill_quillplate_b127() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 128 (push claude/modern_decks): new Silverquill cards ───────────
+
+/// Inkling Quillstrike (b128) — {1}{W}{B}, 2/2 Inkling Rogue Flying.
+/// Magecraft drain 1 — same shape as Inkling Coursebinder, with Rogue
+/// subtype instead of Wizard (synergises with Rogue tribal payoffs).
+pub fn inkling_quillstrike_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quillstrike (b128)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkmaster (b128) — {2}{W}{B}, 3/3 Inkling Wizard
+/// Flying + Lifelink. ETB mints an Inkling token. 4-mana race-breaking
+/// double-flyer payoff (4 power in the air on entry, gains 4 life
+/// triggered by attacking lifelink combined).
+pub fn silverquill_inkmaster_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkmaster (b128)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Drafter (b128) — {2}{B}, 2/2 Vampire Warlock. Magecraft
+/// Surveil 1 — Witherbloom-flavor surveil on a Silverquill body for
+/// gy-fueling decks.
+pub fn silverquill_drafter_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drafter (b128)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_surveil(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sermonist (b128) — {1}{W}, 2/3 Human Cleric Vigilance.
+/// ETB Scry 1. Standard early defender at the 2-drop slot — durable
+/// blocker that also smooths the early draw.
+pub fn silverquill_sermonist_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sermonist (b128)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Vellumbinder (b128) — {3}{W}{B}, 4/3 Inkling Cleric Flying.
+/// ETB drain 2 (4-life swing). 5-mana evasive race-breaker.
+pub fn inkling_vellumbinder_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Vellumbinder (b128)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkblot (b128) — {W}{B} Instant. Seq(Drain 1 + Draw 1).
+/// 2-mana drain-and-cantrip. Mini Sign in Blood variant.
+pub fn silverquill_inkblot_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkblot (b128)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Watchwarden (b128) — {2}{W}, 2/4 Inkling Soldier Flying +
+/// Vigilance. Big evasive defender; pairs with Tenured Inkcaster
+/// anthem to become a 4/6 flier.
+pub fn inkling_watchwarden_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Watchwarden (b128)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

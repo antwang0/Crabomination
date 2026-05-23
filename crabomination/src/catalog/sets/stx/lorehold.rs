@@ -11372,3 +11372,270 @@ pub fn lorehold_embercurse_b127() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 128 (push claude/modern_decks): new Lorehold cards ──────────────
+
+/// Lorehold Skybinder (b128) — {2}{W}, 2/2 Spirit Cleric Flying.
+/// Magecraft +1/+1 EOT self-pump — small flying body that scales in
+/// spell-heavy shells.
+pub fn lorehold_skybinder_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skybinder (b128)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Bookforger (b128) — {3}{R}, 3/3 Human Wizard. Magecraft
+/// "create a Treasure token" — Lorehold spin on Prismari's treasure
+/// generators, fueling expensive R/W finishers.
+pub fn lorehold_bookforger_b128() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_treasure;
+    CardDefinition {
+        name: "Lorehold Bookforger (b128)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Bell-Ringer (b128) — {1}{R}{W}, 2/3 Spirit Cleric. ETB
+/// gain 2 life + Spirit token mints — Lorehold double-payoff 3-drop
+/// (durable body + immediate Spirit anthem fuel + lifegain).
+pub fn lorehold_bell_ringer_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bell-Ringer (b128)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2), etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cliffstrike (b128) — {2}{R}{W} Sorcery. Seq(DealDamage 4
+/// target creature + GainLife 3). Larger Embercurse — 4-mana removal-
+/// and-lifegain finisher (kills 4-toughness ground bodies).
+pub fn lorehold_cliffstrike_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cliffstrike (b128)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkmender (b128) — {2}{W}, 2/3 Spirit Cleric Lifelink.
+/// 3-mana defensive lifelinker that scales with the Lorehold lifegain
+/// payoffs (Light of Promise template).
+pub fn lorehold_sparkmender_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkmender (b128)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlespirit (b128) — {3}{R}{W}, 4/4 Spirit Warrior with
+/// Haste. ETB mints a 2/2 R/W Spirit token via `etb_mint_token`. 5-mana
+/// haste finisher with go-wide rider.
+pub fn lorehold_battlespirit_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battlespirit (b128)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Soulreaver (b128) — {2}{R}{W}, 3/3 Spirit Knight First
+/// Strike. Magecraft ping each opp 1 — Lorehold Pyrebrand on a bigger
+/// body with first strike for combat survival.
+pub fn lorehold_soulreaver_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Soulreaver (b128)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrestone (b128) — {R}{W} Instant. Target creature gets
+/// +2/+0 and gains first strike EOT — Lorehold combat trick at a
+/// cheap rate. Same shape as Silverquill Discipline but trades
+/// lifelink for first strike for a more aggressive R/W tempo play.
+pub fn lorehold_pyrestone_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrestone (b128)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

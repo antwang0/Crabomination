@@ -8755,3 +8755,135 @@ pub fn prismari_ember_wave_b127() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 128 (push claude/modern_decks): new Prismari cards ──────────────
+
+/// Prismari Stormcrafter (b128) — {2}{U}{R}, 3/3 Elemental Wizard.
+/// Magecraft loot — every instant/sorcery cycles the top card via
+/// `magecraft_loot`. 4-mana spellslinger engine that pairs with
+/// Treasure-mint Prismari payoffs.
+pub fn prismari_stormcrafter_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormcrafter (b128)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Firebrand (b128) — {1}{R}, 2/1 Human Wizard with Haste.
+/// Magecraft +1/+1 EOT self-pump — aggressive 2-drop that grows on
+/// every spell. Same shape as Lorehold Cinderscholar but with haste
+/// for surprise damage.
+pub fn prismari_firebrand_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Firebrand (b128)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tide-Surger (b128) — {3}{U}, 3/3 Merfolk Wizard Flying.
+/// Magecraft Treasure mint — 4-mana flying treasure-engine for
+/// Prismari ramp shells.
+pub fn prismari_tide_surger_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tide-Surger (b128)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyroblast (b128) — {1}{R} Instant. Deal 3 damage to any
+/// target — Lightning Bolt at Prismari color identity. Bread-and-
+/// butter burn for Prismari magecraft shells.
+pub fn prismari_pyroblast_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyroblast (b128)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

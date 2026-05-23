@@ -3213,6 +3213,49 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   control `non_infect_spell_damage_to_player_reduces_life_per_cr_702_
   90b_control` (bare bear deals 2 → 2 life loss, 0 poison).
 
+- 🟡 **CR 702.15 — Lifelink** (push claude/modern_decks batch 128 —
+  audit against `MagicCompRules_20260417.txt` lines 4015–4035). The
+  lifelink keyword: a source with lifelink causes its controller to
+  gain life equal to damage dealt. Audit:
+  (a) **702.15a** "Lifelink is a static ability" — ✅ (`Keyword::
+  Lifelink` is a static keyword tag; layered grants via
+  `StaticEffect::GrantKeyword` and per-card declarations both
+  light up the lifelink flag in `compute_battlefield`).
+  (b) **702.15b** "Damage dealt by a source with lifelink causes
+  that source's controller to gain that much life" — ✅ (combat
+  path: `combat.rs::apply_combat_damage` consults
+  `AttackerInfo.has_lifelink` and dispatches `adjust_life(a,
+  lifelink_dealt)` after damage assignment; non-combat path:
+  `deal_damage_to_from` consults the source's lifelink flag and
+  emits a `GainLife` event when present).
+  (c) **702.15c** "If an object changes zones before an effect
+  causes it to deal damage, its last known information is used" —
+  🟡 (LKI is consulted via `died_card_snapshots` for SBA-driven
+  zone-changes, but a spell-cast lifelink source that resolves
+  from the stack still uses live battlefield state. No catalog
+  card today triggers this exact corner case for lifelink, so the
+  behavior matches printed Oracle).
+  (d) **702.15d** "Lifelink functions no matter what zone an object
+  with lifelink deals damage from" — ✅ (the combat path emits
+  lifelink life-gain from attackers on the battlefield; the non-
+  combat path treats `source` as any zone via `CardId` lookup).
+  (e) **702.15e** "If multiple sources with lifelink deal damage at
+  the same time, they cause separate life gain events" — ✅
+  (`apply_combat_damage` emits one `GainLife` event per lifelink
+  attacker via the per-attacker loop in `combat.rs:471`. Each
+  event fires Ajani's Pridemate-style "whenever you gain life"
+  triggers separately).
+  (f) **702.15f** "Multiple instances of lifelink on the same
+  object are redundant" — ✅ (the `has_lifelink` flag is boolean;
+  layered grants don't stack into multiple life-gain events).
+  Tests: `lorehold_sparkmender_b128_has_lifelink` (basic lifelink
+  on a creature body); `silverquill_inkmaster_b128_etb_mints_inkling`
+  exercises lifelink + flying (a future test could verify combat
+  damage life-gain). Combat-path lifelink is exercised by Vampire
+  Nighthawk-class cube tests in `tests::cube`. Promote to ✅ when
+  the LKI corner case (702.15c) is wired with a triggered-ability
+  source that leaves the battlefield mid-resolution.
+
 - 🟡 **CR 116 — Special Actions** (push modern_decks batch 57,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). Special actions are priority-window
@@ -7875,3 +7918,38 @@ event and `on_unblocked()` shortcut. Open items to explore next:
   with greater power." Unrelated to 509.3g but in the same family of
   evasion abilities. Catalog has Flying / Reach / Menace / Unblockable;
   Skulk is the next ladder rung.
+
+### Suggested next-up tasks (additions from batch 128)
+
+Batch 128 added 30 STX synthesised cards across all five colleges,
+audited CR 702.15 (Lifelink) for completeness. Open items to explore
+next:
+
+- **Skeleton tribal subpool** — Witherbloom Reaper-Hand (b128) introduces
+  the Skeleton creature type with a die→drain trigger. A small subpool
+  of Skeleton-tribal payoffs (anthem, regen-on-mana, "your Skeletons
+  have menace") would unlock Skeleton-tribal SOS/Strixhaven decks.
+- **Skeleton regeneration primitive** — printed Skeletons in Magic
+  history often have `{B}: Regenerate this creature` activations.
+  Currently the engine has a partial regen replacement, but the
+  cost-of-regen pattern hasn't been ported to the post-batch helpers.
+- **`etb_mint_token_with_counters(token, count, counter_amount)`
+  shortcut** — Quandrix Bloomforge (b128) and Quandrix Geometer (b128)
+  both use the pattern `etb(Seq[CreateToken, AddCounter(LastCreatedToken,
+  +1/+1, N)])`. A helper would collapse this to one line. Pairs with
+  `Fractal Bedrock` and Body of Research-style printed cards.
+- **Reach + Plant tribal payoff** — Witherbloom Sprawl-Vine + Verdant
+  Sage are Plant-typed Reach defenders. An anthem ("Plants you control
+  get +1/+1") or a Plant-tribal lord would tie the Witherbloom Plant
+  cards together with the existing Pest cycle.
+- **Magecraft Treasure mint frequency** — `magecraft_treasure()` shows
+  up on Lorehold Bookforger (b128), Prismari Tide-Surger (b128), and
+  Prismari Flarescholar (b127). At a body cost of 4+ mana, the rate is
+  defensive; future Prismari "every spell + every attack mints a
+  Treasure" combinations would warrant a tighter cost curve.
+- **Spirit-tribal anthem on Lorehold** — Lorehold Battlespirit (b128)
+  is a 4/4 Spirit Warrior Haste that mints another Spirit on ETB.
+  A Spirit-tribal anthem ("Spirits you control get +1/+1") would tie
+  the existing 20+ Spirit creatures (Aerialist, Ironbound, Bell-Ringer,
+  Battlespirit, Skybinder) into a tight tribal pool. Mirror of Tenured
+  Inkcaster's Inkling anthem.

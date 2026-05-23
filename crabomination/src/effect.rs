@@ -3469,4 +3469,35 @@ pub mod shortcut {
             effect,
         }
     }
+
+    /// ETB-Mint-Token-With-Counters shortcut: "When this creature
+    /// enters, create `count` copies of `definition`, then put
+    /// `counter_amount` +1/+1 counters on each." Wraps [`etb`] with
+    /// `Seq([CreateToken, AddCounter(LastCreatedToken, +1/+1, N)])`.
+    /// Used by Quandrix Bloomforge (b128, 4-counter Fractal token) and
+    /// Quandrix Geometer (b128, 2-counter Fractal). Mirrors the
+    /// Body of Research and Fractal Summoning patterns.
+    ///
+    /// Push claude/modern_decks batch 128: shipped to collapse the
+    /// recurring "ETB mint a counter-scaled token" pattern across
+    /// Quandrix Fractal-engine cards.
+    pub fn etb_mint_token_with_counters(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+        counter_amount: i32,
+    ) -> TriggeredAbility {
+        use crate::card::CounterType;
+        etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(count),
+                definition,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(counter_amount),
+            },
+        ]))
+    }
 }

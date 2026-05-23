@@ -9325,3 +9325,134 @@ pub fn quandrix_fractus_touch_b127() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 128 (push claude/modern_decks): new Quandrix cards ──────────────
+
+/// Quandrix Bloomforge (b128) — {2}{G}{U}, 3/3 Elemental. ETB mints a
+/// 4-counter Fractal via the new `etb_mint_token_with_counters` shortcut.
+/// 4-mana double-body (3/3 + 4/4 fractal). Pairs with Bedrock for
+/// go-wide Quandrix math shells.
+pub fn quandrix_bloomforge_b128() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::etb_mint_token_with_counters;
+    CardDefinition {
+        name: "Quandrix Bloomforge (b128)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 4)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tideshaper (b128) — {1}{U}, 2/1 Merfolk Wizard. Magecraft
+/// Scry 1 — early flier-fueler that draws every IS spell smoother.
+pub fn quandrix_tideshaper_b128() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tideshaper (b128)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Treebinder (b128) — {2}{G}, 3/3 Elf Druid Reach. ETB Draw 1
+/// (cantrip body). 3-mana defensive + smoother body.
+pub fn quandrix_treebinder_b128() -> CardDefinition {
+    use crate::effect::shortcut::etb_draw;
+    CardDefinition {
+        name: "Quandrix Treebinder (b128)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Geometer (b128) — {2}{G}{U}, 2/2 Elf Wizard. ETB mints a
+/// 2-counter Fractal (so it enters as a 2/2 Fractal) via the new
+/// `etb_mint_token_with_counters` shortcut. Mathematical 4-mana
+/// double-body (2/2 + 2/2 Fractal).
+pub fn quandrix_geometer_b128() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::etb_mint_token_with_counters;
+    CardDefinition {
+        name: "Quandrix Geometer (b128)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

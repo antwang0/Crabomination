@@ -19,10 +19,63 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1769 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1799 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 127:
+Push (claude/modern_decks branch — current head — **post-batch 128:
+30 more Strixhaven synthesised cards across all five colleges. The
+batch focuses on filling out Lorehold (R/W) further (8 new cards) and
+adds 7 each to Witherbloom and Silverquill, with 4 each to Prismari
+and Quandrix. All cards use existing shortcut helpers and engine
+primitives — no new engine primitives required.
+
+- **Lorehold (R/W, 8 cards)** — Lorehold Skybinder (b128) ({2}{W}
+  2/2 Spirit Cleric Flying magecraft +1/+1 EOT self-pump), Lorehold
+  Bookforger (b128) ({3}{R} 3/3 Human Wizard magecraft Treasure
+  mint), Lorehold Bell-Ringer (b128) ({1}{R}{W} 2/3 Spirit Cleric
+  ETB Seq[gain 2 life, mint Spirit token]), Lorehold Cliffstrike
+  (b128) ({2}{R}{W} Sorcery DealDamage 4 to creature + GainLife 3),
+  Lorehold Sparkmender (b128) ({2}{W} 2/3 Spirit Cleric Lifelink),
+  Lorehold Battlespirit (b128) ({3}{R}{W} 4/4 Spirit Warrior Haste
+  ETB mint Spirit), Lorehold Soulreaver (b128) ({2}{R}{W} 3/3
+  Spirit Knight First Strike magecraft drain each opp 1), Lorehold
+  Pyrestone (b128) ({R}{W} Instant +2/+0 EOT + First Strike EOT).
+- **Witherbloom (B/G, 7 cards)** — Witherbloom Toxicspeaker (b128)
+  ({1}{B} 1/3 Human Warlock magecraft drain each opp 1), Witherbloom
+  Pestcaller (b128) ({3}{B}{G} 3/3 Plant Druid ETB mint Pest token),
+  Witherbloom Mossfeeder (b128) ({1}{G} 2/2 Plant Beast magecraft
+  +1/+1 counter on self), Witherbloom Reaper-Hand (b128) ({2}{B} 3/2
+  Skeleton Warlock dies → drain 2), Witherbloom Cauldronkeeper
+  (b128) ({1}{B}{G} 2/3 Human Warlock ETB Seq[Surveil 2, GainLife 1]),
+  Witherbloom Sprawl-Vine (b128) ({2}{G} 3/3 Plant Reach), Witherbloom
+  Spellrot (b128) ({1}{B}{G} Sorcery Drain 3 + Surveil 1).
+- **Silverquill (W/B, 7 cards)** — Inkling Quillstrike (b128)
+  ({1}{W}{B} 2/2 Inkling Rogue Flying magecraft drain each opp 1),
+  Silverquill Inkmaster (b128) ({2}{W}{B} 3/3 Inkling Wizard Flying
+  + Lifelink ETB mint Inkling), Silverquill Drafter (b128) ({2}{B}
+  2/2 Vampire Warlock magecraft Surveil 1), Silverquill Sermonist
+  (b128) ({1}{W} 2/3 Human Cleric Vigilance ETB Scry 1), Inkling
+  Vellumbinder (b128) ({3}{W}{B} 4/3 Inkling Cleric Flying ETB
+  drain 2), Silverquill Inkblot (b128) ({W}{B} Instant Drain 1 +
+  Draw 1), Inkling Watchwarden (b128) ({2}{W} 2/4 Inkling Soldier
+  Flying + Vigilance).
+- **Prismari (U/R, 4 cards)** — Prismari Stormcrafter (b128)
+  ({2}{U}{R} 3/3 Elemental Wizard magecraft Loot), Prismari Firebrand
+  (b128) ({1}{R} 2/1 Human Wizard Haste magecraft self-pump +1/+1),
+  Prismari Tide-Surger (b128) ({3}{U} 3/3 Merfolk Wizard Flying
+  magecraft Treasure mint), Prismari Pyroblast (b128) ({1}{R} Instant
+  Deal 3 dmg to any target — Bolt at Prismari colors).
+- **Quandrix (G/U, 4 cards)** — Quandrix Bloomforge (b128) ({2}{G}{U}
+  3/3 Elemental ETB mint 4/4 Fractal via Seq[CreateToken, AddCounter
+  LastCreatedToken, 4]), Quandrix Tideshaper (b128) ({1}{U} 2/1
+  Merfolk Wizard magecraft Scry 1), Quandrix Treebinder (b128)
+  ({2}{G} 3/3 Elf Druid Reach ETB Draw 1), Quandrix Geometer
+  (b128) ({2}{G}{U} 2/2 Elf Wizard ETB mint 2/2 Fractal).
+
+Tests: 3716 → 3747 (30 new b128 card tests + 1 dual-keyword test = 31
+new tests). All tests pass; cargo clippy clean.
+
+Push (claude/modern_decks branch — post-batch 127:
 27 more Strixhaven synthesised cards across all five colleges + new
 `on_unblocked` shortcut helper + new `EventKind::
 AttacksAndIsntBlocked` event (CR 509.3g promotion ⏳ → ✅).
