@@ -12535,3 +12535,265 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 132 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Cleric-Recruit (b132) — {W}, 1/2 Spirit Cleric. Vanilla
+/// one-drop with the Spirit tribal subtype to feed Lorehold's anthem
+/// engines (Spirit Banner, Skyguard Banner, Lectern).
+pub fn lorehold_cleric_recruit_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cleric-Recruit (b132)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrescholar (b132) — {1}{R}, 2/2 Spirit Wizard. Magecraft:
+/// deal 1 damage to any target. Mirror of `magecraft_ping_any` on a
+/// cheap red Spirit body to support the Spirit-tribal Lorehold pool.
+pub fn lorehold_pyrescholar_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrescholar (b132)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritforger (b132) — {2}{R}{W}, 2/3 Spirit Wizard.
+/// ETB mints a 2/2 Lorehold Spirit token. Mid-curve mint body that
+/// pairs with the Lorehold Spirit anthems for tribal pressure.
+pub fn lorehold_spiritforger_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritforger (b132)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Bandit (b132) — {1}{R}, 2/1 Spirit Rogue, Haste.
+/// On-attack ping 1 to any target. Cheap aggressive body that doubles
+/// as removal-on-curve.
+pub fn lorehold_ember_bandit_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Bandit (b132)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skyforge (b132) — {3}{W} Sorcery. Create 2 1/1 white
+/// Spirit tokens with flying (uses SOS's `spirit_token`). Lorehold's
+/// Spirit-token go-wide complement to Lorehold Excavation.
+pub fn lorehold_skyforge_b132() -> CardDefinition {
+    use crate::catalog::spirit_token;
+    CardDefinition {
+        name: "Lorehold Skyforge (b132)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: spirit_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Champion's Echo (b132) — {2}{R}{W}, 3/3 Spirit Knight.
+/// Vigilance. Whenever this attacks, you gain 1 life. Combines attack
+/// trigger gain-life with a vigilant body — solid defensive aggressor.
+pub fn lorehold_champions_echo_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Champion's Echo (b132)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresinger (b132) — {2}{R}, 3/2 Spirit Bard. Magecraft:
+/// drain 1 to a single opponent (each-opp shape via magecraft_drain).
+/// Aggressive red 3-drop with reach via the magecraft drain engine.
+pub fn lorehold_pyresinger_b132() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Lorehold Pyresinger (b132)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Final Lesson (b132) — {1}{W} Instant. Target creature
+/// gets +2/+2 until end of turn and gains Lifelink until end of turn.
+/// Single-target combat trick with a defensive twist.
+pub fn lorehold_final_lesson_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Final Lesson (b132)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

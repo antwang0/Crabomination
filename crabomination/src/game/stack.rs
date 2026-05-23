@@ -92,6 +92,16 @@ impl GameState {
         if next == TurnStep::FirstStrikeDamage && !self.has_first_strikers() {
             next = next.next(); // skip directly to CombatDamage
         }
+        // CR 506.1 — "The declare blockers and combat damage steps are
+        // skipped if no creatures are declared as attackers or put onto
+        // the battlefield attacking." When the DeclareAttackers step
+        // ends with no attackers, advance straight past DeclareBlockers /
+        // FirstStrikeDamage / CombatDamage to EndCombat. Trigger windows
+        // for "at the beginning of combat" still fire at BeginCombat
+        // since that step is unaffected.
+        if self.step == TurnStep::DeclareAttackers && self.attacking.is_empty() {
+            next = TurnStep::EndCombat;
+        }
 
         // CR 511.2 — "Effects that last 'until end of combat' expire at the
         // end of the combat phase." When we leave the EndCombat step (the

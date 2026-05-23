@@ -14052,3 +14052,135 @@ pub fn silverquill_quill_blade_b131() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 132 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Ink-Apprentice (b132) — {W}, 1/2 Inkling Cleric, Flying.
+/// Vanilla one-drop flier; feeds the Inkling tribal pool (Inkcaster,
+/// Verselord) at the bottom of the curve.
+pub fn silverquill_ink_apprentice_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ink-Apprentice (b132)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quill-Striker (b132) — {2}{B}, 3/2 Inkling Rogue, Flying.
+/// Whenever this attacks, each opponent loses 1 life and you gain 1.
+/// Mirror of the on-attack-drain pattern on a flier.
+pub fn inkling_quill_striker_b132() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_drain;
+    CardDefinition {
+        name: "Inkling Quill-Striker (b132)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Scrivener-Apprentice (b132) — {2}{W}, 2/3 Human Cleric.
+/// ETB scry 1, then draw a card. Smoothing body that pairs with the
+/// Mavinda recursion engine.
+pub fn silverquill_scrivener_apprentice_b132() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Silverquill Scrivener-Apprentice (b132)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Pamphleteer II (b132) — {1}{W}{B}, 2/2 Inkling Wizard,
+/// Flying. Magecraft drain 1 (asymmetric — opp loses 1, you gain 1).
+/// Cheap flier with a magecraft drain engine.
+pub fn inkling_pamphleteer_ii_b132() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Inkling Pamphleteer II (b132)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

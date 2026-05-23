@@ -4553,3 +4553,42 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
     assert_eq!(g.players[0].graveyard.len(), 4,
         "3 milled + 1 cast goes to graveyard (per CR 701.17b mills exactly library_size)");
 }
+
+#[test]
+fn cr_506_1_no_attackers_skips_to_end_of_combat() {
+    // CR 506.1: "The declare blockers and combat damage steps are
+    // skipped if no creatures are declared as attackers..." Verify that
+    // ending the DeclareAttackers step with `attacking` empty advances
+    // directly to EndCombat without lingering in DeclareBlockers or
+    // CombatDamage.
+    let mut g = two_player_game();
+    g.step = TurnStep::DeclareAttackers;
+    // No attackers declared. Pass priority twice (active then non-active).
+    assert!(g.attacking.is_empty());
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    // Per CR 506.1 we now jump straight to EndCombat.
+    assert_eq!(g.step, TurnStep::EndCombat,
+        "Empty-attacker DeclareAttackers should advance straight to EndCombat");
+}
+
+#[test]
+fn cr_506_1_with_attackers_progresses_normally() {
+    // Mirror test: when attackers exist, DeclareAttackers→DeclareBlockers
+    // happens normally (no skip).
+    let mut g = two_player_game();
+    let bear_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear_id) {
+        c.summoning_sick = false;
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear_id,
+        target: AttackTarget::Player(1),
+    }])).unwrap();
+    assert!(!g.attacking.is_empty());
+    g.perform_action(GameAction::PassPriority).unwrap();
+    g.perform_action(GameAction::PassPriority).unwrap();
+    assert_eq!(g.step, TurnStep::DeclareBlockers,
+        "With attackers declared, DeclareAttackers should advance to DeclareBlockers");
+}

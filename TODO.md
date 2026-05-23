@@ -1850,7 +1850,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `game/types.rs`); first-strike split-damage step ✅ (the
   `TurnStep::FirstStrikeDamage` variant is present in `TurnStep`
   and runs before the regular `CombatDamage` step when any
-  attacker/blocker has First Strike or Double Strike). (b) **506.2** active = attacker,
+  attacker/blocker has First Strike or Double Strike). **506.1
+  skip-on-empty-attackers** ✅ (push claude/modern_decks batch 132):
+  the engine now jumps `DeclareAttackers → EndCombat` when
+  `self.attacking.is_empty()` at the end of DeclareAttackers,
+  matching CR 506.1's "skipped if no creatures are declared as
+  attackers" clause. Tests: `cr_506_1_no_attackers_skips_to_end_of_
+  combat`, `cr_506_1_with_attackers_progresses_normally`.
+  (b) **506.2** active = attacker,
   non-active = defender — ✅ (`declare_attackers` enforces
   `AttackTarget::Player(p) != active_player_idx`). (c) **506.3**
   only creatures attack/block — ✅ (`declare_attackers` requires

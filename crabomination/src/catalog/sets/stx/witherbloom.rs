@@ -11949,3 +11949,192 @@ pub fn witherbloom_lifescribe_ii_b131() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 132 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Pestcaller II (b132) — {1}{B}{G}, 2/2 Human Warlock.
+/// ETB mint a Pest token and drain 1. Compact ETB Pest mint + drain
+/// engine using `etb_mint_token_and_drain`.
+pub fn witherbloom_pestcaller_ii_b132() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_and_drain;
+    CardDefinition {
+        name: "Witherbloom Pestcaller II (b132)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_drain(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Sproutbinder (b132) — {1}{G}, 1/3 Pest Druid, Reach. Defensive
+/// Pest body that walls fliers and feeds Witherbloom's Pest pool.
+pub fn pest_sproutbinder_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Sproutbinder (b132)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestbinder (b132) — {2}{B}, 2/3 Human Warlock.
+/// On-attack drain 1. Combat-trigger drain body that scales with the
+/// Pest tribe's anthems.
+pub fn witherbloom_pestbinder_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbinder (b132)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mossreaver (b132) — {2}{G}, 3/2 Plant Druid. Vanilla
+/// curve body that feeds Plant tribal anthems (Vinetongue, Planttender).
+pub fn witherbloom_mossreaver_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mossreaver (b132)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necrobloom (b132) — {3}{B}, 3/3 Plant Warlock. ETB
+/// drain 2. Curve-out drain Plant — combines Pest engine durability
+/// with mid-curve life-swing.
+pub fn witherbloom_necrobloom_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necrobloom (b132)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Petalpoke (b132) — {B} Instant. Target creature gets
+/// -1/-1 until end of turn. Cheap removal-on-a-card; pairs with
+/// Witherbloom's PT-modify package (Boneshroud, Wither curve).
+pub fn witherbloom_petalpoke_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Petalpoke (b132)",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

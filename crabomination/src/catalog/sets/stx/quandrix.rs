@@ -9836,3 +9836,136 @@ pub fn fractal_inkfall_b131() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 132 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Theorymage (b132) — {2}{G}{U}, 3/3 Merfolk Wizard.
+/// Magecraft: scry 1. Spellslinging body with built-in smoothing.
+pub fn quandrix_theorymage_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Theorymage (b132)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mathstudent (b132) — {G}{U}, 1/2 Elf Druid. Magecraft:
+/// add a +1/+1 counter to target creature you control. Cheap counter
+/// engine on a curve-out body.
+pub fn quandrix_mathstudent_b132() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Quandrix Mathstudent (b132)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractal-Tutor (b132) — {3}{U}, 2/3 Merfolk Wizard. ETB:
+/// draw a card. Card-advantage body that turns into a recursion engine
+/// with Mavinda or other graveyard recursion.
+pub fn quandrix_fractal_tutor_b132() -> CardDefinition {
+    use crate::effect::shortcut::etb_draw;
+    CardDefinition {
+        name: "Quandrix Fractal-Tutor (b132)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Burst (b132) — {2}{G}{U} Sorcery. Create a 0/0 Fractal
+/// token with 3 +1/+1 counters on it. Mid-curve Fractal mint.
+pub fn fractal_burst_b132() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Burst (b132)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: create_token_with_counter(
+            PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 3,
+        ),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

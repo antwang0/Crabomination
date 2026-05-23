@@ -19,10 +19,71 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1871 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1896 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 131:
+Push (claude/modern_decks branch — current head — **post-batch 132:
+25 more Strixhaven synthesised cards across all five colleges, plus
+the CR 506.1 skip-on-empty-attackers engine fix. Tests: 3836 → 3865
+(27 new b132 card tests + 2 CR 506.1 turn-flow tests). All cards use
+existing primitives — no new shortcut helpers required. All tests
+pass; cargo clippy clean on lib and tests.
+
+- **Lorehold (R/W, 8 cards)** — Lorehold Cleric-Recruit (b132) ({W}
+  1/2 Spirit Cleric vanilla one-drop), Lorehold Pyrescholar (b132)
+  ({1}{R} 2/2 Spirit Wizard magecraft ping-any 1), Lorehold
+  Spiritforger (b132) ({2}{R}{W} 2/3 Spirit Wizard ETB mint a 2/2
+  Lorehold Spirit), Lorehold Ember-Bandit (b132) ({1}{R} 2/1 Spirit
+  Rogue Haste on-attack ping-any 1), Lorehold Skyforge (b132)
+  ({3}{W} Sorcery — 2 flying Spirit tokens via SOS spirit_token),
+  Lorehold Champion's Echo (b132) ({2}{R}{W} 3/3 Spirit Knight
+  Vigilance on-attack gain 1 life), Lorehold Pyresinger (b132)
+  ({2}{R} 3/2 Spirit Bard magecraft drain 1), Lorehold Final
+  Lesson (b132) ({1}{W} Instant — +2/+2 EOT + Lifelink EOT to target
+  creature).
+- **Witherbloom (B/G, 6 cards)** — Witherbloom Pestcaller II (b132)
+  ({1}{B}{G} 2/2 Human Warlock ETB mint Pest + drain 1 via
+  `etb_mint_token_and_drain`), Pest Sproutbinder (b132) ({1}{G} 1/3
+  Pest Druid Reach defender), Witherbloom Pestbinder (b132) ({2}{B}
+  2/3 Human Warlock on-attack drain 1), Witherbloom Mossreaver
+  (b132) ({2}{G} 3/2 Plant Druid vanilla), Witherbloom Necrobloom
+  (b132) ({3}{B} 3/3 Plant Warlock ETB drain 2), Witherbloom
+  Petalpoke (b132) ({B} Instant — -1/-1 EOT to target creature).
+- **Silverquill (W/B, 4 cards)** — Silverquill Ink-Apprentice (b132)
+  ({W} 1/2 Inkling Cleric Flying vanilla one-drop), Inkling Quill-
+  Striker (b132) ({2}{B} 3/2 Inkling Rogue Flying on-attack drain 1),
+  Silverquill Scrivener-Apprentice (b132) ({2}{W} 2/3 Human Cleric
+  ETB Scry 1 + Draw 1), Inkling Pamphleteer II (b132) ({1}{W}{B}
+  2/2 Inkling Wizard Flying magecraft drain 1).
+- **Prismari (U/R, 4 cards)** — Prismari Sparkscholar II (b132)
+  ({U}{R} 2/1 Human Wizard Haste magecraft loot), Prismari
+  Glasswright (b132) ({2}{R} 3/2 Human Artificer magecraft Treasure),
+  Prismari Spellstrike (b132) ({2}{U}{R} Instant — DealDamage 3 any
+  target + Draw 1), Prismari Tempest-Scribe (b132) ({3}{U} 2/4 Human
+  Wizard Flying magecraft self-pump +1/+0 EOT).
+- **Quandrix (G/U, 4 cards)** — Quandrix Theorymage (b132) ({2}{G}{U}
+  3/3 Merfolk Wizard magecraft Scry 1), Quandrix Mathstudent (b132)
+  ({G}{U} 1/2 Elf Druid magecraft +1/+1 counter on target friendly
+  creature), Quandrix Fractal-Tutor (b132) ({3}{U} 2/3 Merfolk Wizard
+  ETB Draw 1), Fractal Burst (b132) ({2}{G}{U} Sorcery — 0/0 Fractal
+  with 3 +1/+1 counters).
+
+Engine bonus (batch 132):
+- **CR 506.1 — Skip declare-blockers / combat-damage when no
+  attackers declared.** The engine previously walked
+  DeclareAttackers → DeclareBlockers → FirstStrikeDamage →
+  CombatDamage → EndCombat unconditionally regardless of whether
+  any creatures actually attacked. Now (per CR 506.1 / 508.8) when
+  the DeclareAttackers step ends with `self.attacking.is_empty()`,
+  the next step is set to `TurnStep::EndCombat` directly, skipping
+  the dead steps. The FirstStrikeDamage-skip path already existed
+  via `has_first_strikers()`; this round added the symmetric skip-
+  the-rest-of-combat path for the no-attackers case. Tests:
+  `cr_506_1_no_attackers_skips_to_end_of_combat`,
+  `cr_506_1_with_attackers_progresses_normally`. TODO.md's CR 506
+  audit row updated.
+
+Push (claude/modern_decks branch — post-batch 131:
 21 more Strixhaven synthesised cards across all five colleges. All
 cards use existing primitives — no engine changes. Tests: 3806 →
 3836 (30 new b131 card tests). All tests pass; cargo clippy clean.

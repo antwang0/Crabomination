@@ -9232,3 +9232,135 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 132 ───────────────────────────────────────────────────────────────
+
+/// Prismari Sparkscholar II (b132) — {U}{R}, 2/1 Human Wizard, Haste.
+/// Magecraft: loot (draw 1, discard 1). Aggressive 2-drop spellslinger
+/// with built-in card-quality engine.
+pub fn prismari_sparkscholar_ii_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkscholar II (b132)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Glasswright (b132) — {2}{R}, 3/2 Human Artificer.
+/// Magecraft: mint a Treasure. Treasure-engine body that scales with
+/// instant/sorcery casts.
+pub fn prismari_glasswright_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Glasswright (b132)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spellstrike (b132) — {2}{U}{R} Instant. Deal 3 damage to
+/// any target, then draw a card. Big tempo instant.
+pub fn prismari_spellstrike_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellstrike (b132)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempest-Scribe (b132) — {3}{U}, 2/4 Human Wizard. Flying.
+/// Magecraft self-pump +1/+0 EOT. Defensive flier that turns into a
+/// 3/4 attacker with each instant/sorcery cast.
+pub fn prismari_tempest_scribe_b132() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tempest-Scribe (b132)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
