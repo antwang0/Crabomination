@@ -39075,3 +39075,46 @@ pub fn fractal_coursemate_b124() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Cycling-keyword test card (CR 702.29) ──────────────────────────────────
+
+/// Strixhaven Cycle-Glyph (b143) — {3}{U} Sorcery: "Draw two cards.
+/// / Cycling {1}{U}".
+///
+/// Synthesised filler test card that exercises the new
+/// `GameAction::Cycle` path. The body half is castable from hand as a
+/// 4-mana draw-2 sorcery; the Cycling {1}{U} half discards-and-draws
+/// from hand on demand at the 2-mana payment line. The same shape
+/// covers any future STA reprint with Cycling (Decree of Pain,
+/// Akroma's Vengeance, Boon of the Wish-Giver). Per CR 702.29c, "When
+/// you cycle this card" triggers fire from whatever zone the card
+/// winds up in after the discard — this filler card has none, but the
+/// `CardDiscarded` event is emitted so future cycle-matters cards see
+/// the cycle.
+pub fn strixhaven_cycle_glyph_b143() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Cycle-Glyph (b143)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), u()]))],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

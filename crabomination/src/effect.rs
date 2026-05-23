@@ -53,6 +53,26 @@ pub enum PlayerRef {
     DefendingPlayer,
 }
 
+/// Which players a player-targeted static effect affects. The static
+/// is anchored on a permanent (the "source") and reads off that
+/// source's controller seat at recompute time. Used by
+/// `StaticEffect::PlayerCannotGainLife` and any future player-static
+/// (lose-life redirection, hand-size caps, draw caps, etc.).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PlayerStaticTarget {
+    /// The source's controller — Sulfuric Vortex's "no player can gain
+    /// life" applied to the controller-only side. Rare.
+    Controller,
+    /// Each opponent of the source's controller — the default for the
+    /// printed "your opponents can't gain life" wording (Erebos,
+    /// Rampaging Ferocidon, Tainted Remedy approximation).
+    EachOpponent,
+    /// Every player on the table — Sulfuric Vortex (each player can't
+    /// gain life), Stigma Lasher's "permanents you control share the
+    /// no-lifegain rider" template.
+    EachPlayer,
+}
+
 /// A zone plus optional owner (for zones like Hand/Library/Graveyard that
 /// are per-player). Battlefield, Stack, Command are global.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -709,6 +729,19 @@ pub enum EventKind {
     /// Concocter's "Whenever this creature becomes the target of a
     /// spell or ability an opponent controls, you may draw a card".
     BecameTarget,
+    /// CR 702.29c — A card was cycled (the controller paid a cycling
+    /// cost to discard it from hand and draw). This event is emitted
+    /// from `GameState::cycle_card` *in addition* to `CardDiscarded`,
+    /// so cycle-specific triggers ("When you cycle this card",
+    /// "Whenever a player cycles a card") can fire without also
+    /// triggering on regular hand-discards. The triggered ability's
+    /// source typically lives on the cycled card itself (CR 702.29c —
+    /// "These abilities trigger from whatever zone the card winds up
+    /// in after it's cycled" — the engine reads the card from its new
+    /// home in the graveyard). `EventScope::SelfSource` fires when the
+    /// source card was the one cycled; `EventScope::YourControl` fires
+    /// when any of the controller's cards were cycled.
+    CardCycled,
 }
 
 /// Whose events does this trigger listen for?
@@ -2114,6 +2147,27 @@ pub enum StaticEffect {
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
     ControllerHasHexproof,
+    /// CR 119.7 — Targeted players can't gain life while this static is
+    /// active. The `applies_to` selector resolves to one or more
+    /// `PlayerView`-style entries; each matching player has their
+    /// `Player.cannot_gain_life` flag set in the per-recompute pass
+    /// in `compute_battlefield`. Adjust_life drops positive deltas
+    /// targeting those players. Powers Erebos, God of the Dead's
+    /// "Each opponent can't gain life" and similar lifegain-prevention
+    /// statics. `target: PlayerStaticTarget` carries the affected player
+    /// set so the same primitive can express "you can't gain life"
+    /// (rare) and the more common "each opponent can't gain life".
+    PlayerCannotGainLife { target: PlayerStaticTarget },
+    /// CR 119.8 — Targeted players can't lose life while this static is
+    /// active. Sibling of `PlayerCannotGainLife`. The check consults
+    /// the active battlefield via `player_cannot_lose_life_now` from
+    /// the lose-life paths (`Effect::LoseLife`, `Effect::Drain`,
+    /// damage-to-player). Cost-side life payments are also gated —
+    /// per CR 119.8 "a cost that involves having that player pay
+    /// life can't be paid." Used by Platinum Emperion-class statics
+    /// ("your life total can't change") and by future "your opponent
+    /// can't lose life" payoffs.
+    PlayerCannotLoseLife { target: PlayerStaticTarget },
     /// Damping-Sphere-style "lands that tap for more than one mana enter
     /// producing only {C}". Detected at `play_land` time: if any active
     /// `LandsTapColorlessOnly` static is in play, the entering land's

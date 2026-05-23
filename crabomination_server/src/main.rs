@@ -375,6 +375,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         Ok(s) => s,
         Err(e) => { eprintln!("tcp_seat failed for {peer}: {e}"); return; }
     };
+    let started = Instant::now();
     run_match(
         format.build(),
         vec![
@@ -382,7 +383,12 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
             SeatOccupant::Bot(Box::new(RandomBot::new())),
         ],
     );
-    eprintln!("bot match ended ({peer})");
+    eprintln!(
+        "bot match ended ({}, format={}, duration={})",
+        peer,
+        format.label(),
+        format_duration(started.elapsed()),
+    );
 }
 
 fn run_pair_match(
@@ -411,11 +417,43 @@ fn run_pair_match(
             return;
         }
     };
+    let started = Instant::now();
     run_match(
         format.build(),
         vec![SeatOccupant::Human(a_seat), SeatOccupant::Human(b_seat)],
     );
-    eprintln!("pair match ended ({a_peer} ↔ {b_peer})");
+    eprintln!(
+        "pair match ended ({} ↔ {}, format={}, duration={})",
+        a_peer,
+        b_peer,
+        format.label(),
+        format_duration(started.elapsed()),
+    );
+}
+
+/// Render a `Duration` as a short human-readable string for logs:
+/// `1h2m3s` / `5m12s` / `38s` / `420ms`. Sub-millisecond durations
+/// fall through to `<1ms`. Used by the per-match completion log so
+/// operators can spot stuck matches at a glance.
+fn format_duration(d: Duration) -> String {
+    let total_secs = d.as_secs();
+    let millis = d.subsec_millis();
+    if total_secs == 0 {
+        if millis == 0 {
+            return "<1ms".to_string();
+        }
+        return format!("{millis}ms");
+    }
+    let h = total_secs / 3600;
+    let m = (total_secs % 3600) / 60;
+    let s = total_secs % 60;
+    if h > 0 {
+        format!("{h}h{m}m{s}s")
+    } else if m > 0 {
+        format!("{m}m{s}s")
+    } else {
+        format!("{s}s")
+    }
 }
 
 #[cfg(test)]
@@ -614,6 +652,23 @@ mod tests {
             usize_from_env("CRAB_MAX_CONNS", 42)
         });
         assert_eq!(v, 42);
+    }
+
+    #[test]
+    fn format_duration_renders_short_values() {
+        assert_eq!(format_duration(Duration::from_micros(500)), "<1ms");
+        assert_eq!(format_duration(Duration::from_millis(420)), "420ms");
+        assert_eq!(format_duration(Duration::from_secs(0)), "<1ms");
+    }
+
+    #[test]
+    fn format_duration_renders_seconds_minutes_hours() {
+        assert_eq!(format_duration(Duration::from_secs(38)), "38s");
+        assert_eq!(format_duration(Duration::from_secs(5 * 60 + 12)), "5m12s");
+        assert_eq!(
+            format_duration(Duration::from_secs(3600 + 2 * 60 + 3)),
+            "1h2m3s"
+        );
     }
 
     /// `accept_with_deadline` returns the connection if a client arrives

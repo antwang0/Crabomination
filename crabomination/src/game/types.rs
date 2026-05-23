@@ -205,6 +205,13 @@ pub enum GameAction {
     },
     PassPriority,
     SubmitDecision(DecisionAnswer),
+    /// CR 702.29 — Activate a card's Cycling ability from your hand.
+    /// `card_id` must be in the caster's hand and carry a
+    /// `Keyword::Cycling(cost)`. Pays the cycling cost, discards the
+    /// card to the controller's graveyard, draws a card. Per CR
+    /// 702.29c, "When you cycle this card" triggers fire from
+    /// whatever zone the card winds up in after the discard.
+    Cycle { card_id: CardId },
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────
@@ -479,6 +486,13 @@ pub enum GameEvent {
     /// ability is pushed). Used by SOS Tenured Concocter and any future
     /// "whenever this becomes the target of …" trigger.
     BecameTarget { target: CardId, caster: usize },
+    /// CR 702.29c — `player` cycled `card_id` (paid the cycling cost
+    /// and discarded the card to draw). Fires *in addition* to the
+    /// `CardDiscarded` emission from the same activation, so cycle-
+    /// specific triggers ("When you cycle this card", "Whenever a
+    /// player cycles a card") see a distinct event from regular hand
+    /// discards.
+    CardCycled { player: usize, card_id: CardId },
     GameOver { winner: Option<usize> },
 }
 

@@ -2817,6 +2817,24 @@ pub fn handle_game_input(
             }
         }
 
+        // Keyboard-specific: C activates Cycling on the selected hand
+        // card (CR 702.29). Submits `GameAction::Cycle` directly — the
+        // server pays the cycling cost from the floated mana pool,
+        // discards the card to graveyard, and draws.
+        if keyboard.just_pressed(KeyCode::KeyC)
+            && let Some(game_id) = hovered_hand.iter().next()
+        {
+            let card_id = game_id.0;
+            let has_cycling = cv.players[your_seat].hand.iter().any(|h| {
+                matches!(h,
+                    crabomination::net::HandCardView::Known(k)
+                    if k.id == card_id && k.has_cycling)
+            });
+            if has_cycling {
+                outbox.submit(GameAction::Cycle { card_id });
+            }
+        }
+
         // Keyboard-specific: M opens the ability menu for the selected
         // viewer-controlled battlefield card.
         if kb_menu

@@ -649,6 +649,25 @@ impl GameState {
         if delta == 0 {
             return self.effective_life(seat);
         }
+        // CR 119.7: if `seat` can't gain life and the delta would
+        // increase their life total, drop the gain on the floor. The
+        // 119.10 rider — "If a player gains 0 life, no life gain event
+        // would occur, and these effects won't apply" — is honored
+        // implicitly: the gain never happens, no LifeGained event is
+        // emitted, the `life_gained_this_turn` counter isn't bumped.
+        //
+        // The check ORs the directly-settable `Player.cannot_gain_life`
+        // flag (set by emblems / once-per-game effects) with the
+        // dynamic battlefield scan via `player_cannot_gain_life_now`
+        // (consults `StaticEffect::PlayerCannotGainLife` statics on
+        // the live battlefield).
+        if delta > 0 && self.player_cannot_gain_life_now(seat) {
+            return self.effective_life(seat);
+        }
+        // CR 119.8: symmetric drop for negative deltas (lose-life).
+        if delta < 0 && self.player_cannot_lose_life_now(seat) {
+            return self.effective_life(seat);
+        }
         let team_idx = self
             .teams
             .iter()
@@ -955,6 +974,57 @@ impl GameState {
                     .count() as u32
             })
             .sum()
+    }
+
+    /// True if `seat` cannot gain life *right now*, per CR 119.7. ORs:
+    /// 1. The directly-settable `Player.cannot_gain_life` flag (set by
+    ///    emblems / once-per-game state — currently dormant; reserved for
+    ///    permanent grants).
+    /// 2. Any active `StaticEffect::PlayerCannotGainLife` on the
+    ///    battlefield whose `target` resolves to include `seat`.
+    ///
+    /// Consulted by `GameState::adjust_life` to drop positive deltas
+    /// targeting `seat` on the floor.
+    pub fn player_cannot_gain_life_now(&self, seat: usize) -> bool {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        if self.players[seat].cannot_gain_life {
+            return true;
+        }
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| {
+                if let StaticEffect::PlayerCannotGainLife { target } = &sa.effect {
+                    match target {
+                        PlayerStaticTarget::Controller => src.controller == seat,
+                        PlayerStaticTarget::EachOpponent => src.controller != seat,
+                        PlayerStaticTarget::EachPlayer => true,
+                    }
+                } else {
+                    false
+                }
+            })
+        })
+    }
+
+    /// CR 119.8 — True if `seat` cannot lose life right now. Mirror of
+    /// `player_cannot_gain_life_now`. Scans the battlefield for any
+    /// `StaticEffect::PlayerCannotLoseLife` whose `target` resolves to
+    /// include `seat`. Consulted by `adjust_life` (negative deltas) and
+    /// by the lose-life paths (`Effect::LoseLife`, drain-target gates).
+    pub fn player_cannot_lose_life_now(&self, seat: usize) -> bool {
+        use crate::effect::{PlayerStaticTarget, StaticEffect};
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| {
+                if let StaticEffect::PlayerCannotLoseLife { target } = &sa.effect {
+                    match target {
+                        PlayerStaticTarget::Controller => src.controller == seat,
+                        PlayerStaticTarget::EachOpponent => src.controller != seat,
+                        PlayerStaticTarget::EachPlayer => true,
+                    }
+                } else {
+                    false
+                }
+            })
+        })
     }
 
     /// Replace the current team partition. Every seat must appear in
@@ -1624,8 +1694,68 @@ impl GameState {
             GameAction::DeclareBlockers(assignments) => self.declare_blockers(assignments),
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
+            GameAction::Cycle { card_id } => self.cycle_card(card_id),
         }?;
         self.dispatch_triggers_for_events(&events);
+        Ok(events)
+    }
+
+    /// CR 702.29a — Activate Cycling on `card_id` from the active
+    /// player's hand. Pre-flight gates: card must be in someone's hand
+    /// (we use the priority holder's hand), must carry
+    /// `Keyword::Cycling(cost)`, and the controller must be able to
+    /// pay the mana cost from their pool. On success: pays the cost,
+    /// discards the card to the controller's graveyard, then draws a
+    /// card. Per CR 702.29c, "When you cycle this card" triggers fire
+    /// from the discarded zone (graveyard); the engine emits
+    /// `GameEvent::CardDiscarded` from `discard_card_from_hand` so
+    /// discard-matters triggers see the cycle.
+    fn cycle_card(&mut self, card_id: crate::card::CardId) -> Result<Vec<GameEvent>, GameError> {
+        use crate::card::Keyword;
+        let seat = self.player_with_priority();
+        // Locate the card in `seat`'s hand and clone the cycling cost.
+        let cycling_cost = self.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| {
+                c.definition.keywords.iter().find_map(|kw| {
+                    if let Keyword::Cycling(mc) = kw {
+                        Some(mc.clone())
+                    } else {
+                        None
+                    }
+                })
+            })
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        // Pay the cycling cost from the floated mana pool.
+        self.players[seat]
+            .mana_pool
+            .pay(&cycling_cost)
+            .map_err(GameError::Mana)?;
+        // Discard the card from hand to graveyard.
+        let mut events = vec![];
+        if let Some(card) = self.players[seat].remove_from_hand(card_id) {
+            self.players[seat].graveyard.push(card);
+            events.push(GameEvent::CardDiscarded {
+                player: seat,
+                card_id,
+            });
+            // CR 702.29c — emit the cycle-specific event in addition to
+            // the discard event, so "When you cycle this card" triggers
+            // distinguish cycle from a regular hand discard.
+            events.push(GameEvent::CardCycled {
+                player: seat,
+                card_id,
+            });
+        }
+        // Draw a card.
+        if let Some(drawn) = self.players[seat].draw_top() {
+            events.push(GameEvent::CardDrawn {
+                player: seat,
+                card_id: drawn,
+            });
+        }
         Ok(events)
     }
 
@@ -3135,7 +3265,13 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::UncounterableCreaturesOfChosenType
             // EtbTriggerTax — read at ETB trigger push time by
             // `apply_etb_trigger_tax` (Strict Proctor); no layer effect.
-            | StaticEffect::EtbTriggerTax { .. } => vec![],
+            | StaticEffect::EtbTriggerTax { .. }
+            // PlayerCannotGainLife — projected onto Player.cannot_gain_life
+            // each recompute by apply_player_statics; no layer effect.
+            | StaticEffect::PlayerCannotGainLife { .. }
+            // PlayerCannotLoseLife — consulted dynamically by adjust_life /
+            // damage paths via player_cannot_lose_life_now; no layer effect.
+            | StaticEffect::PlayerCannotLoseLife { .. } => vec![],
         })
         .collect()
 }

@@ -43,6 +43,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::AbilityActivated, GameEvent::AbilityActivated { .. }) => true,
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
+        (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         _ => false,
     };
     if !kind_ok {
@@ -94,6 +95,17 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 702.29c — "When you cycle this card" triggers fire
+            // with the cycled card as the trigger source. The card is
+            // in the graveyard by the time triggers dispatch (per
+            // CR 702.29c, "These abilities trigger from whatever zone
+            // the card winds up in after it's cycled"), so SelfSource
+            // here intentionally identifies the source by id; the
+            // dispatcher will walk hand → graveyard to find the
+            // card's printed abilities.
+            event,
+            GameEvent::CardCycled { card_id, .. } if *card_id == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A
@@ -190,6 +202,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::ColorlessManaAdded { player }
         | GameEvent::CardLeftGraveyard { player, .. }
+        | GameEvent::CardCycled { player, .. }
         | GameEvent::TurnStarted { player, .. } => Some(*player),
         // For BecameTarget the "actor" is the caster of the spell or
         // ability that picked the target. This drives YourControl /
@@ -253,6 +266,11 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // became the target — what `Selector::TriggerSource` should bind
         // to for any filter predicate.
         GameEvent::BecameTarget { target, .. } => Some(EntityRef::Permanent(*target)),
+        // CardCycled binds TriggerSource to the cycled card (which is
+        // now in the controller's graveyard). Used by future "Whenever
+        // a player cycles a card" payoffs that introspect the cycled
+        // card's printed attributes.
+        GameEvent::CardCycled { card_id, .. } => Some(EntityRef::Card(*card_id)),
         _ => None,
     }
 }
@@ -263,6 +281,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::PermanentExiled { card_id }
         | GameEvent::CreatureDied { card_id }
         | GameEvent::CreatureSacrificed { card_id, .. }
+        | GameEvent::CardCycled { card_id, .. }
         | GameEvent::PermanentSacrificed { card_id, .. }
         | GameEvent::PermanentTapped { card_id }
         | GameEvent::PermanentUntapped { card_id }

@@ -213,6 +213,18 @@ pub struct KnownCard {
     /// `PlayLand`.
     #[serde(default)]
     pub back_face_name: Option<String>,
+    /// True if this card has `Keyword::Cycling(cost)`. Drives the
+    /// client's "Cycle" hand action — when true, the client can submit
+    /// `GameAction::Cycle` to discard-and-draw at the cycling cost
+    /// (rendered as `cycling_cost_label` for the UI).
+    /// Defaults to `false` for older clients.
+    #[serde(default)]
+    pub has_cycling: bool,
+    /// Pre-rendered cycling cost label (e.g. "{1}{U}"). Empty string
+    /// when `has_cycling == false`. Used by the client to render the
+    /// cycle activation hint. Defaults to "" for older clients.
+    #[serde(default)]
+    pub cycling_cost_label: String,
 }
 
 /// One activated ability as projected for the client.
@@ -590,6 +602,10 @@ pub enum GameEventWire {
     /// ability (Tenured Concocter's "you may draw" trigger, future
     /// targeting-payoff cards).
     BecameTarget { target: CardId, caster: usize },
+    /// Wire mirror of `GameEvent::CardCycled`. Surfaced so client UIs
+    /// can animate cycle activations distinctly from regular
+    /// hand-discards. Per CR 702.29.
+    CardCycled { player: usize, card_id: CardId },
     GameOver { winner: Option<usize> },
 }
 
@@ -758,6 +774,10 @@ impl From<&GameEvent> for GameEventWire {
                 target: *target,
                 caster: *caster,
             },
+            GameEvent::CardCycled { player, card_id } => GameEventWire::CardCycled {
+                player: *player,
+                card_id: *card_id,
+            },
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
         }
     }
@@ -874,6 +894,9 @@ impl GameEventWire {
             }
             E::BecameTarget { target, caster } => {
                 format!("{} targeted by P{caster}", name(*target))
+            }
+            E::CardCycled { player, card_id } => {
+                format!("P{player} cycled {}", name(*card_id))
             }
             E::GameOver { winner } => match winner {
                 Some(p) => format!("Game over — P{p} wins"),

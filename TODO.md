@@ -323,8 +323,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (g) **119.6** — ✅
   (state-based actions in `state_based_actions.rs` emit
   `GameEvent::PlayerLost` when `Player.life <= 0`; CR 704.5a).
-  (h) **119.7-119.8** — ⏳ (no `Player.can_
-  not_gain_life: bool` flag; no card in the catalog grants this).
+  (h) **119.7** — 🟡 (push claude/modern_decks: the can't-gain-life
+  half is wired via `StaticEffect::PlayerCannotGainLife { target:
+  PlayerStaticTarget }` consulted in `GameState::adjust_life` via
+  `player_cannot_gain_life_now`; Witherbloom Lifeglobe (b143) ships
+  the "Your opponents can't gain life" static. The can't-lose-life
+  half + the redistribute / exchange clause are still ⏳).
+  **119.8** — ⏳ (no `StaticEffect::PlayerCannotLoseLife`; the
+  primitive would mirror the 119.7 shape against the lose-life
+  path).
   (i) **119.9** — ✅ (`EventKind::
   LifeGained` triggers fire per-event with `event_amount` threaded
   through `EffectContext`; `Value::TriggerEventAmount` reads the
@@ -3441,11 +3448,29 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   pass emits one event per blocker, then the dispatcher fans out
   matching triggers. Test: STX
   `daemogoth_titan_blocks_sacrifices_another_creature`.
-- ⏳ **CR 702.29 — Cycling** (renumbered from CR 702.21 in the
-  20260116 rules edition): Not implemented. `keyword::Cycling`
-  doesn't exist; cards with Cycling are either stubbed or omitted.
-  See `MagicCompRules_20260417.txt` line 4194 for the current rule
-  text.
+- 🟡 **CR 702.29 — Cycling** (renumbered from CR 702.21 in the
+  20260116 rules edition). The base cycling action ships: a new
+  `GameAction::Cycle { card_id }` reads the card's printed
+  `Keyword::Cycling(cost)`, pays the cost from the active player's
+  mana pool, discards the card to graveyard, and draws one. Per
+  CR 702.29a "[Cost], Discard this card: Draw a card." Per CR
+  702.29c, the `GameEvent::CardDiscarded` emission happens
+  *after* the discard to graveyard, so "When you cycle this card"
+  / "Whenever a player cycles or discards" triggers fire from the
+  graveyard side of the move. Filler test card
+  `strixhaven_cycle_glyph_b143` exercises the path; lock-in tests
+  `cycling_discards_and_draws_a_card`,
+  `cycling_rejects_without_mana_to_pay_the_cost`,
+  `cycle_glyph_castable_as_a_sorcery_too`. Remaining ⏳: (a) "When
+  you cycle this card" *dedicated* trigger via a new
+  `EventKind::CycledThis` (or by gating `CardDiscarded` on a
+  `cycle_source` flag), so cycle-specific triggers don't
+  double-fire on regular discards; (b) Typecycling per CR 702.29e
+  ("Mountaincycling" / "Basic landcycling" → discard to tutor a
+  matching land instead of drawing); (c) Cycling-cost reduction
+  (Astral Slide / Lightning Rift activate when you cycle); (d)
+  printed STA cycling reprints (Decree of Pain, Akroma's
+  Vengeance, Mystical Dispute via the mystic-archive split).
 - ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for
@@ -3919,19 +3944,26 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (30 new b131 card tests — multiple tests per card). All pass; cargo
   clippy clean.
 
-- ⏳ **CR 119.7 / 119.8 — "Can't gain/lose life" replacement** (next
-  up): The engine has no `Player.cannot_gain_life: bool` flag and no
-  `StaticEffect::CannotGainLife { who: PlayerRef }` primitive. Adding
-  it would unlock cards like Tainted Remedy (each opp gains life →
-  loses instead — already partially in catalog), Erebos, God of the
-  Dead (opp can't gain life unless they spend mana), Skullcrack-like
-  effects, and the Boon Reflection / Cathars' Crusade replacement
-  variants. Engine shape: a `Player.life_gain_locked: bool` flag
-  consulted in `do_gain_life`; or a layer-2-style continuous effect
-  on `Player` via a new `PlayerStaticEffect` table. Lowest effort:
-  per-player boolean flag + a `LifeGainPermitted` predicate in the
-  life-gain pipeline, since the catalog has no card today that
-  partially gates lifegain.
+- 🟡 **CR 119.7 — "Can't gain life"** (push modern_decks claude/modern_decks
+  branch). The gain-life half of CR 119.7 is now wired via the new
+  `StaticEffect::PlayerCannotGainLife { target: PlayerStaticTarget }`
+  primitive + the `player_cannot_gain_life_now(seat)` helper called
+  from `GameState::adjust_life`. The `Player.cannot_gain_life: bool`
+  flag is also exposed (set by emblems / future grant effects but
+  currently dormant); `adjust_life` ORs the dynamic battlefield check
+  with the cached flag. Witherbloom Lifeglobe (b143) ships the
+  "Your opponents can't gain life" static; lock-in tests
+  `witherbloom_lifeglobe_b143_prevents_opp_lifegain`,
+  `witherbloom_lifeglobe_b143_releases_lifegain_lock_when_it_leaves`.
+  Remaining ⏳ for full CR 119.7 / 119.8 parity: (a) the lose-life
+  half ("can't lose life") needs the same shape via
+  `StaticEffect::PlayerCannotLoseLife { target }` consulted in the
+  loss path (`damage_player`, `Effect::LoseLife`); (b) the
+  redistribute-life-totals + exchange-life-totals clauses (CR 119.7,
+  last sentence) need a check at `Effect::ExchangeLifeTotals` /
+  `Effect::DistributeLifeTotals` resolve time; (c) Tainted Remedy's
+  "instead, that player loses that much life" replacement needs an
+  on-gain redirect rather than a drop.
 
 - ⏳ **Keyword counters (CR 122.1b)** — no `CounterType::Keyword(Keyword)`
   variant yet. Cards that print this rider (Mortarpod variants,

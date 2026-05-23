@@ -135,6 +135,15 @@ pub struct Player {
     /// snapshot back-compat.
     #[serde(default)]
     pub dellian_fel_emblem: bool,
+    /// True while a continuous effect on the battlefield prevents this
+    /// player from gaining life (CR 119.7). Set by
+    /// `StaticEffect::CannotGainLife` in `compute_battlefield`'s player-
+    /// static pass, reset there each recompute. Honored by
+    /// `GameState::adjust_life` — a positive delta is dropped while the
+    /// flag is set. Powers Tainted Remedy / Erebos / Sulfuric Vortex
+    /// style effects.
+    #[serde(default)]
+    pub cannot_gain_life: bool,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -169,6 +178,7 @@ impl Player {
             eliminated: false,
             skip_turns: 0,
             dellian_fel_emblem: false,
+            cannot_gain_life: false,
             wants_ui: false,
         }
     }
