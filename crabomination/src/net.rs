@@ -570,6 +570,7 @@ pub enum GameEventWire {
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },
+    AttackerWentUnblocked { attacker: CardId },
     CombatResolved,
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: String, is_land: bool },
@@ -699,6 +700,9 @@ impl From<&GameEvent> for GameEventWire {
                 blocker: *blocker,
                 attacker: *attacker,
             },
+            GameEvent::AttackerWentUnblocked { attacker } => {
+                GameEventWire::AttackerWentUnblocked { attacker: *attacker }
+            }
             GameEvent::CombatResolved => GameEventWire::CombatResolved,
             GameEvent::FirstStrikeDamageResolved => GameEventWire::FirstStrikeDamageResolved,
             GameEvent::TopCardRevealed { player, card_name, is_land } => {
@@ -829,6 +833,9 @@ impl GameEventWire {
             E::AttackerDeclared(cid) => format!("{} attacks", name(*cid)),
             E::BlockerDeclared { blocker, attacker } => {
                 format!("{} blocks {}", name(*blocker), name(*attacker))
+            }
+            E::AttackerWentUnblocked { attacker } => {
+                format!("{} attacks and is unblocked", name(*attacker))
             }
             E::CombatResolved => "Combat resolved".into(),
             E::FirstStrikeDamageResolved => "First-strike damage resolved".into(),

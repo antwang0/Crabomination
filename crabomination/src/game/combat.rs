@@ -274,6 +274,17 @@ impl GameState {
                 attacker: attacker_id,
             });
         }
+        // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
+        // with no blockers assigned. Trigger source is the unblocked
+        // attacker; consumers can read it via `Selector::TriggerSource`.
+        // The block_map maps blocker → attacker, so an attacker is
+        // unblocked iff no entry has it as a value.
+        for atk in &self.attacking {
+            let blocked = self.block_map.values().any(|&aid| aid == atk.attacker);
+            if !blocked {
+                events.push(GameEvent::AttackerWentUnblocked { attacker: atk.attacker });
+            }
+        }
         self.give_priority_to_active();
         Ok(events)
     }

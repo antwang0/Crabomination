@@ -672,9 +672,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   filter `Predicate::EntityMatches` reads layered characteristics at
   fire time; type changes mid-combat don't retroactively trigger).
   (m) **509.3g** "Whenever this creature attacks and isn't blocked"
-  — ⏳ (no `EventKind::AttacksAndIsntBlocked` primitive yet;
-  approximated for some cards by reading `block_map` at end of
-  declare-blockers).
+  — ✅ (push claude/modern_decks batch 127: new
+  `EventKind::AttacksAndIsntBlocked` + `GameEvent::
+  AttackerWentUnblocked` events emitted at the end of
+  `declare_blockers` for each attacker with zero entries in
+  `block_map`. The unified trigger dispatcher routes them via
+  `event_matches_spec` / `event_subject` / `event_card`. New shortcut
+  `effect::shortcut::on_unblocked(effect)` wraps the trigger. Inkling
+  Skyraider (b127) exercises this — "drain 1 when unblocked"; tests
+  cover both the unblocked-fire and blocked-no-fire paths.).
   (n) **509.4** "If a creature is put onto the battlefield blocking,
   controller chooses which attacker it's blocking" — ⏳ (no `Effect::
   PutOntoBattlefieldBlocking` primitive; cards like Mantis Rider don't
@@ -682,9 +688,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Tests: combat-coverage tests in `crabomination/src/tests/game.rs`
   exercise basic declare-blockers + flying-evasion + menace-2-blockers;
   STX `daemogoth_titan_blocks_sacrifices_another_creature` covers
-  509.1i + 509.3a. Promote to ✅ when 509.1c (requirements),
-  509.1d-f (cost-to-block), 509.3g (unblocked trigger), and 509.4
-  (put-onto-bf-blocking) all land.
+  509.1i + 509.3a; `inkling_skyraider_b127_drains_when_attacking_
+  unblocked` + `_does_not_drain_when_blocked` cover 509.3g. Promote
+  to ✅ when 509.1c (requirements), 509.1d-f (cost-to-block), and
+  509.4 (put-onto-bf-blocking) all land.
 
 - 🟡 **CR 118 — Costs** (push modern_decks batch 16, claude/modern_decks
   branch — audit against `MagicCompRules_20260417.txt`): The cost
@@ -7842,3 +7849,29 @@ collapsed to "each opponent" via the auto-target framework. A
 `shortcut::magecraft_drain_target(amount)` helper using a
 `PlayerRef::Target(0)` slot would let the picker pick the opp
 explicitly (relevant in multiplayer).
+
+### Suggested next-up tasks (additions from batch 127)
+
+Batch 127 promoted CR 509.3g via the new `EventKind::AttacksAndIsntBlocked`
+event and `on_unblocked()` shortcut. Open items to explore next:
+
+- **509.4 — "Put onto battlefield blocking"** — `Effect::PutOntoBattlefieldBlocking
+  { what, blocking_attacker_filter }`. Used by Mantis Rider / Ambush
+  Viper-style flash-blockers. The controller chooses which attacker the
+  creature is blocking *as it enters*. Currently no primitive — the only
+  "block at ETB" cards in the catalog (none yet) would need this.
+- **509.1c — "Must block" requirements** — `StaticEffect::MustBlockTarget
+  { target_filter }` or `Keyword::Provoke`. Provoke (e.g. Lure, Lunge)
+  forces a creature to block if able. Currently no card uses this.
+- **509.1d-f — Cost-to-block** — `ActivatedAbility`-style "creatures can't
+  block unless their controller pays {N}" cost gate. Cards like
+  Norn's Annex, Ghostly Prison-style attack taxes have the dual on the
+  attacker side; no STX card uses it on the blocker side directly.
+- **Ninja-style "swing in unblocked" payoffs** — now unblocked by
+  `on_unblocked()`. Future cards: Ingenious Infiltrator, Yuriko-clones,
+  ninjutsu-replacement-from-hand (engine-wide; requires ninjutsu cost
+  primitive on top of `on_unblocked`).
+- **Skulk** (CR 702.118) — "this creature can't be blocked by creatures
+  with greater power." Unrelated to 509.3g but in the same family of
+  evasion abilities. Catalog has Flying / Reach / Menace / Unblockable;
+  Skulk is the next ladder rung.

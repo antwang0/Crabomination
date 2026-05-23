@@ -10842,3 +10842,174 @@ pub fn witherbloom_vinerunner_b126() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 127 (push claude/modern_decks): new Witherbloom cards ───────────
+
+/// Witherbloom Sapsage (b127) — {1}{G}, 1/3 Plant Druid. Magecraft +1/+1
+/// counter on self via the new `magecraft_self_counter_b127` pattern
+/// (inlined for now). Aggressive self-growing magecraft 2-drop.
+pub fn witherbloom_sapsage_b127() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        name: "Witherbloom Sapsage (b127)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Brewerthing (b127) — {2}{B}, 2/2 Pest Warlock. Dies → mint a
+/// Pest token (self-replicating aristocrats body, uses
+/// `dies_mint_token`).
+pub fn pest_brewerthing_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Brewerthing (b127)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mossbinder (b127) — {2}{B}{G}, 3/3 Plant Warrior. ETB
+/// drain 2 (4-life swing). 4-mana race breaker body.
+pub fn witherbloom_mossbinder_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mossbinder (b127)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestsower (b127) — {3}{B}{G} Sorcery. Seq(CreateToken
+/// 2 Pests + Drain 2). 5-mana go-wide + drain finisher.
+pub fn witherbloom_pestsower_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestsower (b127)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::Player(PlayerRef::You),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Verdant Sage (b127) — {2}{G}, 2/4 Plant Druid Reach.
+/// ETB GainLife 2. 3-mana anti-flier + lifegain.
+pub fn witherbloom_verdant_sage_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Verdant Sage (b127)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

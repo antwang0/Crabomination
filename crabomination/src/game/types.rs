@@ -454,6 +454,10 @@ pub enum GameEvent {
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },
+    /// An attacker finished declare-blockers without any blockers
+    /// assigned (CR 509.3g). Emitted at the end of `declare_blockers`
+    /// once for each attacker with zero entries in `block_map`.
+    AttackerWentUnblocked { attacker: CardId },
     CombatResolved,
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: &'static str, is_land: bool },

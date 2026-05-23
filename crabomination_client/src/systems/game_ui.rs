@@ -127,6 +127,7 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
 
         E::AttackerDeclared(_)
         | E::BlockerDeclared { .. }
+        | E::AttackerWentUnblocked { .. }
         | E::CombatResolved
         | E::FirstStrikeDamageResolved => theme::ACCENT_ORANGE,
 

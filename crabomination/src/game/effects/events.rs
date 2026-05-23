@@ -34,6 +34,7 @@ pub(crate) fn event_matches_spec(
         // `BecomesBlocked`.
         (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
+        (EventKind::AttacksAndIsntBlocked, GameEvent::AttackerWentUnblocked { .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
@@ -88,6 +89,8 @@ pub(crate) fn event_matches_spec(
                 if matches!(spec.kind, EventKind::Blocks) && *blocker == source.id)
             || matches!(event, GameEvent::BlockerDeclared { attacker, .. }
                 if matches!(spec.kind, EventKind::BecomesBlocked) && *attacker == source.id)
+            || matches!(event, GameEvent::AttackerWentUnblocked { attacker }
+                if matches!(spec.kind, EventKind::AttacksAndIsntBlocked) && *attacker == source.id)
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
@@ -228,6 +231,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::BlockerDeclared { blocker, attacker } => Some(EntityRef::Permanent(
             if matches!(kind, EventKind::BecomesBlocked) { *attacker } else { *blocker },
         )),
+        GameEvent::AttackerWentUnblocked { attacker } => Some(EntityRef::Permanent(*attacker)),
         GameEvent::LandPlayed { card_id, .. } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
@@ -266,6 +270,7 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         | GameEvent::CounterAdded { card_id, .. }
         | GameEvent::AttackerDeclared(card_id) => Some(*card_id),
         GameEvent::BlockerDeclared { blocker, .. } => Some(*blocker),
+        GameEvent::AttackerWentUnblocked { attacker } => Some(*attacker),
         // BecameTarget's card is the targeted permanent (used by
         // AnotherOfYours scope checks if any card uses it).
         GameEvent::BecameTarget { target, .. } => Some(*target),

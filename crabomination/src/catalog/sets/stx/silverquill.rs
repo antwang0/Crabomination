@@ -13230,3 +13230,194 @@ pub fn silverquill_glyphcaller_b126() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 127 (push claude/modern_decks): new Silverquill cards ───────────
+
+/// Silverquill Aristocrat (b127) — {1}{B}, 1/2 Inkling Cleric Flying.
+/// Magecraft drain each opp 1 — small evasive aristocrats payoff.
+pub fn silverquill_aristocrat_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Aristocrat (b127)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quillmender (b127) — {2}{W}, 2/3 Inkling Cleric Flying.
+/// On_attack gain life 1 — small evasive lifegain attacker.
+pub fn inkling_quillmender_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quillmender (b127)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lecturist (b127) — {W}{B}, 2/2 Vampire Cleric Lifelink.
+/// 2-mana lifelink body — Light-of-Promise enabler that swings to gain
+/// life every turn.
+pub fn silverquill_lecturist_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lecturist (b127)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Battle Drone (b127) — {3}{W}{B}, 3/3 Inkling Soldier Flying
+/// + Vigilance. ETB drain 1. 5-mana evasive race breaker.
+pub fn inkling_battle_drone_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Battle Drone (b127)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Skyraider (b127) — {1}{W}{B}, 2/2 Inkling Rogue Flying.
+/// "Whenever this creature attacks and isn't blocked, you gain 1 life
+/// and each opponent loses 1 life." Tests the new CR 509.3g
+/// `AttacksAndIsntBlocked` event added in this batch — wired via the
+/// new `on_unblocked()` shortcut.
+pub fn inkling_skyraider_b127() -> CardDefinition {
+    use crate::effect::shortcut::on_unblocked;
+    CardDefinition {
+        name: "Inkling Skyraider (b127)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_unblocked(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::Player(PlayerRef::You),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillplate (b127) — {2}{W}, 2/4 Human Soldier Vigilance.
+/// ETB GainLife 2. 3-mana defensive lifegainer + vigilant blocker.
+pub fn silverquill_quillplate_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillplate (b127)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

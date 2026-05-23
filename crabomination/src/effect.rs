@@ -658,6 +658,13 @@ pub enum EventKind {
     Blocks,
     /// A creature became blocked.
     BecomesBlocked,
+    /// An attacking creature finished the declare-blockers step
+    /// without any blockers assigned to it (CR 509.3g — "Whenever
+    /// [creature] attacks and isn't blocked"). Fires once per
+    /// unblocked attacker after `declare_blockers` completes. The
+    /// `BecomesBlocked` event fires for attackers WITH blockers; this
+    /// is the parallel rail for unblocked attackers.
+    AttacksAndIsntBlocked,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
     /// Combat damage was dealt to a creature by a creature.
@@ -3448,5 +3455,18 @@ pub mod shortcut {
                 random: false,
             },
         ]))
+    }
+
+    /// "Whenever this creature attacks and isn't blocked, …" trigger
+    /// (CR 509.3g). Wraps the new `EventKind::AttacksAndIsntBlocked`
+    /// event added in batch 127. Fired once per attacker that
+    /// finishes the declare-blockers step with zero blockers
+    /// assigned. Used by ninja-style "combat-damage-only" payoffs and
+    /// any "swing in for free" attack riders.
+    pub fn on_unblocked(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
+            effect,
+        }
     }
 }

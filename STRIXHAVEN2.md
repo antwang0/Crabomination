@@ -19,10 +19,76 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1742 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1769 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 126:
+Push (claude/modern_decks branch — current head — **post-batch 127:
+27 more Strixhaven synthesised cards across all five colleges + new
+`on_unblocked` shortcut helper + new `EventKind::
+AttacksAndIsntBlocked` event (CR 509.3g promotion ⏳ → ✅).
+
+- **Lorehold (R/W, 6 cards)** — Lorehold Aerialist (b127) ({1}{W}
+  2/2 Spirit Cleric Flying — vanilla evasive Spirit tribal fodder),
+  Lorehold Ironbound (b127) ({2}{W} 2/4 Spirit Soldier — defensive
+  body), Lorehold Pyrebrand (b127) ({1}{R} 1/2 Human Wizard
+  magecraft ping each opp 1 — Lorehold variant of Pestmancer),
+  Lorehold Veteran (b127) ({3}{R}{W} 3/3 Spirit Cleric ETB GainLife 3
+  + on-attack DealDamage 2 to target opp creature), Lorehold
+  Honorbound (b127) ({1}{R}{W} 2/3 Spirit Knight First Strike —
+  evasive early aggressor), Lorehold Embercurse (b127) ({R}{W}
+  Sorcery — DealDamage 3 to creature + GainLife 2).
+- **Witherbloom (B/G, 5 cards)** — Witherbloom Sapsage (b127) ({1}{G}
+  1/3 Plant Druid magecraft AddCounter(+1/+1) on self — self-growing
+  body), Pest Brewerthing (b127) ({2}{B} 2/2 Pest Warlock dies →
+  mint Pest), Witherbloom Mossbinder (b127) ({2}{B}{G} 3/3 Plant
+  Warrior ETB drain 2), Witherbloom Pestsower (b127) ({3}{B}{G}
+  Sorcery — 2 Pests + drain 2), Witherbloom Verdant Sage (b127)
+  ({2}{G} 2/4 Plant Druid Reach ETB GainLife 2).
+- **Silverquill (W/B, 6 cards)** — Silverquill Aristocrat (b127)
+  ({1}{B} 1/2 Inkling Cleric Flying magecraft drain each opp 1),
+  Inkling Quillmender (b127) ({2}{W} 2/3 Inkling Cleric Flying
+  on-attack gain life 1), Silverquill Lecturist (b127) ({W}{B} 2/2
+  Vampire Cleric Lifelink), Inkling Battle Drone (b127) ({3}{W}{B}
+  3/3 Inkling Soldier Flying + Vigilance ETB drain 1), Inkling
+  Skyraider (b127) ({1}{W}{B} 2/2 Inkling Rogue Flying — uses the
+  new CR 509.3g `AttacksAndIsntBlocked` event via `on_unblocked()`
+  shortcut, drains 1 when unblocked), Silverquill Quillplate (b127)
+  ({2}{W} 2/4 Human Soldier Vigilance ETB GainLife 2).
+- **Prismari (U/R, 5 cards)** — Prismari Sparkbolt (b127) ({1}{R}
+  Instant DealDamage 2 + Draw 1 — Shock-with-cantrip), Prismari
+  Flarescholar (b127) ({2}{R} 3/2 Human Wizard Haste magecraft
+  Treasure), Prismari Mistscholar (b127) ({1}{U} 1/3 Human Wizard
+  magecraft Loot), Prismari Surgebearer (b127) ({3}{U}{R} 4/3
+  Elemental Wizard magecraft ping each opp 1), Prismari Ember-Wave
+  (b127) ({U}{R} Instant — Tap target creature + DealDamage 1).
+- **Quandrix (G/U, 5 cards)** — Quandrix Greenmage (b127) ({1}{G}
+  2/2 Elf Druid magecraft AddCounter(+1/+1) on self), Fractal
+  Bedrock (b127) ({3}{G} 0/0 Fractal with `enters_with_counters = 4`
+  → 4/4 Fractal), Quandrix Sageling (b127) ({2}{G}{U} 2/4 Elf Druid
+  magecraft Scry 1), Fractal Stormcaller (b127) ({1}{U} 1/2 Merfolk
+  Wizard ETB Scry 1), Quandrix Fractus-Touch (b127) ({1}{G}{U}
+  Instant — 2 +1/+1 counters on target friendly Fractal + Draw 1).
+
+Engine bonuses (batch 127):
+- **CR 509.3g — "Whenever this attacks and isn't blocked" promoted
+  ⏳ → ✅**. New `EventKind::AttacksAndIsntBlocked` event variant
+  paired with `GameEvent::AttackerWentUnblocked { attacker }`. The
+  event is emitted at the end of `declare_blockers` for every
+  attacker that has no entries in `block_map`. The unified trigger
+  dispatcher routes via the standard `event_matches_spec` /
+  `event_subject` / `event_card` walkers. New `effect::shortcut::
+  on_unblocked(effect)` helper wraps the trigger spec for clean
+  card factories. Net wire layer extended to ferry the new event
+  to the client (rendered as "X attacks and is unblocked").
+- New shortcut helper `on_unblocked(effect)` in `effect::shortcut`.
+- Wire-level event added (`GameEventWire::AttackerWentUnblocked`)
+  with renderer text "X attacks and is unblocked".
+
+Tests: 3687 → 3716 (27 card tests + 2 not-blocked-no-drain tests +
+1 shortcut lock-in test = 30 new tests; net +3 b127 cards over
+b126's 26 (one of which is now using the new event)).
+
+Push (post-batch 126:
 26 more Strixhaven synthesised cards across all five colleges + five
 new shortcut helpers (`dies_ping_any`, `dies_mint_token`,
 `magecraft_draw`, `magecraft_treasure`, `on_attack_loot`):

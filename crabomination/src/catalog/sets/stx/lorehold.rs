@@ -11158,3 +11158,217 @@ pub fn lorehold_sparkscholar_b126() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 127 (push claude/modern_decks): six new Lorehold cards ──────────
+
+/// Lorehold Aerialist (b127) — {1}{W}, 2/2 Spirit Cleric Flying. A
+/// vanilla 2-mana evasive Spirit — Lorehold tribal fodder for the
+/// Lorehold spirit anthems (Quintorius, Hofri).
+pub fn lorehold_aerialist_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Aerialist (b127)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ironbound (b127) — {2}{W}, 2/4 Spirit Soldier. A defensive
+/// 3-mana spirit-tribal body — pairs with the spirit anthems for stable
+/// ground defense.
+pub fn lorehold_ironbound_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ironbound (b127)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrebrand (b127) — {1}{R}, 1/2 Human Wizard. Magecraft
+/// ping each opp 1. Lorehold variant of Pestmancer — every IS spell
+/// pings each opponent for 1 free damage.
+pub fn lorehold_pyrebrand_b127() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        name: "Lorehold Pyrebrand (b127)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::DealDamage {
+                amount: Value::Const(1),
+                to: Selector::Player(PlayerRef::EachOpponent),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Vetenarian (b127) — {3}{R}{W}, 3/3 Spirit Cleric.
+/// ETB GainLife 3 + on_attack DealDamage 2 to target opp creature via
+/// `target_filtered`. A 5-mana attack-focused mid-curve threat.
+pub fn lorehold_veteran_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Veteran (b127)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_gain_life(3),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::DealDamage {
+                    amount: Value::Const(2),
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    ),
+                },
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Honorbound (b127) — {1}{R}{W}, 2/3 Spirit Knight First
+/// Strike. 3-mana evasive Lorehold body — early curve aggressor in
+/// Spirit/Knight shells.
+pub fn lorehold_honorbound_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Honorbound (b127)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embercurse (b127) — {R}{W} Sorcery. DealDamage 3 to a
+/// target creature + GainLife 2. Lorehold's mini-Sacred-Fire at a
+/// tighter curve (2 mana vs Sacred Fire's no-cost-burn-pump).
+pub fn lorehold_embercurse_b127() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embercurse (b127)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
