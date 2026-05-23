@@ -8098,3 +8098,58 @@ landed the CR 305.2 ExtraLandPerTurn engine wiring with Exploration
   `Keyword::Regenerate(1)` already. A small cycle of similar
   Skeleton bodies (1/1, 2/2, 3/3) at curve-out mana values would
   give Reaper-Lord's anthem a tribal pool to feed.
+
+### Suggested next-up tasks (additions from batch 133)
+
+Batch 133 added 16 STX synthesised cards across all five colleges and
+landed three new shortcut helpers (`etb_mint_token_and_gain_life`,
+`etb_scry_and_draw`, `pump_and_grant_keyword`). Open items to explore
+next:
+
+- **`dies_mint_token_and_drain` shortcut** — mirror of
+  `etb_mint_token_and_drain` for the on-death event. Used by
+  "Pest dies → another Pest enters + drain" patterns. Currently
+  no card uses this, but Witherbloom's Pest-aristocrats archetype
+  would benefit from a one-line helper.
+- **`magecraft_mint_and_drain` shortcut** — composite of
+  `magecraft_mint_token` and `magecraft_drain`. Used in spells-
+  matter Pest aristocrat decks where each instant/sorcery makes a
+  Pest AND drains the table.
+- **Plant tribal lord at common rarity** — Witherbloom Vinetongue
+  (b129) at {1}{G}{G} is the rare/uncommon Plant anthem. A
+  {2}{G} 2/2 "Other Plants get +1/+1" lord would round out the
+  curve for Plant-tribal aggressive Witherbloom shells.
+- **Spirit-tribal Lifelink anthem variants** — Lorehold Lectern
+  (b129) grants Lifelink to Spirits. A 4-mana 2/4 Spirit body that
+  is itself a Spirit AND grants Lifelink to other Spirits would
+  combine the body slot with the anthem; current Lectern is a
+  pure 3-mana artifact.
+- **`on_other_dies_mint_token` shortcut** — "Whenever another
+  creature you control dies, create a 1/1 X token." Witherbloom
+  aristocrats payoff that scales with sacrifice fodder.
+
+### Suggested next-up tasks (additions from batch 132)
+
+Batch 132 added 25 STX synthesised cards across all five colleges and
+shipped the CR 506.1 skip-on-empty-attackers engine fix. Open items:
+
+- **CR 508.8 — Skip declare-blockers / combat-damage when no
+  attackers** — partially landed via b132's CR 506.1 enforcement at
+  the step-advance level (DeclareAttackers → EndCombat skip when
+  `self.attacking.is_empty()`). The CR 508.8 path also says "if no
+  attacking creatures are blocked, the combat-damage step is
+  skipped." That partial-skip path isn't wired yet — the engine
+  always advances DeclareBlockers → FirstStrikeDamage / CombatDamage
+  even when no blocks were declared. The skip is unobservable today
+  since CombatDamage handlers gracefully no-op on empty blockers,
+  but the literal step skip would match CR more closely.
+- **`dies_ping_creature` shortcut** — mirror of `dies_ping_any` /
+  `dies_drain` for the creature-only target case. Used by Mogg
+  Fanatic-style "dies dealing 1 to a creature" cards.
+- **`magecraft_scry_and_draw` shortcut** — composite of
+  `magecraft_scry` and `magecraft_draw` (Sphinx's Insight magecraft
+  template). Useful for spellslinging engine creatures.
+- **Skeleton-tribal "ETB regen self" pattern** — current Skeleton
+  pool has Bonewight (b129) with `Keyword::Regenerate(1)` as the
+  baseline. A "ETB scry 1 + Regenerate" Skeleton would round out
+  the curve.

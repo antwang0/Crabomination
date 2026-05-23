@@ -14120,9 +14120,9 @@ pub fn inkling_quill_striker_b132() -> CardDefinition {
 
 /// Silverquill Scrivener-Apprentice (b132) — {2}{W}, 2/3 Human Cleric.
 /// ETB scry 1, then draw a card. Smoothing body that pairs with the
-/// Mavinda recursion engine.
+/// Mavinda recursion engine. Uses `etb_scry_and_draw` shortcut.
 pub fn silverquill_scrivener_apprentice_b132() -> CardDefinition {
-    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::etb_scry_and_draw;
     CardDefinition {
         name: "Silverquill Scrivener-Apprentice (b132)",
         cost: cost(&[generic(2), w()]),
@@ -14137,10 +14137,7 @@ pub fn silverquill_scrivener_apprentice_b132() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]))],
+        triggered_abilities: vec![etb_scry_and_draw(1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -14173,6 +14170,101 @@ pub fn inkling_pamphleteer_ii_b132() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 133 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inkwriter II (b133) — {2}{W}, 2/3 Inkling Cleric.
+/// ETB mints an Inkling token and gains 1 life. Uses the new
+/// `etb_mint_token_and_gain_life` shortcut.
+pub fn silverquill_inkwriter_ii_b133() -> CardDefinition {
+    use crate::catalog::inkling_token;
+    use crate::effect::shortcut::etb_mint_token_and_gain_life;
+    CardDefinition {
+        name: "Silverquill Inkwriter II (b133)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_gain_life(inkling_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Skydeath (b133) — {3}{B}, 3/2 Inkling Rogue, Flying.
+/// Dies → drain 2. Mid-curve fragile sweeper bait that pays you back.
+pub fn inkling_skydeath_b133() -> CardDefinition {
+    use crate::effect::shortcut::dies_drain;
+    CardDefinition {
+        name: "Inkling Skydeath (b133)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pure Touch (b133) — {W}{B} Instant. Target creature
+/// gets +1/+1 EOT and gains Lifelink EOT. Uses the new
+/// `pump_and_grant_keyword` shortcut.
+pub fn silverquill_pure_touch_b133() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Silverquill Pure Touch (b133)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(1, 1, Keyword::Lifelink),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -12758,10 +12758,108 @@ pub fn lorehold_pyresinger_b132() -> CardDefinition {
     }
 }
 
+// ── Batch 133 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Spirit-Cleric (b133) — {1}{W}, 2/2 Spirit Cleric, Lifelink.
+/// Solid two-drop with intrinsic Lifelink — feeds Lorehold's
+/// Spirit + lifegain shells (Light of Promise, anthem decks).
+pub fn lorehold_spirit_cleric_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Cleric (b133)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Bell-Ringer II (b133) — {2}{W}, 2/3 Spirit Cleric.
+/// ETB mints a 2/2 Lorehold Spirit + gains 2 life. Uses the new
+/// `etb_mint_token_and_gain_life` shortcut.
+pub fn lorehold_bell_ringer_ii_b133() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_and_gain_life;
+    CardDefinition {
+        name: "Lorehold Bell-Ringer II (b133)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_gain_life(lorehold_spirit_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkstrider (b133) — {3}{R}{R}, 4/3 Spirit Warrior Haste.
+/// Magecraft: deal 1 damage to any target. Big hasty body with magecraft
+/// reach.
+pub fn lorehold_sparkstrider_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkstrider (b133)",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Final Lesson (b132) — {1}{W} Instant. Target creature
 /// gets +2/+2 until end of turn and gains Lifelink until end of turn.
-/// Single-target combat trick with a defensive twist.
+/// Single-target combat trick with a defensive twist. Uses the new
+/// `pump_and_grant_keyword` shortcut.
 pub fn lorehold_final_lesson_b132() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
     CardDefinition {
         name: "Lorehold Final Lesson (b132)",
         cost: cost(&[generic(1), w()]),
@@ -12771,19 +12869,7 @@ pub fn lorehold_final_lesson_b132() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
-            },
-            Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Lifelink,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
+        effect: pump_and_grant_keyword(2, 2, Keyword::Lifelink),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -3527,4 +3527,80 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// ETB-Mint-Token-And-Gain-Life shortcut: "When this creature
+    /// enters, create one copy of `definition` and gain `amount`
+    /// life." Wraps [`etb`] with `Seq([CreateToken, GainLife])`.
+    /// Asymmetric variant of [`etb_mint_token_and_drain`] (Witherbloom
+    /// uses drain; Lorehold/Selesnya-style cards just gain).
+    ///
+    /// Push claude/modern_decks batch 132: shipped to collapse the
+    /// recurring "mint + gain" pattern (Lorehold Bell-Ringer template
+    /// — mints a Spirit + gains 2 life, etc.).
+    pub fn etb_mint_token_and_gain_life(
+        definition: crate::card::TokenDefinition,
+        amount: i32,
+    ) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(amount),
+            },
+        ]))
+    }
+
+    /// ETB-Scry-and-Draw shortcut: "When this creature enters,
+    /// scry `scry_amount`, then draw a card." Wraps [`etb`] with
+    /// `Seq([Scry, Draw])`. Used by smoothing creatures that combine
+    /// library-quality and card draw (Silverquill Scrivener-Apprentice
+    /// template). The scry resolves first per the printed sequence.
+    ///
+    /// Push claude/modern_decks batch 132: shipped to collapse the
+    /// recurring "scry + draw" ETB pattern.
+    pub fn etb_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(scry_amount),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
+
+    /// ETB-Pump-And-Grant-Keyword shortcut: target friendly creature
+    /// gets +`power`/+`toughness` and gains `keyword` until end of
+    /// turn. Returns a raw `Effect` (not wrapped in a trigger). Used
+    /// by combat-trick instants like Lorehold Final Lesson (b132)
+    /// that combine stat-pump with a keyword grant.
+    ///
+    /// Push claude/modern_decks batch 132: shipped to collapse the
+    /// recurring "+P/+T + keyword EOT" combat-trick pattern.
+    pub fn pump_and_grant_keyword(
+        power: i32,
+        toughness: i32,
+        keyword: crate::card::Keyword,
+    ) -> Effect {
+        use crate::card::SelectionRequirement;
+        Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(power),
+                toughness: Value::Const(toughness),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword,
+                duration: Duration::EndOfTurn,
+            },
+        ])
+    }
 }

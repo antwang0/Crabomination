@@ -19,10 +19,55 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1896 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1912 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 132:
+Push (claude/modern_decks branch — current head — **post-batch 133:
+16 more Strixhaven synthesised cards across all five colleges, plus
+three new shortcut helpers (`etb_mint_token_and_gain_life`,
+`etb_scry_and_draw`, `pump_and_grant_keyword`). Tests: 3865 → 3881
+(16 new b133 card tests). All tests pass; cargo clippy clean.
+
+- **Lorehold (R/W, 3 cards)** — Lorehold Spirit-Cleric (b133) ({1}{W}
+  2/2 Spirit Cleric Lifelink), Lorehold Bell-Ringer II (b133) ({2}{W}
+  2/3 Spirit Cleric ETB mint Spirit + gain 2 life via
+  `etb_mint_token_and_gain_life`), Lorehold Sparkstrider (b133)
+  ({3}{R}{R} 4/3 Spirit Warrior Haste magecraft ping-any 1).
+- **Witherbloom (B/G, 4 cards)** — Witherbloom Twinpest (b133)
+  ({2}{B}{G} 2/2 Pest Warlock ETB mint 2 Pests), Witherbloom
+  Toadcaller (b133) ({1}{G} 2/1 Human Druid magecraft +1/+1 counter
+  on self), Pest Mawcatcher (b133) ({1}{B} 1/2 Pest dies drain 2),
+  Witherbloom Sproutchanter (b133) ({2}{G} 2/3 Plant Druid magecraft
+  AddCounter +1/+1 to each friendly creature).
+- **Silverquill (W/B, 3 cards)** — Silverquill Inkwriter II (b133)
+  ({2}{W} 2/3 Inkling Cleric ETB mint Inkling + gain 1 life),
+  Inkling Skydeath (b133) ({3}{B} 3/2 Inkling Rogue Flying dies
+  drain 2), Silverquill Pure Touch (b133) ({W}{B} Instant +1/+1 EOT
+  + Lifelink EOT to target creature via `pump_and_grant_keyword`).
+- **Prismari (U/R, 3 cards)** — Prismari Ember-Sprite (b133) ({1}{R}
+  2/1 Elemental Haste magecraft ping-any 1), Prismari Wave-Surger
+  (b133) ({2}{U} 2/3 Merfolk Wizard ETB scry+draw via
+  `etb_scry_and_draw`), Prismari Magma-Cleric (b133) ({2}{R} 3/3
+  Human Wizard vanilla).
+- **Quandrix (G/U, 3 cards)** — Quandrix Forecaster (b133) ({1}{U}
+  1/2 Merfolk Wizard ETB scry+draw), Fractal Spore (b133) ({1}{G}
+  0/0 Fractal — enters with 2 +1/+1 counters), Quandrix Numerist
+  (b133) ({2}{G}{U} 2/2 Elf Wizard magecraft draw 1).
+
+Engine: three new shortcut helpers landed —
+- `etb_mint_token_and_gain_life(token, amount)` — asymmetric mirror
+  of `etb_mint_token_and_drain`; mints a token and gains life
+  (Lorehold/Selesnya-style mint-and-heal). Used by Lorehold Bell-
+  Ringer II and Silverquill Inkwriter II in batch 133.
+- `etb_scry_and_draw(scry_amount)` — collapses `etb(Seq[Scry, Draw])`.
+  Used by Silverquill Scrivener-Apprentice (b132, refactored),
+  Prismari Wave-Surger (b133), Quandrix Forecaster (b133).
+- `pump_and_grant_keyword(power, toughness, keyword)` — single-target
+  pump + keyword grant EOT raw `Effect` (not a trigger). Used by
+  Lorehold Final Lesson (b132, refactored) and Silverquill Pure
+  Touch (b133).
+
+Push (claude/modern_decks branch — post-batch 132:
 25 more Strixhaven synthesised cards across all five colleges, plus
 the CR 506.1 skip-on-empty-attackers engine fix. Tests: 3836 → 3865
 (27 new b132 card tests + 2 CR 506.1 turn-flow tests). All cards use

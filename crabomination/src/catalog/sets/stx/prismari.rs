@@ -9364,3 +9364,104 @@ pub fn prismari_tempest_scribe_b132() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 133 ───────────────────────────────────────────────────────────────
+
+/// Prismari Ember-Sprite (b133) — {1}{R}, 2/1 Elemental, Haste.
+/// Magecraft: deal 1 damage to any target.
+pub fn prismari_ember_sprite_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Ember-Sprite (b133)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            amount: Value::Const(1),
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Wave-Surger (b133) — {2}{U}, 2/3 Merfolk Wizard.
+/// ETB Scry 1, then Draw 1. Uses the new `etb_scry_and_draw` shortcut.
+pub fn prismari_wave_surger_b133() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry_and_draw;
+    CardDefinition {
+        name: "Prismari Wave-Surger (b133)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magma-Cleric (b133) — {2}{R}, 3/3 Human Wizard.
+/// Vanilla beat-stick with the Wizard tribal subtype for Wizard-tribal
+/// pools.
+pub fn prismari_magma_cleric_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Magma-Cleric (b133)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

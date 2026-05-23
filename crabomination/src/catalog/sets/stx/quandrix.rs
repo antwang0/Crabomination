@@ -9969,3 +9969,97 @@ pub fn fractal_burst_b132() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 133 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Forecaster (b133) — {1}{U}, 1/2 Merfolk Wizard. ETB
+/// Scry 1, then Draw 1. Uses the new `etb_scry_and_draw` shortcut.
+pub fn quandrix_forecaster_b133() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry_and_draw;
+    CardDefinition {
+        name: "Quandrix Forecaster (b133)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Spore (b133) — {1}{G}, 0/0 Fractal. Enters with 2 +1/+1
+/// counters. Cheap baseline Fractal body via the `enters_with_counters`
+/// replacement (CR 614.12). Becomes a 2/2 immediately.
+pub fn fractal_spore_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Spore (b133)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Numerist (b133) — {2}{G}{U}, 2/2 Elf Wizard. Magecraft:
+/// draw a card.
+pub fn quandrix_numerist_b133() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Numerist (b133)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
