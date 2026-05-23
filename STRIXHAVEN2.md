@@ -22,7 +22,82 @@ Two adjacent catalogs:
 | STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 134:
+Push (claude/modern_decks branch — current head — **post-batch 136:
+20 more Strixhaven synthesised cards across all five colleges (4 per
+school). All cards use existing primitives — no new shortcut helpers
+required. Tests: 3909 → 3929 (20 new b136 card tests). All tests
+pass; cargo clippy clean.
+
+- **Silverquill (W/B, 4 cards)** — Inkling Forewing (b136) ({2}{W}
+  2/2 Inkling Cleric Flying + Ward 1), Silverquill Honor-Witness
+  (b136) ({2}{W} 2/3 Human Cleric ETB Seq(GainLife 2 + Scry 1)),
+  Inkling Battle-Scribe (b136) ({3}{B} 3/3 Inkling Wizard Flying
+  magecraft drain each opp 1), Silverquill Pristine Sermon (b136)
+  ({3}{W}{B} Sorcery — Drain 3 + Scry 2 + 1 Inkling token).
+- **Witherbloom (B/G, 4 cards)** — Pest Twinger (b136) ({2}{B} 2/2
+  Pest Warlock ETB Pest), Witherbloom Bonereader (b136) ({2}{B}{G}
+  3/2 Human Warlock ETB Seq(Mill 2 + GainLife 1)), Witherbloom
+  Vinemaul (b136) ({1}{G} Instant — +2/+2 EOT + Trample EOT),
+  Witherbloom Necrosage (b136) ({1}{B}{G} 2/2 Human Warlock
+  Deathtouch).
+- **Lorehold (R/W, 4 cards)** — Lorehold Ember-Chant (b136)
+  ({2}{R}{W} Sorcery — 2 Lorehold Spirit tokens), Lorehold
+  Skirmisher Captain (b136) ({2}{R} 3/2 Spirit Soldier Haste
+  on-attack ping-any 1), Lorehold Sage-Choir (b136) ({2}{W} 1/4
+  Spirit Cleric Vigilance magecraft GainLife 1), Lorehold
+  Ember-Sprite (b136) ({R} 1/1 Spirit Elemental Haste).
+- **Prismari (U/R, 4 cards)** — Prismari Ember-Scribe (b136)
+  ({2}{U}{R} 3/3 Human Wizard magecraft Seq(Ping 1 + Draw 1)),
+  Prismari Burnpaste (b136) ({1}{R} Instant — DealDamage 3 to
+  target creature), Prismari Treasure-Pyro (b136) ({3}{R} 4/2
+  Human Artificer ETB Treasure), Prismari Glassflinger (b136)
+  ({U}{R} 2/2 Human Wizard magecraft Scry 1).
+- **Quandrix (G/U, 4 cards)** — Fractal Beanstalker (b136)
+  ({2}{G}{U} 0/0 Fractal Wizard Reach — enters with 4 +1/+1
+  counters), Quandrix Mathwarden (b136) ({1}{U} 1/3 Merfolk Wizard
+  magecraft Scry 1), Quandrix Fractal-Apprentice (b136) ({G}{U}
+  1/1 Fractal Wizard — Symmathematics self-counter on every spell
+  cast), Quandrix Lifestream (b136) ({2}{G}{U} Sorcery — mint
+  Fractal with 3 +1/+1 counters + GainLife 2).
+
+Push (claude/modern_decks branch — post-batch 135:
+20 more Strixhaven synthesised cards across all five colleges (4 per
+school). All cards use existing primitives — no new shortcut helpers
+required. Tests: 3888 → 3909 (21 new b135 card tests). All tests
+pass; cargo clippy clean.
+
+- **Silverquill (W/B, 4 cards)** — Silverquill Penwarden (b135)
+  ({1}{W}{B} 2/3 Inkling Cleric Flying ETB drain 1), Inkling
+  Quill-Cleric (b135) ({2}{W} 2/2 Inkling Cleric Flying + Lifelink),
+  Silverquill Edict-Speaker (b135) ({1}{W}{B} Sorcery — target opp
+  sacrifices a creature, gain 2 life, draw 1), Silverquill Bookworm
+  (b135) ({W} 1/2 Human Cleric magecraft Scry 1).
+- **Witherbloom (B/G, 4 cards)** — Witherbloom Pestmaster (b135)
+  ({2}{B}{G} 3/3 Human Warlock — aristocrat drain trigger via
+  `on_other_dies` + Drain), Pest Sprouter (b135) ({1}{G} 1/2 Plant
+  Druid ETB Pest), Witherbloom Vinemender (b135) ({2}{G} 2/3 Plant
+  Druid Reach magecraft gain 2 life), Pest Reaper (b135) ({3}{B}{G}
+  3/3 Pest Warlock Deathtouch — combat removal stick).
+- **Lorehold (R/W, 4 cards)** — Lorehold Skirmisher (b135) ({1}{R}
+  2/2 Spirit Soldier Haste), Lorehold Crackleflame (b135) ({1}{R}
+  Instant — DealDamage 2 + Scry 1), Lorehold Sparkpilgrim (b135)
+  ({2}{W} 2/3 Spirit Cleric Vigilance ETB mint a Spirit token),
+  Lorehold Pyremartyr (b135) ({2}{R} 3/2 Spirit Wizard dies →
+  ping-any 2).
+- **Prismari (U/R, 4 cards)** — Prismari Sparkmage (b135) ({1}{U}{R}
+  2/3 Human Wizard magecraft ping-any 1), Prismari Splash (b135)
+  ({U}{R} Instant — Draw 1 + DealDamage 1), Prismari Glasswright II
+  (b135) ({2}{R} 2/3 Human Artificer magecraft Treasure), Prismari
+  Stormcaller (b135) ({3}{U}{R} 3/3 Elemental Haste — magecraft
+  Pump-1/-1 EOT to target opp creature).
+- **Quandrix (G/U, 4 cards)** — Quandrix Tracker (b135) ({1}{G} 2/2
+  Elf Druid magecraft loot), Quandrix Equation-Lord (b135) ({2}{G}{U}
+  0/0 Fractal Wizard Trample — enters with 3 +1/+1 counters), Fractal
+  Aspirant (b135) ({G} 0/0 Fractal Wizard — enters with 1 +1/+1
+  counter), Quandrix Scaleshifter (b135) ({1}{G}{U} 2/2 Merfolk
+  Wizard — magecraft +1/+1 counter on target friendly creature).
+
+Push (claude/modern_decks branch — post-batch 134:
 7 more Strixhaven synthesised cards across all five colleges, plus
 two new shortcut helpers (`magecraft_scry_and_draw`,
 `dies_mint_token_and_drain`). Tests: 3881 → 3888 (7 new b134 card

@@ -14339,3 +14339,287 @@ pub fn inkling_lifemender_b134() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 135 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Penwarden (b135) — {1}{W}{B}, 2/3 Inkling Cleric, Flying.
+/// ETB drain 1. Defensive evasive drain body — 3-mana 2/3 flier
+/// with a built-in 2-life swing.
+pub fn silverquill_penwarden_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penwarden (b135)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quill-Cleric (b135) — {2}{W}, 2/2 Inkling Cleric, Flying +
+/// Lifelink. Vanilla efficient evasive lifelinker — fills the 3-mana
+/// curve slot alongside Inkling Sanctifier with a different keyword mix.
+pub fn inkling_quill_cleric_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quill-Cleric (b135)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Edict-Speaker (b135) — {1}{W}{B} Sorcery. Target opponent
+/// sacrifices a creature; you gain 2 life and draw a card. Beefier
+/// Diabolic-Edict-with-rider at the 3-mana slot — closes out aristocrats
+/// and tempo positions.
+pub fn silverquill_edict_speaker_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Edict-Speaker (b135)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::Target(0)),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Bookworm (b135) — {W} 1/2 Human Cleric. Magecraft scry 1.
+/// Cheap one-drop selection engine.
+pub fn silverquill_bookworm_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Bookworm (b135)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 136 ───────────────────────────────────────────────────────────────
+
+/// Inkling Forewing (b136) — {2}{W} 2/2 Inkling Cleric Flying. Ward 1.
+/// 3-mana Inkling flier with a 1-mana protection tax — fills the
+/// defensive midrange slot in Inkling tribal builds.
+pub fn inkling_forewing_b136() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        name: "Inkling Forewing (b136)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Ward(WardCost::generic(1))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Honor-Witness (b136) — {2}{W} 2/3 Human Cleric. ETB Seq
+/// (GainLife 2 + Scry 1). Defensive lifegain body that smooths the top.
+pub fn silverquill_honor_witness_b136() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::{EventScope, EventSpec};
+    CardDefinition {
+        name: "Silverquill Honor-Witness (b136)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+                Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Battle-Scribe (b136) — {3}{B} 3/3 Inkling Wizard Flying.
+/// Magecraft each-opp loses 1. Heavier evasive drain body — pairs with
+/// Tenured Inkcaster to swing the race.
+pub fn inkling_battle_scribe_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Battle-Scribe (b136)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pristine Sermon (b136) — {3}{W}{B} Sorcery. Seq
+/// (Drain 3 + Scry 2 + CreateToken 1 Inkling). 5-mana drain finisher
+/// that mints a flyer to push through the table.
+pub fn silverquill_pristine_sermon_b136() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Pristine Sermon (b136)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

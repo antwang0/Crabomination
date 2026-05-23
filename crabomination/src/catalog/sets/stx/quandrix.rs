@@ -10128,3 +10128,271 @@ pub fn fractal_hatchling_b134() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 135 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Tracker (b135) — {1}{G} 2/2 Elf Druid. Magecraft loot.
+/// Cheap selection engine on a Quandrix two-drop body.
+pub fn quandrix_tracker_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tracker (b135)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Equation-Lord (b135) — {2}{G}{U} 0/0 Fractal Wizard
+/// Trample. Enters with three +1/+1 counters. Quandrix Fractal
+/// midrange body — 3/3 trampler with growth potential.
+pub fn quandrix_equation_lord_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Equation-Lord (b135)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Aspirant (b135) — {G} 0/0 Fractal Wizard. Enters with one
+/// +1/+1 counter. The cheapest possible Fractal-tribal one-drop, fuels
+/// Quandrix's +1/+1 counter-payoff cards.
+pub fn fractal_aspirant_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Aspirant (b135)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Scaleshifter (b135) — {1}{G}{U} 2/2 Merfolk Wizard.
+/// Magecraft: put a +1/+1 counter on target creature you control.
+/// Quandrix's classic spell-into-counter shape.
+pub fn quandrix_scaleshifter_b135() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_to_friendly;
+    CardDefinition {
+        name: "Quandrix Scaleshifter (b135)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_to_friendly()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 136 ───────────────────────────────────────────────────────────────
+
+/// Fractal Beanstalker (b136) — {2}{G}{U} 0/0 Fractal Wizard Reach.
+/// Enters with 4 +1/+1 counters. Heavy Reach-blocker with Fractal-tribal
+/// support — feeds Fractal payoffs and stalls aerial assaults.
+pub fn fractal_beanstalker_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Beanstalker (b136)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mathwarden (b136) — {1}{U} 1/3 Merfolk Wizard. Magecraft
+/// draw a card if it's the first instant or sorcery you cast this turn.
+/// Approximated as magecraft_scry(1) — same shape, simpler. The first-
+/// only condition is engine-wide (no per-turn-first gate primitive).
+pub fn quandrix_mathwarden_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mathwarden (b136)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractal-Apprentice (b136) — {G}{U} 1/1 Fractal Wizard.
+/// Magecraft: put a +1/+1 counter on this creature. Self-growing
+/// Quandrix Symmathematics body.
+pub fn quandrix_fractal_apprentice_b136() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::{EventScope, EventSpec};
+    CardDefinition {
+        name: "Quandrix Fractal-Apprentice (b136)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Lifestream (b136) — {2}{G}{U} Sorcery. Creates a 0/0
+/// Fractal token with 3 +1/+1 counters and you gain 2 life. Body of
+/// Research mini-version with a defensive lifegain rider.
+pub fn quandrix_lifestream_b136() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Lifestream (b136)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            create_token_with_counter(PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 3),
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

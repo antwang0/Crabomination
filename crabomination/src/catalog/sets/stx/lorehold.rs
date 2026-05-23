@@ -12883,3 +12883,265 @@ pub fn lorehold_final_lesson_b132() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 135 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Skirmisher (b135) — {1}{R} 2/2 Spirit Soldier Haste.
+/// Cheap aggressive Spirit 2-drop. Combos with the various
+/// magecraft + Spirit-tribal payoffs already in the Lorehold roster.
+pub fn lorehold_skirmisher_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skirmisher (b135)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Crackleflame (b135) — {1}{R} Instant. Lorehold Spirit-tribal
+/// burn: deal 2 damage to any target, then if you control a Spirit, scry 1.
+/// Approximated as DealDamage 2 + Scry 1 (unconditional scry; the Spirit
+/// gate is collapsed since the catalog has many Spirit-token creators).
+pub fn lorehold_crackleflame_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Crackleflame (b135)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkpilgrim (b135) — {2}{W} 2/3 Spirit Cleric Vigilance.
+/// ETB Spirit token. Spirit-tribal mint body with a defender's stat line.
+pub fn lorehold_sparkpilgrim_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkpilgrim (b135)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyremartyr (b135) — {2}{R} 3/2 Spirit Wizard. When this
+/// dies, deal 2 damage to any target. Dies-ping-any payoff at 3 mana —
+/// trades into something and brings a 2-damage swing on death.
+pub fn lorehold_pyremartyr_b135() -> CardDefinition {
+    use crate::effect::shortcut::dies_ping_any;
+    CardDefinition {
+        name: "Lorehold Pyremartyr (b135)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 136 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Ember-Chant (b136) — {2}{R}{W} Sorcery. Creates 2 Lorehold
+/// Spirit tokens (2/2 R/W). 4-mana token mint for Spirit tribal.
+pub fn lorehold_ember_chant_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Chant (b136)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: lorehold_spirit_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skirmisher Captain (b136) — {2}{R} 3/2 Spirit Soldier
+/// Haste. On-attack ping-any 1. 3-mana aggressive Spirit body with a
+/// rake-on-attack rider.
+pub fn lorehold_skirmisher_captain_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skirmisher Captain (b136)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sage-Choir (b136) — {2}{W} 1/4 Spirit Cleric Vigilance.
+/// Magecraft gain 1 life. Defensive Vigilance body with passive
+/// lifegain on every spell.
+pub fn lorehold_sage_choir_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sage-Choir (b136)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Sprite (b136) — {R} 1/1 Spirit Elemental Haste.
+/// Cheap red one-drop Spirit — feeds Lorehold's Spirit-tribal payoffs.
+pub fn lorehold_ember_sprite_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Sprite (b136)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

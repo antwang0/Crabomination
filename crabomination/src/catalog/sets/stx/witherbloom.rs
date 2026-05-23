@@ -12311,6 +12311,265 @@ pub fn pest_lichcaller_b134() -> CardDefinition {
     }
 }
 
+// ── Batch 135 (placed after b134 cards below) ───────────────────────────────
+
+/// Witherbloom Pestmaster (b135) — {2}{B}{G} 3/3 Human Warlock.
+/// "Whenever another creature you control dies, each opponent loses 1
+/// life and you gain 1 life." Aristocrat payoff at 4 mana — fires once
+/// per friendly death (including Pest tokens).
+pub fn witherbloom_pestmaster_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestmaster (b135)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Sprouter (b135) — {1}{G} 1/2 Plant Druid. ETB creates a Pest
+/// token. Card-advantage one-shot at the 2-mana slot.
+pub fn pest_sprouter_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Sprouter (b135)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinemender (b135) — {2}{G} 2/3 Plant Druid Reach.
+/// Magecraft gain 2 life. Defensive Reach body that lifegain-scales on
+/// every spell cast.
+pub fn witherbloom_vinemender_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinemender (b135)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Reaper (b135) — {3}{B}{G} 3/3 Pest Warlock Deathtouch. Combat
+/// removal stick — 5-mana 3/3 Deathtouch trades into anything.
+pub fn pest_reaper_b135() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Reaper (b135)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 136 ───────────────────────────────────────────────────────────────
+
+/// Pest Twinger (b136) — {2}{B} 2/2 Pest Warlock. ETB mint a Pest.
+/// 3-mana 2-body for Pest aristocrats.
+pub fn pest_twinger_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Twinger (b136)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bonereader (b136) — {2}{B}{G} 3/2 Human Warlock.
+/// "When this enters, mill 2 cards, then gain 1 life for each creature
+/// card you milled." Approximated as Mill 2 + GainLife 1 (a steady
+/// drip).
+pub fn witherbloom_bonereader_b136() -> CardDefinition {
+    use crate::card::TriggeredAbility;
+    use crate::effect::{EventScope, EventSpec};
+    CardDefinition {
+        name: "Witherbloom Bonereader (b136)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinemaul (b136) — {1}{G} Instant. Target creature gets
+/// +2/+2 EOT and gains Trample EOT. Witherbloom-flavored combat trick.
+pub fn witherbloom_vinemaul_b136() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Witherbloom Vinemaul (b136)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(2, 2, Keyword::Trample),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necrosage (b136) — {1}{B}{G} 2/2 Human Warlock Deathtouch.
+/// Cheap evasive removal-stick — Deathtouch at 3 mana with a 2-body.
+pub fn witherbloom_necrosage_b136() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necrosage (b136)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Plantlord (b134) — {1}{G} 2/2 Plant Druid. Static
 /// "Other Plant creatures you control get +1/+1." Cheap Plant-tribal
 /// lord that fills the curve below Vinetongue (b129, 3/3 for 3).
