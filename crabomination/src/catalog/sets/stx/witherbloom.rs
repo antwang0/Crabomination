@@ -12570,6 +12570,163 @@ pub fn witherbloom_necrosage_b136() -> CardDefinition {
     }
 }
 
+// ── Batch 138 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Drainpath II (b138) — {2}{B} Sorcery. Drain 2 + Surveil 1.
+/// 3-mana drain + selection.
+pub fn witherbloom_drainpath_ii_b138() -> CardDefinition {
+    use crate::effect::shortcut::drain_and_surveil;
+    CardDefinition {
+        name: "Witherbloom Drainpath II (b138)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_surveil(2, 1),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Quartermaster (b138) — {2}{B}{G} 3/3 Pest Warlock. ETB mints
+/// 1 Pest token + on-other-dies trigger gains 1 life. Aristocrat
+/// scaling lifegain engine.
+pub fn pest_quartermaster_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Quartermaster (b138)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_mint_token(stx_pest_token(), 1),
+            on_other_dies(Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestlord II (b138) — {3}{B}{G} 4/4 Plant Warlock.
+/// ETB mints 2 Pest tokens. 5-mana go-wide top-end.
+pub fn witherbloom_pestlord_ii_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestlord II (b138)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Verdantroot (b138) — {1}{G} 1/3 Plant Druid Reach.
+/// Magecraft GainLife 2. Defensive anti-flier with on-cast lifegain.
+pub fn witherbloom_verdantroot_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Verdantroot (b138)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Bloodscribe (b138) — {1}{B} 2/2 Pest Warlock. Dies-trigger
+/// Drain 1. 2-mana aristocrats trade body.
+pub fn pest_bloodscribe_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Bloodscribe (b138)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Plantlord (b134) — {1}{G} 2/2 Plant Druid. Static
 /// "Other Plant creatures you control get +1/+1." Cheap Plant-tribal
 /// lord that fills the curve below Vinetongue (b129, 3/3 for 3).

@@ -537,6 +537,15 @@ pub enum LibraryPosition {
     /// previous Run-Behind behavior. ScriptedDecider can flip to top
     /// for tests.
     OwnerChoice,
+    /// "Put this card Nth from the top of the owner's library." Used by
+    /// Approach of the Second Sun ({6}{W}{W}: "If this spell was cast
+    /// from your hand and you've cast another spell named Approach of
+    /// the Second Sun this game, you win the game. Otherwise, put this
+    /// spell's owner gains 7 life and puts this spell into their
+    /// library seventh from the top.") and similar cards. Per CR 401.7,
+    /// if the library has fewer than N cards, the card goes on the
+    /// bottom instead. `FromTop(0)` is equivalent to `Top`.
+    FromTop(usize),
 }
 
 /// Where the non-matching revealed cards go after a

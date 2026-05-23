@@ -22,7 +22,48 @@ Two adjacent catalogs:
 | STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 137:
+Push (claude/modern_decks branch — current head — **post-batch 138:
+22 more Strixhaven synthesised cards across all five colleges
+(5 Silverquill, 5 Witherbloom, 5 Lorehold, 5 Prismari, 3 Quandrix).
+All cards use existing primitives — no new shortcut helpers required.
+Tests: 3934 → 3957 (23 new b138 card tests). All tests pass; cargo
+clippy clean.
+
+- **Silverquill (W/B, 5 cards)** — Silverquill Inksworn (b138)
+  ({1}{W}{B} 2/3 Inkling Cleric Flying ETB drain 1), Inkling
+  Ledgerwarden (b138) ({2}{W} 1/4 Inkling Cleric Flying + Vigilance
+  magecraft Scry 1), Silverquill Quillstrike (b138) ({W}{B} Instant
+  — Drain 2 + Scry 1), Inkling Quillforge (b138) ({3}{W}{B} 3/3
+  Inkling Wizard Flying ETB drain 1 + draw 1), Silverquill
+  Memorialist II (b138) ({1}{W} 1/3 Human Cleric magecraft GainLife 1).
+- **Witherbloom (B/G, 5 cards)** — Witherbloom Drainpath II (b138)
+  ({2}{B} Sorcery — Drain 2 + Surveil 1), Pest Quartermaster (b138)
+  ({2}{B}{G} 3/3 Pest Warlock ETB Pest + on-other-dies GainLife 1),
+  Witherbloom Pestlord II (b138) ({3}{B}{G} 4/4 Plant Warlock ETB 2
+  Pests), Witherbloom Verdantroot (b138) ({1}{G} 1/3 Plant Druid
+  Reach magecraft GainLife 2), Pest Bloodscribe (b138) ({1}{B} 2/2
+  Pest Warlock dies drain 1).
+- **Lorehold (R/W, 5 cards)** — Lorehold Pyrocaller (b138) ({1}{R}
+  2/2 Spirit Shaman magecraft ping-any 1), Lorehold Spirit-Marshal
+  (b138) ({2}{R}{W} 3/3 Spirit Soldier Vigilance ETB Spirit),
+  Lorehold Sparkdancer (b138) ({1}{R}{W} 2/2 Spirit Warrior Haste
+  on-attack ping 1), Lorehold Spiritsong (b138) ({2}{R}{W} Sorcery —
+  Spirit + GainLife 2), Lorehold Ember-Cleric (b138) ({1}{W} 1/3
+  Spirit Cleric magecraft GainLife 1).
+- **Prismari (U/R, 5 cards)** — Prismari Sparkforge (b138)
+  ({1}{U}{R} 2/3 Human Artificer ETB Treasure), Prismari Embersinger
+  (b138) ({1}{R} 2/2 Elemental Bard magecraft ping each opp 1),
+  Prismari Surgebolt (b138) ({1}{R} Instant — DealDamage 3 to any),
+  Prismari Wavecaller (b138) ({1}{U} 1/3 Merfolk Wizard magecraft
+  loot), Prismari Stormhand (b138) ({2}{U}{R} Sorcery — DealDamage 3
+  + Treasure).
+- **Quandrix (G/U, 3 cards)** — Quandrix Mathmaster (b138)
+  ({2}{G}{U} 3/3 Human Wizard ETB Fractal w/ 2 counters), Fractal
+  Scholar (b138) ({1}{U} 1/3 Fractal Wizard magecraft +1/+1 counter
+  on self), Quandrix Equation (b138) ({1}{G}{U} Sorcery — Fractal w/
+  2 counters + Draw 1).
+
+Push (claude/modern_decks branch — post-batch 137:
 3 more Strixhaven synthesised cards plus two new shortcut helpers
 (`etb_drain_and_draw(amount)` and `on_attack_create_token(token)`).
 Tests: 3929 → 3934 (5 new tests: 3 card tests + 2 helper lock-ins).

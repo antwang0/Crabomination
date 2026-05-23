@@ -10361,6 +10361,122 @@ pub fn quandrix_fractal_apprentice_b136() -> CardDefinition {
     }
 }
 
+// ── Batch 138 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Mathmaster (b138) — {2}{G}{U} 3/3 Human Wizard. ETB
+/// fractal mint with 2 +1/+1 counters. 4-mana go-wide token engine.
+pub fn quandrix_mathmaster_b138() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Mathmaster (b138)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(create_token_with_counter(
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            2,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Scholar (b138) — {1}{U} 1/3 Fractal Wizard. Magecraft
+/// AddCounter(+1/+1, Self). Self-growing magecraft body.
+pub fn fractal_scholar_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Scholar (b138)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Equation (b138) — {1}{G}{U} Sorcery. Creates a 0/0
+/// Fractal token with 2 +1/+1 counters and you draw a card. Body of
+/// Research + cantrip.
+pub fn quandrix_equation_b138() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Equation (b138)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            create_token_with_counter(
+                PlayerRef::You,
+                1,
+                fractal_token(),
+                CounterType::PlusOnePlusOne,
+                2,
+            ),
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Lifestream (b136) — {2}{G}{U} Sorcery. Creates a 0/0
 /// Fractal token with 3 +1/+1 counters and you gain 2 life. Body of
 /// Research mini-version with a defensive lifegain rider.

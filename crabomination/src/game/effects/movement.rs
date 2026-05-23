@@ -313,6 +313,21 @@ impl GameState {
                         self.players[p].library.push(card);
                         self.players[p].library.shuffle(&mut rng);
                     }
+                    LibraryPosition::FromTop(n) => {
+                        // CR 401.7: "If a player is instructed to put a
+                        // card 'Nth from the top' of a library, and there
+                        // are fewer than N cards in that library, the
+                        // card is put on the bottom of that library."
+                        // `FromTop(0)` = top; otherwise insert at index
+                        // `n` if the library has at least `n` cards,
+                        // else `push` (= bottom).
+                        let lib_len = self.players[p].library.len();
+                        if *n >= lib_len {
+                            self.players[p].library.push(card);
+                        } else {
+                            self.players[p].library.insert(*n, card);
+                        }
+                    }
                 }
             }
             ZoneDest::Graveyard => {

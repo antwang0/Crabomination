@@ -4592,3 +4592,127 @@ fn cr_506_1_with_attackers_progresses_normally() {
     assert_eq!(g.step, TurnStep::DeclareBlockers,
         "With attackers declared, DeclareAttackers should advance to DeclareBlockers");
 }
+
+// ── CR 401.7 — LibraryPosition::FromTop(n) ───────────────────────────────────
+
+/// Verify that `LibraryPosition::FromTop(n)` places a card N from the top
+/// of the library. We exercise this via the place_card_in_dest path by
+/// resolving an Effect::Move targeting a card in hand.
+#[test]
+fn library_position_from_top_inserts_at_index() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::{LibraryPosition, ZoneDest};
+    let mut g = two_player_game();
+    // Seed the library with five distinct cards.
+    let a = g.add_card_to_library(0, catalog::plains());
+    let b = g.add_card_to_library(0, catalog::island());
+    let c = g.add_card_to_library(0, catalog::swamp());
+    let d = g.add_card_to_library(0, catalog::mountain());
+    let e = g.add_card_to_library(0, catalog::forest());
+
+    // Pre-state: library top → bottom is [a, b, c, d, e]. Index 0 is the
+    // top by convention.
+    assert_eq!(g.players[0].library[0].id, a);
+
+    // Cast a fake spell whose effect is Move(target → FromTop(2)).
+    // We'll seed a token-like card on the battlefield and move it.
+    let target_card = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        0,
+        Some(crate::game::types::Target::Permanent(target_card)),
+        0,
+        0,
+    );
+    let _ = g.resolve_effect(
+        &Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::Seat(0),
+                pos: LibraryPosition::FromTop(2),
+            },
+        },
+        &ctx,
+    ).unwrap();
+
+    // Verify the card is now at index 2 of the 6-card library.
+    assert_eq!(g.players[0].library.len(), 6);
+    assert_eq!(g.players[0].library[0].id, a);
+    assert_eq!(g.players[0].library[1].id, b);
+    assert_eq!(g.players[0].library[2].id, target_card);
+    assert_eq!(g.players[0].library[3].id, c);
+    assert_eq!(g.players[0].library[4].id, d);
+    assert_eq!(g.players[0].library[5].id, e);
+}
+
+/// CR 401.7: "If a player is instructed to put a card 'Nth from the top'
+/// of a library, and there are fewer than N cards in that library, the
+/// card is put on the bottom of that library."
+#[test]
+fn library_position_from_top_with_fewer_cards_goes_to_bottom() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::{LibraryPosition, ZoneDest};
+    let mut g = two_player_game();
+    // Seed the library with only two cards.
+    let a = g.add_card_to_library(0, catalog::plains());
+    let b = g.add_card_to_library(0, catalog::island());
+
+    // Put a card in battlefield and move it to FromTop(7) — should go to bottom.
+    let target_card = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        0,
+        Some(crate::game::types::Target::Permanent(target_card)),
+        0,
+        0,
+    );
+    let _ = g.resolve_effect(
+        &Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::Seat(0),
+                pos: LibraryPosition::FromTop(7),
+            },
+        },
+        &ctx,
+    ).unwrap();
+
+    assert_eq!(g.players[0].library.len(), 3);
+    assert_eq!(g.players[0].library[0].id, a);
+    assert_eq!(g.players[0].library[1].id, b);
+    // The new card was put on bottom (index 2).
+    assert_eq!(g.players[0].library[2].id, target_card);
+}
+
+/// `LibraryPosition::FromTop(0)` is equivalent to `Top`.
+#[test]
+fn library_position_from_top_zero_is_top() {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::target_filtered;
+    use crate::effect::{LibraryPosition, ZoneDest};
+    let mut g = two_player_game();
+    let a = g.add_card_to_library(0, catalog::plains());
+    let b = g.add_card_to_library(0, catalog::island());
+
+    let target_card = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ctx = crate::game::effects::EffectContext::for_spell(
+        0,
+        Some(crate::game::types::Target::Permanent(target_card)),
+        0,
+        0,
+    );
+    let _ = g.resolve_effect(
+        &Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::Seat(0),
+                pos: LibraryPosition::FromTop(0),
+            },
+        },
+        &ctx,
+    ).unwrap();
+
+    assert_eq!(g.players[0].library[0].id, target_card);
+    assert_eq!(g.players[0].library[1].id, a);
+    assert_eq!(g.players[0].library[2].id, b);
+}

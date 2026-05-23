@@ -14691,3 +14691,164 @@ pub fn silverquill_pristine_sermon_b136() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 138 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inksworn (b138) — {1}{W}{B} 2/3 Inkling Cleric Flying.
+/// ETB Drain 1. Solid 3-mana evasive drain body, mirrors
+/// Inkling Coursebinder shape.
+pub fn silverquill_inksworn_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inksworn (b138)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Ledgerwarden (b138) — {2}{W} 1/4 Inkling Cleric Flying +
+/// Vigilance. Magecraft Scry 1. Defensive evasive scaler.
+pub fn inkling_ledgerwarden_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Ledgerwarden (b138)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillstrike (b138) — {W}{B} Instant.
+/// Seq(Drain 2 + Scry 1). 2-mana drain spell with selection.
+pub fn silverquill_quillstrike_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillstrike (b138)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quillforge (b138) — {3}{W}{B} 3/3 Inkling Wizard Flying.
+/// ETB drain 1 + draw a card. Uses `etb_drain_and_draw(1)`.
+pub fn inkling_quillforge_b138() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_draw;
+    CardDefinition {
+        name: "Inkling Quillforge (b138)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Memorialist II (b138) — {1}{W} 1/3 Human Cleric.
+/// Magecraft Gain 1 life. Defensive lifegain-on-cast body.
+pub fn silverquill_memorialist_ii_b138() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Memorialist II (b138)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

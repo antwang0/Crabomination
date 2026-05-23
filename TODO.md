@@ -1265,14 +1265,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   re-reveal" — ⏳ (no `play_with_top_revealed` to begin with, so the
   CR 400.7 zone-change-new-object semantic doesn't have a hook yet).
   (g) **401.7** "Put a card 'Nth from the top' with fewer than N → goes
-  on bottom" — 🟡 (the engine has no `LibraryPosition::FromTop(n)`
-  primitive yet — Approach of the Second Sun's "seventh from top"
-  collapses to `Move → Graveyard` per the catalog comment. The
-  `Player::add_to_library_top` / `add_to_library_bottom` helpers cover
-  the two boundary positions, and `shuffle_library` is the canonical
-  randomiser. Adding a generalised `add_to_library_at(n)` with the
-  fewer-than-N → bottom guard would unblock Approach of the Second
-  Sun's true behavior and any future "Nth from top" effect).
+  on bottom" — ✅ (push claude/modern_decks batch 139): the new
+  `LibraryPosition::FromTop(usize)` variant in `effect.rs` and the
+  matching branch in `place_card_in_dest` (`game/effects/movement.rs`)
+  implement the CR 401.7 semantic exactly: `FromTop(0)` = top,
+  `FromTop(n)` inserts at index n if the library has ≥ n cards, else
+  pushes to bottom. Tests: `library_position_from_top_inserts_at_index`
+  (5-card library, FromTop(2) lands at index 2), `library_position_
+  from_top_with_fewer_cards_goes_to_bottom` (2-card library + FromTop(7)
+  → bottom per CR 401.7), `library_position_from_top_zero_is_top`
+  (FromTop(0) = Top equivalence). Approach of the Second Sun still uses
+  the graveyard approximation since switching it would change the
+  "second cast wins" test pattern; a future refactor can wire it to
+  `LibraryPosition::FromTop(6)` once an exile-instead-of-graveyard cast
+  resolution path lands.
   Tests: `lookup_resolves_a_basic_land` exercises library-resident
   deserialization; `approach_of_the_second_sun_*` tests cover the
   "library positioning is approximated" path; library-size predicates
