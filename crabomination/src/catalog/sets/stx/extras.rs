@@ -334,19 +334,36 @@ pub fn combat_professor() -> CardDefinition {
 /// {T}: Exile the top card of your library. You may play it this turn.
 /// Activate only if you control no cards in hand."
 ///
-/// 🟡 Body wired as 2/1 Human Shaman. The full "play from exile this
-/// turn" semantics are still ⏳ (no play-from-exile-with-timer
-/// primitive — same gap as Suspend Aggression). Push (modern_decks)
-/// adds the attack-trigger rummage approximation: on each attack,
-/// the controller may discard a card; if they do, draw a card
-/// (replacing the "exile-and-play" rider with a strict-weaker cantrip
-/// since the engine can't grant temporary playability to an exiled
-/// card). The empty-hand activated ability is omitted (no
-/// hand-size-conditional sorcery primitive aligned with the activation
-/// path).
+/// Push (claude/modern_decks batch 140): both halves are now fully
+/// wired via the existing `Effect::Move(TopOfLibrary → Exile) +
+/// GrantMayPlay(LastMoved, EndOfThisTurn)` pattern (used by Tablet of
+/// Discovery, Spell Satchel, Practiced Scrollsmith). The attack trigger
+/// asks the controller whether to discard (via `MayDo`); on yes, the
+/// top card of library is exiled and gets a `MayPlay` permission valid
+/// until end of turn. The empty-hand activated ability does the same
+/// exile-and-may-play (no longer falls back to a cantrip).
+///
+/// AutoDecider declines the optional discard (so a bot won't discard
+/// for value); ScriptedDecider can flip true to exercise the full
+/// behavior.
 pub fn conspiracy_theorist() -> CardDefinition {
-    use crate::card::ActivatedAbility;
-    use crate::effect::Predicate;
+    use crate::card::{ActivatedAbility, MayPlayDuration};
+    use crate::effect::{Predicate, ZoneDest};
+    let exile_top_and_grant_may_play = Effect::Seq(vec![
+        Effect::Move {
+            what: Selector::TopOfLibrary {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+            },
+            to: ZoneDest::Exile,
+        },
+        Effect::GrantMayPlay {
+            what: Selector::LastMoved,
+            duration: MayPlayDuration::EndOfThisTurn,
+            to_owner: false,
+            exile_after: false,
+        },
+    ]);
     CardDefinition {
         name: "Conspiracy Theorist",
         cost: cost(&[generic(1), r()]),
@@ -360,21 +377,12 @@ pub fn conspiracy_theorist() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        // Push (modern_decks): empty-hand activated ability wired via
-        // `ActivatedAbility.condition: Predicate::ValueEquals(HandSizeOf,
-        // 0)`. The "exile top + may play this turn" rider still
-        // approximates to a plain Draw (cast-from-exile-with-timer
-        // primitive is engine-wide ⏳ — same gap as Suspend Aggression,
-        // Tablet of Discovery, Practiced Scrollsmith). Activating
-        // immediately puts a card in hand, so the empty-hand gate
-        // naturally rate-limits this to once per discard cycle.
+        // {1}{R}, {T}: exile top of library + may play it this turn.
+        // The empty-hand gate is enforced via the predicate.
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(1), r()]),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: exile_top_and_grant_may_play.clone(),
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -390,22 +398,15 @@ pub fn conspiracy_theorist() -> CardDefinition {
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            // Approximation: "you may discard a card. If you do, draw a
-            // card." (printed: "exile top + may play this turn").
-            // AutoDecider declines (won't discard for the cantrip);
-            // ScriptedDecider can flip true for tests.
             effect: Effect::MayDo {
-                description: "Discard a card, then draw a card.".to_string(),
+                description: "Discard a card, exile the top card of your library, may play.".to_string(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
+                    exile_top_and_grant_may_play,
                 ])),
             },
         }],

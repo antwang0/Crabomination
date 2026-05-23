@@ -13848,19 +13848,54 @@ fn conspiracy_theorist_activation_succeeds_with_empty_hand() {
     g.clear_sickness(ct);
     // P0's hand must be empty for the activation gate to pass.
     assert!(g.players[0].hand.is_empty());
-    g.add_card_to_library(0, catalog::lightning_bolt());
+    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
 
-    let hand_before = g.players[0].hand.len();
+    let exile_before = g.exile.len();
     g.perform_action(GameAction::ActivateAbility {
         card_id: ct,
         ability_index: 0,
         target: None, x_value: None })
     .expect("Conspiracy Theorist activates when hand is empty");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1,
-        "P0 should have drawn a card (approximation of 'exile top, may play')");
+    // Top of library should now be in exile with a may-play permission.
+    assert_eq!(g.exile.len(), exile_before + 1,
+        "exile should hold the exiled top card");
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("the bolt should be in exile");
+    assert!(exiled.may_play_until.is_some(),
+        "exiled card should have may_play permission");
+}
+
+#[test]
+fn conspiracy_theorist_attack_with_discard_exiles_top_and_grants_may_play() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    // Put a discard target in hand.
+    let _hand_discard = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
+    // Scripted decider: opt into the MayDo, so discard happens and the
+    // top card gets exiled with may-play.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Fire the attack trigger via a direct dispatch — we can't easily
+    // step combat in this test harness. Use perform_action to declare
+    // an attacker.
+    let exile_before = g.exile.len();
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: ct,
+        target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("Conspiracy Theorist attacks");
+    drain_stack(&mut g);
+    // The top card should now be in exile.
+    assert_eq!(g.exile.len(), exile_before + 1);
+    let exiled = g.exile.iter().find(|c| c.id == bolt_id)
+        .expect("the bolt should be in exile");
+    assert!(exiled.may_play_until.is_some(),
+        "exiled card should have may_play permission");
 }
 
 #[test]

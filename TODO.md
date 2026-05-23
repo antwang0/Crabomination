@@ -4031,6 +4031,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   +1/+1 counters Reach), Inkling Wingmother (on-attack Inkling), Lorehold
   Spirit-Captain (on-attack Spirit token).
 
+- ✅ **STX batches 138 + 139 + 140 — 38 more synthesised cards + CR
+  401.7 LibraryPosition::FromTop primitive + Conspiracy Theorist
+  promotion** (push claude/modern_decks batch 138/139/140 done).
+  Batch 138 added 22 cards (5 per school for Silverquill/Witherbloom/
+  Lorehold/Prismari + 3 Quandrix); batch 139 added 15 cards (3+ per
+  school); batch 140 promoted Conspiracy Theorist from 🟡 → ✅ by
+  wiring its full attack-trigger and empty-hand activated halves via
+  the existing `Move(TopOfLibrary → Exile) + GrantMayPlay(LastMoved,
+  EndOfThisTurn)` chain (no new primitive needed — the engine had it
+  since Tablet of Discovery / Spell Satchel landed). Tests: 3934 →
+  3976 (42 new tests: 38 card tests + 3 library-position primitive
+  tests + 1 conspiracy attack-trigger test). All pass; cargo clippy
+  clean.
+
 - ⏳ **Future batch — focus on engine-feature-unlocking cards**: priority
   candidates are Helix Pinnacle (keyword counter), Walking Ballista
   (Nth-counter trigger), and cards that exercise CR 122.4 (counter cap)
