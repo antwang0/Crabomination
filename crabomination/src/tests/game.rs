@@ -40,6 +40,72 @@ fn cannot_play_two_lands_per_turn() {
 }
 
 #[test]
+fn exploration_grants_extra_land_play_per_turn() {
+    // CR 305.2 — "A player can normally play one land during their
+    // turn; however, continuous effects may increase this number."
+    // Exploration grants +1 land/turn via StaticEffect::ExtraLandPerTurn.
+    let mut g = two_player_game();
+    let _exp = g.add_card_to_battlefield(0, catalog::exploration());
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).expect("first land play");
+    // CR 305.2a — second land permitted because Exploration adds +1.
+    g.perform_action(GameAction::PlayLand(f2))
+        .expect("second land play permitted by Exploration");
+    assert_eq!(g.players[0].lands_played_this_turn, 2);
+}
+
+#[test]
+fn exploration_third_land_rejected_with_only_one_copy() {
+    // CR 305.2b — "A player can't play a land if the number of lands
+    // they can play this turn is equal to or less than the number
+    // they've played." With one Exploration the cap is 2; the third
+    // attempt errors.
+    let mut g = two_player_game();
+    let _exp = g.add_card_to_battlefield(0, catalog::exploration());
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+    let f3 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).unwrap();
+    g.perform_action(GameAction::PlayLand(f2)).unwrap();
+    let err = g.perform_action(GameAction::PlayLand(f3)).unwrap_err();
+    assert_eq!(err, GameError::AlreadyPlayedLand);
+}
+
+#[test]
+fn two_explorations_stack_for_three_lands_per_turn() {
+    // Stacking grant: two Explorations add +2, total cap is 3.
+    let mut g = two_player_game();
+    let _e1 = g.add_card_to_battlefield(0, catalog::exploration());
+    let _e2 = g.add_card_to_battlefield(0, catalog::exploration());
+    assert_eq!(g.max_lands_per_turn(0), 3);
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+    let f3 = g.add_card_to_hand(0, catalog::forest());
+    let f4 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).unwrap();
+    g.perform_action(GameAction::PlayLand(f2)).unwrap();
+    g.perform_action(GameAction::PlayLand(f3)).unwrap();
+    let err = g.perform_action(GameAction::PlayLand(f4)).unwrap_err();
+    assert_eq!(err, GameError::AlreadyPlayedLand);
+}
+
+#[test]
+fn opp_exploration_does_not_grant_extra_land_to_you() {
+    // ExtraLandPerTurn is checked against the *active* player's
+    // controlled permanents — an opponent's Exploration doesn't help.
+    let mut g = two_player_game();
+    let _exp = g.add_card_to_battlefield(1, catalog::exploration());
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(f1)).unwrap();
+    let err = g.perform_action(GameAction::PlayLand(f2)).unwrap_err();
+    assert_eq!(err, GameError::AlreadyPlayedLand);
+    assert_eq!(g.max_lands_per_turn(0), 1, "P0 has no extra land grants");
+    assert_eq!(g.max_lands_per_turn(1), 2, "P1 controls the Exploration");
+}
+
+#[test]
 fn cannot_play_land_in_combat() {
     let mut g = two_player_game();
     g.step = TurnStep::DeclareAttackers;

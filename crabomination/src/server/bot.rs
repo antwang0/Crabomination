@@ -232,8 +232,10 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
 
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
-    // played-this-turn, etc.).
-    if state.players[seat].can_play_land()
+    // played-this-turn, etc.). Use the game-level helper so an
+    // Exploration / Azusa-style ExtraLandPerTurn static lets the bot
+    // play a second land in the same turn (CR 305.2).
+    if state.can_player_play_land(seat)
         && let Some(land) = state.players[seat].hand.iter().find(|c| c.definition.is_land())
     {
         let action = GameAction::PlayLand(land.id);

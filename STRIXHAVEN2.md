@@ -19,10 +19,69 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1829 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1850 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 129:
+Push (claude/modern_decks branch — current head — **post-batch 130:
+21 more Strixhaven synthesised cards across all five colleges, plus
+the CR 305.2 ExtraLandPerTurn engine wiring + Exploration card
+(modern-staple). All cards use existing primitives — no new engine
+primitives required for STX, but the land-cap check is now CR-correct
+via the new `GameState::can_player_play_land`/`max_lands_per_turn`
+helpers. Tests: 3778 → 3806 (21 b130 card tests + 4 Exploration tests
++ 3 land-cap helpers = 28 new). All tests pass; cargo clippy clean.
+
+- **Lorehold (R/W, 6 cards)** — Lorehold Spiritcaller (b130) ({R}{W}
+  1/1 Spirit Cleric, ETB mint a 2/2 Spirit), Lorehold Skyguard Banner
+  (b130) ({3}{W} 2/3 Spirit Soldier, "Other Spirit creatures you
+  control have flying" — second Lorehold Spirit-tribal anthem
+  granting evasion), Lorehold Pyresage (b130) ({4}{R}{W} 4/4 Spirit
+  Warrior Haste, magecraft mint Spirit), Lorehold Reliquarian (b130)
+  ({3}{W} 2/3 Spirit Cleric ETB return Spirit MV≤3 from gy → hand),
+  Lorehold Battle Cantrip (b130) ({2}{R}{W} Instant — DealDamage 3 +
+  mint Spirit), Lorehold Pyremaster (b130) ({2}{R} 2/3 Spirit Wizard
+  magecraft drain each opp 1).
+- **Witherbloom (B/G, 5 cards)** — Witherbloom Skeletonsage (b130)
+  ({1}{B} 1/3 Skeleton Wizard magecraft AddCounter +1/+1 self),
+  Witherbloom Planttender (b130) ({1}{G} 1/3 Plant Druid Reach),
+  Witherbloom Blightroot (b130) ({1}{B}{G} 2/2 Plant Beast Deathtouch),
+  Witherbloom Petalspeak (b130) ({2}{G} Sorcery — +1/+1 counter on
+  each Plant you control), Witherbloom Skullcarver (b130) ({3}{B}
+  4/3 Skeleton Warrior).
+- **Silverquill (W/B, 4 cards)** — Silverquill Pageturner (b130)
+  ({1}{W} 1/2 Inkling Cleric Flying ETB Scry 1), Inkling Archivist
+  (b130) ({3}{B} 2/3 Inkling Wizard Flying dies → drain 1),
+  Silverquill Inkclaw (b130) ({1}{W}{B} Instant — Drain 2 +
+  AddCounter(-1/-1) on target creature), Silverquill Quillsworn
+  (b130) ({2}{W}{B} 3/3 Inkling Knight First Strike).
+- **Prismari (U/R, 3 cards)** — Prismari Emberseer (b130) ({1}{R}
+  1/2 Human Wizard magecraft mint Treasure), Prismari Inktrickster
+  (b130) ({2}{U}{R} 3/2 Human Wizard Flying magecraft Loot), Prismari
+  Burnstrike (b130) ({R}{R} Instant DealDamage 4 to creature).
+- **Quandrix (G/U, 3 cards)** — Quandrix Fractalseed (b130) ({1}{G}{U}
+  2/2 Elf Druid ETB +1/+1 counter on target Fractal), Quandrix Doubler
+  II (b130) ({3}{G}{U} 2/4 Merfolk Wizard ETB +2/+2 counters on each
+  Fractal), Fractal Skybloom (b130) ({2}{U} 2/2 Fractal Wizard Flying).
+
+Engine bonuses (batch 130):
+- **CR 305.2 — ExtraLandPerTurn now CR-correct.** The
+  `StaticEffect::ExtraLandPerTurn` variant existed since the catalog
+  began but was *never checked* by `play_land` — the per-turn land
+  cap was hard-coded to 1 via `Player::can_play_land`. Now
+  `GameState::can_player_play_land` walks every battlefield permanent
+  the active player controls and sums their `ExtraLandPerTurn` static
+  grants; the cap becomes `1 + grants`. Multiple Explorations stack
+  (verified by `two_explorations_stack_for_three_lands_per_turn`); an
+  opponent's Exploration does not help (verified by
+  `opp_exploration_does_not_grant_extra_land_to_you`).
+- **Exploration card** ({G} Enchantment, mod_set) ships as the
+  reference user of `StaticEffect::ExtraLandPerTurn`. Tests:
+  `exploration_grants_extra_land_play_per_turn`,
+  `exploration_third_land_rejected_with_only_one_copy`,
+  `two_explorations_stack_for_three_lands_per_turn`,
+  `opp_exploration_does_not_grant_extra_land_to_you`.
+
+Push (claude/modern_decks branch — post-batch 129:
 30 more Strixhaven synthesised cards across all five colleges, with
 the Lorehold Spirit-tribal anthem (Lorehold Spirit Banner) and Plant /
 Skeleton / Fractal tribal anthems unlocking three new tribal subpools.

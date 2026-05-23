@@ -445,6 +445,41 @@ impl crate::game::GameState {
                 .any(|sa| matches!(sa.effect, StaticEffect::LandsTapColorlessOnly))
         })
     }
+
+    /// CR 305.2 — Number of additional lands `player` may play this turn
+    /// over the default "one." Counts every battlefield permanent that
+    /// the given player controls whose static abilities include
+    /// `StaticEffect::ExtraLandPerTurn` (Exploration, Azusa Lost But
+    /// Seeking, Wayward Swordtooth). Each granting permanent adds one,
+    /// so two Explorations stack to "three lands per turn."
+    pub fn extra_land_plays_per_turn(&self, player: usize) -> u32 {
+        use crate::effect::StaticEffect;
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == player)
+            .map(|c| {
+                c.definition
+                    .static_abilities
+                    .iter()
+                    .filter(|sa| matches!(sa.effect, StaticEffect::ExtraLandPerTurn))
+                    .count() as u32
+            })
+            .sum()
+    }
+
+    /// CR 305.2 — Total lands `player` may play this turn. Defaults to
+    /// 1, plus any `ExtraLandPerTurn` grants. Used by `play_land` to
+    /// permit second-land + plays under Exploration etc.
+    pub fn max_lands_per_turn(&self, player: usize) -> u32 {
+        1 + self.extra_land_plays_per_turn(player)
+    }
+
+    /// CR 305.2a — Whether `player` may legally play another land this
+    /// turn. Compares lands already played to the active per-turn cap
+    /// (which honors `ExtraLandPerTurn` static effects).
+    pub fn can_player_play_land(&self, player: usize) -> bool {
+        self.players[player].lands_played_this_turn < self.max_lands_per_turn(player)
+    }
 }
 
 fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
@@ -483,7 +518,9 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        if !self.players[p].can_play_land() {
+        // CR 305.2 — honor ExtraLandPerTurn static grants (Exploration,
+        // Azusa, Wayward Swordtooth) when checking the per-turn cap.
+        if !self.can_player_play_land(p) {
             return Err(GameError::AlreadyPlayedLand);
         }
         if !self.players[p].has_in_hand(card_id) {

@@ -11534,3 +11534,171 @@ pub fn witherbloom_boneshroud_b129() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 130 (push claude/modern_decks): more Witherbloom cards ────────────
+
+/// Witherbloom Skeletonsage (b130) — {1}{B}, 1/3 Skeleton Wizard.
+/// Magecraft puts a +1/+1 counter on this creature. Self-growing
+/// Skeleton on the curve below Reaper-Hand and Bonewight; pairs with
+/// Reaper-Lord's Skeleton anthem.
+pub fn witherbloom_skeletonsage_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Skeletonsage (b130)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Planttender (b130) — {1}{G}, 1/3 Plant Druid, Reach.
+/// Vanilla Plant defender with Reach — pairs with Vinetongue (Plant
+/// anthem) and Sprawl-Vine to defend vs Flying-heavy boards.
+pub fn witherbloom_planttender_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Planttender (b130)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Blightroot (b130) — {1}{B}{G}, 2/2 Plant Beast, Deathtouch.
+/// 3-mana Plant deathtoucher — a strong removal-or-trade body that
+/// benefits from Vinetongue's Plant anthem.
+pub fn witherbloom_blightroot_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Blightroot (b130)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Petalspeak (b130) — {2}{G} Sorcery. Put a +1/+1 counter
+/// on each Plant you control. Mass Plant pump that scales with the
+/// Plant subpool (Petalmaster, Sprawl-Vine, Mossfeeder, Vinetongue,
+/// Pestcaller, Planttender, Blightroot).
+pub fn witherbloom_petalspeak_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Petalspeak (b130)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Plant))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Skullcarver (b130) — {3}{B}, 4/3 Skeleton Warrior.
+/// Vanilla Skeleton body at top-of-curve — benefits from Reaper-Lord's
+/// +1/+1/menace Skeleton anthem (becomes a 5/4 menace).
+pub fn witherbloom_skullcarver_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Skullcarver (b130)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -177,6 +177,13 @@ impl Player {
         !self.eliminated
     }
 
+    /// Baseline per-turn land-play check — `true` iff this player has
+    /// not yet played any land this turn. NOTE: this is a vanilla CR
+    /// 305.2 default and **does not** consult
+    /// `StaticEffect::ExtraLandPerTurn` (Exploration, Azusa). For the
+    /// CR-correct check that honors continuous-effect grants, use
+    /// `GameState::can_player_play_land(seat)` which sums
+    /// `extra_land_plays_per_turn(seat)` into the cap.
     pub fn can_play_land(&self) -> bool {
         self.lands_played_this_turn == 0
     }

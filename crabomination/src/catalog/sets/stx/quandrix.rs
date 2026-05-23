@@ -9620,3 +9620,116 @@ pub fn quandrix_bloomscatter_b129() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 130 (push claude/modern_decks): more Quandrix cards ───────────────
+
+/// Quandrix Fractalseed (b130) — {1}{G}{U}, 2/2 Elf Druid. ETB puts a
+/// +1/+1 counter on target Fractal you control. Curve-out partner for
+/// Quandrix Geometer (b128) — a 3-mana 2/2 that grows an existing
+/// Fractal by +1/+1, paired with Bloomforge / Anomaly seed.
+pub fn quandrix_fractalseed_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalseed (b130)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Doubler II (b130) — {3}{G}{U}, 2/4 Merfolk Wizard. ETB
+/// puts two +1/+1 counters on each Fractal you control. Bigger Doubler
+/// (b129) variant — 5 mana for a deeper anthem effect.
+pub fn quandrix_doubler_ii_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Doubler II (b130)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Skybloom (b130) — {2}{U}, 2/2 Fractal Wizard, Flying. A
+/// Fractal-typed evasive 3-drop — fills the gap between Geometer
+/// (2/2 ground) and Tide-Surger (3/3 flying) and benefits from the
+/// Fractalbinder anthem.
+pub fn fractal_skybloom_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Skybloom (b130)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

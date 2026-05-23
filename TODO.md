@@ -2794,8 +2794,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   stack-empty + main-phase invariants via `can_cast_sorcery_speed`;
   the land moves direct to battlefield, no `StackItem` push).
   (b) **305.2 / 305.2a / 305.2b** "One land per turn unless modified"
-  — ✅ (`Player.can_play_land()` enforces `lands_played_this_turn ==
-  0`; bumped per land-play, reset in `do_untap`. See dedicated row
+  — ✅ (`GameState::can_player_play_land` (push modern_decks batch 130)
+  compares `lands_played_this_turn` against
+  `max_lands_per_turn(player) = 1 + extra_land_plays_per_turn(player)`,
+  where the addend counts every battlefield permanent the player
+  controls whose static abilities include
+  `StaticEffect::ExtraLandPerTurn` (Exploration ships as the
+  reference user). Multiple Explorations stack. See dedicated row
   below).
   (c) **305.3** "Can't play a land if it isn't your turn" — ✅
   (`play_land` checks `active_player == player_idx` via
@@ -2845,21 +2850,25 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Promote the umbrella to ✅ when 305.7 (set-subtype rewrite) lands;
   the remaining clauses are end-to-end CR-compliant.
 
-- ✅ **CR 305.2 / 305.2b — One land per turn enforcement** (push
-  modern_decks audit): "A player can normally play one land during
-  their turn; however, continuous effects may increase this number."
-  The baseline rule is enforced via `Player.can_play_land()` returning
-  `lands_played_this_turn == 0` (consulted in
-  `actions.rs::play_land`). The `lands_played_this_turn` counter is
-  bumped on every land-play (including back-face MDFC land plays via
-  `play_land_back`) and reset to 0 on the player's untap step. The
-  `StaticEffect::ExtraLandPerTurn` variant is recognized by the layer
-  system but not yet enforced — no catalog card uses it today, so
-  the gap is theoretical. When the first Exploration / Azusa Lost But
-  Seeking-style card lands in the catalog, the `can_play_land`
-  helper will need to thread the player's active static-effect
-  count so it allows N+1 plays per turn. Tracked under "Engine —
-  Missing Mechanics" below as a TODO.
+- ✅ **CR 305.2 / 305.2a / 305.2b — One land per turn enforcement +
+  ExtraLandPerTurn** (push modern_decks batch 130): "A player can
+  normally play one land during their turn; however, continuous
+  effects may increase this number." Baseline is enforced via
+  `GameState::can_player_play_land` (which replaced the old
+  `Player::can_play_land` check at the `play_land_with_face` call
+  site). The new helper sums every battlefield permanent the active
+  player controls whose static abilities include
+  `StaticEffect::ExtraLandPerTurn` — Exploration ({G} Enchantment,
+  Urza's Saga reprint) ships as the reference user. Two Explorations
+  stack to "three lands per turn"; an opponent's Exploration does
+  not help (controller scoping is by `c.controller == player`).
+  The `lands_played_this_turn` counter is bumped on every land-play
+  (including back-face MDFC land plays via `play_land_back`) and
+  reset to 0 on the player's untap step. Tests:
+  `exploration_grants_extra_land_play_per_turn`,
+  `exploration_third_land_rejected_with_only_one_copy`,
+  `two_explorations_stack_for_three_lands_per_turn`,
+  `opp_exploration_does_not_grant_extra_land_to_you`.
 
 - ✅ **CR 608.2c / 701.6a — Later text on a card may modify earlier
   text (Memory Lapse exception)** (modern_decks push, engine
@@ -7993,3 +8002,54 @@ next:
   the existing 20+ Spirit creatures (Aerialist, Ironbound, Bell-Ringer,
   Battlespirit, Skybinder) into a tight tribal pool. Mirror of Tenured
   Inkcaster's Inkling anthem.
+
+### Suggested next-up tasks (additions from batch 130)
+
+Batch 130 added 21 STX synthesised cards across all five colleges and
+landed the CR 305.2 ExtraLandPerTurn engine wiring with Exploration
+({G} Enchantment) as the reference user. Open items to explore next:
+
+- **Azusa, Lost But Seeking / Wayward Swordtooth** — printed cards
+  that grant +2 land plays per turn (Azusa) or +1 (Swordtooth)
+  via a static ability. Now that `ExtraLandPerTurn` is honored, each
+  copy of these would automatically chain. The variant we need is
+  a `StaticEffect::ExtraLandPlaysPerTurn(N)` (an integer multiplier,
+  not a flag) — currently the engine sums grants by counting copies
+  of the flag, which means an Azusa-style "+2 land plays per turn"
+  needs three flag stamps (one each from "playing one more" lined up
+  three times) on the same card. A clean refactor would replace the
+  flag with `ExtraLandPlaysPerTurn(u32)` and have Exploration use
+  `(1)`, Azusa use `(2)`, Swordtooth use `(1)`.
+- **Mox Diamond / Crucible of Worlds** — Mox Diamond ("If a land
+  card would enter the battlefield under your control, you may pay
+  …") and Crucible ("you may play land cards from your graveyard")
+  both need the play-land code path to be aware of *which zone* the
+  land card is being played from. Currently `play_land_with_face`
+  hard-codes `players[p].remove_from_hand`. A `play_land_from(zone)`
+  variant + a `LandPlayPolicy::FromGraveyard` static effect would
+  cleanly unlock both cards.
+- **Fastbond** — "You may play any number of additional lands on
+  each of your turns. Whenever you play a land, if it wasn't the
+  first land you played this turn, Fastbond deals 1 damage to you."
+  Needs a uncapped variant of ExtraLandPerTurn (or just a big
+  number) plus a `LandPlayed` event-trigger gated on
+  `lands_played_this_turn > 1`. The trigger half is already supported
+  via `EventKind::LandPlayed` if we add the gating predicate.
+- **Spirit-tribal anthem variants beyond Banner + Skyguard** — the
+  R/W Spirit pool now has +1/+1 (Banner b129), Lifelink-grant
+  (Lectern b129), and Flying-grant (Skyguard Banner b130). Future
+  anthems to round out the cycle: Trample-grant ("Other Spirits you
+  control have trample"), Reach-grant ("Other Spirits have reach")
+  for Spirit-tribal-defensive builds, and an indestructible-grant
+  Equipment ("Equipped creature has indestructible if it's a
+  Spirit" — Hammer-of-Nazahn flavor).
+- **Plant-tribal anthem + Plant-tribal payoffs** — b130 added
+  Petalspeak ({2}{G} Sorcery, mass +1/+1 on each Plant) and
+  Planttender/Blightroot (vanilla Plants). A Plant-tribal lord
+  ("Other Plants you control get +1/+1") is the next natural fit;
+  the Vinetongue (b129) already plays this role on Plants but a
+  cheaper 2-mana version would unlock aggressive Plant decks.
+- **Skeleton-tribal regenerate cycle** — Bonewight (b129) carries
+  `Keyword::Regenerate(1)` already. A small cycle of similar
+  Skeleton bodies (1/1, 2/2, 3/3) at curve-out mana values would
+  give Reaper-Lord's anthem a tribal pool to feed.

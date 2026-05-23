@@ -5,10 +5,10 @@
 use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CounterType, Effect, EventKind, EventScope, EventSpec,
-    SelectionRequirement, Subtypes, TriggeredAbility,
+    SelectionRequirement, StaticAbility, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{PlayerRef, Selector, Value};
+use crate::effect::{PlayerRef, Selector, StaticEffect, Value};
 use crate::mana::{cost, g, generic, u, w};
 
 /// Disenchant — {1}{W} Instant. Destroy target artifact or enchantment.
@@ -244,6 +244,40 @@ pub fn static_prison() -> CardDefinition {
             ]),
         }],
         static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Exploration — {G} Enchantment (Urza's Saga reprint). "You may play
+/// an additional land on each of your turns." Single static grant of
+/// `ExtraLandPerTurn`. The per-turn land cap is checked by
+/// [`GameState::can_player_play_land`] (CR 305.2a), which sums every
+/// `ExtraLandPerTurn` static effect controlled by the active player.
+/// Stacks multiplicatively: two Explorations → three lands per turn.
+pub fn exploration() -> CardDefinition {
+    CardDefinition {
+        name: "Exploration",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "You may play an additional land on each of your turns.",
+            effect: StaticEffect::ExtraLandPerTurn,
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

@@ -12027,3 +12027,224 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 130 (push claude/modern_decks): more Lorehold cards ───────────────
+
+/// Lorehold Spiritcaller (b130) — {R}{W}, 1/1 Spirit Cleric. ETB mints
+/// a 2/2 R/W Spirit token via the shared `lorehold_spirit_token`. A
+/// 2-mana mint that snowballs Spirit tribal pools (Banner, Lectern,
+/// Sparkscholar II) and lifts the Lorehold curve at the 2-drop slot.
+pub fn lorehold_spiritcaller_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritcaller (b130)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skyguard Banner (b130) — {3}{W}, 2/3 Spirit Soldier. Static
+/// "Other Spirit creatures you control have flying." A second Lorehold
+/// Spirit-tribal anthem that swaps the Banner's +1/+1 for evasion —
+/// pairs with the Banner to swing in over Reach defenders.
+pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Lorehold Skyguard Banner (b130)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control have flying.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Flying,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresage (b130) — {4}{R}{W}, 4/4 Spirit Warrior, Haste.
+/// Magecraft mints a 2/2 R/W Spirit. A 6-mana finisher that finishes
+/// the chain — magecraft mints Spirit, plus the Banner anthem stacks.
+pub fn lorehold_pyresage_b130() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_token;
+    CardDefinition {
+        name: "Lorehold Pyresage (b130)",
+        cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Reliquarian (b130) — {3}{W}, 2/3 Spirit Cleric. ETB returns
+/// target Spirit card with mana value ≤ 3 from your graveyard to your
+/// hand. A higher-MV Memorist that recovers larger Spirits (Bell-Ringer
+/// MV 3, Sparkmender MV 3, Honorbound MV 2 etc.).
+pub fn lorehold_reliquarian_b130() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Reliquarian (b130)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle Cantrip (b130) — {2}{R}{W} Instant. Deal 3 damage to
+/// target creature, then create a 2/2 R/W Spirit token. The combo of
+/// removal + body-on-instant matches Lorehold's "trade for body" style.
+pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle Cantrip (b130)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyremaster (b130) — {2}{R}, 2/3 Spirit Wizard. Magecraft
+/// each opponent loses 1 life — Lorehold's drain-each-opp body on a
+/// Spirit-typed Wizard for Spirit-tribal cascades.
+pub fn lorehold_pyremaster_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyremaster (b130)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

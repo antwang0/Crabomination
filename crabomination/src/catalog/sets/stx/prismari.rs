@@ -9023,3 +9023,98 @@ pub fn prismari_stormbolt_b129() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 130 (push claude/modern_decks): more Prismari cards ───────────────
+
+/// Prismari Emberseer (b130) — {1}{R}, 1/2 Human Wizard. Magecraft
+/// creates a Treasure. Bottom-curve Prismari ramp creature that turns
+/// every spell into a fuel token.
+pub fn prismari_emberseer_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Emberseer (b130)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inktrickster (b130) — {2}{U}{R}, 3/2 Human Wizard, Flying.
+/// Magecraft Loot (draw + discard). An evasive Prismari with the
+/// "smooth your draws" loop on every spell.
+pub fn prismari_inktrickster_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inktrickster (b130)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Burnstrike (b130) — {R}{R} Instant. Deal 4 damage to target
+/// creature. Premium 2-mana hard burn — pairs with Treasure ramp from
+/// Prismari Emberseer / Sparkmaker for explosive early kills.
+pub fn prismari_burnstrike_b130() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Burnstrike (b130)",
+        cost: cost(&[r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
