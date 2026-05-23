@@ -12248,3 +12248,290 @@ pub fn lorehold_pyremaster_b130() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─── Batch 131: Lorehold synthesised cards ────────────────────────────────────
+
+/// Lorehold Spirit-Warden (b131) — {1}{W}, 1/3 Spirit Cleric, Vigilance.
+/// ETB gain 2 life. Compact defensive body for the Spirit/Cleric tribal
+/// curve.
+pub fn lorehold_spirit_warden_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Warden (b131)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrosaint (b131) — {1}{R}, 2/1 Spirit Cleric, Haste.
+/// Magecraft drains each opponent 1.
+pub fn lorehold_pyrosaint_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrosaint (b131)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Relic-Keeper (b131) — {2}{W}, 2/3 Spirit Cleric, Vigilance.
+/// ETB exile a target card from any graveyard.
+pub fn lorehold_relic_keeper_b131() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Relic-Keeper (b131)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Any),
+            to: ZoneDest::Exile,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkpriest (b131) — {2}{R}{W}, 3/3 Spirit Cleric.
+/// Magecraft Seq(DealDamage 1 any target + GainLife 1). Lightning-Helix
+/// flavoured magecraft on a body.
+pub fn lorehold_sparkpriest_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkpriest (b131)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(1),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle-Chant (b131) — {3}{R}{W} Sorcery. Mints 2 Spirit
+/// tokens and grants Haste EOT to each Spirit you control.
+pub fn lorehold_battle_chant_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle-Chant (b131)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Remembrance (b131) — {2}{W} Sorcery. Return target creature
+/// card from your graveyard to hand, then scry 1.
+pub fn lorehold_remembrance_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Remembrance (b131)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature,
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Choir (b131) — {1}{R}{W}, 2/2 Spirit Wizard.
+/// Magecraft self-pump +1/+0 EOT.
+pub fn lorehold_ember_choir_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Choir (b131)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyremourner (b131) — {3}{R}, 3/3 Spirit Warrior, Haste.
+/// ETB DealDamage 1 to each opponent creature. Hasty mid-curve sweeper.
+pub fn lorehold_pyremourner_b131() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Pyremourner (b131)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            amount: Value::Const(1),
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

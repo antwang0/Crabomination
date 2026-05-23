@@ -14,7 +14,7 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    dies_drain, dies_mint_token, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    dies_drain, dies_mint_token, drain, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, on_attack_drain,
     on_other_dies, target_filtered,
 };
@@ -11691,6 +11691,253 @@ pub fn witherbloom_skullcarver_b130() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─── Batch 131: Witherbloom synthesised cards ──────────────────────────────────
+
+/// Witherbloom Pestseed (b131) — {1}{G}, 1/2 Plant Druid. ETB mints
+/// a Pest token (with the SOS Pest attack-trigger gainlife rider riding
+/// on the token).
+pub fn witherbloom_pestseed_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestseed (b131)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodthorn (b131) — {1}{B}, 2/2 Plant Vampire. Dies →
+/// drain 1.
+pub fn witherbloom_bloodthorn_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodthorn (b131)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Decaywarden (b131) — {2}{B}{G}, 2/3 Plant Warlock,
+/// Deathtouch. Magecraft drain 1.
+pub fn witherbloom_decaywarden_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Decaywarden (b131)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Lichbinder (b131) — {1}{B}, 1/2 Pest Cleric. "Whenever you
+/// sacrifice a creature, each opponent loses 1 life." Aristocrat drain
+/// payoff via `EventKind::CreatureSacrificed/YourControl`.
+pub fn pest_lichbinder_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Lichbinder (b131)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureSacrificed, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rootwoven (b131) — {3}{B}{G}, 4/4 Plant Beast, Trample.
+/// Vanilla finisher.
+pub fn witherbloom_rootwoven_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rootwoven (b131)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Overgrowth (b131) — {2}{B}{G} Sorcery. CreateToken 3 Pests.
+pub fn pest_overgrowth_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Overgrowth (b131)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Drainshroud (b131) — {1}{B} Instant. Drain 2 (each opp
+/// loses 2; you gain 2). Uses the `drain` shortcut.
+pub fn witherbloom_drainshroud_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainshroud (b131)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(2),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifescribe II (b131) — {2}{G}, 2/3 Plant Druid, Reach.
+/// Magecraft GainLife 2.
+pub fn witherbloom_lifescribe_ii_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifescribe II (b131)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

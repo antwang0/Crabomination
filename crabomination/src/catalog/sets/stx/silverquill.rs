@@ -25,7 +25,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    drain_and_surveil, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    drain, drain_and_surveil, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, magecraft_scry,
     on_attack_drain, on_attack_gain_life, target_filtered,
 };
@@ -13905,6 +13905,140 @@ pub fn silverquill_quillsworn_b130() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─── Batch 131: Silverquill synthesised cards ──────────────────────────────────
+
+/// Silverquill Inkblade (b131) — {1}{W}, 2/2 Inkling Cleric, Flying.
+/// Vanilla evasive 2-drop — strong on its own and pumped further by
+/// Tenured Inkcaster's +2/+2 anthem.
+pub fn silverquill_inkblade_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkblade (b131)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Sermon II (b131) — {2}{W}{B} Sorcery. Seq(Drain 2 +
+/// CreateToken 1 Inkling). Uses the `drain` shortcut.
+pub fn inkling_sermon_ii_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Sermon II (b131)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(2),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Serene Voice (b131) — {1}{W}{B}, 2/2 Vampire Cleric,
+/// Lifelink. ETB drain 1.
+pub fn silverquill_serene_voice_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Serene Voice (b131)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quill Blade (b131) — {W}{B} Instant. Seq(Drain 2 +
+/// PumpPT +1/+1 EOT to target creature you control).
+pub fn silverquill_quill_blade_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quill Blade (b131)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(2),
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

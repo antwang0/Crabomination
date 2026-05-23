@@ -9733,3 +9733,106 @@ pub fn fractal_skybloom_b130() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─── Batch 131: Quandrix synthesised cards ───────────────────────────────────
+
+/// Quandrix Fractalsage (b131) — {1}{G}{U}, 2/2 Fractal Wizard. ETB
+/// puts a +1/+1 counter on target Fractal you control.
+pub fn quandrix_fractalsage_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalsage (b131)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calculator (b131) — {2}{G}{U}, 2/3 Fractal Wizard.
+/// Magecraft AddCounter(+1/+1, Self). Self-growing magecraft.
+pub fn quandrix_calculator_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Calculator (b131)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Inkfall (b131) — {3}{G}{U} Sorcery. Create a 0/0 Fractal
+/// token, then put 4 +1/+1 counters on it. Single big Fractal body.
+pub fn fractal_inkfall_b131() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Fractal Inkfall (b131)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: create_token_with_counter(PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

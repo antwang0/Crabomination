@@ -4007,6 +4007,44 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **STX batch 131 — 21 more synthesised cards across all five
+  colleges** (push claude/modern_decks batch 131 done). Added 8
+  Lorehold + 8 Witherbloom + 4 Silverquill + 3 Prismari + 3 Quandrix
+  cards using only existing primitives. New helper-call patterns
+  reinforced: `etb_gain_life`, `etb_drain`, `etb_mint_token`,
+  `dies_drain`, `magecraft`, `magecraft_drain_each_opp`,
+  `magecraft_gain_life`, `magecraft_self_pump`, `magecraft_treasure`,
+  `create_token_with_counter`, the `Effect::Drain` /
+  `Effect::CreateToken` / `Effect::AddCounter` primitives, and a new
+  sacrifice-event-driven trigger (Pest Lichbinder) via
+  `EventKind::CreatureSacrificed/YourControl`. Tests: 3806 → 3836
+  (30 new b131 card tests — multiple tests per card). All pass; cargo
+  clippy clean.
+
+- ⏳ **CR 119.7 / 119.8 — "Can't gain/lose life" replacement** (next
+  up): The engine has no `Player.cannot_gain_life: bool` flag and no
+  `StaticEffect::CannotGainLife { who: PlayerRef }` primitive. Adding
+  it would unlock cards like Tainted Remedy (each opp gains life →
+  loses instead — already partially in catalog), Erebos, God of the
+  Dead (opp can't gain life unless they spend mana), Skullcrack-like
+  effects, and the Boon Reflection / Cathars' Crusade replacement
+  variants. Engine shape: a `Player.life_gain_locked: bool` flag
+  consulted in `do_gain_life`; or a layer-2-style continuous effect
+  on `Player` via a new `PlayerStaticEffect` table. Lowest effort:
+  per-player boolean flag + a `LifeGainPermitted` predicate in the
+  life-gain pipeline, since the catalog has no card today that
+  partially gates lifegain.
+
+- ⏳ **Keyword counters (CR 122.1b)** — no `CounterType::Keyword(Keyword)`
+  variant yet. Cards that print this rider (Mortarpod variants,
+  Helix Pinnacle, Decayed-counter zombies) would need a new
+  enum variant + a layer-6 keyword-grant pass in `compute_battlefield`
+  that reads `counter_count(Keyword(K))` per permanent. Same shape
+  as the existing `PlusOnePlusOne` layer-7c pass but for keywords.
+  Tracked as engine work — no STX/SOS card prints keyword counters,
+  but eventually a Mortarpod-style "keyword counter for {2}" card
+  would land here.
+
 - ✅ **`effect::shortcut::on_attack_drain` / `on_attack_gain_life` /
   `on_attack_ping_any` helpers** (push claude/modern_decks batch 125
   done). Three attack-trigger shortcut helpers landed in `effect.rs`

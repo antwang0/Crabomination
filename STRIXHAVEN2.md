@@ -19,10 +19,54 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1850 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1871 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 130:
+Push (claude/modern_decks branch — current head — **post-batch 131:
+21 more Strixhaven synthesised cards across all five colleges. All
+cards use existing primitives — no engine changes. Tests: 3806 →
+3836 (30 new b131 card tests). All tests pass; cargo clippy clean.
+
+- **Lorehold (R/W, 8 cards)** — Lorehold Spirit-Warden (b131) ({1}{W}
+  1/3 Spirit Cleric Vigilance ETB gain 2 life), Lorehold Pyrosaint
+  (b131) ({1}{R} 2/1 Spirit Cleric Haste magecraft drain each opp 1),
+  Lorehold Relic-Keeper (b131) ({2}{W} 2/3 Spirit Cleric Vigilance ETB
+  exile target gy card), Lorehold Sparkpriest (b131) ({2}{R}{W} 3/3
+  Spirit Cleric magecraft Seq(ping 1 + gain 1)), Lorehold Battle-Chant
+  (b131) ({3}{R}{W} Sorcery — 2 Spirit tokens + Haste EOT to all
+  friendly Spirits), Lorehold Remembrance (b131) ({2}{W} Sorcery —
+  return creature card from gy → hand + Scry 1), Lorehold Ember-Choir
+  (b131) ({1}{R}{W} 2/2 Spirit Wizard magecraft self-pump +1/+0 EOT),
+  Lorehold Pyremourner (b131) ({3}{R} 3/3 Spirit Warrior Haste ETB
+  ping 1 each opp creature).
+- **Witherbloom (B/G, 8 cards)** — Witherbloom Pestseed (b131) ({1}{G}
+  1/2 Plant Druid ETB Pest), Witherbloom Bloodthorn (b131) ({1}{B} 2/2
+  Plant Vampire dies → drain 1), Witherbloom Decaywarden (b131)
+  ({2}{B}{G} 2/3 Plant Warlock Deathtouch magecraft drain 1), Pest
+  Lichbinder (b131) ({1}{B} 1/2 Pest Cleric — "Whenever you sacrifice
+  a creature, each opp loses 1" via the CR-701.16 sacrifice event),
+  Witherbloom Rootwoven (b131) ({3}{B}{G} 4/4 Plant Beast Trample),
+  Pest Overgrowth (b131) ({2}{B}{G} Sorcery — 3 Pest tokens),
+  Witherbloom Drainshroud (b131) ({1}{B} Instant — Drain 2),
+  Witherbloom Lifescribe II (b131) ({2}{G} 2/3 Plant Druid Reach
+  magecraft gain 2 life).
+- **Silverquill (W/B, 4 cards)** — Silverquill Inkblade (b131) ({1}{W}
+  2/2 Inkling Cleric Flying vanilla 2-drop), Inkling Sermon II (b131)
+  ({2}{W}{B} Sorcery — Drain 2 + 1 Inkling token), Silverquill Serene
+  Voice (b131) ({1}{W}{B} 2/2 Vampire Cleric Lifelink ETB drain 1),
+  Silverquill Quill Blade (b131) ({W}{B} Instant — Drain 2 + +1/+1 EOT
+  on target friendly creature).
+- **Prismari (U/R, 3 cards)** — Prismari Artistic Burst (b131)
+  ({2}{U}{R} Sorcery — DealDamage 3 + Treasure), Prismari Inkpyromancer
+  (b131) ({1}{U}{R} 2/2 Human Wizard magecraft Treasure), Prismari
+  Volatile Inkstroke (b131) ({U}{R} Instant — DealDamage 2 + Scry 1).
+- **Quandrix (G/U, 3 cards)** — Quandrix Fractalsage (b131) ({1}{G}{U}
+  2/2 Fractal Wizard ETB +1/+1 counter on target friendly Fractal),
+  Quandrix Calculator (b131) ({2}{G}{U} 2/3 Fractal Wizard magecraft
+  AddCounter +1/+1 Self — Symmathematics-style), Fractal Inkfall
+  (b131) ({3}{G}{U} Sorcery — mint 1 Fractal with 4 +1/+1 counters).
+
+Push (claude/modern_decks branch — post-batch 130:
 21 more Strixhaven synthesised cards across all five colleges, plus
 the CR 305.2 ExtraLandPerTurn engine wiring + Exploration card
 (modern-staple). All cards use existing primitives — no new engine

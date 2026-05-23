@@ -9118,3 +9118,117 @@ pub fn prismari_burnstrike_b130() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─── Batch 131: Prismari synthesised cards ───────────────────────────────────
+
+/// Prismari Artistic Burst (b131) — {2}{U}{R} Sorcery. Seq(DealDamage 3
+/// to any target + create Treasure token). 4-mana burn + Treasure-ramp.
+pub fn prismari_artistic_burst_b131() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Artistic Burst (b131)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inkpyromancer (b131) — {1}{U}{R}, 2/2 Human Wizard.
+/// Magecraft mints a Treasure token (`magecraft_treasure`).
+pub fn prismari_inkpyromancer_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inkpyromancer (b131)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Volatile Inkstroke (b131) — {U}{R} Instant. Seq(DealDamage
+/// 2 to any target + Scry 1). 2-mana shock + smoothing.
+pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Volatile Inkstroke (b131)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(2),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
