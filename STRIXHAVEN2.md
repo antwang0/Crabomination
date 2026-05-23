@@ -19,10 +19,37 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1912 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 133:
+Push (claude/modern_decks branch — current head — **post-batch 134:
+7 more Strixhaven synthesised cards across all five colleges, plus
+two new shortcut helpers (`magecraft_scry_and_draw`,
+`dies_mint_token_and_drain`). Tests: 3881 → 3888 (7 new b134 card
+tests). All tests pass; cargo clippy clean.
+
+- **Quandrix (G/U, 2 cards)** — Quandrix Insight-Mage (b134) ({3}{G}{U}
+  3/3 Merfolk Wizard magecraft scry+draw via
+  `magecraft_scry_and_draw`), Fractal Hatchling (b134) ({1}{U} 0/0
+  Fractal Wizard Flying — enters with 2 +1/+1 counters).
+- **Witherbloom (B/G, 2 cards)** — Pest Lichcaller (b134) ({1}{B} 1/2
+  Pest Warlock — dies mints Pest + drains 1 via
+  `dies_mint_token_and_drain`), Witherbloom Plantlord (b134) ({1}{G}
+  2/2 Plant Druid — "Other Plants get +1/+1" cheap Plant-tribal lord).
+- **Silverquill (W/B, 2 cards)** — Silverquill Inkflight (b134)
+  ({W} Instant — +1/+1 EOT + Flying EOT to target creature via
+  `pump_and_grant_keyword`), Inkling Lifemender (b134) ({2}{W} 2/3
+  Inkling Cleric Flying magecraft gain 1 life).
+
+Engine: two new shortcut helpers —
+- `magecraft_scry_and_draw(scry_amount)` — magecraft variant of
+  `etb_scry_and_draw` for spellslinging engines that want both
+  smoothing and card draw.
+- `dies_mint_token_and_drain(token, amount)` — mirror of
+  `etb_mint_token_and_drain` on the death event. Used by
+  aristocrats-style Pest replacements.
+
+Push (claude/modern_decks branch — post-batch 133:
 16 more Strixhaven synthesised cards across all five colleges, plus
 three new shortcut helpers (`etb_mint_token_and_gain_life`,
 `etb_scry_and_draw`, `pump_and_grant_keyword`). Tests: 3865 → 3881

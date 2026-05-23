@@ -3603,4 +3603,53 @@ pub mod shortcut {
             },
         ])
     }
+
+    /// Magecraft-Scry-And-Draw shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, scry `scry_amount`, then draw a card."
+    /// Wraps [`magecraft`] with `Seq([Scry, Draw])`. Mirror of
+    /// `etb_scry_and_draw` for the magecraft event. Used by Sphinx's
+    /// Insight-template magecraft engines that combine smoothing with
+    /// card draw.
+    ///
+    /// Push claude/modern_decks batch 133: shipped to collapse the
+    /// recurring "magecraft → scry + draw" pattern.
+    pub fn magecraft_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
+        magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(scry_amount),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
+
+    /// Dies-Mint-Token-And-Drain shortcut: "When this creature dies,
+    /// create a token and each opponent loses `amount` life and you
+    /// gain `amount` life." Mirror of `etb_mint_token_and_drain` for
+    /// the on-death event. Used by Witherbloom Pest-aristocrats
+    /// templates that replace the dying body with a fresh Pest while
+    /// also draining the table.
+    ///
+    /// Push claude/modern_decks batch 133: shipped to collapse the
+    /// recurring "die → mint + drain" pattern.
+    pub fn dies_mint_token_and_drain(
+        definition: crate::card::TokenDefinition,
+        amount: i32,
+    ) -> TriggeredAbility {
+        on_dies(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+        ]))
+    }
 }

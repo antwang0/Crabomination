@@ -10063,3 +10063,68 @@ pub fn quandrix_numerist_b133() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 134 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Insight-Mage (b134) — {3}{G}{U}, 3/3 Merfolk Wizard.
+/// Magecraft: Scry 1, then Draw 1. Uses the new
+/// `magecraft_scry_and_draw` shortcut.
+pub fn quandrix_insight_mage_b134() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry_and_draw;
+    CardDefinition {
+        name: "Quandrix Insight-Mage (b134)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Hatchling (b134) — {1}{U}, 0/0 Fractal Wizard, Flying.
+/// Enters with 2 +1/+1 counters via `enters_with_counters`. Becomes
+/// a 2/2 flier on entry.
+pub fn fractal_hatchling_b134() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Hatchling (b134)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

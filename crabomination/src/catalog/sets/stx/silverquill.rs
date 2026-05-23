@@ -14276,3 +14276,66 @@ pub fn silverquill_pure_touch_b133() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 134 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inkflight (b134) — {W} Instant. Target creature gets
+/// +1/+1 EOT and gains Flying EOT. Mirrors Pure Touch but with the
+/// Flying-grant rider for an aerial combat trick.
+pub fn silverquill_inkflight_b134() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Silverquill Inkflight (b134)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(1, 1, Keyword::Flying),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Lifemender (b134) — {2}{W}, 2/3 Inkling Cleric Flying.
+/// Magecraft: gain 1 life. Defensive flier that drips lifegain on
+/// every instant/sorcery cast.
+pub fn inkling_lifemender_b134() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_gain_life;
+    CardDefinition {
+        name: "Inkling Lifemender (b134)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

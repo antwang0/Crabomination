@@ -12276,3 +12276,82 @@ pub fn witherbloom_sproutchanter_b133() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 134 ───────────────────────────────────────────────────────────────
+
+/// Pest Lichcaller (b134) — {1}{B}, 1/2 Pest Warlock. When this dies,
+/// create a Pest token and drain 1. Uses the new
+/// `dies_mint_token_and_drain` shortcut.
+pub fn pest_lichcaller_b134() -> CardDefinition {
+    use crate::effect::shortcut::dies_mint_token_and_drain;
+    CardDefinition {
+        name: "Pest Lichcaller (b134)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_token_and_drain(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Plantlord (b134) — {1}{G} 2/2 Plant Druid. Static
+/// "Other Plant creatures you control get +1/+1." Cheap Plant-tribal
+/// lord that fills the curve below Vinetongue (b129, 3/3 for 3).
+pub fn witherbloom_plantlord_b134() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Witherbloom Plantlord (b134)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Plant creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Plant))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

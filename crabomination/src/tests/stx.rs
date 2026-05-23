@@ -53616,3 +53616,106 @@ fn quandrix_numerist_b133_magecraft_draws() {
     // -1 (bolt cast), +1 (Numerist magecraft draws) = same count
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
+
+// ── Batch 134 tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_insight_mage_b134_magecraft_scrys_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::plains()); }
+    let _ = g.add_card_to_battlefield(0, catalog::quandrix_insight_mage_b134());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 bolt cast, +1 magecraft draw = same hand count
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn fractal_hatchling_b134_enters_with_two_counters_and_flies() {
+    let mut g = two_player_game();
+    let fh = g.add_card_to_hand(0, catalog::fractal_hatchling_b134());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: fh, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fractal Hatchling castable");
+    drain_stack(&mut g);
+    let h = g.battlefield.iter().find(|c| c.id == fh).expect("on bf");
+    assert!(h.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0) >= 2);
+    assert!(h.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn pest_lichcaller_b134_dies_mints_pest_and_drains() {
+    let mut g = two_player_game();
+    let lc = g.add_card_to_battlefield(0, catalog::pest_lichcaller_b134());
+    let l0_before = g.players[0].life;
+    let l1_before = g.players[1].life;
+    let bf_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    let card = g.battlefield_find_mut(lc).expect("on bf");
+    card.damage = 99;
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    // Lichcaller is gone, Pest is created → net 0 (was 1, now 1 Pest token)
+    let bf_after = g.battlefield.iter().filter(|c| c.controller == 0).count();
+    assert_eq!(bf_after, bf_before, "Lichcaller dies, Pest minted = net zero");
+    assert_eq!(g.players[1].life, l1_before - 1);
+    assert_eq!(g.players[0].life, l0_before + 1);
+}
+
+#[test]
+fn witherbloom_plantlord_b134_pumps_other_plants() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_plantlord_b134());
+    let mossreaver = g.add_card_to_battlefield(0, catalog::witherbloom_mossreaver_b132());
+    let after = g.compute_battlefield().into_iter().find(|c| c.id == mossreaver).unwrap();
+    // Mossreaver base 3/2, +1/+1 from anthem = 4/3
+    assert_eq!(after.power, 4, "Mossreaver pumped +1/+1 by Plantlord anthem");
+    assert_eq!(after.toughness, 3);
+}
+
+#[test]
+fn witherbloom_plantlord_b134_does_not_pump_self() {
+    let mut g = two_player_game();
+    let pl = g.add_card_to_battlefield(0, catalog::witherbloom_plantlord_b134());
+    let after = g.compute_battlefield().into_iter().find(|c| c.id == pl).unwrap();
+    // Plantlord is 2/2 base — should not pump itself since "Other" excludes source
+    assert_eq!(after.power, 2, "Plantlord does not pump itself");
+    assert_eq!(after.toughness, 2);
+}
+
+#[test]
+fn silverquill_inkflight_b134_pumps_and_grants_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p_before = g.battlefield_find(bear).unwrap().power();
+    let il = g.add_card_to_hand(0, catalog::silverquill_inkflight_b134());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: il, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkflight castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().power(), p_before + 1);
+}
+
+#[test]
+fn inkling_lifemender_b134_magecraft_gains_life() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::inkling_lifemender_b134());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l_before + 1);
+}
