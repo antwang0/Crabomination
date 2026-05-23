@@ -73,9 +73,10 @@ pub fn strict_proctor() -> CardDefinition {
 /// Wired via the existing magecraft helper + the Pest token shared
 /// helper in `super::shared::stx_pest_token`. The "creates may"
 /// upgrade clause (real Oracle is non-may; we keep it non-may here).
-/// Ward 1 ships as a `Keyword::Ward(1)` on the body — the engine has
-/// the keyword declared but no targeting-trigger plumbing yet; it
-/// remains 🟡 for that reason but the magecraft trigger is full.
+/// Ward 1 ships as `Keyword::Ward(WardCost::generic(1))` on the body
+/// — the engine's `push_ward_triggers_for_cast` enforces the
+/// counter-unless-paid effect via `Effect::CounterUnless` (see CR
+/// 702.21). The magecraft trigger fires on every IS spell cast.
 pub fn sedgemoor_witch() -> CardDefinition {
     CardDefinition {
         name: "Sedgemoor Witch",
