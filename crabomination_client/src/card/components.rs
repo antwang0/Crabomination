@@ -260,20 +260,67 @@ pub struct DeckPile {
 #[derive(Component)]
 pub struct ValidTarget;
 
-/// Clickable zone representing a player as a target.
+/// Clickable zone representing a player as a target. Lives on the
+/// player-icon disc entity so the visible icon doubles as the click
+/// target for spells / abilities that take a player.
 #[derive(Component)]
 pub struct PlayerTargetZone(pub usize);
 
-/// Combat-animation offset for a battlefield creature. The
-/// `update_combat_lurch_targets` system sets `target_z` from the view's
-/// attacking / blocking_attacker flags; `animate_combat_lurch` lerps
-/// `current_z` toward it each frame and writes the offset onto the
-/// card's transform after the hover-lift system has placed it. Removed
-/// once `target_z` and `current_z` are both zero.
+/// Visible 3-D disc sitting on the table at each player's target-zone
+/// position. Doubles as the click hit-region for [`PlayerTargetZone`]
+/// (all seats including the viewer) and as the world-space anchor that
+/// attackers lunge toward during combat.
+#[derive(Component, Clone, Copy)]
+pub struct PlayerIcon {
+    #[allow(dead_code)]
+    pub seat: usize,
+}
+
+/// Parent marker for the per-seat "player crest" — the disc + halo ring
+/// + floating life numeral cluster that represents the player on the
+/// 3-D table. Replaces the bare [`PlayerIcon`] disc as the player-stats
+/// anchor; the disc and ring child entities carry their own markers
+/// ([`PlayerIcon`] / [`PlayerCrestRing`]) so per-mesh systems can find
+/// them without walking the hierarchy.
+#[derive(Component, Clone, Copy)]
+pub struct PlayerCrest {
+    pub seat: usize,
+}
+
+/// Marker for the halo / status ring sitting just below the player disc.
+/// `update_player_crest_ring` drives its material's `base_color` and
+/// `emissive` each frame based on the seat's current state (targetable,
+/// threatened, holding priority, active player).
+#[derive(Component, Clone, Copy)]
+pub struct PlayerCrestRing {
+    pub seat: usize,
+}
+
+/// Screen-space text node tied to the world position of a [`PlayerCrest`].
+/// `update_player_crest_life_label` re-projects the crest's world
+/// position to viewport coordinates each frame, updates the node's
+/// `top` / `left`, and writes the current life total. Independent of
+/// the 2-D `PlayerStatsRow` chip strip — this label is the *primary*
+/// life readout, anchored next to the avatar where the player is
+/// already looking.
+#[derive(Component, Clone, Copy)]
+pub struct PlayerLifeLabel {
+    pub seat: usize,
+}
+
+/// Combat-animation offset for a battlefield creature. `progress`
+/// interpolates 0..1 along `target_offset` (the world-space vector from
+/// the card's base position to whatever it's lunging at — defending
+/// player's icon for attackers, the attacker's position for blockers).
+/// `update_combat_lurch_targets` writes the desired `target_progress`
+/// each frame from the view's combat step; `animate_combat_lurch`
+/// lerps `progress` toward it and writes `target_offset * progress`
+/// onto the card's transform. Removed once both are ~0.
 #[derive(Component, Default, Clone, Copy)]
 pub struct CombatLurch {
-    pub current_z: f32,
-    pub target_z: f32,
+    pub progress: f32,
+    pub target_progress: f32,
+    pub target_offset: Vec3,
 }
 
 /// Animates a card flying to the graveyard pile; despawns the entity on completion.

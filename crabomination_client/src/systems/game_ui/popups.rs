@@ -1,0 +1,359 @@
+//! Floating modal-ish surfaces: the right-click ability context menu
+//! and the alt-cast (pitch / evoke) picker. Both share the pattern of
+//! "open conditionally on a state resource, despawn when state clears."
+
+use bevy::prelude::*;
+use crabomination::card::CardId;
+use crabomination::game::GameAction;
+
+use crate::card::DeckPile;
+use crate::game::{AbilityMenuState, TargetingState};
+use crate::net_plugin::{CurrentView, NetOutbox};
+use crate::systems::ui::RevealPopupState;
+use crate::theme::{self, UiFonts};
+
+// ── Ability menu (right-click context menu on own battlefield cards) ─────────
+
+/// Root entity of the floating ability context menu.
+#[derive(Component)]
+pub struct AbilityMenu;
+
+/// One item in the ability menu.
+#[derive(Component)]
+pub struct AbilityMenuItem {
+    pub card_id: CardId,
+    pub ability_index: usize,
+}
+
+/// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
+pub fn spawn_ability_menu(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    menu_state: Res<AbilityMenuState>,
+    existing: Query<Entity, With<AbilityMenu>>,
+) {
+    if !menu_state.is_changed() { return; }
+
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+
+    let Some(card_id) = menu_state.card_id else { return };
+    let Some(cv) = view.0.as_ref() else { return };
+    let Some(pv) = cv.battlefield.iter().find(|p| p.id == card_id) else { return };
+
+    // Project (index, label, used_this_turn) so the menu can grey out
+    // once-per-turn abilities that have already been activated. Includes
+    // mana abilities so multi-colour lands surface all the pip choices
+    // when opened via the left-click mana-source picker (see the
+    // `mana_abilities.len() > 1` branch in `handle_game_input`).
+    let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
+        .map(|a| {
+            let label = if a.once_per_turn_used {
+                format!("{}: {} (used)", a.cost_label, a.effect_label)
+            } else {
+                format!("{}: {}", a.cost_label, a.effect_label)
+            };
+            (a.index, label, a.once_per_turn_used)
+        })
+        .collect();
+    if abilities.is_empty() { return; }
+    let card_name = pv.name.clone();
+
+    let pos = menu_state.spawn_pos;
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(pos.x),
+                top: Val::Px(pos.y),
+                flex_direction: FlexDirection::Column,
+                row_gap: Val::Px(4.0),
+                padding: UiRect::all(Val::Px(8.0)),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG_SUNKEN),
+            AbilityMenu,
+        ))
+        .with_children(|menu| {
+            menu.spawn((
+                Text::new(card_name),
+                ui_fonts.tf(13.0),
+                TextColor(theme::ACCENT_BLUE),
+            ));
+            for (ability_index, label, used) in abilities {
+                let bg = if used {
+                    // Darkened background for once-per-turn abilities
+                    // already activated this turn — clicks still go
+                    // through, but the engine returns
+                    // `AbilityAlreadyUsedThisTurn`.
+                    theme::PANEL_BG_RAISED
+                } else {
+                    theme::BUTTON_NEUTRAL_BG
+                };
+                let fg = if used {
+                    theme::TEXT_MUTED
+                } else {
+                    theme::TEXT_PRIMARY
+                };
+                menu.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
+                        ..default()
+                    },
+                    BackgroundColor(bg),
+                    AbilityMenuItem { card_id, ability_index },
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(label),
+                        ui_fonts.tf(13.0),
+                        TextColor(fg),
+                        Pickable::IGNORE,
+                    ));
+                });
+            }
+        });
+}
+
+/// Handle clicks on ability menu items.
+pub fn handle_ability_menu(
+    outbox: Option<Res<NetOutbox>>,
+    view: Res<CurrentView>,
+    mut targeting: ResMut<TargetingState>,
+    mut menu_state: ResMut<AbilityMenuState>,
+    query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
+) {
+    for (interaction, item) in &query {
+        if *interaction != Interaction::Pressed { continue; }
+
+        let Some(cv) = &view.0 else { menu_state.card_id = None; continue };
+        let Some(pv) = cv.battlefield.iter().find(|p| p.id == item.card_id) else { menu_state.card_id = None; continue };
+        let Some(av) = pv.abilities.iter().find(|a| a.index == item.ability_index) else { menu_state.card_id = None; continue };
+
+        if av.needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_ability_source = Some(item.card_id);
+            targeting.pending_ability_index = Some(item.ability_index);
+        } else if let Some(ob) = &outbox {
+            ob.submit(GameAction::ActivateAbility {
+                card_id: item.card_id,
+                ability_index: item.ability_index,
+                target: None,
+                x_value: None,
+            });
+        }
+
+        menu_state.card_id = None;
+    }
+}
+
+// ── Alt-cast (pitch / evoke) modal ───────────────────────────────────────────
+
+#[derive(Component)]
+pub struct AltCastModal;
+
+#[derive(Component)]
+pub struct AltCastPitchButton {
+    pub spell: CardId,
+    pub pitch: CardId,
+}
+
+#[derive(Component)]
+pub struct AltCastCancelButton;
+
+/// Spawn or despawn the alt-cast pitch picker based on `AltCastState`.
+pub fn spawn_alt_cast_modal(
+    mut commands: Commands,
+    view: Res<CurrentView>,
+    ui_fonts: Res<UiFonts>,
+    state: Res<crate::game::AltCastState>,
+    existing: Query<Entity, With<AltCastModal>>,
+) {
+    let want_open = state.pending.is_some();
+    let is_open = !existing.is_empty();
+    if !state.is_changed() && want_open == is_open {
+        return;
+    }
+    for e in &existing {
+        commands.entity(e).despawn();
+    }
+    let Some(spell_id) = state.pending else { return };
+    let Some(cv) = &view.0 else { return };
+
+    // Collect candidate pitch cards: every other Known card in the viewer's
+    // hand. The engine validates the filter and returns InvalidPitchCard if
+    // wrong color; we render every card so the player sees the full hand.
+    let candidates: Vec<(CardId, String)> = cv
+        .players
+        .get(cv.your_seat)
+        .map(|p| {
+            p.hand
+                .iter()
+                .filter_map(|h| match h {
+                    crabomination::net::HandCardView::Known(k) if k.id != spell_id => {
+                        Some((k.id, k.name.clone()))
+                    }
+                    _ => None,
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            AltCastModal,
+        ))
+        .with_children(|root| {
+            root.spawn((
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    padding: UiRect::all(Val::Px(20.0)),
+                    row_gap: Val::Px(10.0),
+                    align_items: AlignItems::Center,
+                    min_width: Val::Px(360.0),
+                    ..default()
+                },
+                BackgroundColor(theme::PANEL_BG),
+            ))
+            .with_children(|panel| {
+                panel.spawn((
+                    Text::new("Cast for alternative cost — pick a card to exile:"),
+                    ui_fonts.tf(15.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                ));
+                if candidates.is_empty() {
+                    panel.spawn((
+                        Text::new("(no other cards in hand to pitch)"),
+                        ui_fonts.tf(13.0),
+                        TextColor(theme::TEXT_SECONDARY),
+                    ));
+                }
+                for (pid, name) in candidates {
+                    panel
+                        .spawn((
+                            Button,
+                            Node {
+                                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                                ..default()
+                            },
+                            BackgroundColor(theme::BUTTON_INFO_BG),
+                            AltCastPitchButton { spell: spell_id, pitch: pid },
+                        ))
+                        .with_children(|b| {
+                            b.spawn((
+                                Text::new(name),
+                                ui_fonts.tf(13.0),
+                                TextColor(theme::TEXT_PRIMARY),
+                                bevy::picking::Pickable::IGNORE,
+                            ));
+                        });
+                }
+                panel
+                    .spawn((
+                        Button,
+                        Node {
+                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                            margin: UiRect::top(Val::Px(8.0)),
+                            ..default()
+                        },
+                        BackgroundColor(theme::BUTTON_DANGER_BG),
+                        AltCastCancelButton,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((
+                            Text::new("Cancel"),
+                            ui_fonts.tf(13.0),
+                            TextColor(theme::TEXT_PRIMARY),
+                            bevy::picking::Pickable::IGNORE,
+                        ));
+                    });
+            });
+        });
+}
+
+/// Click on a pitch button → submit `CastSpellAlternative`. Click cancel →
+/// clear the pending alt-cast.
+pub fn handle_alt_cast_buttons(
+    mut state: ResMut<crate::game::AltCastState>,
+    outbox: Option<Res<NetOutbox>>,
+    pitch_q: Query<(&Interaction, &AltCastPitchButton), Changed<Interaction>>,
+    cancel_q: Query<&Interaction, (Changed<Interaction>, With<AltCastCancelButton>)>,
+) {
+    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
+        state.pending = None;
+        return;
+    }
+    for (interaction, btn) in &pitch_q {
+        if *interaction == Interaction::Pressed
+            && let Some(outbox) = &outbox
+        {
+            outbox.submit(GameAction::CastSpellAlternative {
+                card_id: btn.spell,
+                pitch_card: Some(btn.pitch),
+                target: None,
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+            state.pending = None;
+            return;
+        }
+    }
+}
+
+// ── Reveal animation trigger ─────────────────────────────────────────────────
+
+/// When RevealPopupState activates, start a RevealPeekAnimation on the top
+/// deck card of the revealed player's pile.
+#[allow(clippy::type_complexity)]
+pub fn trigger_reveal_animation(
+    mut reveal: ResMut<RevealPopupState>,
+    deck_cards: Query<
+        (Entity, &DeckPile, &Transform),
+        (
+            Without<crate::card::RevealPeekAnimation>,
+            Without<crate::card::Animating>,
+        ),
+    >,
+    mut commands: Commands,
+) {
+    let Some(player) = reveal.revealed_player.take() else {
+        return;
+    };
+
+    // Top of the pile = highest index for that owner. face_up = 180° around
+    // the card's local Y axis so the flip rotates along the long edge.
+    let top = deck_cards
+        .iter()
+        .filter(|(_, dp, _)| dp.owner == player)
+        .max_by_key(|(_, dp, _)| dp.index);
+    if let Some((entity, _, transform)) = top {
+        let face_up = transform.rotation * Quat::from_rotation_y(std::f32::consts::PI);
+        commands
+            .entity(entity)
+            .insert(crate::card::Animating)
+            .insert(crate::card::RevealPeekAnimation {
+                progress: 0.0,
+                speed: 0.6,
+                start_rotation: transform.rotation,
+                face_up_rotation: face_up,
+                start_y: transform.translation.y,
+            });
+    }
+}

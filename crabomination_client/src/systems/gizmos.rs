@@ -6,12 +6,12 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 use crabomination::card::CardId;
-use crabomination::game::{Target, TurnStep};
+use crabomination::game::{AttackTarget, Target, TurnStep};
 use crabomination::net::StackItemView;
 
 use crate::card::{BattlefieldCard, CardOwner, GameCardId, StackCard};
 use crate::card::layout::player_target_zone_position;
-use crate::game::BlockingState;
+use crate::game::{AttackingState, BlockingState};
 use crate::net_plugin::CurrentView;
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
@@ -25,6 +25,12 @@ pub struct StackGizmos;
 
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct PtModifiedGizmos;
+
+/// Overlay drawn while the viewer is building their attack plan during
+/// their own DeclareAttackers step. One diamond per selected attacker,
+/// one arrow per attacker → target (player zone or planeswalker).
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct AttackPlanGizmos;
 
 pub fn draw_blocking_gizmos(
     view: Res<CurrentView>,
@@ -214,4 +220,70 @@ fn draw_diamond(gizmos: &mut Gizmos<BlockingGizmos>, pos: Vec3, r: f32, color: C
     gizmos.line(e, s, color);
     gizmos.line(s, w, color);
     gizmos.line(w, n, color);
+}
+
+/// Render the viewer's in-progress attack plan: a yellow diamond on each
+/// chosen attacker and an arrow from that attacker to its target (player
+/// disc or opp planeswalker card). Active only during the viewer's own
+/// DeclareAttackers step with priority — outside that window the plan is
+/// stale and the resource is cleared by the input handler.
+pub fn draw_attack_plan_gizmos(
+    view: Res<CurrentView>,
+    attacking: Res<AttackingState>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<AttackPlanGizmos>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if cv.step != TurnStep::DeclareAttackers
+        || cv.active_player != cv.your_seat
+        || cv.priority != cv.your_seat
+    {
+        return;
+    }
+    if attacking.plan.is_empty() {
+        return;
+    }
+
+    let viewer = cv.your_seat;
+    let n_seats = cv.players.len();
+    let yellow = Color::srgb(1.0, 0.88, 0.0);
+    let pending = Color::srgba(1.0, 0.88, 0.0, 0.5);
+
+    let mut positions: HashMap<CardId, Vec3> = HashMap::new();
+    for (t, gid) in &bf_cards {
+        positions.insert(gid.0, t.translation + Vec3::Y * 0.18);
+    }
+
+    for (attacker, target) in &attacking.plan {
+        let Some(&from) = positions.get(attacker) else {
+            continue;
+        };
+        let color = if attacking.last_added == Some(*attacker) {
+            pending
+        } else {
+            yellow
+        };
+        // Diamond on the attacker.
+        let n = from + Vec3::Z * 1.1;
+        let s = from - Vec3::Z * 1.1;
+        let e = from + Vec3::X * 1.1;
+        let w = from - Vec3::X * 1.1;
+        gizmos.line(n, e, color);
+        gizmos.line(e, s, color);
+        gizmos.line(s, w, color);
+        gizmos.line(w, n, color);
+
+        // Arrow to its current target.
+        let to = match target {
+            AttackTarget::Player(seat) => {
+                let mut p = player_target_zone_position(*seat, viewer, n_seats);
+                p.y = 0.3;
+                Some(p)
+            }
+            AttackTarget::Planeswalker(pw_id) => positions.get(pw_id).copied(),
+        };
+        if let Some(to) = to {
+            gizmos.arrow(from, to, color).with_tip_length(0.7);
+        }
+    }
 }

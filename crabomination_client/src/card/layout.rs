@@ -43,11 +43,35 @@ const HAND_TILT_X: f32 = -1.16;
 // ── Battlefield layout constants ─────────────────────────────────────────────
 
 const BF_Y: f32 = 0.02;
-const BF_CARD_SPACING: f32 = CARD_HEIGHT * 1.1;
+/// Per-slot battlefield spacing. Sized to the longer axis (CARD_HEIGHT)
+/// with extra headroom so adjacent **tapped** creatures don't visually
+/// overlap — a tapped card rotates 90° and its long edge (CARD_HEIGHT)
+/// becomes its width. With the previous `* 1.1` multiplier the gap
+/// between two adjacent tapped cards was under half a unit and read as
+/// overlapping at the typical camera angle.
+const BF_CARD_SPACING: f32 = CARD_HEIGHT * 1.35;
 /// Distance from center to creature row (viewer side; opponent is mirrored).
 const BF_CREATURE_Z: f32 = 3.5;
 /// Distance from center to land row.
 const BF_LAND_Z: f32 = 8.5;
+
+/// Effective per-card spacing for a battlefield row of `total` groups.
+/// Caps at [`BF_CARD_SPACING`] for small rows but shrinks proportionally
+/// when the row would otherwise extend past the deck/graveyard footprint
+/// at |x| = [`DECK_X`]. Without this, a commander deck with 7+ distinct
+/// lands pushes the outermost groups directly under the pile.
+fn bf_spacing(total: usize) -> f32 {
+    if total <= 1 {
+        return BF_CARD_SPACING;
+    }
+    // Pile inner face sits at |x| = DECK_X - CARD_WIDTH/2. Add a small
+    // visual margin so the row never butts up against the pile face,
+    // and subtract another CARD_WIDTH/2 so the outermost group's edge
+    // (not its center) stays inside that boundary.
+    let max_outer_center = DECK_X - CARD_WIDTH - 0.3;
+    let max_spacing = 2.0 * max_outer_center / (total as f32 - 1.0);
+    BF_CARD_SPACING.min(max_spacing)
+}
 
 // ── Pile constants ───────────────────────────────────────────────────────────
 
@@ -169,11 +193,31 @@ pub fn back_face_rotation(seat: usize, viewer: usize) -> Quat {
     }
 }
 
-/// Center of `seat`'s clickable player-target zone (used for spell targeting).
+/// Width along X that a 7-card hand fan occupies (the soft cap). Used to
+/// position the per-seat 3-D player-avatar disc just past the right
+/// edge of the hand so it's clearly visible from the camera without
+/// overlapping creature / land rows or the hand cards themselves.
+const HAND_HALF_WIDTH: f32 = HAND_CARD_SPACING * ((HAND_FAN_SOFT_CAP as f32) - 1.0) / 2.0;
+
+/// Center of `seat`'s player-avatar position. Used both as the
+/// click-target hit region for spell/ability targeting **and** as the
+/// 3-D anchor for combat-lurch + attack-plan + stack-spell arrows.
+///
+/// Placed just past the right edge of each player's hand fan, at the
+/// same z as the hand. That puts the avatar in the empty table area
+/// between the hand and the deck/graveyard piles — clearly visible from
+/// the (slightly tilted top-down) camera and outside both the playable
+/// creature/land rows *and* the hand-card fan. Prior layouts placed it
+/// mid-board (overlapping rows) or under the hand (hidden by the hand
+/// cards from the camera POV).
 pub fn player_target_zone_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
-    let sign = z_sign(seat, viewer);
-    let x = opp_x_offset(seat, viewer, n_seats);
-    Vec3::new(x, 0.01, sign * 6.0)
+    let x = opp_x_offset(seat, viewer, n_seats) + HAND_HALF_WIDTH + 1.2;
+    let z = if is_viewer(seat, viewer) {
+        HAND_CENTER_Z
+    } else {
+        -(HAND_CENTER_Z + 2.0)
+    };
+    Vec3::new(x, 0.01, z)
 }
 
 // ── Hand cards ───────────────────────────────────────────────────────────────
@@ -243,7 +287,7 @@ pub fn bf_card_transform(
 ) -> Transform {
     let center = (total as f32 - 1.0) / 2.0;
     let offset = slot as f32 - center;
-    let x = offset * BF_CARD_SPACING + opp_x_offset(seat, viewer, n_seats);
+    let x = offset * bf_spacing(total) + opp_x_offset(seat, viewer, n_seats);
 
     let row_offset = if is_land { BF_LAND_Z } else { BF_CREATURE_Z };
     let z = z_sign(seat, viewer) * row_offset;

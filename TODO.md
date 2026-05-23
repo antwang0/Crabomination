@@ -16,27 +16,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
   2922–2939). The "change a word on a card" primitive — Mind Bend,
   Glamerdye, Spy Kit, Volrath's Shapeshifter, Exchange of Words.
-  (a) **612.1 — Definition** "Some continuous effects change an
-  object's text … generally rules text and/or type line" — ⏳
+  (a) **612.1 — Definition** — ⏳
   (no engine primitive for `StaticEffect::ReplaceWord` or
   `Modification::ReplaceCreatureType` exists; nothing in the catalog
   uses one. Type-line manipulation today goes through the
   layer-system's `Modification::AddCreatureType` /
   `RemoveCreatureType` which is a different shape — text-changing
   effects rewrite the WORDS, not the resolved characteristics).
-  (b) **612.2 — Word-use disambiguation** "only changes words used
-  in the correct way (color word as color, land type as land type,
-  creature type as creature type)" — ⏳ (engine-wide ⏳; no card
+  (b) **612.2 — Word-use disambiguation** — ⏳ (engine-wide ⏳; no card
   in the catalog distinguishes "this word is being used as a color
   word vs as part of a name" — Mind Bend / Glamerdye-class only).
-  (c) **612.2a — Token name shares creature type** "creature-type
-  text in a token-mint clause can be changed because it's used as
-  both type and name" — ⏳ (no use; TokenDefinition.name and
+  (c) **612.2a — Token name shares creature type** — ⏳ (no use; TokenDefinition.name and
   TokenDefinition.subtypes.creature_types are stored separately
   today, no text-rewriting hook on token mint).
-  (d) **612.3 — Ability-add doesn't change text** "granting an
-  ability via static effect doesn't make that ability eligible for
-  text-changing rewrites" — ✅ (the `StaticEffect::GrantKeyword`
+  (d) **612.3 — Ability-add doesn't change text** — ✅ (the `StaticEffect::GrantKeyword`
   family adds keyword presence but doesn't synthesize printed text,
   so 612.3 is naturally satisfied — there's no path to rewrite a
   granted keyword).
@@ -64,114 +57,82 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   The SBA framework — game actions that happen automatically when
   certain conditions are met, checked whenever a player would get
   priority, applied as a single simultaneous event.
-  (a) **704.1 — Definition** "SBAs are game actions that happen
-  automatically whenever certain conditions are met. SBAs don't use
-  the stack." — ✅ (`check_state_based_actions` in
+  (a) **704.1 — Definition** — ✅ (`check_state_based_actions` in
   `game/stack.rs:772` is a direct mutator; emits `GameEvent`s but
   doesn't push to the stack).
-  (b) **704.2 — Continuous** "SBAs are checked throughout the game" —
+  (b) **704.2 — Continuous** —
   ✅ (SBA check is interleaved with the priority loop and stack
   resolution; called after every stack item resolves via
   `perform_action`'s stack-drain path in `mod.rs:2245`).
-  (c) **704.3 — Priority-window loop** "Whenever a player would get
-  priority, the game checks SBAs, then performs all applicable SBAs
-  simultaneously. If any are performed, the check is repeated;
-  otherwise all triggered abilities waiting to be put on the stack
-  are put on the stack, then the check is repeated. Once no SBAs are
-  performed and no triggered abilities are waiting, the appropriate
-  player gets priority." — ✅ (the repeat-until-stable loop is
+  (c) **704.3 — Priority-window loop** — ✅ (the repeat-until-stable loop is
   encoded in `pass_priority`'s post-resolve walk; trigger dispatch
   fans out via `dispatch_triggers_for_events`).
-  (d) **704.4 — Mid-resolution invisibility** "SBAs pay no attention
-  to what happens during the resolution of a spell or ability." — ✅
+  (d) **704.4 — Mid-resolution invisibility** — ✅
   (`check_state_based_actions` is only called between stack items,
   never inside `resolve_effect`; Maro-class transient toughness
   changes are unobservable).
-  (e) **704.5a — 0 or less life** "If a player has 0 or less life,
-  that player loses the game." — ✅
+  (e) **704.5a — 0 or less life** — ✅
   (`game/stack.rs:1070` consults `effective_life(i)` and sets
   `players[i].eliminated = true`).
-  (f) **704.5b — Empty-library draw** "Attempted draw from empty
-  library loses the game." — ✅ (per CR 121.4 audit row;
+  (f) **704.5b — Empty-library draw** — ✅ (per CR 121.4 audit row;
   `draws_from_empty_library` flag bumped at draw time, checked here).
-  (g) **704.5c — 10 poison counters** "If a player has 10 or more
-  poison counters, that player loses the game." — ✅
+  (g) **704.5c — 10 poison counters** — ✅
   (`players[i].poison_counters >= 10` check at `stack.rs:1071`).
-  (h) **704.5d — Token off battlefield** "If a token is in a zone
-  other than the battlefield, it ceases to exist." — ✅ (the post-
+  (h) **704.5d — Token off battlefield** — ✅ (the post-
   events sweep in `stack.rs:1039` walks every player's graveyard /
   hand / library and the exile zone, retaining only non-token cards;
   Dies / leaves-bf triggers fire before this so they observe the
   token).
-  (i) **704.5e — Copy of spell off-stack** "If a copy of a spell is
-  in a zone other than the stack, it ceases to exist." — 🟡 (no
+  (i) **704.5e — Copy of spell off-stack** — 🟡 (no
   first-class "spell copy" identity tag today; the
   `Effect::CopySpell` primitive resolves the copy in place rather
   than placing a distinct copy item that could persist into another
   zone, so this rule is observable only via the resolve-then-vanish
   shape which matches printed Oracle).
-  (j) **704.5f — Toughness 0** "If a creature has toughness 0 or
-  less, it's put into its owner's graveyard. Regeneration can't
-  replace this event." — ✅ (the `computed_toughness <= 0` branch in
+  (j) **704.5f — Toughness 0** — ✅ (the `computed_toughness <= 0` branch in
   `stack.rs:851` routes through `remove_from_battlefield_to_
   graveyard` which bypasses the regen replacement framework).
-  (k) **704.5g — Lethal damage** "Toughness > 0 + damage ≥
-  toughness → destroyed. Regeneration can replace this event." — ✅
+  (k) **704.5g — Lethal damage** — ✅
   (the `(c.damage as i32) >= computed_toughness` branch in
   `stack.rs:855` routes through the destroy pipeline which honors
   regen replacement; Indestructible blocks this branch).
-  (l) **704.5h — Deathtouch damage** "Damage by a deathtouch source
-  destroys, regen can replace." — ✅ (the deathtouch event marker
+  (l) **704.5h — Deathtouch damage** — ✅ (the deathtouch event marker
   routes through the same destroy pipeline as 704.5g; tested via
   cube's Deathtouch interaction).
-  (m) **704.5i — Loyalty 0** "Planeswalker with 0 loyalty dies." —
+  (m) **704.5i — Loyalty 0** —
   ✅ (`pw_dead` walk at `stack.rs:1002` filters
   `is_planeswalker() && counter_count(Loyalty) == 0`).
-  (n) **704.5j — Legend rule** "Two+ legendaries with same name
-  under same controller → controller chooses one to keep, rest go to
-  graveyard." — ✅ (the `legend_victims` HashMap walk at
+  (n) **704.5j — Legend rule** — ✅ (the `legend_victims` HashMap walk at
   `stack.rs:803`; defaults to "keep newest" via descending CardId
   sort, controller-choice prompt engine-wide ⏳ since auto-picker is
   deterministic).
-  (o) **704.5k — World rule** "Two+ world permanents → keep the one
-  with shortest world-supertype duration." — ⏳ (no World supertype
+  (o) **704.5k — World rule** — ⏳ (no World supertype
   in the catalog; no engine path; Ice Age / Mirage era only).
-  (p) **704.5m — Aura attachment** "Aura attached to illegal object
-  / not attached → graveyard." — ✅ (the `orphaned_auras` walk at
+  (p) **704.5m — Aura attachment** — ✅ (the `orphaned_auras` walk at
   `stack.rs:1017` filters auras where `attached_to` is `None` or
   points to a non-battlefield CardId; Pacifism-class tested).
-  (q) **704.5n — Equipment / Fortification attachment** "Attached
-  to illegal permanent or to a player → becomes unattached, remains
-  on bf." — 🟡 (engine prunes `attached_to` when the host leaves bf
+  (q) **704.5n — Equipment / Fortification attachment** — 🟡 (engine prunes `attached_to` when the host leaves bf
   via `remove_from_combat`-adjacent paths, but the "remains on bf
   unattached" half is wired; no Fortification card in the catalog).
-  (r) **704.5p — Battle/creature attached** "Battle or creature
-  attached to anything → unattached." — ⏳ (no Battle card type in
+  (r) **704.5p — Battle/creature attached** — ⏳ (no Battle card type in
   the catalog; tracked in TODO.md "Engine — Battle permanent type
   (CR 110.4) ⏳").
-  (s) **704.5q — +1/+1 vs -1/-1 counter cancellation** "N +1/+1
-  and N -1/-1 counters cancel where N = min." — ✅ (`stack.rs:777`
+  (s) **704.5q — +1/+1 vs -1/-1 counter cancellation** — ✅ (`stack.rs:777`
   walks each battlefield card and subtracts `cancel = plus.min(
   minus)` from both counter types; this is the first SBA performed
   per CR 704.5q's "single event" semantics).
-  (t) **704.5r — Bounded counter caps** "A permanent with an ability
-  capping a counter type at N has counters above N removed." — ⏳ (no
+  (t) **704.5r — Bounded counter caps** — ⏳ (no
   card in the catalog uses this; engine has no `Capped(Counter, N)`
   static effect primitive).
-  (u) **704.5s — Saga sacrifice** "Saga with lore counters ≥ final
-  chapter is sacrificed (unless source of a triggered chapter
-  ability still on stack)." — ⏳ (no Saga card type in the catalog;
+  (u) **704.5s — Saga sacrifice** — ⏳ (no Saga card type in the catalog;
   tracked in CUBE_FEATURES.md "Saga lore counters + DFC ⏳").
-  (v) **704.5t — Dungeon completion** "Venture marker on bottommost
-  room → dungeon removed from game." — ⏳ (no Dungeon card type in
+  (v) **704.5t — Dungeon completion** — ⏳ (no Dungeon card type in
   the catalog; AFR / Y22 era only).
   (w) **704.5v / 704.5w / 704.5x — Battle defense / protector** —
   ⏳ (no Battle card type in the catalog; tracked under CR 110.4).
-  (x) **704.5y — Role count** "Multiple Roles from same player on
-  same permanent → all but newest go to graveyard." — ⏳ (no Role
+  (x) **704.5y — Role count** — ⏳ (no Role
   subtype in the catalog; WOE-era only).
-  (y) **704.5z — Speed start** "Permanent with `start your engines!`
-  and player has no speed → speed becomes 1." — ⏳ (no speed
+  (y) **704.5z — Speed start** — ⏳ (no speed
   primitive in the engine; UFO / MKM-era only).
   (z) **704.6 — Variant-game additions** "2HG team-life loss /
   team-poison; Commander 21 commander damage; Archenemy scheme
@@ -179,16 +140,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   shared-life loss (effective_life consults team), ✅ for Commander
   21-damage SBA (commander_damage walk at `stack.rs:1066`), ⏳ for
   Archenemy/Planechase variants (not in the catalog).
-  (aa) **704.7 — Multi-SBA replacement** "If multiple SBAs would
-  have the same result at the same time, one replacement replaces
-  all." — 🟡 (the replacement-effect framework handles single
+  (aa) **704.7 — Multi-SBA replacement** — 🟡 (the replacement-effect framework handles single
   triggers but the "all SBAs collapse into one replacement"
   semantic for Lich's Mirror-style replacements is doc-tracked; no
   card in the catalog has both a same-result life-loss + draw-from-
   empty-library replacement).
-  (bb) **704.8 — LKI on simultaneous SBA** "If an SBA leaves a
-  permanent at the same time as others, its LKI is derived from
-  pre-SBA state." — ✅ (the `died_card_snapshots` HashMap at
+  (bb) **704.8 — LKI on simultaneous SBA** — ✅ (the `died_card_snapshots` HashMap at
   `stack.rs:830` caches the full `CardInstance` before zone change,
   consulted by trigger dispatch + filter eval; Undying / Persist's
   no-counter check reads pre-SBA counter state via this).
@@ -203,33 +160,28 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt` lines 2946–3041). The layer system
   governs how multiple continuous effects combine to produce an
   object's final characteristics.
-  (a) **613.1 — Layer order** "rules and effects are applied in a
-  series of layers" — ✅ (`game/layers.rs::Layer` enum spans Layer1
+  (a) **613.1 — Layer order** — ✅ (`game/layers.rs::Layer` enum spans Layer1
   through Layer7; `compute_battlefield` walks layers in CR order and
   applies modifications per-layer).
   (b) **613.1a–g — Sublayers** — ✅ (Layer 7a/7b/7c/7d sublayers
   exist as distinct `Layer::Pt7a`/`Pt7b`/`Pt7c`/`Pt7d` variants;
   layer 1a copy effects are wired for token / clone primitives).
-  (c) **613.3 — CDA-first ordering** "characteristic-defining
-  abilities … first, then all other effects in timestamp order" — 🟡
+  (c) **613.3 — CDA-first ordering** — 🟡
   (the engine applies static effects in registration order; CDA
   flagging exists but isn't yet a separate pre-pass within a layer.
   In practice the dependency rule applies to layer 4 / 7a only, and
   no STX/SOS/cube card today has a CDA that conflicts with a
   non-CDA effect in the same layer, so the behavior matches CR).
-  (d) **613.4b — Layer 7b (base P/T set)** "effects that set
-  power and/or toughness to a specific number" — ✅ (`Modification::
+  (d) **613.4b — Layer 7b (base P/T set)** — ✅ (`Modification::
   SetPowerToughness` + the new `Effect::SetBasePT` primitive route
   through Layer7b; Cosmogoyf / Tarmogoyf / Cruel Somnophage's
   dynamic-P/T scaling lands here via `DynamicPt::*` variants in
   `compute_battlefield`).
-  (e) **613.4c — Layer 7c (P/T modify)** "effects and counters
-  that modify P/T (but don't set)" — ✅ (`Modification::ModifyPower
+  (e) **613.4c — Layer 7c (P/T modify)** — ✅ (`Modification::ModifyPower
   Toughness` + `+1/+1 / -1/-1 counter` accumulation route through
   Layer7c; Quandrix Symmetrist's "double counters" payoff in
   batch 104 stacks at this layer correctly).
-  (f) **613.7 — Timestamps** "an effect with an earlier timestamp
-  is applied before an effect with a later timestamp" — 🟡 (the
+  (f) **613.7 — Timestamps** — 🟡 (the
   engine threads a monotonic `next_timestamp: u64` and stamps
   `ContinuousEffect.timestamp` on every effect creation; conflicts
   within a layer use timestamp order via the `apply_in_layer`
@@ -237,15 +189,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   timestamps) are wired. Aura/Equipment re-stamp (613.7e) is
   partial — Equipment attachment re-stamps the equip, but the
   Aura re-stamp on enchant is doc-tracked).
-  (g) **613.8 — Dependency** "if a dependency exists, it overrides
-  timestamp order" — ⏳ (no engine-wide dependency analyzer; the
+  (g) **613.8 — Dependency** — ⏳ (no engine-wide dependency analyzer; the
   current static-effect application is purely linear in timestamp.
   No STX/SOS card today exhibits a dependency loop, so this is
   unobservable in current play. Engine-wide ⏳ for general
   correctness on edge cases like Conspiracy + Opalescence /
   Humility + Opalescence.).
-  (h) **613.11 — Game-rule effects** "effects on game rules
-  applied after object characteristics" — 🟡 (cost-reduction
+  (h) **613.11 — Game-rule effects** — 🟡 (cost-reduction
   effects use CR 601.2f ordering; hand-size / sorcery-timing
   restrictions are wired (Teferi Time Raveler, Damping Sphere); a
   general "modify the rules" framework hasn't been carved out, but
@@ -258,24 +208,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 - 🟡 **CR 208 — Power/Toughness** (push claude/modern_decks batch 122
   — audit against `MagicCompRules_20260417.txt` lines 1535–1568). How
   the engine reads, sets, and modifies creature power and toughness.
-  (a) **208.1 — Power and toughness** "A creature card has two
-  numbers separated by a slash printed in its lower right corner. The
-  first number is its power (the amount of damage it deals in combat);
-  the second is its toughness (the amount of damage needed to destroy
-  it)." — ✅ (`CardDefinition.power: i32` / `toughness: i32`;
+  (a) **208.1 — Power and toughness** — ✅ (`CardDefinition.power: i32` / `toughness: i32`;
   `CardInstance.power()` / `toughness()` apply layered modifications;
   `apply_combat_damage_to_creature` uses toughness to compute lethal).
-  (b) **208.2 — Star power/toughness (CDA)** "Some creature cards have
-  power and/or toughness that includes a star (\*)." — ✅
+  (b) **208.2 — Star power/toughness (CDA)** — ✅
   (`DynamicPt::*` variants in `compute_battlefield` cover Tarmogoyf-
   class CDAs: `BasePlusCardsTypesInGy`, `BasePlusLandsInAllGraveyards`,
   `BasePlusCountOfFilter`, `BasePlusCardsInExile`, etc. The "if the
   ability needs to use a number that can't be determined, use 0
   instead" CR 208.2a rule lives in `count_or_zero` clamps inside the
   resolvers.).
-  (c) **208.3 — Noncreature P/T** "A noncreature permanent has no
-  power or toughness, even if it's a card with a power and toughness
-  printed on it (such as a Vehicle)." — 🟡 (`power()` /
+  (c) **208.3 — Noncreature P/T** — 🟡 (`power()` /
   `toughness()` always return the printed value, even on noncreature
   permanents like Vehicles. Today no card checks "noncreature power"
   vs "creature power" so the gap is unobservable; the engine should
@@ -284,25 +227,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Engine-wide 🟡 for the literal API observability difference; play-
   observable 🟡 for the Vehicle-without-Crew case (today Vehicles
   attack at their printed P/T since Crew isn't wired).).
-  (d) **208.4 — Base P/T** "Some effects refer to a creature's 'base
-  power,' 'base toughness,' or 'base power and toughness.'" — ✅
+  (d) **208.4 — Base P/T** — ✅
   (`Effect::SetBasePT` routes through `Layer::Pt7b`, which only sets
   the *base* P/T leaving Layer 7c +1/+1 counter modifications intact;
   the layer order matches CR 613.4b/c. Used by Heavenly Blademaster
   / Cleric of Life's Bond / Mirror Mockery and the SOS Strixhaven
   set-base-PT primitives.).
-  (e) **208.4b — base P/T checks** "Some effects check a creature's
-  base power and/or toughness. These effects see that creature's
-  characteristics after applying any characteristic-defining
-  abilities and abilities that set power and/or toughness, ignoring
-  any effects and counters that modify power and/or toughness
-  without setting them." — 🟡 (the engine has no first-class
+  (e) **208.4b — base P/T checks** — 🟡 (the engine has no first-class
   `BasePowerOf(_)` value; `Value::PowerOf(_)` reads the layered
   modified P/T including counters. No STX/SOS card today checks
   base-P/T-only — engine-wide 🟡 for completeness on cards like
   Glassdust Hulk and Crystalline Crawler.).
-  (f) **208.5 — Missing P/T defaults to 0** "If a creature somehow
-  has no value for its power, its power is 0." — ✅ (`power()` /
+  (f) **208.5 — Missing P/T defaults to 0** — ✅ (`power()` /
   `toughness()` never panic; the helpers return `i32` from a base
   `definition.base_power() + power_bonus + +1/+1 counters − -1/-1
   counters`, so a default-constructed card reads 0/0. The lethal-
@@ -323,22 +259,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   sacrifice routes a permanent to graveyard, when it can be
   performed, and how it interacts with destruction-replacement
   effects (regenerate, indestructible).
-  (a) **701.21a** "To sacrifice a permanent, its controller moves
-  it from the battlefield directly to its owner's graveyard" — ✅
+  (a) **701.21a** — ✅
   (`Effect::Sacrifice` and the `sac_cost: true` activated-ability
   path both bypass destruction-replacement: the
   `remove_from_battlefield_to_graveyard` helper moves the card
   directly to graveyard without re-routing through the destroy
   pipeline). Sacrifice ignores Indestructible and Regenerate.
-  (b) **701.21a** "A player can't sacrifice something that isn't a
-  permanent, or something that's a permanent they don't control" — ✅
+  (b) **701.21a** — ✅
   (the `sac_cost` cost validation in `actions.rs` rejects activations
   where the source isn't on the battlefield or isn't controlled by
   the activator; `Effect::Sacrifice`'s filter pass + `c.controller
   == p` clause picks only `who`'s controlled permanents).
-  (c) **701.21a** "Sacrificing a permanent doesn't destroy it, so
-  regeneration or other effects that replace destruction can't affect
-  this action" — ✅ (the engine moves the card directly via
+  (c) **701.21a** — ✅ (the engine moves the card directly via
   `remove_from_battlefield_to_graveyard`; the regen replacement
   effect framework hooks into `Effect::Destroy`, not the sacrifice
   path).
@@ -363,39 +295,37 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`). The life-total primitive — how
   gain/lose life are computed, payment-of-life validity, and the
   "can't gain/lose life" effect framework.
-  (a) **119.1** "Each player begins the game with a starting life
-  total of 20" — ✅ (`Player::new` in `game/types.rs` initialises
+  (a) **119.1** — ✅ (`Player::new` in `game/types.rs` initialises
   `life: 20`; format mod sets Commander's 40 and Two-Headed Giant's
   30 via `Player::with_starting_life`).
-  (b) **119.2** "Damage dealt to a player causes that player to
-  lose that much life" — ✅ (`deal_damage_to` in `game/effects/mod.rs`
+  (b) **119.2** — ✅ (`deal_damage_to` in `game/effects/mod.rs`
   routes player damage through `Player.life -= amount` and emits
   `GameEvent::LifeLost`).
-  (c) **119.3** "Gain/lose life adjusts life total" — ✅ (`Effect::
+  (c) **119.3** — ✅ (`Effect::
   GainLife` / `Effect::LoseLife` both modify `Player.life` and emit
   the matching events; `Player.life_gained_this_turn` tracks the
   per-turn fan-out for Honor Troll / Children of Korlis-class
   triggers).
-  (d) **119.4** "Pay X life requires life ≥ X" — 🟡 (the engine
+  (d) **119.4** — 🟡 (the engine
   enforces this via `Player.can_pay_life` for activated-ability
   `life_cost: u32` and `Effect::LoseLife` clamps at 0 instead of
   going negative; no cards that pay life as a spell-cast cost are
   in the catalog beyond the Vicious Rivalry / Pay-X-life-as-effect
   template).
-  (e) **119.4b** "Players can always pay 0 life" — ✅ (the cost
+  (e) **119.4b** — ✅ (the cost
   validator short-circuits when `amount == 0` and never checks the
   life total; this matches the CR-correct behavior).
-  (f) **119.5** "Set life to specific number → gain/lose enough" —
+  (f) **119.5** —
   ✅ (`Effect::SetLife { who, amount }` computes the delta and emits
   the matching `LifeGained` / `LifeLost` event; Beacon of Immortality,
   Magus of the Mirror, Skull of Orm-class effects all route through
   this).
-  (g) **119.6** "Player at 0 or less life loses the game" — ✅
+  (g) **119.6** — ✅
   (state-based actions in `state_based_actions.rs` emit
   `GameEvent::PlayerLost` when `Player.life <= 0`; CR 704.5a).
-  (h) **119.7-119.8** "Can't gain/lose life" — ⏳ (no `Player.can_
+  (h) **119.7-119.8** — ⏳ (no `Player.can_
   not_gain_life: bool` flag; no card in the catalog grants this).
-  (i) **119.9** "Whenever [player] gains life" — ✅ (`EventKind::
+  (i) **119.9** — ✅ (`EventKind::
   LifeGained` triggers fire per-event with `event_amount` threaded
   through `EffectContext`; `Value::TriggerEventAmount` reads the
   amount in trigger bodies for Light of Promise-class "that many"
@@ -415,18 +345,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The card-draw primitive — what
   drawing means, how multiple draws are sequenced, what happens when
   the library is empty, and the replacement-effect framework. Audit:
-  (a) **121.1** "A player draws a card by putting the top card of
-  their library into their hand" — ✅ (`Effect::Draw` in
+  (a) **121.1** — ✅ (`Effect::Draw` in
   `game/effects/mod.rs` pops the top of `Player.library` and pushes
   to `Player.hand`; emits `GameEvent::CardDrawn`).
-  (b) **121.2** "Cards may only be drawn one at a time. If a player
-  is instructed to draw multiple cards, that player performs that
-  many individual card draws" — ✅ (`Effect::Draw { amount }` loops
+  (b) **121.2** — ✅ (`Effect::Draw { amount }` loops
   `amount` times, each iteration pulling exactly one card; each
   iteration emits its own `CardDrawn` event so triggers fire per
   card).
-  (c) **121.2a** "Multiple-draw modifications via replacement
-  effects" — 🟡 (Replacement-effect framework landed in Phase H of
+  (c) **121.2a** — 🟡 (Replacement-effect framework landed in Phase H of
   the Commander rollout but is sparsely used for draws today. No STX/
   SOS card prints a "draw N additional cards as part of each draw"
   rider, so the gap is doc-tracked).
@@ -434,22 +360,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   ⏳ (no `StaticEffect::CapDrawsPerTurn(N)` primitive; Maralen of the
   Mornsong / Future Sight-class no-draw effects aren't in the
   catalog).
-  (e) **121.2c** "APNAP order for multiple-player draws" — 🟡
+  (e) **121.2c** — 🟡
   (multi-player draws fan out via `Selector::Player(EachPlayer)`'s
   iteration order which is seat-index; the active player is seat 0
   in 1v1, so the order is APNAP-correct. In multiplayer the
   fan-out walks `0..N` rather than starting from `active_player`).
-  (f) **121.3** "If library is empty AND effect offers a *choice* to
-  draw, that player can choose to do so" — ⏳ (engine doesn't model
+  (f) **121.3** — ⏳ (engine doesn't model
   "choose to draw" via decision; `Effect::Draw` always draws
   unconditionally, so the choice path collapses to "always-draw"
   whether or not the library is empty).
-  (g) **121.4** "Player attempting to draw from empty library loses
-  next time priority is given" — ✅ (`Effect::Draw` increments
+  (g) **121.4** — ✅ (`Effect::Draw` increments
   `Player.draws_from_empty_library` when the library is empty; the
   SBA loop in `state_based_actions.rs` reads this and emits a
   `PlayerLost` event at the next priority window per CR 704).
-  (h) **121.5** "Move from library to hand without 'draw'" — ✅
+  (h) **121.5** — ✅
   (`Effect::Move { from: Library, to: Hand }` doesn't emit
   `CardDrawn` events, so draw-triggers don't fire on tutored cards;
   this is exactly the printed-Oracle semantics for Demonic Tutor /
@@ -460,17 +384,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   draw-replacement specifically is wired for Anvil of Bogardan,
   Notion Thief, etc. The framework supports the printed shape but
   card-count is small).
-  (j) **121.7** "Replacement effects that result in card draws" —
+  (j) **121.7** —
   🟡 (Same coverage as 121.6 — works for the cards that use it).
-  (k) **121.8** "Card drawn during a spell cast is kept face down
-  until the cast completes" — ⏳ (no face-down-pending-draw queue;
+  (k) **121.8** — ⏳ (no face-down-pending-draw queue;
   the engine resolves a draw mid-cast immediately, so a hypothetical
   "as you cast this spell, draw a card" rider sees the drawn card
   immediately. No card in the catalog actually leans on this
   ordering, so it's doc-tracked).
-  (l) **121.9** "Effect that gives a player the option to reveal a
-  card as they draw it, that player may look at that card as they
-  draw it before choosing whether to reveal" — ⏳ (no
+  (l) **121.9** — ⏳ (no
   reveal-on-draw decision shape).
   Tests: `archmage_emeritus_draws_on_instant_cast` exercises basic
   draw-trigger fire (121.1); `gambit_player_loses_with_empty_library`
@@ -485,8 +406,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Untap / Upkeep / Draw — there are no turn-based actions at the
   *phase* level (each child step owns its own turn-based actions).
   Audit:
-  (a) **501.1** "The beginning phase consists of three steps, in
-  this order: untap, upkeep, and draw." — ✅ (`TurnStep::next` in
+  (a) **501.1** — ✅ (`TurnStep::next` in
   `game/types.rs` walks `Untap → Upkeep → Draw → PreCombatMain → …`
   in CR-mandated order; no engine state allows phase reordering).
   The phase enum itself is implicit — the engine tracks the step
@@ -505,18 +425,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The untap step's turn-based actions.
   Audit:
-  (a) **502.1** "Phased-in permanents with phasing phase out, and
-  phased-out permanents that the active player controlled when they
-  phased out phase in" — ⏳ no Phasing keyword primitive (no
+  (a) **502.1** — ⏳ no Phasing keyword primitive (no
   `Keyword::Phasing` variant; `do_untap` doesn't walk a phased-out
   list). No STX/SOS card uses Phasing (Iceage / Mirage block only).
-  (b) **502.2** "Day/Night transition: if previous active player cast
-  0 spells while day → night; if cast 2+ spells while night → day" —
+  (b) **502.2** —
   ⏳ no `GameState.day_night: DayNight` field; no transition logic in
   `enter_step`. No STX/SOS card uses Day/Night (Innistrad: Midnight
   Hunt block only).
-  (c) **502.3** "Active player determines which permanents untap, then
-  untaps them all simultaneously" — ✅ (`do_untap` in
+  (c) **502.3** — ✅ (`do_untap` in
   `game/stack.rs:572` walks `self.battlefield`, filters by
   `card.controller == active_player_idx`, and flips `card.tapped =
   false`. Stun counters interpose per CR 701.46a / 122.1d via
@@ -531,11 +447,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `creatures_cast_this_turn`, and Teferi's sorcery-as-instant flag.
   Effects that "prevent N permanents from untapping" (Frozen Aether /
   Stasis-class effects) — ⏳ no `StaticEffect::PreventUntap` primitive.
-  (d) **502.4** "No player receives priority during the untap step,
-  so no spells can be cast or resolve and no abilities can be
-  activated or resolve. Any ability that triggers during this step
-  will be held until the next time a player would receive priority,
-  which is usually during the upkeep step" — ✅ (`enter_step`'s
+  (d) **502.4** — ✅ (`enter_step`'s
   `TurnStep::Untap` arm at `game/stack.rs:101` calls `do_untap`,
   emits `TurnStarted`, then immediately calls `pass_priority()` to
   advance to Upkeep — no priority window is opened. Untap-step
@@ -552,13 +464,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The upkeep-step framework — no
   turn-based actions, but the active player receives priority and
   beginning-of-upkeep triggers go on the stack. Audit:
-  (a) **503.1** "No turn-based actions. Once it begins, the active
-  player gets priority" — ✅ (`enter_step` arm for `TurnStep::Upkeep`
+  (a) **503.1** — ✅ (`enter_step` arm for `TurnStep::Upkeep`
   in `game/stack.rs` opens a priority window via
   `give_priority_to_active()` without applying any TBA between
-  Untap and Upkeep). (b) **503.1a** "Untap-step triggers AND
-  beginning-of-upkeep triggers are put on the stack before the AP
-  gets priority; emission order doesn't matter" — ✅ (untap-step
+  Untap and Upkeep). (b) **503.1a** — ✅ (untap-step
   triggers are emitted during `do_untap` and the trigger dispatcher
   pushes each `StackItem::Trigger` onto the stack; beginning-of-
   upkeep triggers fire via `EventKind::StepBegins(Upkeep)` /
@@ -567,8 +476,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   default LIFO from the trigger dispatcher — for 1v1 the active
   player's triggers are pushed first and resolve last, matching
   the printed "AP picks order within their pile" convention).
-  (c) **503.2** "Cast only after [player's] upkeep step — applies
-  to first upkeep when multiple exist" — ⏳ (no card in the catalog
+  (c) **503.2** — ⏳ (no card in the catalog
   prints "cast only after upkeep"; the engine's cast-time predicate
   framework doesn't gate on "first upkeep this turn"). No STX/SOS
   card requires this.
@@ -585,8 +493,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   special rules — ✅ (`LoyaltyAbility` struct in `card.rs` keyed
   separately from regular `ActivatedAbility`; activation routes
   through `activate_loyalty_ability` in `game/mod.rs:1715`).
-  (b) **606.2** "An activated ability with a loyalty symbol in its
-  cost is a loyalty ability" — ✅ (`LoyaltyAbility.loyalty_cost: i32`
+  (b) **606.2** — ✅ (`LoyaltyAbility.loyalty_cost: i32`
   is the loyalty delta; +N to add counters, -N to remove).
   (c) **606.3** sorcery-speed + main-phase only + own permanent +
   once-per-turn — ✅ (`activate_loyalty_ability` gates: (i)
@@ -615,14 +522,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The two-step draw-step framework
   — TBA to draw a card, then AP gets priority. Audit:
-  (a) **504.1** "First, the active player draws a card. This
-  turn-based action doesn't use the stack" — ✅ (`enter_step` arm
+  (a) **504.1** — ✅ (`enter_step` arm
   for `TurnStep::Draw` calls `Effect::Draw { who: active_player,
   amount: 1 }` directly via `resolve_effect` BEFORE opening the
   priority window — the draw is not pushed as a stack item, the
   draw event emits `GameEvent::CardDrawn`, and any "whenever a
-  player draws a card" triggers fan out from there). (b) **504.2**
-  "Second, the active player gets priority" — ✅ (after the draw
+  player draws a card" triggers fan out from there). (b) **504.2** — ✅ (after the draw
   TBA resolves, `give_priority_to_active()` opens the priority
   window; trigger-stack resolution from draw-event triggers takes
   precedence over the priority window since stack items resolve
@@ -639,19 +544,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 - ✅ **CR 505 — Main Phase** (push modern_decks batch 38,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Audit:
-  (a) **505.1** "Two main phases per turn (precombat / postcombat)" — ✅
+  (a) **505.1** — ✅
   (`TurnStep::FirstMainPhase` and `TurnStep::SecondMainPhase` are
   separate variants in `game/types.rs` with the combat phase wedged
   between them; an additional combat phase + main pair is reachable
   through the `extra_combat_phases_this_turn` counter used by
   Aggravated Assault / World at War).
-  (b) **505.1a / 505.1b** "Only the first main phase is precombat;
-  others are postcombat" — ✅ (`TurnStep::FirstMainPhase` is the only
+  (b) **505.1a / 505.1b** — ✅ (`TurnStep::FirstMainPhase` is the only
   variant whose `is_first_main_phase()` returns true; `Selector::Targets`
   in step-trigger filters distinguish first vs second mains via the
   enum variant, so cards keyed on precombat-main fire correctly).
-  (c) **505.2** "Main phase ends when all players pass while stack is
-  empty" — ✅ (`pass_priority` in `game/stack.rs` advances the step
+  (c) **505.2** — ✅ (`pass_priority` in `game/stack.rs` advances the step
   only when `self.stack.is_empty()` and both players have passed in
   succession — the standard step-end rule; no special main-phase
   branch needed).
@@ -663,16 +566,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   in `CUBE_FEATURES.md`).
   (f) **505.5** Attraction roll-to-visit precombat turn-based action
   — ⏳ (no Attraction card type — Unfinity-only).
-  (g) **505.6** "Active player gets priority" — ✅
+  (g) **505.6** — ✅
   (`give_priority_to_active` is called at the start of each main
   phase via `enter_step`'s match arm on `FirstMainPhase`/`SecondMainPhase`).
-  (h) **505.6a** "Main phase is the only phase you can normally cast
-  sorcery-speed spells" — ✅ (`can_cast_sorcery_speed` checks
+  (h) **505.6a** — ✅ (`can_cast_sorcery_speed` checks
   `current_step ∈ {FirstMainPhase, SecondMainPhase}` AND stack-empty
   AND player-has-priority).
-  (i) **505.6b** "During either main phase, the active player may play
-  one land card from hand if stack is empty, has priority, and hasn't
-  played a land this turn" — ✅ (`play_land` enforces all three
+  (i) **505.6b** — ✅ (`play_land` enforces all three
   preconditions: `current_step.is_main_phase()` via
   `can_cast_sorcery_speed`, `self.stack.is_empty()`, the
   `Player.lands_played_this_turn` cap modulo `extra_land_per_turn`
@@ -690,11 +590,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   The blocker-declaration turn-based action — who can block what, when
   triggers fire, and how block-on-ETB interacts with normal blocking.
   Audit:
-  (a) **509.1** "Defending player declares blockers, no stack" — ✅
+  (a) **509.1** — ✅
   (`declare_blockers` in `game/combat.rs` is a direct mutator; emits
   `BlockerDeclared` events but doesn't push to the stack).
-  (b) **509.1a** "Chosen creatures must be untapped, not battles, and
-  block creatures attacking the controller or their planeswalker" — ✅
+  (b) **509.1a** — ✅
   for tap state (`can_block` checks `tapped`); the "attacking-creatures
   only" gate enforces `defender_idx == blocker.controller` per the
   `same_team` check (battles are not modelled as attackable but the
@@ -710,21 +609,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (e) **509.1d-f** cost-to-block lock-in and payment — ⏳ (no
   blocker-cost activation pipeline; no cards in the catalog have
   "creatures can't block unless their controller pays {N}").
-  (f) **509.1g** "Each chosen creature still controlled by the
-  defending player becomes a blocking creature" — ✅ (`block_map`
+  (f) **509.1g** — ✅ (`block_map`
   records the assignment; SBA later checks for blocker survival before
   combat damage assigns).
-  (g) **509.1h** "An attacking creature with one or more declared
-  blockers becomes a blocked creature" — ✅ (`is_blocked(attacker_id)`
+  (g) **509.1h** — ✅ (`is_blocked(attacker_id)`
   derived from `block_map` entries; persists through combat phase).
-  (h) **509.1i** "Any abilities that trigger on blockers being declared
-  trigger" — ✅ (push XXVI: `EventKind::Blocks` + `EventKind::BecomesBlocked`
+  (h) **509.1i** — ✅ (push XXVI: `EventKind::Blocks` + `EventKind::BecomesBlocked`
   emit per `BlockerDeclared` event; trigger dispatcher fans out matching
   triggered abilities; test `daemogoth_titan_blocks_sacrifices_another_creature`).
-  (i) **509.2** "Active player gets priority after declare-blockers"
-  — ✅ (`give_priority_to_active()` at the end of `declare_blockers`).
-  (j) **509.2a** "Triggers from 509.1 go on the stack before AP priority,
-  order doesn't matter" — 🟡 (the dispatcher orders by emission sequence
+  (i) **509.2** — ✅ (`give_priority_to_active()` at the end of `declare_blockers`).
+  (j) **509.2a** — 🟡 (the dispatcher orders by emission sequence
   rather than APNAP; in 1v1 this is the same outcome, in multiplayer the
   APNAP order is approximated).
   (k) **509.3a/b/c/d/e** different trigger condition shapes
@@ -737,11 +631,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   accumulation; functionally correct for single-creature blockers but
   doesn't model the "Whenever this creature blocks two or more
   creatures" pattern accurately if such a card existed.
-  (l) **509.3f** "characteristics-at-block-time gating" — ✅ (trigger
+  (l) **509.3f** — ✅ (trigger
   filter `Predicate::EntityMatches` reads layered characteristics at
   fire time; type changes mid-combat don't retroactively trigger).
-  (m) **509.3g** "Whenever this creature attacks and isn't blocked"
-  — ✅ (push claude/modern_decks batch 127: new
+  (m) **509.3g** — ✅ (push claude/modern_decks batch 127: new
   `EventKind::AttacksAndIsntBlocked` + `GameEvent::
   AttackerWentUnblocked` events emitted at the end of
   `declare_blockers` for each attacker with zero entries in
@@ -750,8 +643,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `effect::shortcut::on_unblocked(effect)` wraps the trigger. Inkling
   Skyraider (b127) exercises this — "drain 1 when unblocked"; tests
   cover both the unblocked-fire and blocked-no-fire paths.).
-  (n) **509.4** "If a creature is put onto the battlefield blocking,
-  controller chooses which attacker it's blocking" — ⏳ (no `Effect::
+  (n) **509.4** — ⏳ (no `Effect::
   PutOntoBattlefieldBlocking` primitive; cards like Mantis Rider don't
   exercise this).
   Tests: combat-coverage tests in `crabomination/src/tests/game.rs`
@@ -766,36 +658,31 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   branch — audit against `MagicCompRules_20260417.txt`): The cost
   framework — what counts as a cost, payment order, replacement
   primitives, and "X" costs. Audit:
-  (a) **118.1** "A cost is an action or payment necessary to take
-  another action…" — ✅ (the engine models costs as fields on
+  (a) **118.1** — ✅ (the engine models costs as fields on
   `ActivatedAbility` + `CardDefinition.cost` for spells, plus
   `AlternativeCost` for pitch / cost-reduction-with-gate paths).
   (b) **118.2** mana payment opens a mana-ability activation window —
   ✅ (`try_pay_with_auto_tap` / `try_pay_after_snapshot` in
   `game/actions.rs` allow mana-ability activation mid-payment; mana
   abilities resolve immediately without the stack per CR 605.3).
-  (c) **118.3** "A player can't pay a cost without having the necessary
-  resources" — ✅ (`InsufficientMana` for mana, `InsufficientLife` for
+  (c) **118.3** — ✅ (`InsufficientMana` for mana, `InsufficientLife` for
   life-cost, `CardIsTapped` for tap costs, `SelectionRequirementViolated`
   for exile-other-from-gy preflight; all rejection paths roll back the
   payment snapshot via `restore_payment_state`).
-  (d) **118.3a** "Paying mana is done by removing the indicated mana
-  from a player's mana pool" — ✅ (`ManaPool::try_pay`).
-  (e) **118.3b** "Paying life is done by subtracting the indicated
-  amount of life" — ✅ (`life_cost` deduction in `activate_ability`,
+  (d) **118.3a** — ✅ (`ManaPool::try_pay`).
+  (e) **118.3b** — ✅ (`life_cost` deduction in `activate_ability`,
   `LoseLife` event emission).
-  (f) **118.3c** "Activating mana abilities is not mandatory, even if
-  paying a cost is" — 🟡 (the auto-decider always activates mana
+  (f) **118.3c** — 🟡 (the auto-decider always activates mana
   abilities to satisfy payment; a real UI player choosing not to tap a
   source could fail a payment. Functionally indistinguishable from the
   CR-correct outcome in bot harness).
-  (g) **118.4** "Some costs include an X" — ✅ for spells (`x_value`
+  (g) **118.4** — ✅ for spells (`x_value`
   on `CastSpell`, propagated through `ManaCost::with_x_value`), 🟡 for
   activated abilities (Berta's `{X}{T}: …` activation has X-symbols in
   the cost but no per-activation X prompt; the engine zeroes X for
   activations — tracked under `Value::SacrificedToughness` row in
   "Engine — Missing Mechanics" follow-ups).
-  (h) **118.5** "Some costs are represented by {0}" — ✅ (zero-mana
+  (h) **118.5** — ✅ (zero-mana
   spells like Mox cycle, Prismari Bauble are castable with empty pool).
   (i) **118.6** unpayable cost (mana_cost = None / empty + no alt) —
   🟡 (engine has no general "unpayable" gate — `ManaCost::default()` is
@@ -818,7 +705,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   same for "pay X life" additional costs that vary independently of
   cast-time X). Convoke (`Effect::CastWithConvoke` path) lands as an
   additional-cost replacement that consumes tapped creatures.
-  (l) **118.9** "Some costs are described as 'pay 0'" — ✅ (zero-mana
+  (l) **118.9** — ✅ (zero-mana
   payment is a no-op, the auto-decider always pays).
   (m) **118.10/12** other corner cases — ⏳ (cost-of-cost interactions
   not exercised). Tests: implicit across the entire suite — every cast
@@ -917,13 +804,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): Emblems
   represent abilities in the command zone with no other characteristics.
   Audit:
-  (a) **114.1** "Some effects put emblems into the command zone" — ⏳
+  (a) **114.1** — ⏳
   (no `Effect::CreateEmblem` primitive; no `Zone::CommandZone`
   emblem-mode). Some planeswalker ults that grant emblems (Professor
   Dellian Fel's -6, Ral Zarek's -7, Tezzeret's emblems) are doc-tracked
   as 🟡 with the emblem half omitted — the body / earlier loyalty
   abilities still ship.
-  (b) **114.2** "[Player] gets an emblem with [ability]" — ⏳ (no
+  (b) **114.2** — ⏳ (no
   emblem creation effect; the engine's command zone exists for
   Commander/Brawl but holds only `Card` instances, not abilityless
   emblem markers).
@@ -948,18 +835,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   The targeting framework — declaring targets at cast / activation time,
   legal-target check at resolution time, and "change targets" effects.
   Audit:
-  (a) **115.1** "Some spells and abilities require their controller to
-  choose one or more targets for them. The targets are declared as part
-  of the process of putting the spell or ability on the stack. The
-  targets can't be changed except by another spell or ability that
-  explicitly says it can do so" — ✅ (`GameAction::CastSpell.target` +
+  (a) **115.1** — ✅ (`GameAction::CastSpell.target` +
   `additional_targets: Vec<Target>` capture the target slots at cast
   time; `StackItem::Spell.target` + `additional_targets` persist them
   through the resolution window. Triggered/activated targets are stored
   on `StackItem::Trigger.target` similarly. No "change targets" effect
   exists today; engine has no `Effect::ChangeTarget` primitive).
-  (b) **115.1a/c/d** "Instants/sorceries/activated/triggered abilities
-  are targeted if they say 'target [something]'" — ✅ (the `Selector::
+  (b) **115.1a/c/d** — ✅ (the `Selector::
   Target(slot)` and `Selector::TargetFiltered { slot, filter }` shapes
   on effects flag an ability as targeted; the cast pipeline's
   `requires_target_check` walks the effect tree at cast time to enforce
@@ -970,10 +852,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (c) **115.1b** Aura spells — ⏳ (no Aura subtype primitive; the engine
   has no Enchant keyword + attached-to mechanic. Affected cards: any
   Aura — no STX/SOS Aura is wired today).
-  (d) **115.2** "Only permanents are legal targets for spells and
-  abilities, unless a spell or ability (a) specifies that it can target
-  an object in another zone or a player, or (b) targets an object that
-  can't exist on the battlefield, such as a spell or ability" — ✅
+  (d) **115.2** — ✅
   (`check_target_legality_with_source` walks the battlefield by default;
   `SelectionRequirement::IsSpellOnStack` and `SelectionRequirement::
   CardsInZone` shapes opt-in to other-zone targets. `Target::Player`
@@ -981,8 +860,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   shape used by graveyard-recursion cards (Witherbloom Recourse,
   Silverquill Necroscribe) explicitly targets the graveyard residents
   per 115.2(a).
-  (e) **115.3** "The same target can't be chosen multiple times for any
-  one instance of the word 'target' on a spell or ability" — 🟡 (the
+  (e) **115.3** — 🟡 (the
   multi-target slots in `additional_targets` allow the caller to repeat
   the same `Target::Permanent` at different slot indices; the engine
   doesn't reject same-target across slots today. In practice no STX/SOS
@@ -1000,15 +878,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Apprentice ping, Storm-Kiln Artist, etc.). The "another target"
   variant chains through `Predicate::All` to exclude the source / first
   target — handled per-card today rather than via a dedicated primitive).
-  (g) **115.5** "A spell or ability on the stack is an illegal target
-  for itself" — ✅ (`check_target_legality_with_source` accepts an
+  (g) **115.5** — ✅ (`check_target_legality_with_source` accepts an
   optional `source_card_id` and rejects targets that match. The cast
   pipeline at `game/actions.rs:657` passes the casting spell's own
   `CardId` so e.g. Bury in Books can't put itself on top of the
   library; existing test `cr_115_5_spell_targeting_itself_is_illegal_via_permanent_id`
   locks the regression).
-  (h) **115.6** "A spell or ability that requires targets may allow zero
-  targets to be chosen" — 🟡 (Divergent Equation's "up to X" picker uses
+  (h) **115.6** — 🟡 (Divergent Equation's "up to X" picker uses
   `Selector::take` with `Value::XFromCost`; at X=0 the selector returns
   empty and the spell still resolves. No general "zero-target" gate
   rejects a target-required spell at cast time — `additional_targets`
@@ -1033,15 +909,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   validation against the chosen mode's filter is a future polish item.
   In practice the AutoDecider picks a mode whose filter is consistent
   with the cast-time target, so the gap is invisible).
-  (k) **115.9** "Object that checks what another spell is targeting" —
+  (k) **115.9** —
   ✅ (the `Predicate::CastSpellTargetsMatch(filter)` reads the firing
   spell's `target` slot at trigger-resolution time; Strixhaven Repartee
   uses this for "spells that target a creature" payoffs (Stirring
   Hopesinger, Rehearsed Debater, Informed Inkwright, etc.). The
   "[spell] with [N] targets" multi-target count check from 115.9a is
   not exposed as a separate predicate — no STX/SOS card needs it).
-  (l) **115.10** "Spells and abilities can affect objects and players
-  they don't target" — ✅ (`Selector::EachPermanent(filter)` and
+  (l) **115.10** — ✅ (`Selector::EachPermanent(filter)` and
   `Selector::Player(EachOpponent)`-style fan-outs resolve at
   resolution time and don't require cast-time target declaration; the
   Sweeper template (Pestilent Haze, Crippling Fear, Wrath of God, Crux
@@ -1057,22 +932,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Special actions are player-initiated actions that don't use the stack
   (CR 116.1). Audit:
-  (a) **116.1** "Special actions are actions a player may take when they
-  have priority that don't use the stack" — ✅ (the engine has separate
+  (a) **116.1** — ✅ (the engine has separate
   `GameAction` variants for each special action; none push onto
   `self.stack`).
-  (b) **116.2a** "Playing a land is a special action" — ✅
+  (b) **116.2a** — ✅
   (`play_land_with_face` in `game/actions.rs` checks priority via
   `can_cast_sorcery_speed(p)` for sorcery-speed timing, enforces the
   per-turn limit via `can_play_land()`, requires `has_in_hand`, and
   moves the card via direct push to battlefield without using the stack).
-  (c) **116.2b** "Turning a face-down creature face up" — ⏳ (no morph /
+  (c) **116.2b** — ⏳ (no morph /
   face-down primitive in the engine; the corner is not exercised by the
   current catalog).
-  (d) **116.2c** "End a continuous effect / stop a delayed triggered
-  ability" — 🟡 (some duration-bound effects clear in cleanup; no
+  (d) **116.2c** — 🟡 (some duration-bound effects clear in cleanup; no
   general-purpose "special action to dismiss" path).
-  (e) **116.2d** "Ignore a static ability for a duration" — ⏳ (no static
+  (e) **116.2d** — ⏳ (no static
   ability with "you may ignore" rider in the catalog).
   (f) **116.2e** Circling Vultures "may discard at any time" — ⏳ (the
   card isn't in the catalog).
@@ -1087,8 +960,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (l) **116.2k** Plot exile from hand — ⏳.
   (m) **116.2m** Pay locked-half unlock cost (Mystery Houses / Rooms) —
   ⏳.
-  (n) **116.3** "If a player takes a special action, that player receives
-  priority afterward" — ✅ (`play_land` does NOT call
+  (n) **116.3** — ✅ (`play_land` does NOT call
   `pass_priority`, leaving priority with the active player; the priority
   system idempotently re-checks who has priority via `priority.
   player_with_priority` and stack-empty state).
@@ -1100,10 +972,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   — audit against `MagicCompRules_20260417.txt`): The five-color
   primitive — what defines an object's color, color changes, monocolor
   vs multicolor vs colorless. Audit:
-  (a) **105.1** "five colors: white, blue, black, red, green" — ✅
+  (a) **105.1** — ✅
   (`mana.rs::Color::ALL` lists exactly those five, in WUBRG order).
-  (b) **105.2** "An object is the color or colors of the mana symbols
-  in its mana cost" — ✅ (`format.rs::color_identity` walks the printed
+  (b) **105.2** — ✅ (`format.rs::color_identity` walks the printed
   `cost.symbols` and unions colored / phyrexian / hybrid pips). Color
   indicator override and CDA-defined color are not yet modeled: no card
   in scope has a color indicator that disagrees with its mana cost
@@ -1115,7 +986,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   shape: add the three helpers on `ColorSet` so cards keying on
   "multicolored" (Multicolored Charms, Naya Charm, Edgewall variants)
   have a one-line query).
-  (d) **105.3** "Effects may change an object's color or add to it" —
+  (d) **105.3** —
   ⏳ (no `StaticEffect::AddColor` / `StaticEffect::BecomeColor`
   primitive. Cards like Kasmina's Transmutation ("becomes a blue
   Frog"), Mercurial Transformation ("becomes a blue Frog"), Fractalize
@@ -1127,7 +998,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   colorless — ⏳ (no choose-color decision shape; cards like Painter's
   Servant ("As this enters, choose a color"), Cabal Ritual variants
   with name choice, etc. aren't in scope today).
-  (f) **105.5** "Color pair = exactly two of the five" — ✅
+  (f) **105.5** — ✅
   (`cube.rs::pair_contains` walks two-color tuples; `College::colors`
   returns exactly `[Color; 2]` for each guild; Commander color-identity
   rule rejects 3+ pairs via `format.rs`'s deck validator).
@@ -1140,15 +1011,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   against `MagicCompRules_20260417.txt`): The coin-flip primitive — what
   flipping means, win/loss semantics, and "ignore the result" overrides.
   Audit:
-  (a) **705.1** "A coin used in a flip must be a two-sided object with
-  easily distinguished sides and equal likelihood that either side lands
-  face up" — ✅ (the `Effect::FlipCoin` resolver asks the decider for a
+  (a) **705.1** — ✅ (the `Effect::FlipCoin` resolver asks the decider for a
   `Bool` answer per flip. `AutoDecider` always returns `Bool(true)`
   (heads) for determinism in tests; a real client RNG would call
   `rand::random::<bool>()`. The two-sided constraint is enforced by the
   `Bool` return type.).
-  (b) **705.2** "the player that flips the coin calls 'heads' or 'tails'…
-  If the call matches the result, the player wins the flip" — 🟡 (the
+  (b) **705.2** — 🟡 (the
   engine collapses "call + result" into a single boolean: `true` = the
   flipper "wins" the call. Cards that distinguish "heads" vs "tails"
   specifically — Karplusan Minotaur ("Whenever Karplusan Minotaur deals
@@ -1158,9 +1026,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   win`, `on_tails ↔ lose`. Mana Clash's symmetric "we both flip until one
   comes up tails" needs a two-player flip loop; not yet wired but the
   primitive supports it via `count: Value::Const(N)`.).
-  (c) **705.3** "An effect may state that a coin flip has a certain
-  result… ignore the actual results of that flip and use the indicated
-  results instead" — ⏳ (no Krark's Thumb-style "flip two and pick"
+  (c) **705.3** — ⏳ (no Krark's Thumb-style "flip two and pick"
   override yet; would need a `Player.coin_flip_modifier: CoinFlipMod`
   flag or a stacked replacement effect on `Decision::CoinFlip`).
   Implementation: `Effect::FlipCoin { count, on_heads, on_tails }` at
@@ -1208,9 +1074,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (l) **122.3** +1/+1 vs -1/-1 cancellation as SBA — ✅
   (`check_state_based_actions` line 637-661 deducts `min(plus, minus)`
   of each kind).
-  (m) **122.4** "can't have more than N counters" — ⏳ (no
+  (m) **122.4** — ⏳ (no
   `Modification::MaxCountersOfKind` rule).
-  (n) **122.5** "move a counter" — ✅ (the `Effect::MoveCounter
+  (n) **122.5** — ✅ (the `Effect::MoveCounter
   { from, to, kind, amount }` primitive at `effect.rs:883` walks the
   source's counter pool, deducts up to `amount`, and adds to the
   destination; resolver at `effect.rs:1352` honours both objects being
@@ -1222,7 +1088,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `stack.rs:362+` AFTER the card is pushed onto bf but BEFORE the
   next SBA pass, so printed 0/0 bodies — Pterafractyl, Symmathematics,
   Quandrix Calligrapher — survive ETB).
-  (p) **122.7** "When the Nth [kind] counter is put on" — ⏳ (no
+  (p) **122.7** — ⏳ (no
   threshold-counter trigger; the engine emits one CounterAdded per
   add operation, but no "you went from 4 → 5 counters" notification).
   (q) **122.8** dies-with-counters → counters move to replacement —
@@ -1247,23 +1113,19 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `activate_ability` pushes a `StackItem::Ability` for non-mana
   activations; triggers are pushed via `fire_X_triggers` calls during
   resolution).
-  (b) **405.2** "objects added to the stack go on top" — ✅ (engine
+  (b) **405.2** — ✅ (engine
   uses `self.stack.push(item)` everywhere; the Vec end is the top).
-  (c) **405.3** "objects entering simultaneously, AP-controlled first,
-  then APNAP order" — 🟡 (the engine processes triggers in
+  (c) **405.3** — 🟡 (the engine processes triggers in
   ResolutionBuffer one at a time but doesn't sort by AP-vs-NAP. For
   ETB-rich boards with multiple simultaneous triggers across players,
   the stack order is whatever queue order they were collected in;
   observable difference only when both AP and NAP have triggers from
   the same event).
-  (d) **405.4** "controller of spell = caster; controller of activated
-  ability = activator; controller of triggered ability = controller
-  of source when triggered" — ✅ (`StackItem::Spell.controller` is
+  (d) **405.4** — ✅ (`StackItem::Spell.controller` is
   set in `finalize_cast`; `StackItem::Ability.controller` is set to
   the activator; triggered abilities resolve under
   `source_controller` snapshotted at trigger-fire time).
-  (e) **405.5** "when all players pass, top resolves; if stack empty,
-  step ends" — ✅ (`pass_priority` advances priority through both
+  (e) **405.5** — ✅ (`pass_priority` advances priority through both
   players; when both pass with empty stack, the engine advances
   step/phase via the turn machine).
   (f) **405.6a** effects don't go on stack — ✅ (effects resolve
@@ -1295,25 +1157,22 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt` lines 1984–1998): The library zone
   framework — what a library is, how cards are ordered in it, and how
   positional / counted operations resolve.
-  (a) **401.1** "Deck becomes library at game start" — ✅
+  (a) **401.1** — ✅
   (`build_game_state` in `crabomination::game::types` initialises
   `Player.library: Vec<CardInstance>` from the configured deck before
   the opening hand is drawn; the first card drawn comes off the
   vector's front via `Player::draw_one`).
-  (b) **401.2** "Single face-down pile, players can't look at or
-  reorder it" — ✅ (the `ClientView.library_size` projection sends only
+  (b) **401.2** — ✅ (the `ClientView.library_size` projection sends only
   the **count** to clients, never the cards; the server-side
   `Player.library` is the single source of truth. The engine has no
   "peek arbitrary library card" API; `Effect::LookAtTop`,
   `Effect::Scry`, `Effect::Surveil`, and `Effect::RevealUntilFind` all
   funnel through controlled-look + controlled-reorder paths so only
   the legal "look at top N" operations are exposed).
-  (c) **401.3** "Any player may count cards remaining in any library"
-  — ✅ (`Player.library.len()` is exposed via the public `ClientView`;
+  (c) **401.3** — ✅ (`Player.library.len()` is exposed via the public `ClientView`;
   used by `Predicate::ValueAtLeast(LibrarySizeOf, _)` for empty-library
   gates).
-  (d) **401.4** "If multiple cards are put into a library at the same
-  position simultaneously, owner picks the order" — 🟡 (the engine
+  (d) **401.4** — 🟡 (the engine
   treats each `Move(library)` as a single-card insertion at the top
   or bottom; multi-card simultaneous inserts collapse to sequence
   order. Mass `ShuffleGraveyardIntoLibrary` randomises so 401.4 is
@@ -1322,19 +1181,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   decider-side resolves the 401.4 picking via `Decision::Scry`.
   Engine-wide ⏳ for general "put these N cards on top in any order"
   cases where the decider doesn't already do the picking).
-  (e) **401.5** "Play with top of library revealed; recompute if top
-  changes mid-cast" — 🟡 (the engine has no `play_with_top_revealed`
+  (e) **401.5** — 🟡 (the engine has no `play_with_top_revealed`
   flag yet; cards like Future Sight, Vance's Blasting Cannons, Bolas's
   Citadel are doc-tracked in CUBE_FEATURES.md. The simpler subset —
   "look at the top card" abilities resolve immediately and don't span
   a cast — already works via `Effect::LookAtTop`. The cast-time
   recompute rider is unobservable today since no catalog card exposes
   the "top of library is your hand" play pattern).
-  (f) **401.6** "Top card stops being revealed → new object on
-  re-reveal" — ⏳ (no `play_with_top_revealed` to begin with, so the
+  (f) **401.6** — ⏳ (no `play_with_top_revealed` to begin with, so the
   CR 400.7 zone-change-new-object semantic doesn't have a hook yet).
-  (g) **401.7** "Put a card 'Nth from the top' with fewer than N → goes
-  on bottom" — ✅ (push claude/modern_decks batch 139): the new
+  (g) **401.7** — ✅ (push claude/modern_decks batch 139): the new
   `LibraryPosition::FromTop(usize)` variant in `effect.rs` and the
   matching branch in `place_card_in_dest` (`game/effects/movement.rs`)
   implement the CR 401.7 semantic exactly: `FromTop(0)` = top,
@@ -1362,41 +1218,39 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   framework — what exile is, how cards reach it, face-up vs face-down
   exile, and linked-ability pile-tracking for "exiled with this".
   Audit:
-  (a) **406.1** "Exile is a holding area for objects" — ✅
+  (a) **406.1** — ✅
   (`Player.exile: Vec<CardInstance>` plus `Effect::Move { to:
   ZoneDest::Exile }` and `Effect::Exile { what }` are the routing
   primitives; exile is just another zone on `Player` like graveyard).
-  (b) **406.2** "Exiling means putting into exile from the current
-  zone" — ✅ (the `move_card` helper in `game/effects/movement.rs`
+  (b) **406.2** — ✅ (the `move_card` helper in `game/effects/movement.rs`
   walks every zone — battlefield, graveyard, hand, library, stack —
   to find the source, then pushes onto `exile`; emits a `CardExiled`
   event for trigger consumers).
-  (c) **406.3** "Exiled cards are face up and may be examined" — ✅
+  (c) **406.3** — ✅
   (`Player.exile` is a public-zone Vec, the snapshot/wire layer
   serializes the full card definitions for the client. Face-down exile
   is ⏳: no `face_down: bool` flag on exile residents; foretell /
   Sanguine Brushstroke-class face-down exile is out of scope and the
   current set's catalog never asks for it).
-  (d) **406.3a/b** "Cast face-down from exile" — ⏳ (no morph / face-
+  (d) **406.3a/b** — ⏳ (no morph / face-
   down-cast pipeline; the `cast_spell` path requires a known
   `card_id` with a face-up `definition`. Casting from exile
   via the may-play permission path works for face-up cards —
   Mavinda Students' Advocate, Maelstrom Wanderer, foreboding-style
   cascade all work — but not for face-down).
-  (e) **406.5** "Pile separation for return-tracking" — ✅ (the
+  (e) **406.5** — ✅ (the
   `exile_after: bool` flag on may-play permissions tracks "if cast
   from exile, exile again on resolve" — wired for Mavinda and
   similar cards. The `linked_exile_pile: Vec<CardId>` field on
   `CardInstance` (added in the Linked Abilities work) holds the
   "exiled with this" pile for cards like Misthollow Griffin /
   Sword of Hearth and Home's linked-exile-pile referent).
-  (f) **406.6** "Linked abilities (one ability exiles, another refers
-  to 'the exiled cards')" — ✅ (the `linked_exile_pile` field links
+  (f) **406.6** — ✅ (the `linked_exile_pile` field links
   the two abilities; `Selector::ExiledWithThis` reads back the pile
   for the dependent ability. Wired by Stonebinder's Familiar's
   per-cast trigger gates and by the imprint primitive on artifact
   cards in the cube pool).
-  (g) **406.7** "An object exiled from exile becomes a new object" —
+  (g) **406.7** —
   ✅ (the `move_card` helper unconditionally creates a fresh
   `CardInstance` shell each time the card moves zones; existing
   counters / continuous effects don't follow per CR 400.7).
@@ -1424,32 +1278,28 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   The die-roll randomization primitive — how a rolled die generates a
   1..N outcome, how modifiers / results tables work, and how multi-
   roll ignored-roll mechanics interact. Audit:
-  (a) **706.1** "An N-sided die has N equally likely outcomes 1..N" —
+  (a) **706.1** —
   ✅ (`Effect::RollDie { sides, count, results }` in `card.rs` /
   `effect.rs` and `Decision::DieRoll { sides, player }` in
   `decision.rs` both shipped in batch 125; `DecisionAnswer::DieRoll(u8)`
   carries the rolled face. AutoDecider returns the die's midpoint
   ((sides+1)/2, so 3 for d6, 10 for d20) for deterministic tests;
   ScriptedDecider can script any face 1..=sides).
-  (b) **706.2** "Natural result vs. final result after modifiers;
-  modifier application order: reroll first, then add/subtract" — ⏳
+  (b) **706.2** — ⏳
   (no modifier-application layer; no reroll primitive. The current
   primitive treats the natural result AS the final result, which is
   exact for any card without printed roll modifiers).
-  (c) **706.3** "Result-table abilities ('1: do X, 2-3: do Y, 4+: do
-  Z')" — ✅ (`Effect::RollDie.results: Vec<(u8, u8, Effect)>` encodes
+  (c) **706.3** — ✅ (`Effect::RollDie.results: Vec<(u8, u8, Effect)>` encodes
   the results table; the resolver walks the arms and runs the FIRST
   matching `[low, high]` band. Out-of-range rolls run no effect for
   that die per CR 706.3a literal "If the result was in this range"
   semantics).
-  (d) **706.5** "Doubles rolling (Celebr-8000)" — ⏳ (no two-roll-
+  (d) **706.5** — ⏳ (no two-roll-
   with-doubles-check predicate; the current primitive rolls each die
   independently and dispatches per-die without observing pairs).
-  (e) **706.6** "Ignoring a roll causes no triggers to fire from it"
-  — ⏳ (no ignore-roll primitive; the resolver doesn't emit roll
+  (e) **706.6** — ⏳ (no ignore-roll primitive; the resolver doesn't emit roll
   events that triggers could observe yet).
-  (f) **706.8** "Storing roll results on a permanent (Centaur of
-  Attention)" — ⏳ (no `CounterType` representation of stored rolls;
+  (f) **706.8** — ⏳ (no `CounterType` representation of stored rolls;
   would need a new `CardInstance.stored_rolls: Vec<(u8, u8)>` field).
   Affected cards (none in catalog today): Krark, Tribute Brought,
   Bone Splinters-Variant cards, Aether Sphere Harvester. Tests:
@@ -1465,8 +1315,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — `MagicCompRules_20260417.txt`): The
   copy-effect framework — what gets copied when an object becomes a
   copy of another, copy-as-it-enters, and copies of spells. Audit:
-  (a) **707.1** "Some objects become or turn another object into a
-  copy of a spell, permanent, or card" — ✅ (`Effect::CopySpell`
+  (a) **707.1** — ✅ (`Effect::CopySpell`
   resolves at cast time, stamping `StackItem::Spell.is_token = true`
   for permanent-spell copies per CR 608.3f / 707.10f. The "copy a
   permanent on the battlefield" half — Clone / Cackling Counterpart /
@@ -1481,8 +1330,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (c) **707.2a** copies acquire color from cost and abilities from
   text — ✅ (the spell copy reads its CardDefinition.cost.colors and
   CardDefinition.{triggered,activated,static}_abilities).
-  (d) **707.2b** "Changing copiable values of the original doesn't
-  cascade to copies" — ✅ (the StackItem::Spell.copy snapshot is
+  (d) **707.2b** — ✅ (the StackItem::Spell.copy snapshot is
   independent of the original card; later edits to the original card
   in hand/library don't affect the resolved copy).
   (e) **707.2c** static copy-effect timing — ⏳ (no permanent copy
@@ -1529,7 +1377,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   audit, claude/modern_decks branch — `MagicCompRules_20260417.txt`):
   The split-card primitive — how a single physical card exposes two
   castable halves with distinct names, costs, and rules text. Audit:
-  (a) **709.1** "Two card faces on a single card" — ⏳ (no `Card
+  (a) **709.1** — ⏳ (no `Card
   Definition.split_face: Option<Box<CardDefinition>>` primitive yet;
   the engine has `back_face: Option<Box<BackFace>>` for MDFCs but
   that's wired specifically for double-faced cards on the
@@ -1538,21 +1386,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (b) **709.2** "Each split card is one card" (a player who drew a
   split card has drawn one card) — n/a (cards are one entity in the
   engine's `CardInstance` model; no double-counting to worry about).
-  (c) **709.3** "Player chooses which half to cast before putting it
-  on the stack" — ⏳ (no `GameAction::CastSplitHalf { card_id, half:
+  (c) **709.3** — ⏳ (no `GameAction::CastSplitHalf { card_id, half:
   Left|Right }` action; no cast-time fork on the spell-cast pipeline
   that consults the chosen half before validating cost / targets).
-  (d) **709.3a-b** "Only the chosen half's characteristics exist on
-  stack" — ⏳ (no per-half target / cost / type-line resolution on
+  (d) **709.3a-b** — ⏳ (no per-half target / cost / type-line resolution on
   `StackItem::Spell`; both halves would share the on-stack item if
   naively projected).
-  (e) **709.4** "In every zone except stack, the characteristics are
-  the combined halves" — ⏳ (Cathartic Reunion-style "split card has
+  (e) **709.4** — ⏳ (Cathartic Reunion-style "split card has
   both names" wouldn't work for `Predicate::SameNamedInZoneAtLeast`).
   (f) **709.4b** "Mana value is from combined cost" (Fire//Ice has
   MV 4) — ⏳ (the engine would naively read whichever half's cost is
   stamped on the `CardDefinition.cost` field).
-  (g) **709.4d** "Fused split spell characteristics are combined" —
+  (g) **709.4d** —
   ⏳ (no Fuse primitive — `Keyword::Fuse` doesn't exist).
   Affected cards (none in catalog today; one approximation):
   Wear // Tear (push 102 — single-spell approximation: ships as a
@@ -1640,44 +1485,36 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The object primitive — what an object
   is, how spell/ability descriptions disambiguate across zones, and
   controller assignment for off-stack/off-battlefield objects. Audit:
-  (a) **109.1** "An object is an ability on the stack, a card, a copy
-  of a card, a token, a spell, a permanent, or an emblem" — ✅ (engine
+  (a) **109.1** — ✅ (engine
   models cards via `CardInstance`, tokens via `CardInstance.is_token =
   true`, spells via `StackItem::Spell`, activated/triggered abilities
   via `StackItem::Ability` and `StackItem::Trigger`, permanents via
   battlefield-resident `CardInstance`; emblems are tracked as ⏳ — see
   CR 114 audit row).
-  (b) **109.2** "A description with a card type or subtype but no zone
-  / 'card' / 'spell' / 'source' keyword means a permanent on the
-  battlefield" — ✅ (the `SelectionRequirement` evaluator walks the
+  (b) **109.2** — ✅ (the `SelectionRequirement` evaluator walks the
   battlefield by default; `CardsInZone(Hand|Graveyard|Library|Exile)`
   is the explicit-zone selector — when neither appears, battlefield is
   the default zone the predicate evaluates against).
-  (c) **109.2a** "description including 'card' + zone = card in that
-  zone" — ✅ (`Selector::CardsInZone { who, zone, filter }` is the
+  (c) **109.2a** — ✅ (`Selector::CardsInZone { who, zone, filter }` is the
   primitive for "card in graveyard / hand / library / exile"; auto-
   target picker walks the named zone, not the battlefield).
-  (d) **109.2b** "description including 'spell' = spell on the stack" —
+  (d) **109.2b** —
   ✅ (`Selector::SpellOnStack { filter }` walks `self.stack` for
   `StackItem::Spell` items; `Predicate::IsSpellOnStack` filters
   selectors to the stack-resident spell case).
-  (e) **109.2c** "description including 'source' = source of ability/
-  damage/mana, in any zone" — ✅ (the engine threads
+  (e) **109.2c** — ✅ (the engine threads
   `EffectContext.source` from the original `CardId` regardless of
   current zone; `Value::PowerOf(Selector::Source)` and trigger
   filters that reference the source card all resolve correctly even
   after the source moves out of the battlefield, by walking the
   multi-zone fallback chain in `evaluate_requirement_static`).
-  (f) **109.3** "An object's characteristics are name, mana cost, color,
-  …, power, toughness, loyalty, defense, hand modifier, life modifier"
-  — ✅ (`CardDefinition` carries every printed characteristic;
+  (f) **109.3** — ✅ (`CardDefinition` carries every printed characteristic;
   `ComputedPermanent` carries the layered runtime view. Status —
   tapped/flipped/face-up/phased-in — is correctly NOT a characteristic
   per 109.3, kept on `CardInstance` as separate fields). See also the
   existing CR 109.3 audit row at line 2039 (printed P/T readable across
   zones for X-from-power riders).
-  (g) **109.4** "Only objects on the stack or on the battlefield have a
-  controller. Objects elsewhere aren't controlled by any player" — ✅
+  (g) **109.4** — ✅
   (the engine's `controller` field is meaningful only for
   battlefield-resident `CardInstance` and `StackItem`s with explicit
   controllers; graveyard/hand/library/exile cards expose `owner` via
@@ -1696,8 +1533,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Conspiracy-Draft controller rules — ⏳ (no emblem zone yet; the
   other multiplayer-variant zones are out of scope for the 1v1 +
   Two-Headed Giant builds).
-  (k) **109.5** "you/your on an object refers to controller / would-be
-  controller / owner" — ✅ (the `Selector::You` resolver consults
+  (k) **109.5** — ✅ (the `Selector::You` resolver consults
   `EffectContext.controller`, which is stamped at cast time
   (`for_spell_with_source`) for spells, at activation time
   (`activate_ability`) for activated abilities, at trigger-fire time
@@ -1715,16 +1551,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The permanent primitive — what a
   permanent is, owner/controller, characteristics, types, and status.
   Audit:
-  (a) **110.1** "A permanent is a card or token on the battlefield" —
+  (a) **110.1** —
   ✅ (`GameState.battlefield` is a `Vec<CardInstance>`; every
   battlefield-resident card is a permanent in the engine's terminology).
   (b) **110.2** owner = card-owner, controller = enter-controller —
   ✅ (`CardInstance.owner` and `.controller` are both set at
   construction; `owner` is preserved across zone changes, `controller`
   is updated by gain-control effects like Tempted by the Oriq).
-  (c) **110.2a** "If an effect instructs a player to put an object onto
-  the battlefield, that object enters the battlefield under that
-  player's control unless the effect states otherwise" — ✅
+  (c) **110.2a** — ✅
   (`place_card_in_dest` honors the `PlayerRef` arg of `ZoneDest::
   Battlefield(who, tapped)` so reanimate-into-opp-control patterns
   work via `PlayerRef::ControllerOf` / `PlayerRef::OwnerOf`).
@@ -1742,8 +1576,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (implicit — the engine's spell→permanent ETB flow checks the card's
   types in `resolve_spell`; instants/sorceries enter graveyard
   directly, permanents move to battlefield).
-  (h) **110.4c** "If a permanent somehow loses all its permanent types,
-  it remains on the battlefield" — ✅ (no SBA in
+  (h) **110.4c** — ✅ (no SBA in
   `check_state_based_actions` removes a permanent for having zero
   card types; the engine matches CR's "stays on the battlefield as a
   non-anything object" semantics by default).
@@ -1752,14 +1585,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   flipped = ⏳ — no flip-card support; phased in/out = ⏳ — Phasing
   itself is unmodelled, the `phased_out` flag and its SBA-bypass
   semantics don't exist).
-  (j) **110.5b** "Permanents enter the battlefield untapped, unflipped,
-  face up, and phased in unless a spell or ability says otherwise" —
+  (j) **110.5b** —
   ✅ (`CardInstance::new` sets `tapped: false`, `face_down: false`;
   ETB-tapped is the explicit opt-in via `ZoneDest::Battlefield(_,
   tapped: true)` and lands like `lorehold_excavation` tap targets via
   `Effect::Tap`).
-  (k) **110.5d** "Only permanents have status. Cards not on the
-  battlefield do not" — ✅ (`place_card_in_dest`'s zone-change branch
+  (k) **110.5d** — ✅ (`place_card_in_dest`'s zone-change branch
   resets `tapped = false` and `damage = 0` and `attached_to = None`
   when a card leaves the battlefield; the engine never reads `tapped`
   off graveyard/hand cards).
@@ -1816,14 +1647,12 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 - 🟡 **CR 510 — Combat Damage Step** (push modern_decks batch 38,
   claude/modern_decks branch — audit against `MagicCompRules_20260417.txt`):
   Combat damage assignment and dealing. Audit:
-  (a) **510.1** "active player announces how each attacking creature
-  assigns its combat damage, then the defending player announces" — ✅
+  (a) **510.1** — ✅
   (`resolve_combat_damage_with_filter` in `game/combat.rs` walks
   `self.attacking` first for the active player's damage dealing, then
   iterates `self.block_map` for blocker damage — turn-based action, no
   stack push).
-  (b) **510.1a** "Each attacking creature and each blocking creature
-  assigns combat damage equal to its power" — ✅ (`AttackerInfo.power`
+  (b) **510.1a** — ✅ (`AttackerInfo.power`
   reads `ComputedPermanent.power` which honors layer-7 P/T modifications;
   `blocker_damage_to_attacker` reads blocker's power similarly).
   (c) **510.1b** unblocked attacker assigns to player/PW it's attacking —
@@ -1841,13 +1670,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (f) **510.1e** total damage assignment validity check — n/a (the
   assignment is computed by the engine, not by an external player, so it
   can't be illegal by construction).
-  (g) **510.2** "Second, all combat damage that's been assigned is dealt
-  simultaneously. No player has the chance to cast spells or activate
-  abilities between assigned and dealt" — ✅ (`resolve_combat_damage_with_
+  (g) **510.2** — ✅ (`resolve_combat_damage_with_
   filter` computes attacker damage then resolves it in one pass — no
   priority interlude, no `give_priority` calls between the assignment
   loop and the application loop).
-  (h) **510.3** "Third, the active player gets priority" — ✅
+  (h) **510.3** — ✅
   (`give_priority_to_active` at the end of the damage step).
   (i) **510.4** first-strike split: the regular combat damage step is
   skipped if no attackers/blockers have first/double strike — ✅
@@ -1875,18 +1702,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   phase — last priority window for combat-window effects, expiration
   of "until end of combat" effects, and remove-from-combat cleanup.
   Audit:
-  (a) **511.1** "The end of combat step has no turn-based actions.
-  Once it begins, the active player gets priority" — ✅
+  (a) **511.1** — ✅
   (`pass_priority` in `game/stack.rs` advances into
   `TurnStep::EndCombat` and immediately gives priority to the active
   player via `give_priority_to_active`; no turn-based actions are
   enqueued).
-  (b) **511.2** "Abilities that trigger 'at end of combat' trigger as
-  the end of combat step begins" — ✅ (the `EventKind::StepBegins
+  (b) **511.2** — ✅ (the `EventKind::StepBegins
   (TurnStep::EndCombat)` event scope already wires "at end of combat"
   triggers through the standard `fire_step_triggers` dispatcher).
-  (c) **511.2** "Effects that last 'until end of combat' expire at the
-  end of the combat phase" — ✅ (push modern_decks batch 55: new
+  (c) **511.2** — ✅ (push modern_decks batch 55: new
   `EffectDuration::UntilEndOfCombat` variant in `game/layers.rs`,
   cast-site `Duration::EndOfCombat` now maps onto it via the new
   `map_effect_duration` helper in `game/effects/mod.rs`, and the
@@ -1900,8 +1724,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   also clears `UntilEndOfCombat` effects so an effect registered in a
   no-combat turn (a player who took no combat step) doesn't leak
   forever.
-  (d) **511.3** "As soon as the end of combat step ends, all creatures,
-  battles, and planeswalkers are removed from combat" — 🟡 (the engine
+  (d) **511.3** — 🟡 (the engine
   retains `self.attacking` and `self.block_map` after the step ends
   because the post-combat-main phase has no consumer of them; they're
   rebuilt next combat phase from scratch. The observable behavior
@@ -1965,7 +1788,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `lone_rider_does_not_pump_with_other_attackers`. `Blocking alone`
   predicate is wired in `evaluate_requirement_static` but no
   catalog card exercises it yet.
-  (h) **506.6** "had to attack" — ⏳ (no requirement-vs-choice
+  (h) **506.6** — ⏳ (no requirement-vs-choice
   tracking; cards like Brave the Sands' "creatures you control can
   block as though they could block two" don't reach the predicate).
   (i) **506.7** "cast only [before/after] [point]" timing — ⏳ (no
@@ -2280,7 +2103,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   damage-redirection primitive; Maze of Ith / Lightning Greaves /
   Boros Guildmage-style redirects aren't modelled).
   (l) **614.10** skip-effects (see row (b)) — 🟡.
-  (m) **614.12** "Enters with N counters" — ✅ (see row (c) above;
+  (m) **614.12** — ✅ (see row (c) above;
   full audit row at `TODO.md:2222`).
   (n) **614.16** "create tokens / put counters" replacement —
   ✅ (`StaticEffect::DoubleTokens` + `DoubleCounters`).
@@ -2869,14 +2692,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The land primitive — playing a land,
   basic land types and their intrinsic mana abilities, and land
   subtype manipulation. Audit:
-  (a) **305.1** "A player who has priority may play a land card from
-  their hand during a main phase of their turn when the stack is
-  empty. Playing a land is a special action; it doesn't use the
-  stack" — ✅ (`actions.rs::play_land` checks the priority +
+  (a) **305.1** — ✅ (`actions.rs::play_land` checks the priority +
   stack-empty + main-phase invariants via `can_cast_sorcery_speed`;
   the land moves direct to battlefield, no `StackItem` push).
-  (b) **305.2 / 305.2a / 305.2b** "One land per turn unless modified"
-  — ✅ (`GameState::can_player_play_land` (push modern_decks batch 130)
+  (b) **305.2 / 305.2a / 305.2b** — ✅ (`GameState::can_player_play_land` (push modern_decks batch 130)
   compares `lands_played_this_turn` against
   `max_lands_per_turn(player) = 1 + extra_land_plays_per_turn(player)`,
   where the addend counts every battlefield permanent the player
@@ -2884,7 +2703,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `StaticEffect::ExtraLandPerTurn` (Exploration ships as the
   reference user). Multiple Explorations stack. See dedicated row
   below).
-  (c) **305.3** "Can't play a land if it isn't your turn" — ✅
+  (c) **305.3** — ✅
   (`play_land` checks `active_player == player_idx` via
   `can_cast_sorcery_speed`'s priority gate).
   (d) **305.4** "Put onto the battlefield" ≠ "play a land" — ✅
@@ -2893,19 +2712,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `lands_played_this_turn`. Cultivate / Verdant Mastery / Field Trip
   / Quandrix Cartographer-style ramp respects this — putting lands
   into play from library doesn't count against the per-turn limit).
-  (e) **305.5** "Land subtypes are listed after a long dash, may
-  have multiple subtypes" — ✅ (`Subtypes.land_types: Vec<LandType>`
+  (e) **305.5** — ✅ (`Subtypes.land_types: Vec<LandType>`
   supports multi-subtype lands like Lorehold Excavation, all SOS
   school lands, every Snarl dual).
-  (f) **305.6** "Basic land types grant the corresponding intrinsic
-  mana ability `{T}: Add [color]`" — ✅ (the `tap_add_basic_color`
+  (f) **305.6** — ✅ (the `tap_add_basic_color`
   shortcut at `mana.rs` is hard-wired to each of the five basic
   types; the intrinsic ability ships as a single
   `ActivatedAbility { tap_cost: true, effect: AddMana }` per type).
   Every Plains/Island/Swamp/Mountain/Forest in catalog ships this
   ability — no land "has no text box" today.
-  (g) **305.7** "Setting a land's subtype to a basic type wipes
-  prior subtypes and abilities, grants new mana abilities" — ⏳ (no
+  (g) **305.7** — ⏳ (no
   `Effect::SetLandSubtype` primitive; cards like Spreading Seas
   (becomes Island), Trace of Abundance (becomes basic), Blood Moon
   ("each nonbasic land is a Mountain") aren't in the catalog today.
@@ -2913,12 +2729,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   layer-6 mana-ability-replacement pass — same shape as
   `Effect::LoseAllAbilities` but specifically swapping in the new
   basic mana ability.).
-  (h) **305.8** "Supertype Basic distinguishes basic from nonbasic"
-  — ✅ (`Subtypes.supertypes: Vec<Supertype>` includes `Basic` only
+  (h) **305.8** — ✅ (`Subtypes.supertypes: Vec<Supertype>` includes `Basic` only
   for the five vanilla basics; predicates like
   `SelectionRequirement::IsBasicLand` walk the supertype list).
-  (i) **305.9** "If an object is both a land and another card type,
-  it can be played only as a land" — ✅ (the cast-spell pipeline
+  (i) **305.9** — ✅ (the cast-spell pipeline
   rejects land cards via `CardDefinition.is_land()`; the only way to
   put a land onto the battlefield from the hand is `play_land`. No
   MDFC catalog card today is land-on-front + nonland-on-back, but
@@ -3081,7 +2895,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   damage). Tracked separately because no STX/SOS card today instructs a
   creature to fight itself, but the engine handles it correctly by
   construction.
-  (d) **701.14d** "damage isn't combat damage" — ✅ (fight uses the
+  (d) **701.14d** — ✅ (fight uses the
   general `deal_damage_to` path, NOT the `combat.rs` damage path that
   emits `DealsCombatDamageToPlayer`; trigger-listening cards correctly
   see this as non-combat damage). Lock-in tests:
@@ -3304,40 +3118,34 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   control `non_infect_spell_damage_to_player_reduces_life_per_cr_702_
   90b_control` (bare bear deals 2 → 2 life loss, 0 poison).
 
-- 🟡 **CR 702.15 — Lifelink** (push claude/modern_decks batch 128 —
-  audit against `MagicCompRules_20260417.txt` lines 4015–4035). The
+- 🟡 **CR 702.15 — Lifelink**. The
   lifelink keyword: a source with lifelink causes its controller to
   gain life equal to damage dealt. Audit:
-  (a) **702.15a** "Lifelink is a static ability" — ✅ (`Keyword::
+  (a) **702.15a** — ✅ (`Keyword::
   Lifelink` is a static keyword tag; layered grants via
   `StaticEffect::GrantKeyword` and per-card declarations both
   light up the lifelink flag in `compute_battlefield`).
-  (b) **702.15b** "Damage dealt by a source with lifelink causes
-  that source's controller to gain that much life" — ✅ (combat
+  (b) **702.15b** — ✅ (combat
   path: `combat.rs::apply_combat_damage` consults
   `AttackerInfo.has_lifelink` and dispatches `adjust_life(a,
   lifelink_dealt)` after damage assignment; non-combat path:
   `deal_damage_to_from` consults the source's lifelink flag and
   emits a `GainLife` event when present).
-  (c) **702.15c** "If an object changes zones before an effect
-  causes it to deal damage, its last known information is used" —
+  (c) **702.15c** —
   🟡 (LKI is consulted via `died_card_snapshots` for SBA-driven
   zone-changes, but a spell-cast lifelink source that resolves
   from the stack still uses live battlefield state. No catalog
   card today triggers this exact corner case for lifelink, so the
   behavior matches printed Oracle).
-  (d) **702.15d** "Lifelink functions no matter what zone an object
-  with lifelink deals damage from" — ✅ (the combat path emits
+  (d) **702.15d** — ✅ (the combat path emits
   lifelink life-gain from attackers on the battlefield; the non-
   combat path treats `source` as any zone via `CardId` lookup).
-  (e) **702.15e** "If multiple sources with lifelink deal damage at
-  the same time, they cause separate life gain events" — ✅
+  (e) **702.15e** — ✅
   (`apply_combat_damage` emits one `GainLife` event per lifelink
   attacker via the per-attacker loop in `combat.rs:471`. Each
   event fires Ajani's Pridemate-style "whenever you gain life"
   triggers separately).
-  (f) **702.15f** "Multiple instances of lifelink on the same
-  object are redundant" — ✅ (the `has_lifelink` flag is boolean;
+  (f) **702.15f** — ✅ (the `has_lifelink` flag is boolean;
   layered grants don't stack into multiple life-gain events).
   Tests: `lorehold_sparkmender_b128_has_lifelink` (basic lifelink
   on a creature body); `silverquill_inkmaster_b128_etb_mints_inkling`
@@ -3351,7 +3159,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`). Special actions are priority-window
   actions that don't use the stack. Audit:
-  (a) **116.1** "Special actions don't use the stack" — ✅ (the engine's
+  (a) **116.1** — ✅ (the engine's
   `play_land`, `do_untap`, etc. paths apply their effects without
   pushing a `StackItem`; the priority cycle resumes with the active
   player without an intervening resolve step).
@@ -3391,8 +3199,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (m) **116.2m** Unlock a locked half via paying its mana cost — ⏳
   (no "rooms" / lockable-permanent primitive; this is the Murders at
   Karlov Manor Rooms cycle, which doesn't appear in any wired catalog).
-  (n) **116.3** "After taking a special action, the player receives
-  priority again" — ✅ (`play_land` doesn't pass priority; the
+  (n) **116.3** — ✅ (`play_land` doesn't pass priority; the
   `GameAction` loop re-enters the priority window with the same
   player). Tests: implicit across every `play_land` test in
   `tests/game.rs` + `tests/multiplayer.rs`. Promote to ✅ when
@@ -3824,20 +3631,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The artifact card type — casting,
   Equipment, Fortification, Vehicle subtypes. Audit:
-  (a) **301.1** "A player who has priority may cast an artifact card
-  from their hand during a main phase of their turn when the stack is
-  empty" — ✅ (`GameAction::CastSpell` for Artifact-typed cards is
+  (a) **301.1** — ✅ (`GameAction::CastSpell` for Artifact-typed cards is
   sorcery-speed-gated; Flash override on Manifold Key-style instants
   honored via the `Keyword::Flash` exception).
-  (b) **301.2** "When an artifact spell resolves, its controller puts
-  it onto the battlefield under their control" — ✅ (same
+  (b) **301.2** — ✅ (same
   `resolve_spell` path as creatures).
-  (c) **301.3** "Artifact subtypes are listed after a long dash" — ✅
+  (c) **301.3** — ✅
   (`Subtypes::artifact_subtypes: Vec<ArtifactSubtype>` carries
   Equipment, Vehicle, Food, Treasure, Clue, Blood, Fortification,
   Contraption).
-  (d) **301.4** "Artifacts have no characteristics specific to their
-  card type" — ✅ (color framework reads `mana_cost` regardless of
+  (d) **301.4** — ✅ (color framework reads `mana_cost` regardless of
   card type, so colored artifacts like Treasure-with-color come
   through correctly; the typical colorless-artifact case is the
   default).
@@ -3861,39 +3664,31 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`): The creature card type — casting,
   resolution, subtypes, power/toughness, attack/block eligibility,
   summoning sickness, and damage marking. Audit:
-  (a) **302.1** "A player who has priority may cast a creature card
-  from their hand during a main phase of their turn when the stack is
-  empty. Casting a creature as a spell uses the stack" — ✅
+  (a) **302.1** — ✅
   (`GameAction::CastSpell` for a Creature-typed card pushes a
   `StackItem::Spell` after cost payment; sorcery-speed gating is
   enforced at the priority check).
-  (b) **302.2** "When a creature spell resolves, its controller puts
-  it onto the battlefield under their control" — ✅
+  (b) **302.2** — ✅
   (`resolve_spell` in `game/stack.rs` routes a resolving Creature
   spell to `self.battlefield` under the spell's controller via
   `StackItem.controller`; the move also fires `EntersBattlefield`
   triggers).
-  (c) **302.3** "Creature subtypes are usually a single word long
-  and are listed after a long dash" — ✅ (`Subtypes::creature_types:
+  (c) **302.3** — ✅ (`Subtypes::creature_types:
   Vec<CreatureType>` stores per-card subtypes; the engine carries
   the full STX creature subtype set incl. Inkling, Pest, Fractal,
   Spirit, Cat, Dog, Demon, Elemental, etc.; 205.3m's complete list
   isn't enforced but every printed STX/SOS card uses real subtypes).
-  (d) **302.4 / 302.4a-c** "Power and toughness are characteristics
-  only creatures have. A creature's power is the amount of damage it
-  deals in combat. To determine a creature's power and toughness,
-  start with the numbers printed in its lower right corner, then
-  apply any applicable continuous effects" — ✅ (`CardInstance.power()`
+  (d) **302.4 / 302.4a-c** — ✅ (`CardInstance.power()`
   and `toughness()` start from `CardDefinition.base_power` /
   `base_toughness` and walk the layer system in `game::layers::
   compute_permanent` to apply 7a CDA, 7b SetPowerToughness, 7c
   ModifyPowerToughness, 7d Switch, and +1/+1/-1/-1 counter
   deltas in the correct CR 613.7 order).
-  (e) **302.5** "Creatures can attack and block" — ✅
+  (e) **302.5** — ✅
   (`GameAction::DeclareAttackers` and `DeclareBlockers` accept only
   creature-typed cards; non-creature permanents are rejected at the
   legality check).
-  (f) **302.6** "summoning sickness" — ✅
+  (f) **302.6** — ✅
   (`CardInstance.entered_battlefield_at` snapshot + per-card
   `can_attack`/`can_tap` gate in `actions.rs` checks "has been
   under controller's control continuously since their most recent
@@ -3901,11 +3696,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   "tap/untap symbol" activation gate is also enforced
   (`activate_ability` rejects tap-cost activations on
   summoning-sick creatures unless they have haste).
-  (g) **302.7** "Damage dealt to a creature is marked on that
-  creature; if marked damage ≥ toughness, that creature has been
-  dealt lethal damage and is destroyed as a state-based action.
-  All damage marked on a creature is removed when it regenerates
-  and during the cleanup step" — ✅ (`CardInstance.damage: u32`
+  (g) **302.7** — ✅ (`CardInstance.damage: u32`
   accumulates damage; `check_state_based_actions` at the next SBA
   check destroys creatures whose `damage >= toughness()`;
   `do_cleanup` zeroes `damage` for every creature on the
@@ -3969,33 +3760,33 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `Effect::FlipCoin` (batch ~63) + `Effect::RollDie` (batch 125)
   primitives). Most catalog gaps now have engine wiring; the remaining
   ⏳ items are reroll modifiers, doubles detection, and Planechase.
-  (a) **705.1** "Some cards refer to flipping a coin" — ✅
+  (a) **705.1** — ✅
   (`Effect::FlipCoin { count, on_heads, on_tails }` shipped earlier;
   used by Ral Zarek's -7, Lorehold Coinflinger).
-  (b) **705.2** "Wins/loses a coin flip" — ✅ (the FlipCoin resolver
+  (b) **705.2** — ✅ (the FlipCoin resolver
   splits to `on_heads` / `on_tails` arms based on the
   `Decision::CoinFlip` answer; the "if you won the flip" / "if you
   lost the flip" semantics is encoded structurally).
-  (c) **705.3** "Effect may state coin flip has a certain result" — ⏳
+  (c) **705.3** — ⏳
   (no replacement-effect framework for forcing the flip result, e.g.
   Krark's Thumb).
-  (d) **706.1a** "N-sided die" — ✅ (`Effect::RollDie { sides, count,
+  (d) **706.1a** — ✅ (`Effect::RollDie { sides, count,
   results }` shipped batch 125; `Decision::DieRoll { sides, player }`
   + `DecisionAnswer::DieRoll(u8)` carry the rolled face; AutoDecider
   returns midpoint for deterministic tests).
-  (e) **706.2/706.2b** "Modifiers and reroll ordering" — ⏳ (no
+  (e) **706.2/706.2b** — ⏳ (no
   roll-modifier layer; the primitive's natural-result IS the final
   result. Cards with printed roll modifiers (Anhelo, Vedalken Orrery's
   reroll, etc.) remain ⏳).
-  (f) **706.3** "Results table" — ✅ (`Effect::RollDie.results:
+  (f) **706.3** — ✅ (`Effect::RollDie.results:
   Vec<(u8, u8, Effect)>` encodes the result table; the resolver finds
   the first matching `[low, high]` arm. Out-of-range rolls run no
   effect per CR 706.3a literal "If the result was in this range"
   semantics).
-  (g) **706.5** "Doubles (Celebr-8000)" — ⏳ (per-die independent
+  (g) **706.5** — ⏳ (per-die independent
   resolution; no pair-detection on multi-die rolls).
-  (h) **706.6** "Ignoring a roll" — ⏳ (no ignore-roll primitive).
-  (i) **706.7** "Planar die" — ⏳ (Planechase not modelled; no
+  (h) **706.6** — ⏳ (no ignore-roll primitive).
+  (i) **706.7** — ⏳ (Planechase not modelled; no
   `Plane` zone; no `EventKind::PlanarDieRolled`). Tracked in
   TODO.md's `## Formats` section under `Planechase`.
   Wiring shape for the future when a coin/dice card surfaces in a
@@ -4021,54 +3812,48 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `MagicCompRules_20260417.txt`). The Commander multiplayer variant —
   color-identity deck building, the command zone, commander tax,
   commander damage, and game setup. Audit:
-  (a) **903.4** "Color identity = colored / hybrid / phyrexian pips in
-  mana cost + colors in rules text + color indicator" — 🟡 (Phase K of
+  (a) **903.4** — 🟡 (Phase K of
   the Commander rollout: `ColorSet` bitfield in `mana.rs` + `color_
   identity(def)` in `format.rs` unions the mana-cost pips; rules-text
   mana symbols + printed color indicators are not parsed — the catalog
   doesn't currently use indicator-only color identity sources).
-  (b) **903.4d** "DFC back-face counts toward color identity" — ✅
+  (b) **903.4d** — ✅
   (push modern_decks batch 64: `color_identity(def)` in `format.rs` now
   recursively unions in the back-face's mana cost via the new
   `union_cost_identity` helper. MDFCs with differently-colored faces
   contribute both halves to the deck-validation identity check.
   Test: `color_identity_unions_mdfc_back_face_per_cr_903_4d`).
-  (c) **903.5a** "Each deck must contain exactly 100 cards including
-  its commander" — ✅ (`validate_commander_deck` in `format.rs` checks
+  (c) **903.5a** — ✅ (`validate_commander_deck` in `format.rs` checks
   `deck.main.len() + deck.commanders.len() == 100` via the Phase K
   validator; 99-or-101 decks are rejected).
-  (d) **903.5b** "Other than basic lands, each card must have a
-  different English name" — ✅ (singleton check in `validate_commander_
+  (d) **903.5b** — ✅ (singleton check in `validate_commander_
   deck` walks `deck.main` and asserts `HashSet::insert(card.name)`
   succeeds, with `is_basic_land` carving out the basic exception).
-  (e) **903.5c** "Each card's color identity ⊆ commander identity" —
+  (e) **903.5c** —
   ✅ (color identity validation in `validate_commander_deck`: walks
   each main-deck card's `color_identity(def)` and asserts the bitfield
   is a subset of the combined commander identity via `ColorSet::is_
   subset_of`).
-  (f) **903.5d** "Basic land subtypes restricted by commander identity"
-  — ✅ (covered by 903.5c since each `LandType::Plains` etc. resolves
+  (f) **903.5d** — ✅ (covered by 903.5c since each `LandType::Plains` etc. resolves
   to its corresponding color via the basic-land-to-color mapping; the
   validator filters Mountain out of a {W}{U} commander deck).
-  (g) **903.6 / 903.7** "Setup: command zone + starting life 40 + 7
-  cards" — ✅ (`Player::with_starting_life(40)` for Commander format
+  (g) **903.6 / 903.7** — ✅ (`Player::with_starting_life(40)` for Commander format
   via `Format::starting_life`; `seat_commanders(seat, defs)` pushes
   each commander to the seat's command zone and registers the CR 903.9b
   zone-change replacement effect).
-  (h) **903.8** "Cast commander from command zone; +{2} per prior
-  cast (commander tax)" — ✅ (`GameAction::CastFromCommandZone` +
+  (h) **903.8** — ✅ (`GameAction::CastFromCommandZone` +
   `commander_cast_count: HashMap<CardId, u32>` in `game/types.rs`;
   Phase L's cost-build step adds `2 * prior_casts` generic to the
   spell's mana cost; tests in `tests/multiplayer.rs` verify the tax
   bumps after each successful cast).
-  (i) **903.9** "Commander may return to command zone" — ✅ (Phase H's
+  (i) **903.9** — ✅ (Phase H's
   `ReplacementEffect::ZoneChange { from: any, to: graveyard|exile|
   hand|library, redirect: Command }` registered per commander via
   `seat_commanders`; `resolve_zone_change` consults the replacement
   registry and redirects the move). The "may" choice is currently
   always-yes (no decision plumbing for the optional rider); doc-tracked
   for Phase L.
-  (j) **903.10a** "21+ combat damage from same commander → lose" —
+  (j) **903.10a** —
   ✅ (`Player.commander_damage: HashMap<CardId, u32>` accumulates per-
   attacker damage in `assign_combat_damage` / `effects/movement.rs`;
   state-based action in `stack.rs:1033` checks for any entry ≥ 21 and
@@ -4278,8 +4063,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `shortcut_mint_treasures_creates_treasure_tokens`,
   `shortcut_mint_lorehold_spirits_creates_r_w_spirits`.
 
-- ⏳ **Vehicle / Crew primitive** (push claude/modern_decks batch 104 —
-  new suggestion). Strixhaven has Strixhaven Skycoach (currently
+- ⏳ **Vehicle / Crew primitive**. Strixhaven has Strixhaven Skycoach (currently
   approximated as a free-attacking Construct), and the cube has
   Smuggler's Copter / Esika's Chariot. A general
   `Effect::Crew { tap_count_at_least: Value }` primitive that turns a
@@ -4287,7 +4071,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   would unblock all three plus future vehicles. Engine-wide ⏳.
 
 - ⏳ **`Effect::CreateCopyToken { source, who, count, modifiers }`
-  primitive** (push claude/modern_decks batch 104 — re-emphasised).
+  primitive**.
   Five+ cube/STX cards need this (Phantasmal Image, Helm of the Host,
   Saheeli Rai's -2, Mockingbird, Applied Geometry); only Saheeli Rai
   has a partial implementation today (token mint without copying the
@@ -4300,24 +4084,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   claude/modern_decks — audit against `MagicCompRules_20260417.txt`).
   How the engine puts activated abilities on the stack and pays their
   costs. CR 602.1a is the costs/effect split (the colon).
-  (a) **602.1a** "The activation cost is everything before the colon"
-  — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`, `sac_cost`,
+  (a) **602.1a** — ✅ (`ActivatedAbility::mana_cost`, `tap_cost`, `sac_cost`,
   `life_cost`, `exile_self_cost`, `exile_other_filter` between them
   cover the full cost vocabulary; tap/mana/life/sac are all paid in
   `activate_ability` before the effect goes on stack).
-  (b) **602.1b** "Some text after the colon states activation
-  instructions" — 🟡 (`ActivatedAbility.condition` covers per-ability
+  (b) **602.1b** — 🟡 (`ActivatedAbility.condition` covers per-ability
   predicate gates ("Activate only if …"); `once_per_turn` /
   `sorcery_speed` / `from_graveyard` cover the canonical instructions.
   Per-opponent control restrictions ("Activate only if a player
   controls a Snow permanent") have no first-class slot but can be
   expressed as `condition: Predicate::…` for most.).
-  (c) **602.2** "To activate an ability is to put it onto the stack
-  and pay its costs" — ✅ (`activate_ability` pushes a
+  (c) **602.2** — ✅ (`activate_ability` pushes a
   `StackItem::Trigger` for non-mana abilities; mana abilities resolve
   immediately per CR 605.3).
-  (d) **602.2b** "An activated ability's analog to a spell's mana
-  cost is its activation cost" — ✅ (push claude/modern_decks: added
+  (d) **602.2b** — ✅ (push claude/modern_decks: added
   `GameAction::ActivateAbility.x_value: Option<u32>` so X-cost
   activations bind X at activation time. The cost-payment path
   (`activate_ability` in `actions.rs`) walks `mana_cost.has_x()` and
@@ -4328,16 +4108,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `{X}, Sacrifice this: destroy each permanent with MV ≤ X`. CR
   602.2b is now fully observed in the activation path for non-mana
   abilities; mana abilities never use X today).
-  (e) **602.5a** "A creature's activated ability with the tap symbol …
-  can't be activated unless the creature has been under its
-  controller's control since the start of their most recent turn" —
+  (e) **602.5a** —
   ✅ (the `summoning_sick` flag + `tap_cost: true` activation gate
   reject taps while sick; haste bypasses via `Keyword::Haste` check).
-  (f) **602.5b** "If an activated ability has a restriction on its
-  use, the restriction continues to apply" — ✅
+  (f) **602.5b** — ✅
   (`once_per_turn_used` is per-card, persists across controller
   changes; the cleanup step resets it on the active player's untap).
-  (g) **602.5d** "Activate only as a sorcery" — ✅
+  (g) **602.5d** — ✅
   (`sorcery_speed: true` consults `can_cast_sorcery_speed`).
   Tests: `pernicious_deed_destroys_low_cmc_permanents` covers
   X-cost activation end-to-end.
@@ -5291,35 +5068,11 @@ Then Reckless Amplimancer's +3/+3 hardcode can be replaced with
 work — same shape would unlock other X-cost activations (Berta's
 {X},{T}: Create Fractal with X counters).
 
-### Exile-on-Resolve for Instants/Sorceries ✅ DONE
-~~Cards like Awaken the Ages, Divergent Equation, and Wisdom of Ages
-print "Then exile this spell" — the resolved instant/sorcery should
-land in exile instead of its owner's graveyard. Currently approximated
-as a no-op (sorceries naturally go to graveyard on resolve).~~ Done in
-push (modern_decks): `CardDefinition.exile_on_resolve: bool` flag —
-`continue_spell_resolution` routes the card to exile when set, bumping
-`cards_exiled_this_turn` so Ennis-style payoffs see it. Wired Awaken
-the Ages (Strife Scholar back-face), Divergent Equation, and Wisdom of
-Ages. Tests in `tests::sos`.
-
 ### Cast-From-Exile Pipeline
 Many cards exile a spell/card temporarily and later cast it (Foretell,
 Suspend, Rebound, Flashback-from-exile, Escape, Adventure second cast,
 Cascade resolution).  Currently each is handled ad-hoc or omitted.  A shared
 "cast from alternate zone" code path would unlock dozens of cards.
-
-### Copy Primitive ✅ DONE
-~~No general "create a copy of target spell/permanent" effect exists.  Needed for:
-Reverberate, Fork, Strionic Resonator, Quasiduplicate, Saheeli Rai −3, etc.
-The `CopySpell` effect stub exists in `effect.rs` but is not wired through
-`apply_effect`.~~ Done in push XVII: `Effect::CopySpell { what, count }`
-locates the matching `StackItem::Spell` and pushes `count` copies above it
-on the stack with fresh CardIds. Copies are flagged `uncounterable: true`.
-Wired: Aziza Mage Tower Captain (Magecraft copy with tap-3 cost),
-Lumaret's Favor (Infusion copy gated on life-gain), Social Snub (cast-time
-copy gated on creature-control). Still TODO for "permanent" copies
-(Quasiduplicate, Saheeli Rai −3): the variant exists but the
-target → battlefield-token-copy path is not yet wired.
 
 ### Triggered-Ability Event Gaps
 `EventKind` is missing several commonly-needed triggers:
@@ -5394,25 +5147,6 @@ candidate-cast's chosen target before payment. Probably a new
 and Simian Spirit Guide (exile from hand: add mana) are completely omitted
 because hand-activated mana abilities need a separate activation path.
 
-### Activated-Ability "From Your Graveyard" Path ✅ DONE
-~~The `activate_ability` walker only iterates the battlefield, so cards
-with mana-cost-priced graveyard-recursion abilities currently drop the
-activation entirely.~~ Done in push XVII:
-`ActivatedAbility.from_graveyard: bool` + `exile_self_cost: bool` are
-now first-class fields. The `activate_ability` engine path walks the
-graveyard for `from_graveyard` abilities; `exile_self_cost` exiles
-the source as part of cost (mirror to `sac_cost` for battlefield
-permanents). Wired: Summoned Dromedary, Teacher's Pest, Stone Docent,
-Eternal Student. Remaining gap (3rd-party cost shapes):
-- **Postmortem Professor**: `{1}{B}, Exile an IS card from your
-  graveyard: Return this card from your graveyard to the battlefield.`
-  needs an additional cost variant: exile a *different* card from gy
-  matching a filter. A new `cost: ActivationCost` enum (or sibling
-  `exile_other_filter: Option<SelectionRequirement>`) would cover this
-  case.
-- **Page, Loose Leaf (Grandeur)**: `Discard another card named [self]:
-  …`. Needs `discard_named_self_cost: bool` (or named-cost variant).
-
 ### "Look At Top X, Pick One, Put Rest in Graveyard" Primitive
 Stirring Honormancer ("look at top X cards where X is creatures you
 control, put one in hand, rest into graveyard") and similar look-and-
@@ -5427,23 +5161,6 @@ exposes a 2-option destination prompt that no other primitive currently
 needs. Adding a `Effect::Search` flavor with `to: Either(ZoneDest,
 ZoneDest)` (or a separate decision shape) would honor the toggle for
 this and a handful of black/green search effects.
-
-### "May" Optionality Inside Sequences ✅ DONE
-~~Several SOS cards bake a "you may" into the middle of a `Seq` (Pursue
-the Past's "you may discard a card", Witherbloom Charm's mode 0 "you
-may sacrifice a permanent", Practiced Offense's "may double-strike or
-lifelink"). The engine has no "ask the controller yes/no" primitive,
-so all of these collapse the optional branch into either always-do or
-always-skip. A `Effect::MayDo(inner)` that emits a yes/no decision
-(answered immediately by `AutoDecider`'s heuristic) would unblock a
-chunk of cards without surfacing a new UI affordance.~~ Done in push
-XV: `Effect::MayDo { description: String, body: Box<Effect> }` is now
-first-class. Emits `Decision::OptionalTrigger`, AutoDecider answers
-`false` by default, ScriptedDecider can flip to `true` for tests.
-Promoted: Stadium Tidalmage, Pursue the Past, Witherbloom Charm mode
-0, Heated Argument, Rubble Rouser. Practiced Offense's choice-mode
-("double-strike or lifelink") still ⏳ since that's a 2-option pick,
-not a yes/no.
 
 ### Multi-Target Prompt for Sorceries / Instants
 A handful of SOS cards specify two target slots with different filters
@@ -5484,22 +5201,6 @@ on the spell card's own attributes only. Plumbing the cast-time
 target list into the cost-reduction site would unlock this card and
 similar Lorehold/Witherbloom cost-cutters.
 
-### "May Pay" Optionality on Death/ETB Triggers ✅ DONE
-~~Bayou Groff ("may pay {1} to return to hand on death") and several
-Strixhaven cards bake an optional cost into a triggered effect ("may
-pay X: do Y"). The current engine has no `Effect::MayPay { cost, then
-}` primitive — neither for life nor mana costs — so all these collapse
-to either "always do" or "always skip".~~ Done in push XVI:
-`Effect::MayPay { description, mana_cost, body }` is now first-class
-(`effect.rs:662`). Handler at `game/effects/mod.rs:289` asks the
-controller's decider yes/no; on "yes" + affordable cost it deducts
-the mana from the pool and runs `body`, otherwise skips. AutoDecider
-defaults to "no", ScriptedDecider can flip via
-`DecisionAnswer::Bool(true)`. Bayou Groff is fully promoted with
-3 passing tests (`bayou_groff_dies_may_pay_*`). Life-cost variants
-(`MayPayLife`) and X-cost variants (`MayPayX`) still ⏳ — neither
-has a blocking card today.
-
 ### Transient Triggered-Ability Grants on Pump Spells
 SOS Root Manipulation ("Until end of turn, creatures you control get
 +2/+2 and gain menace and 'Whenever this creature attacks, you gain
@@ -5511,23 +5212,6 @@ this would unlock the third clause of Root Manipulation, similar
 "creatures gain combat-damage trigger until EOT" pump spells, and
 the on-attack rider on tokens (Pest token's "gain 1 on attack",
 Spirit token combat triggers).
-
-### Per-Turn-Cast Gate on Activated Abilities ✅ DONE
-~~SOS Potioner's Trove ("{T}: You gain 2 life. Activate only if you've
-cast an instant or sorcery spell this turn.") needs an
-`ActivatedAbility::condition: Predicate` field (or a sibling
-`gated_when: Option<Predicate>`) to express "activate only if you
-played a spell of type X this turn".~~ Done in push VIII:
-`ActivatedAbility.condition: Option<Predicate>` is now first-class.
-Evaluated against the controller/source context before any cost is
-paid (failed gate doesn't burn tap-cost or once-per-turn budget).
-Promoted Potioner's Trove (gate: `SpellsCastThisTurnAtLeast(You, 1)`,
-an approximation of the printed "instant or sorcery"-only filter) and
-Resonating Lute (gate: `ValueAtLeast(HandSizeOf(You), 7)`). New
-`GameError::AbilityConditionNotMet`. The remaining gap is a
-per-spell-type tally that distinguishes IS casts from creature casts —
-once that lands, Potioner's Trove can swap from
-`SpellsCastThisTurnAtLeast` to the exact predicate.
 
 ### Self-Counter-Scaled Cost Reduction
 SOS Diary of Dreams's `{5},{T}: Draw a card` activation costs `{1}`
@@ -5600,14 +5284,6 @@ target). Need either:
 The latter is more general (also unblocks Tidehollow Sculler,
 Banisher Priest, Fiend Hunter). The former is smaller surface but
 introduces effect-side mutation of ctx.
-
-### "Untap Up To N" Cap ✅ DONE
-~~`Effect::Untap` with a selector untaps *all* matching permanents.~~
-Done in push V: `Effect::Untap` now carries an `up_to: Option<Value>`
-field. Frantic Search caps at 3 lands; other Untap callers opt-out
-with `up_to: None`. The picker takes the first N matching in
-resolution order — a future enhancement could add a "highest-CMC
-first" heuristic for max mana refund.
 
 ### Spend-Restricted Mana
 Strixhaven's "Spend this mana only to cast an instant or sorcery
@@ -5694,28 +5370,6 @@ variant `AffinityCostReduction { filter, scaler: Selector }`) would
 unlock Affinity for Artifacts (Modern Affinity / Cranial Plating-era
 shells), Affinity for X (Strixhaven Witherbloom + future), and Awaken
 the Woods-style "X = forests" payoff costs.
-
-### Token-Side Triggered Abilities ✅ DONE
-~~`TokenDefinition` has `activated_abilities` but not
-`triggered_abilities`.~~ **Done** in push VI: `TokenDefinition` now
-carries `triggered_abilities: Vec<TriggeredAbility>` and
-`token_to_card_definition` copies them through.
-
-Wired tokens:
-- **SOS Pest token** (`catalog::sets::sos::sorceries::pest_token`):
-  "Whenever this token attacks, you gain 1 life." Promotes Send in
-  the Pest, Pestbrood Sloth, Cauldron of Essence (its reanimation
-  output), and any future SOS Pest minter.
-- **STX Pest token** (`catalog::sets::stx::shared::stx_pest_token`):
-  "When this creature dies, you gain 1 life." Promotes Pest
-  Summoning, Tend the Pests, Hunt for Specimens (and Eyetwitch's
-  Pest body would use it if Eyetwitch were a Pest token rather than
-  a creature).
-
-The Pest token chain now correctly trickles 1 life per qualifying
-event into Witherbloom payoffs (Pest Mascot's lifegain → +1/+1
-counter on self, Blech's per-creature-type counter fan-out, Bogwater
-Lumaret's per-creature-ETB drain).
 
 ### Exile Zone as Viewable State
 Exile is a zone in the engine (`Zone::Exile`) and cards move there.
@@ -5819,26 +5473,6 @@ Token cards in the 3D view use the Scryfall-fetched art path, which often
 resolves to a generic back image.  A text overlay (name + P/T) on token cards
 would disambiguate multiple different tokens on the battlefield.
 
-### Theme System (colors + fonts) ✅ DONE
-~~UI color literals and `TextFont { font_size: X, ..default() }` were duplicated
-across 13 files (~161 srgba/srgb literals, 57 bare `TextFont` calls falling
-back to Bevy's default sans).~~ Introduced `crabomination_client/src/theme.rs`
-with named color constants (panel/overlay/HUD/field/button/accent/text) and
-a `UiFonts` resource carrying the loaded Mirano font handle. All 2-D UI
-surfaces (menu, decision modals, draft, game HUD, game-over, quality panel,
-debug console, tooltips, export prompt) now source colors from `theme::*`
-and text from `ui_fonts.tf(size)`. Closes the long-standing "fonts and
-colors drift between files" problem.
-
-### Win/Loss Banner Color Cue ✅ DONE
-~~The game-over modal showed "Victory!" / "Defeat." in identical white
-text on identical dark panels.~~ Done in
-`systems/game_over.rs::sync_game_over_modal`: the subtitle line picks
-`theme::TEXT_GOOD` on win / `theme::TEXT_DANGER` on loss / `ACCENT_GOLD`
-on draw, and the panel border matches at `ACCENT_GREEN` /
-`BUTTON_DANGER_BG` / `ACCENT_GOLD`. Optional follow-up: small icon glyph
-(trophy / skull) next to the subtitle text.
-
 ### Card Art on the Stack
 The stack panel (`game_ui.rs::update_stack_panel`) shows only a "SPELL /
 TRIGGER" badge + name + controller text. Add a small card thumbnail
@@ -5876,6 +5510,66 @@ toward-camera (~5°), and a shadow boost — much more tactile. The
 ---
 
 ## Client — UX
+
+### UI Roadmap (push claude/modern_decks — session-derived)
+
+Ordering layer over the detailed items below. Cross-references existing
+entries instead of duplicating; tiers ordered by start-here leverage.
+
+**Player Crest track** — promote 3-D disc into stat readout + state
+indicator + click target. Slims the 2-D chip strip.
+- Phase 1 ✅ Disc → crest (ring + screen-space life label, world→viewport
+  projection). Files: `card/{components,spawn}.rs`, `systems/game_ui/crest.rs`,
+  `main.rs` (`MainCamera` made `pub`).
+- Phase 2 ✅ `PlayerTargetZone` on every seat incl. viewer; 3-D disc + 2-D
+  chip share `Target::Player` path.
+- Phase 3 ⏳ NEXT — damage/heal floaters. New `life_floaters.rs`:
+  `PreviousLifeTotals` resource + `LifeFloater` component +
+  `detect_life_changes` + `animate_life_floaters`. Re-uses Phase 1
+  projection helper. Data already in `ClientView`.
+- Phase 4 ⏳ — slim corner chip strips to `name · ♥ · ✋`, move mana pips
+  to a bottom detail bar.
+- Phase 5 ⏳ — team-coloured tint from `GameState.teams`; commander emblem
+  when `PlayerView.commanders` non-empty.
+
+**Tier 1**
+- X-ray card inspector ⏳ — extend Hover-Dwell Card Preview (below) to
+  render engine-truth rules text from `CardDefinition` plus current
+  modifications (layer P/T, granted keywords, attachments, counter net,
+  legal actions). Differentiator vs XMage/MTGO/Arena.
+- Stop settings + auto-pass ⏳ — see Per-Phase Auto-Stop + Auto-Pass
+  Toggle. Settings panel; persist via `config.rs`. Urgency infra
+  (`pulse_urgent_pass_button`) already exists.
+- Phase bar ⏳ — replace vertical `PHASE_CHART_STEPS` with horizontal
+  Arena-style strip; click a step to toggle a stop. Pairs with above.
+- Stack widget polish ⏳ — promote `update_stack_panel` to a permanent
+  floating panel; hover for source-card preview; click to scroll log.
+
+**Tier 2**
+- Unify decision modals ⏳ — `decision_ui.rs` has 6 parallel pickers
+  (scry/search/put-on-library/discard/mulligan/color). Refactor into one
+  `Picker { items, min, max, ordered, confirm_label }`. See Decision
+  Modal vs 3-D Hand Consistency.
+- Token stacking ⏳ — group identical tokens with count badge.
+- Valid-target affordance ⏳ — make `ValidTarget` pulse, dim non-targets.
+- Card-name → log preview ⏳ — hover region pops Scryfall image. See
+  Hover-Dwell Card Preview.
+- Theme variants ⏳ — light / high-contrast / colorblind palette in
+  `theme.rs`.
+
+**Tier 3**
+- Replay scrubber ⏳ — `GameSnapshot` recorder + Menu→Replay scrub UI.
+- Touch / controller input ⏳ — Bevy supports touch; `kb_cursor.rs` and
+  input paths are mouse-centric.
+- Split `game_ui.rs` ✅ DONE — see `systems/game_ui/{mod,crest,player_stats,buttons,popups}.rs`.
+  Future: pull `sync_game_visuals` → `visual_sync.rs` (~1.1K lines),
+  `handle_game_input` → `input.rs` (~800 lines).
+
+**Session follow-ups**
+- Step-change → clear attack plan ⏳ — tiny watcher on `View.is_changed()`
+  calling `attacking.clear()` when leaving `DeclareAttackers`.
+- Crest pip cluster ⏳ — disc-rim pips for poison / commander damage /
+  first-spell tax / energy. Reuse `counter_coins.rs` palette.
 
 ### Undo / Take-Back
 A "request take-back" action the opponent can approve would reduce frustration
@@ -5971,16 +5665,6 @@ give a natural home for future global preferences.
 priority. A toolbar toggle ("Auto-pass: On/Off") lets new players step
 through their own turn priority-by-priority instead of having the engine
 fast-forward.
-
-### Tooltip Viewport Clamping ✅ DONE
-~~`counter_tooltip.rs` and the `pile_tooltip` system used fixed `Val::Px`
-offsets without a viewport bounds check, so tooltips on cards near the
-upper-right or bottom edge clipped off-screen.~~ `update_alt_tooltip`
-now reads the primary window size and clamps `left`/`top` to
-`[TOOLTIP_EDGE_PAD, window - tooltip_size - TOOLTIP_EDGE_PAD]` with
-conservative size estimates (240×200). `pile_tooltip` is anchored
-bottom-center on the HUD, not cursor-relative, so it doesn't need
-clamping.
 
 ### Alt-Peek Inside Decision Modals
 Scry / search / discard modal cards are 180×250 (`decision_ui.rs:124`) —
@@ -6502,39 +6186,6 @@ no new engine features required:
 | Tezzeret, Cruel Captain | Artifact-creature static pump | Low |
 | Karn, Scion of Urza | Artifact-count scaling Construct | Medium |
 
-## Engine — Sacrifice-Distinct Event ✅ DONE
-
-~~Currently `Effect::Sacrifice` resolves by removing the picked
-creatures into the graveyard and emitting `GameEvent::CreatureDied`
-per dead creature.~~ Shipped in batch 51: `EventKind::CreatureSacrificed`
-+ `GameEvent::CreatureSacrificed { card_id, who }` are emitted by all
-three sacrifice paths (`Effect::Sacrifice`, `Effect::SacrificeGreatestMV`,
-`Effect::SacrificeAndRemember`) and the activated-ability `sac_cost: true`
-path before the standard `CreatureDied`. Mortician Beetle and Pest
-Pestmaster trigger off the sacrifice-specific event; lethal damage
-emits only `CreatureDied`, so the "sacrifice" payoff doesn't fire on
-combat death. See the CR 701.21 audit row in the MagicCompRules
-coverage section for the full event-emission shape. Generic
-`PermanentSacrificed` shipped in batch 102 for non-creature sacrifices
-(Korvold-class payoffs).
-
-## Engine — `Value::SacrificedToughness` in activation cost path ✅ DONE
-
-~~`Value::SacrificedPower` / `Value::SacrificedToughness` are stamped
-by `Effect::SacrificeAndRemember` but **not** by `sac_cost: true` on
-activated abilities.~~ Shipped in batch 116: the `sac_cost: true`
-activation-cost branch in `actions.rs::activate_ability` now stamps
-`state.sacrificed_power` / `state.sacrificed_toughness` from the
-about-to-be-sacrificed source's `power()` / `toughness()` snapshot,
-mirroring `Effect::SacrificeAndRemember`. Same plumbing — downstream
-`Value::SacrificedPower` / `Value::SacrificedToughness` reads in the
-ability's effect body now see the correct P/T values. Witch's
-Cauldron was already wired correctly via `SacrificeAndRemember` (the
-TODO note above misread the card); the new path unblocks future cards
-that prefer cost-time sacrifice semantics (printed-Oracle Thud-style
-"As an additional cost, sacrifice a creature. ~ deals damage equal to
-the sacrificed creature's power to any target.").
-
 ## New TODO suggestions (push modern_decks)
 
 ### Engine — Battle permanent type (CR 110.4) ⏳
@@ -6565,29 +6216,6 @@ SBA bypass during the phased-out state.
 permanents (they're treated as not on the battlefield for triggers,
 combat, and most checks). The phase-in turn-based action runs at
 the start of each untap step. Engine-wide ⏳ until a card needs it.
-
-### Engine — `Value::CountersOn` fan-out summation ✅ DONE
-
-`Value::CountersOn { what, kind }` now sums `counter_count(kind)` across
-every entity `what` resolves to (`game/effects/eval.rs::evaluate_value`).
-Single-entity selectors (target / This) keep returning the lone entity's
-count; fan-out selectors (`EachPermanent(filter)`) return the total.
-Lock-in test: `tests::stx::reflective_anatomy_pumps_target_by_total_counters`
-stages two bears with 2+1 counters and asserts Reflective Anatomy pumps
-the target +3/+3 (2+1 summed).
-
-### Engine — Token name auto-derive from subtypes (CR 111.4) ✅ DONE
-
-`token_to_card_definition` (`game/effects/tokens.rs`) now synthesizes the
-resulting `CardDefinition.name` from the joined token subtypes when
-`TokenDefinition.name` is empty (`"Spirit Token"`, `"Treasure Token"`,
-`"Soldier Token"`, …). Walks `creature_types`, `artifact_subtypes`,
-`enchantment_subtypes`, `land_types`, `planeswalker_subtypes` in that
-order; falls back to bare `"Token"` if every subtype list is empty.
-Explicit names still pass through unchanged. Lock-in test:
-`tests::game::token_without_name_derives_name_from_creature_subtypes`.
-Catalog factories still ship explicit names today; this just future-
-proofs copy-token-of-creature shells.
 
 ### Engine — Multi-target divided damage primitive
 
@@ -6660,29 +6288,6 @@ keyed on `ZoneChange { from: Battlefield, to: Graveyard, card_filter }`.
 Returns an `(Exile, DelayedTriggerOnExile)` 2-tuple instead of the
 default zone change.
 
-### Engine — Token subject_controller cache in CreatureDied events ✅ DONE
-
-✅ Done in push (modern_decks claude/modern_decks batch 47): new
-`GameState.died_card_snapshots: HashMap<CardId, CardInstance>` field
-populated at SBA emission time for every dying creature (token or
-non-token). Consulted by:
-- `event_matches_spec` AnotherOfYours scope-check (controller lookup)
-- `event_actor` (actor lookup for YourControl / OpponentControl)
-- `evaluate_requirement_static` (type/keyword/counter filter via the
-  zone-walk fallback chain)
-The full `CardInstance` snapshot (not just controller) lets
-predicate filters like
-`Predicate::EntityMatches { TriggerSource, HasCreatureType(Pest) }`
-correctly identify the dying card's printed types even after CR
-111.7c's "token ceases to exist" SBA has removed it from every zone.
-Cleared after each `dispatch_triggers_for_events` pass to prevent
-stale entries leaking into subsequent SBA cycles. Lock-in test:
-`pestmaster_pumps_on_pest_token_death_via_cached_controller`.
-Affected cards: Witherbloom Pestmaster (originally filed repro),
-Felisa Fang of Silverquill (counter-bearer-dies-mints-Inkling
-trigger), Lorehold Spiritcaller (per-leave gain-1 trigger) — all
-now fire correctly on token death.
-
 ### Engine — `Modification::RemoveAllAbilities` only clears keywords
 
 The layer-6 `RemoveAllAbilities` modification at
@@ -6697,46 +6302,6 @@ ability sets to be cleared too.
 `effective_triggered_abilities: Vec<TriggeredAbility>`), then route
 `activate_ability` / `fire_step_triggers` / the dispatcher through
 the computed view. Unblocks the two STX 🟡 cards above.
-
-### Engine — Stack-spell self-target validator (CR 115.5) ✅ DONE
-
-✅ Done in batch 17 (modern_decks): new
-`GameState::check_target_legality_with_source(target, caster, source)`
-wraps the existing `check_target_legality` with a CR 115.5 self-target
-gate — when the chosen target's permanent id matches the casting
-spell's own id, the cast is rejected with `GameError::InvalidTarget`.
-The cast pipeline (`cast_spell`) threads `Some(card_id)` so both the
-slot-0 target and additional-targets slots are checked. The wrapper
-form remains permissive when `source: None` so trigger / activation
-target validation (which doesn't have a spell-on-stack source) is
-unchanged. Lock-in test:
-`cr_115_5_spell_targeting_itself_is_illegal_via_permanent_id` (Bury
-in Books targeting its own card id rejected). Future Spell Burst /
-Lava Spike-style printed "can't target this spell" cards plug in
-against the same primitive.
-
-### Engine — Coin flip primitive (CR 705) ✅ DONE
-
-✅ Done in push (modern_decks claude/modern_decks batch 63): new
-`Effect::FlipCoin { count: Value, on_heads: Box<Effect>, on_tails:
-Box<Effect> }` primitive shipped along with `Decision::CoinFlip
-{ player: usize }` and `DecisionWire::CoinFlip` for the wire format.
-The resolver in `game/effects/mod.rs::run_effect` asks the controller's
-decider for each flip and dispatches to `on_heads`/`on_tails`.
-`AutoDecider` defaults to heads (deterministic for tests); a
-`ScriptedDecider` can script per-flip outcomes via
-`DecisionAnswer::Bool(true|false)`.
-
-Lock-in tests (`tests::stx`):
-- `lorehold_coinflinger_heads_burns_target` (heads branch: 3 dmg)
-- `lorehold_coinflinger_tails_discards_a_card` (tails branch: discard 1)
-- `coin_flip_auto_decider_defaults_to_heads`
-
-Catalog: `lorehold_coinflinger` ({2}{R} 2/2 Spirit Wizard, "ETB flip
-a coin; on heads 3 dmg to any target, on tails discard a card") —
-exercise card for the new primitive. Future unblocks: Ral Zarek's -7
-ultimate (5 flips), Karplusan Minotaur, Mana Clash, Krark's Thumb
-(needs reroll-on-loss flag), Goblin Pulse, Goblin Bookie.
 
 ### Engine — Skip-turn primitive (CR 716)
 
@@ -7125,21 +6690,15 @@ resolution time" in the Suggested next-up tasks section.
 - 🟡 **CR 705 — Flipping a Coin** (push modern_decks batch 25 — rules
   audit against `MagicCompRules_20260417.txt`): Coin-flipping primitive.
   Audit:
-  (a) **705.1** "A coin used in a flip must be a two-sided object with
-  easily distinguished sides and equal likelihood that either side
-  lands face up" — ⏳ (no coin-flip primitive in the engine; tracked
+  (a) **705.1** — ⏳ (no coin-flip primitive in the engine; tracked
   separately as the `Effect::FlipCoin` row in this file). The two
   outcomes ("heads" / "tails") would be modeled as a `Decision::CoinFlip`
   so tests can script them deterministically.
-  (b) **705.2** "If the call matches the result, the player wins the
-  flip. Otherwise, the player loses the flip." — ⏳ (no win/lose
+  (b) **705.2** — ⏳ (no win/lose
   tracking on flips; `Effect::FlipCoin { on_heads, on_tails }` covers
   the "care only about heads/tails" case; a parallel `Effect::FlipCoinAndCall`
   with `on_win`/`on_lose` covers the call-and-match case).
-  (c) **705.3** "An effect may state that a coin flip has a certain
-  result and/or that a certain player wins a coin flip. In that case,
-  ignore the actual results of that flip and use the indicated
-  results instead." — ⏳ (no coin-flip-result override primitive;
+  (c) **705.3** — ⏳ (no coin-flip-result override primitive;
   Krark's Thumb-style "if you would flip one, flip two and ignore one"
   needs the override on top of base flips). Blocked on the base
   `Effect::FlipCoin` primitive landing. Promote to ✅ when Karplusan
@@ -7866,24 +7425,6 @@ HasCardType(Sorcery), keyword: Storm }` + a spell-cast hook that fans
 out the copies. Promotes Prismari, the Inspiration + any future
 storm-keyword card.
 
-### Engine — `EventKind::CardLeftGraveyard` source-controller scope ✅ DONE
-
-The new `EventKind::CardLeftGraveyard` event (push XV) emits per-card
-zone-out from a graveyard. The `EventScope::YourControl` variant is
-correctly scoped to the leaving card's *previous* controller (the
-graveyard owner), so Ark of Hunger / Hardened Academic / Spirit
-Mascot / Lorehold Reliquary fire correctly when *your* gy cards
-leave. Lock-in tests across each of those cards.
-
-### Engine — Per-sacrifice "you control the sacrificer" gating ✅ DONE
-
-The new `EventKind::CreatureSacrificed` event (push modern_decks batch
-51) carries a `who: PlayerIndex` payload identifying the sacrificing
-player. `EventScope::YourControl` correctly gates "Whenever you
-sacrifice a creature, …" triggers (Pest Pestmaster, Pest Anointer,
-Witherbloom Bloodreaper, Pest Brewmaster) while `EventScope::AnyPlayer`
-catches the Mortician Beetle template (Witherbloom Mortician).
-
 ### Engine — Pest-tribal sacrifice scaling (Witherbloom Necropoet)
 
 The new card Witherbloom Necropoet (push modern_decks batch 57) fires
@@ -7903,20 +7444,6 @@ filter: HasCreatureType(Fractal) ∧ ControlledByYou }`. The cast-time
 target picker walks the battlefield for Fractals before defaulting to
 auto-target. Powers Fractal-tribal shells (Symmathematics +
 counter-doublers). Lock-in test: `quandrix_tideguard_magecraft_pumps_target_fractal`.
-
-### Engine — `StaticEffect::EtbTriggerTax` ✅ DONE
-
-The new `StaticEffect::EtbTriggerTax { amount }` primitive (push
-modern_decks batch 58) implements Strict Proctor's printed Oracle "If
-a permanent entering the battlefield causes a triggered ability of a
-permanent to trigger, that ability's controller sacrifices the
-permanent unless they pay {amount}." Wiring at all three ETB-trigger
-push sites: `fire_self_etb_triggers` (`game/actions.rs`),
-`stack.rs::resolve_spell`'s cast-time path, and the unified
-`dispatch_triggers_for_events` (via the new `triggered_by_etb` flag on
-`TriggerCandidate`). Lock-in tests:
-`strict_proctor_taxes_an_etb_trigger_unless_paid`,
-`strict_proctor_does_not_tax_non_etb_triggers`.
 
 ### Engine — Mavinda, Students' Advocate cast-from-graveyard ⏳
 

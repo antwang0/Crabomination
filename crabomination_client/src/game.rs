@@ -125,3 +125,57 @@ pub struct BlockingState {
     /// Confirmed (blocker_id, attacker_id) assignments to submit on Pass.
     pub assignments: Vec<(CardId, CardId)>,
 }
+
+/// Tracks the viewer's in-progress attack plan during the DeclareAttackers
+/// step. Each entry is a chosen attacker + the defender (player or
+/// planeswalker) it's been pointed at. Cleared on submit, on Esc/right-
+/// click, and whenever the step or active player changes.
+///
+/// The plan is *optional*: an empty plan + `A`/button falls back to
+/// "attack all eligible at the next opponent" so the existing one-key
+/// flow still works for single-opponent games.
+#[derive(Resource, Default)]
+pub struct AttackingState {
+    pub plan: Vec<(CardId, crabomination::game::AttackTarget)>,
+    /// The most-recently toggled-in attacker. Defender-zone clicks
+    /// reassign this attacker's target. `None` after every confirm or
+    /// reassign so two consecutive defender clicks don't both bind to
+    /// the same attacker by accident.
+    pub last_added: Option<CardId>,
+}
+
+impl AttackingState {
+    pub fn contains(&self, id: CardId) -> bool {
+        self.plan.iter().any(|(a, _)| *a == id)
+    }
+
+    pub fn remove(&mut self, id: CardId) {
+        self.plan.retain(|(a, _)| *a != id);
+        if self.last_added == Some(id) {
+            self.last_added = None;
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.plan.clear();
+        self.last_added = None;
+    }
+
+    /// Reassign the *most-recently toggled-in* attacker to a new target.
+    /// Returns true if an attacker was reassigned. Clears `last_added`
+    /// so the next defender click doesn't piggyback on the same
+    /// attacker.
+    pub fn set_target_for_last_added(
+        &mut self,
+        target: crabomination::game::AttackTarget,
+    ) -> bool {
+        let Some(id) = self.last_added.take() else {
+            return false;
+        };
+        if let Some(entry) = self.plan.iter_mut().find(|(a, _)| *a == id) {
+            entry.1 = target;
+            return true;
+        }
+        false
+    }
+}

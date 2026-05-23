@@ -1,5 +1,32 @@
 //! HUD overlay, visual sync, input handling, and ability menu. Gizmos and the
 //! quality panel live in their own sibling modules (`gizmos.rs`, `quality.rs`).
+//!
+//! This module is being split into focused submodules; everything still
+//! re-exports from here so external callers (`main.rs`, sibling systems)
+//! see the same flat namespace.
+
+mod buttons;
+mod crest;
+mod player_stats;
+mod popups;
+
+pub use buttons::{
+    handle_audit_buttons, handle_export_keypress, poll_action_buttons, poll_player_chip_clicks,
+    pulse_urgent_pass_button, sync_audit_buttons, update_attack_all_visibility,
+    update_attack_button_label, update_pass_button,
+};
+pub use crest::{
+    setup_player_life_labels, update_player_crest_life_label, update_player_crest_ring,
+    update_player_target_zone_material,
+};
+pub use player_stats::{
+    sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
+    update_player_chip_target_outline, update_player_stats_chips,
+};
+pub use popups::{
+    handle_ability_menu, handle_alt_cast_buttons, spawn_ability_menu, spawn_alt_cast_modal,
+    trigger_reveal_animation,
+};
 
 use std::collections::{HashMap, HashSet};
 use std::f32::consts::PI;
@@ -14,7 +41,7 @@ use crate::card::{
     Animating, BattlefieldCard, CARD_THICKNESS, CardHoverLift, CardHovered,
     CardMeshAssets, CardOwner, DECK_CARD_Y_STEP, DeckCard, DeckPile, DrawCardAnimation,
     GameCardId, GraveyardPile, HandCard, HandSlideAnimation, OpponentHandCard,
-    PlayCardAnimation, PlayerTargetZone, RevealPeekAnimation, SendToGraveyardAnimation,
+    PlayCardAnimation, PlayerTargetZone, SendToGraveyardAnimation,
     StackCard, TapAnimation, TapState, ValidTarget, back_face_rotation, bf_card_transform,
     card_back_face_material, card_front_material, deck_position, graveyard_position,
     hand_card_transform, land_card_transform, spawn_single_card, stack_card_transform,
@@ -44,6 +71,7 @@ pub struct GameInputResources<'w> {
     pub log: ResMut<'w, GameLog>,
     pub targeting: ResMut<'w, TargetingState>,
     pub blocking: ResMut<'w, BlockingState>,
+    pub attacking: ResMut<'w, crate::game::AttackingState>,
     pub reveal: ResMut<'w, RevealPopupState>,
     pub menu_state: ResMut<'w, AbilityMenuState>,
     pub ff: ResMut<'w, FastForward>,
@@ -223,6 +251,22 @@ pub struct AttackAllButton;
 #[derive(Component)]
 pub struct AttackAllPanel;
 
+/// Marker on the Text inside [`AttackAllButton`] so the label can be
+/// swapped between "Attack All (A)" (empty plan → fallback to "attack
+/// all eligible at next opp") and "Confirm Attack (A)" (the viewer has
+/// hand-picked one or more attackers via the per-creature click flow).
+#[derive(Component)]
+pub struct AttackButtonLabel;
+
+/// Clickable "player avatar" — the per-seat HUD chip-row (viewer's
+/// bottom-left panel, opponents' rows in the top-right strip). Holding
+/// this component + a `Button` makes the whole row act as the player's
+/// targeting hit-region.
+#[derive(Component, Clone, Copy)]
+pub struct PlayerHudPanel {
+    pub seat: usize,
+}
+
 #[derive(Component)]
 pub struct EndTurnButton;
 
@@ -269,17 +313,6 @@ pub struct PassButtonLabel;
 #[derive(Component)]
 pub struct PhaseStepLabel(pub TurnStep);
 
-/// Root entity of the floating ability context menu.
-#[derive(Component)]
-pub struct AbilityMenu;
-
-/// One item in the ability menu.
-#[derive(Component)]
-pub struct AbilityMenuItem {
-    pub card_id: CardId,
-    pub ability_index: usize,
-}
-
 /// Latched button presses collected by `poll_action_buttons` each frame,
 /// consumed by `handle_game_input`.  Using a resource instead of inline
 /// button queries keeps `handle_game_input` under Bevy's system-param limit.
@@ -290,23 +323,9 @@ pub struct ButtonState {
     pub end_turn: bool,
     pub next_turn: bool,
     pub export: bool,
-}
-
-/// Reads all action-button `Interaction` components and writes results into
-/// `ButtonState`.  Must run before `handle_game_input` in the same frame.
-pub fn poll_action_buttons(
-    mut state: ResMut<ButtonState>,
-    pass_btn: Query<&Interaction, (Changed<Interaction>, With<PassPriorityButton>)>,
-    attack_btn: Query<&Interaction, (Changed<Interaction>, With<AttackAllButton>)>,
-    end_turn_btn: Query<&Interaction, (Changed<Interaction>, With<EndTurnButton>)>,
-    next_turn_btn: Query<&Interaction, (Changed<Interaction>, With<NextTurnButton>)>,
-    export_btn: Query<&Interaction, (Changed<Interaction>, With<ExportStateButton>)>,
-) {
-    state.pass = pass_btn.iter().any(|i| *i == Interaction::Pressed);
-    state.attack = attack_btn.iter().any(|i| *i == Interaction::Pressed);
-    state.end_turn = end_turn_btn.iter().any(|i| *i == Interaction::Pressed);
-    state.next_turn = next_turn_btn.iter().any(|i| *i == Interaction::Pressed);
-    state.export = export_btn.iter().any(|i| *i == Interaction::Pressed);
+    /// Seat of a `PlayerHudPanel` that was clicked this frame. `None`
+    /// when no panel was clicked.
+    pub player_chip: Option<usize>,
 }
 
 // ── HUD setup ─────────────────────────────────────────────────────────────────
@@ -318,6 +337,13 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
     // Player status used to live in a bottom-left panel that covered
     // the leftmost hand cards; consolidating it up here frees the
     // bottom of the screen for the hand and the action button strip.
+    //
+    // The outer panel itself is the viewer's clickable
+    // [`PlayerHudPanel`] hit-region (Arena / MTGO convention — the
+    // player avatar/portrait is the target). Seat is patched in by
+    // `sync_player_hud_seat` once the first view arrives, since the
+    // viewer seat isn't known at setup time. The border alternates
+    // between transparent and yellow under `update_player_chip_target_outline`.
     commands
         .spawn((
             Node {
@@ -328,9 +354,13 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 flex_direction: FlexDirection::Column,
                 padding: UiRect::all(Val::Px(8.0)),
                 row_gap: Val::Px(4.0),
+                border: UiRect::all(Val::Px(2.0)),
                 ..default()
             },
             BackgroundColor(theme::HUD_BG),
+            BorderColor::all(Color::NONE),
+            Button,
+            PlayerHudPanel { seat: usize::MAX },
             InGameRoot,
         ))
         .with_children(|p| {
@@ -339,19 +369,23 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 tf(16.0),
                 TextColor(theme::TEXT_PRIMARY),
                 TurnInfoText,
+                Pickable::IGNORE,
             ));
             // Stats row: small tinted chips for life / hand / deck / grave
             // (rebuilt by `update_player_stats_chips`) and a sibling row
             // of mana pips. Both use the same chip visual vocabulary so
             // the entire HUD strip reads as one consistent control bar.
-            p.spawn(Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(6.0),
-                flex_wrap: FlexWrap::Wrap,
-                row_gap: Val::Px(4.0),
-                ..default()
-            })
+            p.spawn((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    align_items: AlignItems::Center,
+                    column_gap: Val::Px(6.0),
+                    flex_wrap: FlexWrap::Wrap,
+                    row_gap: Val::Px(4.0),
+                    ..default()
+                },
+                Pickable::IGNORE,
+            ))
             .with_children(|row| {
                 row.spawn((
                     Node {
@@ -361,6 +395,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         ..default()
                     },
                     PlayerStatsRow,
+                    Pickable::IGNORE,
                 ));
                 row.spawn((
                     Node {
@@ -370,6 +405,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                         ..default()
                     },
                     ManaPipRow,
+                    Pickable::IGNORE,
                 ));
             });
         });
@@ -700,6 +736,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     Text::new("Attack All (A)"),
                     tf(15.0),
                     TextColor(theme::TEXT_PRIMARY),
+                    AttackButtonLabel,
                 ));
             });
         });
@@ -736,40 +773,6 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
         });
 }
 
-/// Show the Attack All panel iff: it's the viewer's `DeclareAttackers`
-/// step, and the viewer has at least one creature legally able to attack
-/// (untapped, no summoning sickness without haste, no Defender).
-pub fn update_attack_all_visibility(
-    view: Res<CurrentView>,
-    mut q: Query<&mut Node, With<AttackAllPanel>>,
-) {
-    let Ok(mut node) = q.single_mut() else { return };
-    let Some(cv) = &view.0 else {
-        node.display = Display::None;
-        return;
-    };
-    if cv.game_over.is_some() {
-        node.display = Display::None;
-        return;
-    }
-    let your_seat = cv.your_seat;
-    let attacking_step =
-        cv.step == TurnStep::DeclareAttackers && cv.active_player == your_seat;
-    if !attacking_step {
-        node.display = Display::None;
-        return;
-    }
-    use crabomination::card::Keyword;
-    let has_attackers = cv.battlefield.iter().any(|c| {
-        c.owner == your_seat
-            && c.is_creature()
-            && !c.tapped
-            && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
-            && !c.keywords.contains(&Keyword::Defender)
-    });
-    node.display = if has_attackers { Display::Flex } else { Display::None };
-}
-
 // ── HUD text update ───────────────────────────────────────────────────────────
 
 pub fn update_turn_text(
@@ -800,261 +803,6 @@ fn player_name(cv: &crabomination::net::ClientView, seat: usize) -> String {
         .unwrap_or_else(|| format!("Player {seat}"))
 }
 
-/// Per-stat visual style for a player stat chip: (background, text colour).
-/// Picked to mirror the mana-pip palette — saturated enough to register
-/// as distinct chips, dim enough not to compete with the action buttons.
-fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
-    match kind {
-        StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
-        StatChipKind::Life => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
-        StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
-    }
-}
-
-#[derive(Clone, Copy)]
-enum StatChipKind {
-    Name,
-    Life,
-    Hand,
-    Deck,
-    Grave,
-}
-
-fn spawn_stat_chip(
-    parent: &mut ChildSpawnerCommands,
-    ui_fonts: &UiFonts,
-    kind: StatChipKind,
-    text: String,
-) {
-    let (bg, fg) = stat_chip_style(kind);
-    parent
-        .spawn((
-            Node {
-                padding: UiRect::axes(Val::Px(6.0), Val::Px(2.0)),
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::Center,
-                border_radius: BorderRadius::all(Val::Px(3.0)),
-                ..default()
-            },
-            BackgroundColor(bg),
-        ))
-        .with_children(|chip| {
-            chip.spawn((
-                Text::new(text),
-                ui_fonts.tf(12.0),
-                TextColor(fg),
-                Pickable::IGNORE,
-            ));
-        });
-}
-
-/// Rebuild the viewer's stat chip row whenever the view changes.
-/// Sibling system to `update_mana_pips` — same visual vocabulary, so
-/// the entire HUD-strip reads as a single chip-based status bar.
-pub fn update_player_stats_chips(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    row_q: Query<Entity, With<PlayerStatsRow>>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Ok(row) = row_q.single() else { return };
-    let Some(cv) = &view.0 else { return };
-    let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-    commands.entity(row).despawn_children();
-    commands.entity(row).with_children(|row| {
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
-    });
-}
-
-/// Per-color visual style for a mana pip: background tint + readable
-/// text colour for the count rendered on top.
-fn mana_pip_colors(color: Option<crabomination::mana::Color>) -> (Color, Color) {
-    use crabomination::mana::Color as MC;
-    match color {
-        Some(MC::White) => (Color::srgb(0.95, 0.93, 0.85), Color::srgb(0.20, 0.18, 0.15)),
-        Some(MC::Blue) => (Color::srgb(0.30, 0.55, 0.90), theme::TEXT_PRIMARY),
-        Some(MC::Black) => (Color::srgb(0.18, 0.18, 0.22), theme::TEXT_PRIMARY),
-        Some(MC::Red) => (Color::srgb(0.85, 0.30, 0.25), theme::TEXT_PRIMARY),
-        Some(MC::Green) => (Color::srgb(0.30, 0.65, 0.35), theme::TEXT_PRIMARY),
-        // Colorless
-        None => (Color::srgb(0.70, 0.70, 0.72), Color::srgb(0.20, 0.20, 0.22)),
-    }
-}
-
-/// Rebuild the `ManaPipRow` children to reflect the viewer's current
-/// mana pool. One small tinted chip per non-zero colour, plus a
-/// colorless chip if any colorless mana is in the pool. Width is
-/// auto-sized so the chip grows with the digit count.
-pub fn update_mana_pips(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    row_q: Query<Entity, With<ManaPipRow>>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Ok(row) = row_q.single() else { return };
-    let Some(cv) = &view.0 else { return };
-    let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-
-    commands.entity(row).despawn_children();
-
-    use crabomination::mana::Color as MC;
-    let colors = [
-        (Some(MC::White), "W"),
-        (Some(MC::Blue), "U"),
-        (Some(MC::Black), "B"),
-        (Some(MC::Red), "R"),
-        (Some(MC::Green), "G"),
-    ];
-    let mut entries: Vec<(Option<MC>, &'static str, u32)> = colors
-        .iter()
-        .filter_map(|(c, sym)| {
-            let n = p.mana_pool.amount(c.unwrap());
-            (n > 0).then_some((*c, *sym, n))
-        })
-        .collect();
-    let colorless = p.mana_pool.colorless_amount();
-    if colorless > 0 {
-        entries.push((None, "C", colorless));
-    }
-
-    commands.entity(row).with_children(|row| {
-        if entries.is_empty() {
-            row.spawn((
-                Text::new("(no mana)"),
-                ui_fonts.tf(11.0),
-                TextColor(theme::TEXT_MUTED),
-            ));
-            return;
-        }
-        for (color, sym, count) in entries {
-            let (bg, fg) = mana_pip_colors(color);
-            row.spawn((
-                Node {
-                    min_width: Val::Px(22.0),
-                    height: Val::Px(18.0),
-                    padding: UiRect::axes(Val::Px(5.0), Val::Px(0.0)),
-                    align_items: AlignItems::Center,
-                    justify_content: JustifyContent::Center,
-                    column_gap: Val::Px(2.0),
-                    // Pill shape — pip identity is "a round mana token",
-                    // not panel chrome, so it keeps its rounding even on
-                    // the otherwise-square HUD.
-                    border_radius: BorderRadius::all(Val::Px(9.0)),
-                    ..default()
-                },
-                BackgroundColor(bg),
-            ))
-            .with_children(|chip| {
-                let label = if count > 1 {
-                    format!("{sym}{count}")
-                } else {
-                    sym.to_string()
-                };
-                chip.spawn((
-                    Text::new(label),
-                    ui_fonts.tf(11.0),
-                    TextColor(fg),
-                ));
-            });
-        }
-    });
-}
-
-/// Flip the opponent strip's background between the neutral HUD colour
-/// and the red `HUD_BG_DANGER` variant. Red signals "you are actually
-/// threatened" rather than "an opponent exists":
-///
-/// - Viewer life ≤ 5 → danger (low-life warning).
-/// - Sum of opponent attackers-that-could-swing-now ≥ viewer life → danger
-///   (lethal on board next combat).
-///
-/// "Attackers that could swing now" = controlled by an opponent, not a
-/// land, untapped, and either not summoning-sick or has Haste, and not
-/// a Defender.
-pub fn update_opponent_panel_tint(
-    view: Res<CurrentView>,
-    mut q: Query<&mut BackgroundColor, With<OpponentStatusPanel>>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Ok(mut bg) = q.single_mut() else { return };
-    let Some(cv) = &view.0 else { return };
-    let Some(viewer) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
-
-    use crabomination::card::Keyword;
-    let lethal_on_board: i32 = cv
-        .battlefield
-        .iter()
-        .filter(|c| {
-            c.owner != cv.your_seat
-                && c.is_creature()
-                && !c.tapped
-                && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
-                && !c.keywords.contains(&Keyword::Defender)
-        })
-        .map(|c| c.power.max(0))
-        .sum();
-
-    let threatened = viewer.life <= 5 || lethal_on_board >= viewer.life as i32;
-    *bg = BackgroundColor(if threatened { theme::HUD_BG_DANGER } else { theme::HUD_BG });
-}
-
-/// Rebuild one chip-row per opponent inside the top-right panel.
-/// Replaces the old single-`Text`-with-newlines approach so each
-/// opponent is visually distinct (especially in Commander where there
-/// are 3 of them) and uses the same chip vocabulary as the viewer.
-pub fn update_opponent_stats_rows(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    container_q: Query<Entity, With<OpponentStatsContainer>>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Ok(container) = container_q.single() else { return };
-    let Some(cv) = &view.0 else { return };
-    commands.entity(container).despawn_children();
-    let opponents: Vec<_> = cv.players.iter().filter(|p| p.seat != cv.your_seat).collect();
-    commands.entity(container).with_children(|col| {
-        for p in opponents {
-            col.spawn(Node {
-                flex_direction: FlexDirection::Row,
-                align_items: AlignItems::Center,
-                column_gap: Val::Px(4.0),
-                flex_wrap: FlexWrap::Wrap,
-                row_gap: Val::Px(2.0),
-                ..default()
-            })
-            .with_children(|row| {
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
-            });
-        }
-    });
-}
-
-/// Rebuild the `GameLogPanel` children from `GameLog.entries`. Each
-/// entry becomes one `Text` row colored by `LogEntry.color`. Newest
-/// entries are rendered first so the most recent events are always
-/// visible at the top of the panel; the panel's outer container has
-/// `Overflow::scroll_y()` so older entries are reachable via scroll.
 pub fn update_log_text(
     mut commands: Commands,
     log: Res<GameLog>,
@@ -1486,139 +1234,6 @@ pub fn update_stack_panel(
             });
         }
     });
-}
-
-/// Update the Pass Priority button's background color and label to reflect
-/// whether the viewer has priority and what the stack looks like.
-pub fn update_pass_button(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    mut btn_q: Query<(Entity, &mut BackgroundColor), With<PassPriorityButton>>,
-    mut label_q: Query<&mut Text, With<PassButtonLabel>>,
-) {
-    if !view.is_changed() {
-        return;
-    }
-    let Ok((btn_entity, mut bg)) = btn_q.single_mut() else { return };
-    let Ok(mut label) = label_q.single_mut() else { return };
-
-    let Some(cv) = &view.0 else { return };
-
-    let your_priority = cv.priority == cv.your_seat;
-
-    // Classify the top stack item if any.
-    use crabomination::net::{StackItemKind, StackItemView};
-    let top_is_opp_spell = cv.stack.last().is_some_and(|item| {
-        matches!(item,
-            StackItemView::Known(k)
-            if k.controller != cv.your_seat && k.kind == StackItemKind::Spell
-        )
-    });
-
-    // Pick the new background based on priority + stack state, then write
-    // it once. Track whether the urgent-pulse marker should be present so
-    // we add/remove it in a single place. Refresh `HoverTint` to match the
-    // new idle colour — the button's BG is state-driven, so we maintain
-    // hover affordance manually instead of attaching a static `HoverTint`
-    // at spawn time (which would fight the swaps).
-    let (new_bg, new_label, urgent): (Color, &str, bool) =
-        if your_priority && top_is_opp_spell {
-            (theme::BUTTON_URGENT_BG, "Pass / Respond (Space)", true)
-        } else if your_priority && !cv.stack.is_empty() {
-            (theme::BUTTON_PRIMARY_BG, "Pass (Space)", false)
-        } else if your_priority {
-            (theme::BUTTON_INFO_BG, "Pass (Space)", false)
-        } else {
-            (theme::BUTTON_DISABLED_BG, "Pass (Space)", false)
-        };
-    *bg = BackgroundColor(new_bg);
-    label.0 = new_label.into();
-    let mut entity = commands.entity(btn_entity);
-    // Skip `HoverTint` for the urgent state — `pulse_urgent_pass_button`
-    // is animating the BG alpha and HoverTint would clobber it on every
-    // hover event.
-    if urgent {
-        entity.insert(PassButtonUrgent);
-        entity.remove::<HoverTint>();
-    } else {
-        entity.remove::<PassButtonUrgent>();
-        entity.insert(HoverTint::new(new_bg));
-    }
-}
-
-/// Show / hide the audit-mode HUD buttons based on whether the active
-/// session was launched from the audit picker. `AuditTarget.0` carries
-/// the card name when in audit mode.
-pub fn sync_audit_buttons(
-    target: Res<crate::audit::AuditTarget>,
-    mut verified_q: Query<
-        &mut Node,
-        (
-            With<AuditMarkVerifiedButton>,
-            Without<AuditSkipButton>,
-        ),
-    >,
-    mut skip_q: Query<
-        &mut Node,
-        (
-            With<AuditSkipButton>,
-            Without<AuditMarkVerifiedButton>,
-        ),
-    >,
-) {
-    if !target.is_changed() {
-        return;
-    }
-    let visible = if target.0.is_some() { Display::Flex } else { Display::None };
-    if let Ok(mut n) = verified_q.single_mut() {
-        n.display = visible;
-    }
-    if let Ok(mut n) = skip_q.single_mut() {
-        n.display = visible;
-    }
-}
-
-/// Audit-mode click handlers. "Mark Verified" persists the current
-/// audit target into `AuditedCards` and exits to the picker; "Skip"
-/// exits without changing the set.
-pub fn handle_audit_buttons(
-    mut next_state: ResMut<NextState<crate::menu::AppState>>,
-    mut target: ResMut<crate::audit::AuditTarget>,
-    mut verified: ResMut<crate::audit::AuditedCards>,
-    verified_btn: Query<&Interaction, (Changed<Interaction>, With<AuditMarkVerifiedButton>)>,
-    skip_btn: Query<&Interaction, (Changed<Interaction>, With<AuditSkipButton>)>,
-) {
-    let pressed_verified = verified_btn.iter().any(|i| *i == Interaction::Pressed);
-    let pressed_skip = skip_btn.iter().any(|i| *i == Interaction::Pressed);
-    if !(pressed_verified || pressed_skip) {
-        return;
-    }
-    if pressed_verified
-        && let Some(name) = target.0.clone()
-    {
-        crate::audit::mark_verified(&mut verified, name);
-    }
-    // Either action returns to the picker; clear the target so the
-    // HUD buttons hide on the next sync.
-    target.0 = None;
-    next_state.set(crate::menu::AppState::Audit);
-}
-
-/// Alpha-pulse the Pass button while it's in its urgent (amber) state
-/// so an opponent's pending spell catches the eye. Sine wave with a
-/// 1.2 s period; alpha never drops below 0.55 so the button stays
-/// readable at the dim end of the cycle.
-pub fn pulse_urgent_pass_button(
-    time: Res<Time>,
-    mut q: Query<&mut BackgroundColor, With<PassButtonUrgent>>,
-) {
-    let Ok(mut bg) = q.single_mut() else { return };
-    // sin returns -1..1; map to 0..1 with cosine offset, then to 0.55..1.0.
-    let phase = (time.elapsed_secs() * std::f32::consts::TAU / 1.2).sin();
-    let alpha = 0.775 + 0.225 * phase;
-    let mut c = theme::BUTTON_URGENT_BG.to_srgba();
-    c.alpha = alpha;
-    *bg = BackgroundColor(Color::Srgba(c));
 }
 
 // ── Visual sync: reconcile 3D card entities with the server-projected view ───
@@ -2780,6 +2395,7 @@ pub fn handle_game_input(
     let log = &mut *r.log;
     let targeting = &mut *r.targeting;
     let blocking = &mut *r.blocking;
+    let attacking = &mut *r.attacking;
     let reveal = &mut *r.reveal;
     let menu_state = &mut *r.menu_state;
     let ff = &mut *r.ff;
@@ -2901,6 +2517,100 @@ pub fn handle_game_input(
             return;
         }
 
+        // ── Attacker selection (our own DeclareAttackers, our priority) ─────
+        //
+        // Flow:
+        //   • click an own creature → toggle in/out of the plan with a
+        //     default target (next opponent). The toggled-in creature is
+        //     stored as `last_added` so the next defender-click reassigns
+        //     *its* target.
+        //   • click an opponent's planeswalker → reassign `last_added` to
+        //     that PW.
+        //   • click an opponent's player disc (`PlayerTargetZone`) or 2-D
+        //     HUD chip (`PlayerHudPanel`) → reassign `last_added` to that
+        //     player.
+        //   • Esc / right-click → clear plan.
+        //   • `A` / Attack button (handled below) submits the plan, falling
+        //     back to "attack all eligible at next opp" when empty.
+        if cv.step == TurnStep::DeclareAttackers
+            && cv.active_player == your_seat
+            && cv.priority == your_seat
+        {
+            if mouse.just_pressed(MouseButton::Right) || keyboard.just_pressed(KeyCode::Escape) {
+                attacking.clear();
+                // Fall through so other handlers can also react (e.g. close
+                // an open ability menu via Escape).
+            } else if activate {
+                use crabomination::card::{CardType, Keyword};
+                use crabomination::game::AttackTarget;
+                let next_opp = cv
+                    .players
+                    .iter()
+                    .map(|p| p.seat)
+                    .find(|s| *s != your_seat)
+                    .unwrap_or(your_seat);
+
+                let mut consumed = false;
+                if let Some((game_id, owner)) = hovered_bf.iter().next() {
+                    let bf = cv.battlefield.iter().find(|c| c.id == game_id.0);
+                    if owner.0 == your_seat {
+                        let eligible = bf
+                            .map(|c| {
+                                c.is_creature()
+                                    && !c.tapped
+                                    && (!c.summoning_sick
+                                        || c.keywords.contains(&Keyword::Haste))
+                                    && !c.keywords.contains(&Keyword::Defender)
+                            })
+                            .unwrap_or(false);
+                        if eligible {
+                            if attacking.contains(game_id.0) {
+                                attacking.remove(game_id.0);
+                            } else {
+                                attacking
+                                    .plan
+                                    .push((game_id.0, AttackTarget::Player(next_opp)));
+                                attacking.last_added = Some(game_id.0);
+                            }
+                            consumed = true;
+                        }
+                    } else {
+                        let is_pw = bf
+                            .map(|c| c.card_types.contains(&CardType::Planeswalker))
+                            .unwrap_or(false);
+                        if is_pw
+                            && attacking.set_target_for_last_added(
+                                AttackTarget::Planeswalker(game_id.0),
+                            )
+                        {
+                            consumed = true;
+                        }
+                    }
+                }
+                if !consumed
+                    && let Some(zone) = hovered_target_zone.iter().next()
+                    && zone.0 != your_seat
+                    && attacking.set_target_for_last_added(AttackTarget::Player(zone.0))
+                {
+                    consumed = true;
+                }
+                if consumed {
+                    return;
+                }
+            }
+            // 2-D chip click during DeclareAttackers reassigns the
+            // last-added attacker's defender. Mirrors the 3-D disc path
+            // but always visible and easy to hit.
+            if let Some(seat) = btns.player_chip
+                && seat != your_seat
+                && attacking.set_target_for_last_added(
+                    crabomination::game::AttackTarget::Player(seat),
+                )
+            {
+                return;
+            }
+        }
+
         if cv.game_over.is_some() || cv.priority != your_seat { return; }
 
         // ── Targeting mode ────────────────────────────────────────────────────
@@ -2969,6 +2679,46 @@ pub fn handle_game_input(
                         cancel_targeting(&mut commands, targeting, &valid_targets);
                         return;
                     }
+                }
+            }
+            // 2-D HUD chip click — same Player target submission as the
+            // 3-D disc above, but driven by `poll_player_chip_clicks` so
+            // it fires independent of `activate` (the Button's Pressed
+            // transition is the click signal).
+            if let Some(seat) = btns.player_chip {
+                let target = Target::Player(seat);
+                let is_ability_target = targeting.pending_ability_source.is_some();
+                let cast_back = targeting.back_face_pending;
+                let is_decision = targeting.pending_decision_target;
+                if is_decision {
+                    outbox.submit(GameAction::SubmitDecision(
+                        crabomination::decision::DecisionAnswer::Target(target),
+                    ));
+                    cancel_targeting(&mut commands, targeting, &valid_targets);
+                    return;
+                } else if is_ability_target {
+                    if let (Some(src), Some(idx)) = (
+                        targeting.pending_ability_source,
+                        targeting.pending_ability_index,
+                    ) {
+                        outbox.submit(GameAction::ActivateAbility {
+                            card_id: src,
+                            ability_index: idx,
+                            target: Some(target),
+                            x_value: None,
+                        });
+                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        return;
+                    }
+                } else if let Some(pending_id) = targeting.pending_card_id {
+                    let action = if cast_back {
+                        GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                    } else {
+                        GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                    };
+                    outbox.submit(action);
+                    cancel_targeting(&mut commands, targeting, &valid_targets);
+                    return;
                 }
             }
             return;
@@ -3220,33 +2970,43 @@ pub fn handle_game_input(
             }
         }
 
-        // Attack All (A) — default target is the next opponent (first alive
-        // seat after `your_seat`). Multi-defender target picking has no UI yet.
+        // Attack All / Confirm Attack (A). If the viewer has hand-picked
+        // attackers via the per-creature click flow, submit *that* plan;
+        // otherwise fall back to "attack all eligible at the next opponent"
+        // so the one-key shortcut still works for single-opponent games.
         let attack = keyboard.just_pressed(KeyCode::KeyA) || btns.attack;
         if attack && cv.step == TurnStep::DeclareAttackers {
             use crabomination::game::{Attack, AttackTarget};
-            let next_opp = cv
-                .players
-                .iter()
-                .map(|p| p.seat)
-                .find(|s| *s != your_seat)
-                .unwrap_or(your_seat);
-            use crabomination::card::Keyword;
-            let attacks: Vec<Attack> = cv
-                .battlefield
-                .iter()
-                .filter(|c| {
-                    c.owner == your_seat
-                        && c.is_creature()
-                        && !c.tapped
-                        && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
-                        && !c.keywords.contains(&Keyword::Defender)
-                })
-                .map(|c| Attack {
-                    attacker: c.id,
-                    target: AttackTarget::Player(next_opp),
-                })
-                .collect();
+            let attacks: Vec<Attack> = if !attacking.plan.is_empty() {
+                attacking
+                    .plan
+                    .iter()
+                    .map(|(attacker, target)| Attack { attacker: *attacker, target: *target })
+                    .collect()
+            } else {
+                let next_opp = cv
+                    .players
+                    .iter()
+                    .map(|p| p.seat)
+                    .find(|s| *s != your_seat)
+                    .unwrap_or(your_seat);
+                use crabomination::card::Keyword;
+                cv.battlefield
+                    .iter()
+                    .filter(|c| {
+                        c.owner == your_seat
+                            && c.is_creature()
+                            && !c.tapped
+                            && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
+                            && !c.keywords.contains(&Keyword::Defender)
+                    })
+                    .map(|c| Attack {
+                        attacker: c.id,
+                        target: AttackTarget::Player(next_opp),
+                    })
+                    .collect()
+            };
+            attacking.clear();
             outbox.submit(GameAction::DeclareAttackers(attacks));
         }
 
@@ -3273,33 +3033,6 @@ pub fn handle_game_input(
     }
 }
 
-/// Always-on export-prompt opener. Lives outside `handle_game_input`
-/// because the export feature must work even when:
-///   * a pending decision is blocking gameplay input,
-///   * the bot loop has deadlocked / panicked (NetOutbox is dead),
-///   * or no game view has arrived yet.
-///
-/// Without this hoist, pressing `X` inside `handle_game_input` is
-/// gated by a stack of early-returns (no view, no outbox, decision
-/// pending, etc.) — exactly the conditions where the user is most
-/// likely to want to file a bug report.
-pub fn handle_export_keypress(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    btns: Res<ButtonState>,
-    mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
-    debug_console: Res<crate::systems::debug_console::DebugConsoleState>,
-) {
-    if state.active {
-        return;
-    }
-    if debug_console.card_input_focused {
-        return;
-    }
-    if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
-        crate::systems::export_prompt::open_export_prompt(&mut state);
-    }
-}
-
 fn cancel_targeting(
     commands: &mut Commands,
     targeting: &mut TargetingState,
@@ -3313,365 +3046,6 @@ fn cancel_targeting(
     targeting.pending_decision_target = false;
     for entity in valid_targets.iter() {
         commands.entity(entity).remove::<ValidTarget>();
-    }
-}
-
-/// Highlight the opponent's player-target zone whenever the viewer is in
-/// targeting mode (casting a spell, activating a targeted ability, or
-/// answering a `ChooseTarget` decision). The zone is otherwise an
-/// invisible click pad — without this feedback the user has to remember
-/// where on the table it sits.
-///
-/// Hovered → bright red (high alpha); idle-but-active → subtle outline;
-/// targeting inactive → fully transparent.
-pub fn update_player_target_zone_material(
-    targeting: Res<crate::game::TargetingState>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    zones: Query<
-        (&MeshMaterial3d<StandardMaterial>, Has<CardHovered>),
-        With<PlayerTargetZone>,
-    >,
-) {
-    let active = targeting.active;
-    for (mat_handle, hovered) in &zones {
-        let Some(mat) = materials.get_mut(&mat_handle.0) else { continue };
-        let alpha = if !active {
-            0.0
-        } else if hovered {
-            0.45
-        } else {
-            0.15
-        };
-        mat.base_color = Color::srgba(1.0, 0.15, 0.15, alpha);
-    }
-}
-
-/// Spawn or despawn the floating ability context menu based on `AbilityMenuState`.
-pub fn spawn_ability_menu(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    menu_state: Res<AbilityMenuState>,
-    existing: Query<Entity, With<AbilityMenu>>,
-) {
-    if !menu_state.is_changed() { return; }
-
-    for e in &existing {
-        commands.entity(e).despawn();
-    }
-
-    let Some(card_id) = menu_state.card_id else { return };
-    let Some(cv) = view.0.as_ref() else { return };
-    let Some(pv) = cv.battlefield.iter().find(|p| p.id == card_id) else { return };
-
-    // Project (index, label, used_this_turn) so the menu can grey out
-    // once-per-turn abilities that have already been activated. Includes
-    // mana abilities so multi-colour lands surface all the pip choices
-    // when opened via the left-click mana-source picker (see the
-    // `mana_abilities.len() > 1` branch in `handle_game_input`).
-    let abilities: Vec<(usize, String, bool)> = pv.abilities.iter()
-        .map(|a| {
-            let label = if a.once_per_turn_used {
-                format!("{}: {} (used)", a.cost_label, a.effect_label)
-            } else {
-                format!("{}: {}", a.cost_label, a.effect_label)
-            };
-            (a.index, label, a.once_per_turn_used)
-        })
-        .collect();
-    if abilities.is_empty() { return; }
-    let card_name = pv.name.clone();
-
-    let pos = menu_state.spawn_pos;
-
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(pos.x),
-                top: Val::Px(pos.y),
-                flex_direction: FlexDirection::Column,
-                row_gap: Val::Px(4.0),
-                padding: UiRect::all(Val::Px(8.0)),
-                ..default()
-            },
-            BackgroundColor(theme::PANEL_BG_SUNKEN),
-            AbilityMenu,
-        ))
-        .with_children(|menu| {
-            menu.spawn((
-                Text::new(card_name),
-                ui_fonts.tf(13.0),
-                TextColor(theme::ACCENT_BLUE),
-            ));
-            for (ability_index, label, used) in abilities {
-                let bg = if used {
-                    // Darkened background for once-per-turn abilities
-                    // already activated this turn — clicks still go
-                    // through, but the engine returns
-                    // `AbilityAlreadyUsedThisTurn`.
-                    theme::PANEL_BG_RAISED
-                } else {
-                    theme::BUTTON_NEUTRAL_BG
-                };
-                let fg = if used {
-                    theme::TEXT_MUTED
-                } else {
-                    theme::TEXT_PRIMARY
-                };
-                menu.spawn((
-                    Button,
-                    Node {
-                        padding: UiRect::axes(Val::Px(10.0), Val::Px(6.0)),
-                        ..default()
-                    },
-                    BackgroundColor(bg),
-                    AbilityMenuItem { card_id, ability_index },
-                ))
-                .with_children(|b| {
-                    b.spawn((
-                        Text::new(label),
-                        ui_fonts.tf(13.0),
-                        TextColor(fg),
-                        Pickable::IGNORE,
-                    ));
-                });
-            }
-        });
-}
-
-/// Handle clicks on ability menu items.
-pub fn handle_ability_menu(
-    outbox: Option<Res<NetOutbox>>,
-    view: Res<CurrentView>,
-    mut targeting: ResMut<TargetingState>,
-    mut menu_state: ResMut<AbilityMenuState>,
-    query: Query<(&Interaction, &AbilityMenuItem), Changed<Interaction>>,
-) {
-    for (interaction, item) in &query {
-        if *interaction != Interaction::Pressed { continue; }
-
-        let Some(cv) = &view.0 else { menu_state.card_id = None; continue };
-        let Some(pv) = cv.battlefield.iter().find(|p| p.id == item.card_id) else { menu_state.card_id = None; continue };
-        let Some(av) = pv.abilities.iter().find(|a| a.index == item.ability_index) else { menu_state.card_id = None; continue };
-
-        if av.needs_target {
-            targeting.active = true;
-            targeting.pending_card_id = None;
-            targeting.pending_ability_source = Some(item.card_id);
-            targeting.pending_ability_index = Some(item.ability_index);
-        } else if let Some(ob) = &outbox {
-            ob.submit(GameAction::ActivateAbility {
-                card_id: item.card_id,
-                ability_index: item.ability_index,
-                target: None,
-                x_value: None,
-            });
-        }
-
-        menu_state.card_id = None;
-    }
-}
-
-
-// ── Alt-cast (pitch / evoke) modal ───────────────────────────────────────────
-
-#[derive(Component)]
-pub struct AltCastModal;
-
-#[derive(Component)]
-pub struct AltCastPitchButton {
-    pub spell: CardId,
-    pub pitch: CardId,
-}
-
-#[derive(Component)]
-pub struct AltCastCancelButton;
-
-/// Spawn or despawn the alt-cast pitch picker based on `AltCastState`.
-pub fn spawn_alt_cast_modal(
-    mut commands: Commands,
-    view: Res<CurrentView>,
-    ui_fonts: Res<UiFonts>,
-    state: Res<crate::game::AltCastState>,
-    existing: Query<Entity, With<AltCastModal>>,
-) {
-    let want_open = state.pending.is_some();
-    let is_open = !existing.is_empty();
-    if !state.is_changed() && want_open == is_open {
-        return;
-    }
-    for e in &existing {
-        commands.entity(e).despawn();
-    }
-    let Some(spell_id) = state.pending else { return };
-    let Some(cv) = &view.0 else { return };
-
-    // Collect candidate pitch cards: every other Known card in the viewer's
-    // hand. The engine validates the filter and returns InvalidPitchCard if
-    // wrong color; we render every card so the player sees the full hand.
-    let candidates: Vec<(CardId, String)> = cv
-        .players
-        .get(cv.your_seat)
-        .map(|p| {
-            p.hand
-                .iter()
-                .filter_map(|h| match h {
-                    crabomination::net::HandCardView::Known(k) if k.id != spell_id => {
-                        Some((k.id, k.name.clone()))
-                    }
-                    _ => None,
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                left: Val::Px(0.0),
-                top: Val::Px(0.0),
-                width: Val::Percent(100.0),
-                height: Val::Percent(100.0),
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..default()
-            },
-            bevy::picking::Pickable::IGNORE,
-            AltCastModal,
-        ))
-        .with_children(|root| {
-            root.spawn((
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    padding: UiRect::all(Val::Px(20.0)),
-                    row_gap: Val::Px(10.0),
-                    align_items: AlignItems::Center,
-                    min_width: Val::Px(360.0),
-                    ..default()
-                },
-                BackgroundColor(theme::PANEL_BG),
-            ))
-            .with_children(|panel| {
-                panel.spawn((
-                    Text::new("Cast for alternative cost — pick a card to exile:"),
-                    ui_fonts.tf(15.0),
-                    TextColor(theme::TEXT_PRIMARY),
-                ));
-                if candidates.is_empty() {
-                    panel.spawn((
-                        Text::new("(no other cards in hand to pitch)"),
-                        ui_fonts.tf(13.0),
-                        TextColor(theme::TEXT_SECONDARY),
-                    ));
-                }
-                for (pid, name) in candidates {
-                    panel
-                        .spawn((
-                            Button,
-                            Node {
-                                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
-                                ..default()
-                            },
-                            BackgroundColor(theme::BUTTON_INFO_BG),
-                            AltCastPitchButton { spell: spell_id, pitch: pid },
-                        ))
-                        .with_children(|b| {
-                            b.spawn((
-                                Text::new(name),
-                                ui_fonts.tf(13.0),
-                                TextColor(theme::TEXT_PRIMARY),
-                                bevy::picking::Pickable::IGNORE,
-                            ));
-                        });
-                }
-                panel
-                    .spawn((
-                        Button,
-                        Node {
-                            padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
-                            margin: UiRect::top(Val::Px(8.0)),
-                            ..default()
-                        },
-                        BackgroundColor(theme::BUTTON_DANGER_BG),
-                        AltCastCancelButton,
-                    ))
-                    .with_children(|b| {
-                        b.spawn((
-                            Text::new("Cancel"),
-                            ui_fonts.tf(13.0),
-                            TextColor(theme::TEXT_PRIMARY),
-                            bevy::picking::Pickable::IGNORE,
-                        ));
-                    });
-            });
-        });
-}
-
-/// Click on a pitch button → submit `CastSpellAlternative`. Click cancel →
-/// clear the pending alt-cast.
-pub fn handle_alt_cast_buttons(
-    mut state: ResMut<crate::game::AltCastState>,
-    outbox: Option<Res<NetOutbox>>,
-    pitch_q: Query<(&Interaction, &AltCastPitchButton), Changed<Interaction>>,
-    cancel_q: Query<&Interaction, (Changed<Interaction>, With<AltCastCancelButton>)>,
-) {
-    if cancel_q.iter().any(|i| *i == Interaction::Pressed) {
-        state.pending = None;
-        return;
-    }
-    for (interaction, btn) in &pitch_q {
-        if *interaction == Interaction::Pressed
-            && let Some(outbox) = &outbox
-        {
-            outbox.submit(GameAction::CastSpellAlternative {
-                card_id: btn.spell,
-                pitch_card: Some(btn.pitch),
-                target: None,
-                additional_targets: vec![],
-                mode: None,
-                x_value: None,
-            });
-            state.pending = None;
-            return;
-        }
-    }
-}
-
-/// When RevealPopupState activates, start a RevealPeekAnimation on the top
-/// deck card of the revealed player's pile.
-#[allow(clippy::type_complexity)]
-pub fn trigger_reveal_animation(
-    mut reveal: ResMut<RevealPopupState>,
-    deck_cards: Query<
-        (Entity, &DeckPile, &Transform),
-        (Without<RevealPeekAnimation>, Without<Animating>),
-    >,
-    mut commands: Commands,
-) {
-    let Some(player) = reveal.revealed_player.take() else {
-        return;
-    };
-
-    // Top of the pile = highest index for that owner. face_up = 180° around
-    // the card's local Y axis so the flip rotates along the long edge.
-    let top = deck_cards
-        .iter()
-        .filter(|(_, dp, _)| dp.owner == player)
-        .max_by_key(|(_, dp, _)| dp.index);
-    if let Some((entity, _, transform)) = top {
-        let face_up = transform.rotation * Quat::from_rotation_y(std::f32::consts::PI);
-        commands
-            .entity(entity)
-            .insert(Animating)
-            .insert(RevealPeekAnimation {
-                progress: 0.0,
-                speed: 0.6,
-                start_rotation: transform.rotation,
-                face_up_rotation: face_up,
-                start_y: transform.translation.y,
-            });
     }
 }
 

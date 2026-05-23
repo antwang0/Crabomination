@@ -9,8 +9,9 @@ pub use components::{
     CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CombatLurch,
     CommandZoneCard, DeckCard, DeckPile, DeckShuffleAnimation, DrawCardAnimation, FlippedFace,
     FrontFaceMesh, GameCardId, GraveyardPile, HandCard, HandSlideAnimation, HandZoom,
-    MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation, PlayerTargetZone,
-    RevealPeekAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
+    MdfcFlipAnimation, OpponentHandCard, PileHovered, PlayCardAnimation, PlayerCrest,
+    PlayerCrestRing, PlayerLifeLabel, PlayerTargetZone, RevealPeekAnimation,
+    ReturnToDeckAnimation, ReturnToHandAnimation, SendToGraveyardAnimation,
     ShufflePhase, StackCard, SwapFrontMaterial, TapAnimation, TapState,
     ValidTarget, CARD_HEIGHT, CARD_THICKNESS, CARD_WIDTH, DECK_CARD_Y_STEP, HOVER_LIFT_SPEED,
 };

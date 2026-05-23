@@ -30,7 +30,7 @@ use card::{
 use render_quality::{ChangeQuality, RenderQuality};
 use config::GraphicsConfig;
 use game::{
-    AltCastState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
+    AltCastState, AttackingState, BlockingState, CardNames, FlippedHandCards, GameLog, GraveyardBrowserState,
     TargetingState,
 };
 use systems::game_ui::FastForward;
@@ -43,18 +43,23 @@ use systems::animate::{
 };
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
-    handle_export_keypress, handle_game_input, poll_action_buttons, setup_game_hud,
+    handle_export_keypress, handle_game_input, poll_action_buttons, poll_player_chip_clicks,
+    setup_game_hud, setup_player_life_labels,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
-    handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons,
+    handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons, sync_player_hud_seat,
     sync_hint_chip_visibility, trigger_reveal_animation, update_attack_all_visibility,
+    update_attack_button_label,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
-    update_hint, update_pass_button, update_phase_chart, update_player_target_zone_material,
+    update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
+    update_player_crest_life_label, update_player_crest_ring,
+    update_player_target_zone_material,
     update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
-    draw_attacker_overlays, draw_blocking_gizmos, draw_pt_modified_overlays,
-    draw_stack_arrows, AttackerGizmos, BlockingGizmos, PtModifiedGizmos, StackGizmos,
+    draw_attack_plan_gizmos, draw_attacker_overlays, draw_blocking_gizmos,
+    draw_pt_modified_overlays, draw_stack_arrows, AttackPlanGizmos, AttackerGizmos,
+    BlockingGizmos, PtModifiedGizmos, StackGizmos,
 };
 use systems::quality::{
     handle_quality_buttons, handle_settings_toggle, handle_speed_slider, reset_esc_consumed,
@@ -73,7 +78,7 @@ struct GroundPlane;
 
 /// Marks the primary 3D camera so quality changes can update its SMAA setting.
 #[derive(Component)]
-struct MainCamera;
+pub struct MainCamera;
 
 fn main() {
     let cfg = config::load();
@@ -176,6 +181,7 @@ fn main() {
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
         .init_gizmo_group::<PtModifiedGizmos>()
+        .init_gizmo_group::<AttackPlanGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
         .insert_resource(gfx)
@@ -185,6 +191,7 @@ fn main() {
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
         .insert_resource(BlockingState::default())
+        .insert_resource(AttackingState::default())
         .insert_resource(AltCastState::default())
         .insert_resource(FlippedHandCards::default())
         .insert_resource(CardNames::default())
@@ -217,7 +224,12 @@ fn main() {
         // a mode and we transition into the in-game state.
         .add_systems(
             OnEnter(AppState::InGame),
-            (start_net_session_from_menu, setup_game_hud, setup_quality_panel),
+            (
+                start_net_session_from_menu,
+                setup_game_hud,
+                setup_quality_panel,
+                setup_player_life_labels,
+            ),
         )
         // Audit-mode card picker.
         .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
@@ -235,7 +247,14 @@ fn main() {
                 .run_if(in_state(AppState::InGame)),
         )
         // Button polling runs first so handle_game_input can read latched state.
-        .add_systems(Update, poll_action_buttons.run_if(in_state(AppState::InGame)))
+        // `poll_player_chip_clicks` must run after `poll_action_buttons` so it
+        // can fill the chip slot that the action-button poll first cleared.
+        .add_systems(
+            Update,
+            (poll_action_buttons, poll_player_chip_clicks)
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         // Esc / settings precedence chain. `reset_esc_consumed` clears
         // the cross-system flag, `handle_settings_toggle` claims Esc
         // when it acts on the modal, and `sync_settings_visibility`
@@ -322,6 +341,9 @@ fn main() {
                 update_pass_button,
                 pulse_urgent_pass_button,
                 update_attack_all_visibility,
+                update_attack_button_label,
+                sync_player_hud_seat,
+                update_player_chip_target_outline,
                 sync_hint_chip_visibility,
             )
                 .after(handle_game_input)
@@ -357,7 +379,13 @@ fn main() {
         // Separate add_systems call to stay under Bevy's 20-tuple limit.
         .add_systems(
             Update,
-            update_player_target_zone_material.run_if(in_state(AppState::InGame)),
+            (
+                update_player_target_zone_material,
+                update_player_crest_ring,
+                update_player_crest_life_label,
+                draw_attack_plan_gizmos,
+            )
+                .run_if(in_state(AppState::InGame)),
         )
         // Combat lurch: read attacker/blocker state, lerp Z forward.
         // Must run after animate_hover_lift since that system overwrites
@@ -512,6 +540,8 @@ fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
     let (config, _) = store.config_mut::<StackGizmos>();
     config.line.width = 3.0;
     let (config, _) = store.config_mut::<PtModifiedGizmos>();
+    config.line.width = 4.0;
+    let (config, _) = store.config_mut::<AttackPlanGizmos>();
     config.line.width = 4.0;
 }
 
