@@ -14077,6 +14077,147 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
     }
 }
 
+// ── Batch 144 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Ignis (b144) — {2}{R} Sorcery. Deal 3 damage divided among
+/// any number of targets — collapsed to "3 damage to target creature
+/// or player" (split-damage primitive ⏳).
+pub fn lorehold_ignis_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ignis (b144)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Conjurer (b144) — {2}{R}{W} 2/4 Spirit Cleric Vigilance.
+/// "Whenever you cast an IS spell, create a 2/2 R/W Spirit token."
+/// Stax-style synergy with Magecraft shells.
+pub fn lorehold_conjurer_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Conjurer (b144)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lorehold_spirit_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyroflame (b144) — {R}{W} Instant. Deal 2 damage and gain
+/// 2 life. Apprentice-style template at instant speed.
+pub fn lorehold_pyroflame_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyroflame (b144)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embermage (b144) — {1}{R} 2/2 Human Wizard. Cycling {2}.
+pub fn lorehold_embermage_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embermage (b144)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lorehold Cinderscholar (b143) — {1}{R}{W} 2/3 Spirit Wizard. ETB
 /// gain 2 life + magecraft deal 1 damage to any target.
 pub fn lorehold_cinderscholar_b143() -> CardDefinition {

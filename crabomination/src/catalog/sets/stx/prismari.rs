@@ -10481,6 +10481,103 @@ pub fn prismari_elementalmage_b143() -> CardDefinition {
     }
 }
 
+// ── Batch 144 ───────────────────────────────────────────────────────────────
+
+/// Prismari Stormgust (b144) — {U}{R} Instant. Deal 2 damage to target
+/// creature and draw a card. 2-mana removal + cantrip.
+pub fn prismari_stormgust_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormgust (b144)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: crate::effect::Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Ember-Cantor (b144) — {1}{R} 2/2 Human Wizard. Cycling {1}{U}.
+pub fn prismari_ember_cantor_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Ember-Cantor (b144)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Cycling(cost(&[generic(1), u()]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Wavecraft (b144) — {3}{U}{R} 4/3 Elemental Wizard Flying.
+/// Magecraft loot. 5-mana race-breaker + selection.
+pub fn prismari_wavecraft_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Wavecraft (b144)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Prismari Volcanist (b143) — {1}{R} 2/2 Human Wizard. ETB deal 2 damage
 /// to target creature. Compact tempo body.
 pub fn prismari_volcanist_b143() -> CardDefinition {

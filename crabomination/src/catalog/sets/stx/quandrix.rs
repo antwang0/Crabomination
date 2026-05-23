@@ -11098,6 +11098,138 @@ pub fn fractal_vinemother_b143() -> CardDefinition {
     }
 }
 
+// ── Batch 144 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Echoist (b144) — {1}{G}{U} 2/3 Fractal Wizard. Magecraft
+/// Draw 1 + Surveil 1.
+pub fn quandrix_echoist_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Echoist (b144)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Scion (b144) — {G}{U} 0/0 Fractal. Enters with X +1/+1
+/// counters where X = 2. Compact 2-mana 2/2.
+pub fn fractal_scion_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Scion (b144)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mage-Adept (b144) — {2}{G}{U} 2/2 Human Wizard.
+/// "Whenever you cast an instant or sorcery, put a +1/+1 counter on
+/// target creature you control." Standard Quandrix magecraft.
+pub fn quandrix_mage_adept_b144() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_to_friendly;
+    CardDefinition {
+        name: "Quandrix Mage-Adept (b144)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_to_friendly()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Bookbearer (b144) — {1}{G} 2/2 Fractal Druid. Cycling {2}.
+pub fn fractal_bookbearer_b144() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Bookbearer (b144)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Quandrix Numericist (b143) — {1}{G}{U} 2/2 Human Wizard. Magecraft
 /// Draw 1 + discard a card (loot). Card-velocity engine.
 pub fn quandrix_numericist_b143() -> CardDefinition {
