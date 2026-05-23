@@ -19,20 +19,24 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2007 (incl. synthesised variants) | 0 | 0 |
-| STA reprints (in STX boosters) | 48 | 0 | — |
+| STX (327 cards) | 2024 (incl. synthesised variants) | 0 | 0 |
+| STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batches 143 + 144): 63 new STX cards plus the
-`Strixhaven Cycle-Glyph (b143)` filler card that exercises the new
-`GameAction::Cycle` path. Engine additions: `StaticEffect::Player
-CannotGainLife` / `PlayerCannotLoseLife` (CR 119.7 / 119.8), the
-Cycling activation (CR 702.29a/c) via the new
-`GameAction::Cycle { card_id }` + `EventKind::CardCycled` event +
-`GameEvent::CardCycled` wire mirror. UI: `KnownCard.has_cycling` +
-`KnownCard.cycling_cost_label` exposed to clients; client adds C
-keypress to cycle the hovered hand card. Server: per-match
-duration logging (38s / 5m12s / 1h2m3s) via new `format_duration`
-helper.
+Push (modern_decks, batches 143 + 144 + 145): 80 new STX cards
+across all five colleges, including 10 cards with `Keyword::Cycling`
+plus the two filler test cards (`Strixhaven Cycle-Glyph (b143)` and
+`Strixhaven Cycle-Decree (b145)`) that exercise the new
+`GameAction::Cycle` path end-to-end. Engine additions:
+`StaticEffect::PlayerCannotGainLife` / `PlayerCannotLoseLife` (CR
+119.7 / 119.8) consulted dynamically by `GameState::adjust_life`;
+the Cycling activation (CR 702.29a/c) via `GameAction::Cycle
+{ card_id }` + the new `EventKind::CardCycled` event + the
+`dispatch_triggers_for_events` graveyard-walk extension so
+"When you cycle this card" `SelfSource` triggers fire with the
+cycled card as source. UI: `KnownCard.has_cycling` +
+`KnownCard.cycling_cost_label` exposed to clients; client binds
+`C` to cycle the hovered hand card. Server: per-match duration
+logging (38s / 5m12s / 1h2m3s) via new `format_duration` helper.
 
 
 Per-batch push narrative elided in this compacted view — see
