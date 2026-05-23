@@ -432,6 +432,28 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   post-draw actions on replaced draws), and 121.8 (mid-cast
   face-down draws) all land.
 
+- ✅ **CR 501 — Beginning Phase** (push claude/modern_decks batch 141
+  audit, claude/modern_decks branch — audit against
+  `MagicCompRules_20260417.txt` line 2134–2136). The umbrella over
+  Untap / Upkeep / Draw — there are no turn-based actions at the
+  *phase* level (each child step owns its own turn-based actions).
+  Audit:
+  (a) **501.1** "The beginning phase consists of three steps, in
+  this order: untap, upkeep, and draw." — ✅ (`TurnStep::next` in
+  `game/types.rs` walks `Untap → Upkeep → Draw → PreCombatMain → …`
+  in CR-mandated order; no engine state allows phase reordering).
+  The phase enum itself is implicit — the engine tracks the step
+  directly and the beginning-phase boundary is observable only via
+  the active step (entering Untap = beginning of beginning phase;
+  leaving Draw = beginning of PreCombatMain).
+  Tests: every combat-trace test (~3996 total) traverses
+  beginning-phase via `advance_step` and validates step ordering;
+  `TurnStep::next` round-trips through all variants via
+  `step_order_round_trip` (game tests). Step-trigger fan-out is
+  exercised by `fire_step_triggers(TurnStep::Upkeep)` for "at the
+  beginning of your upkeep" abilities (Lorehold the Historian etc.).
+  Promote stays ✅ — no engine gap at the phase-level umbrella.
+
 - 🟡 **CR 502 — Untap Step** (push modern_decks batch 39,
   claude/modern_decks branch — audit against
   `MagicCompRules_20260417.txt`): The untap step's turn-based actions.
@@ -1283,9 +1305,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   deserialization; `approach_of_the_second_sun_*` tests cover the
   "library positioning is approximated" path; library-size predicates
   are covered by `empty_library_draw_loses_game`. Promote to ✅ when
-  401.5 (cast-time top-of-library recompute) and 401.7 (LibraryPosition
-  primitive) land. The two are independently engine-wide ⏳ and not
-  blocked by current catalog cards.
+  401.4 (multi-card-same-position picker) and 401.5/401.6 (cast-time
+  top-of-library recompute) land. 401.7 is fully ✅ as of batch 138 via
+  the new `LibraryPosition::FromTop(usize)` primitive.
 
 - ✅ **CR 406 — Exile** (push claude/modern_decks batch 120 audit,
   claude/modern_decks branch — audit against
@@ -8190,3 +8212,45 @@ shipped the CR 506.1 skip-on-empty-attackers engine fix. Open items:
   pool has Bonewight (b129) with `Keyword::Regenerate(1)` as the
   baseline. A "ETB scry 1 + Regenerate" Skeleton would round out
   the curve.
+
+### Suggested next-up tasks (additions from batch 141)
+
+Batch 141 added 21 STX synthesised cards across all five colleges,
+landed 3 new shortcut helpers (`dies_ping_creature`,
+`on_other_dies_mint_token`, `magecraft_mint_spirit`), and audited
+CR 501 (Beginning Phase) to ✅. Open items to explore next:
+
+- **`magecraft_mint_pest` shortcut** — mirror of `magecraft_mint_
+  spirit` for the Witherbloom (B/G) Pest token. With ~20 magecraft
+  + Pest-mint cards across SOS / STX (Pest Brewer, Pestmancer,
+  Witherbloom Pestcaller, etc.) a one-line helper would collapse
+  the recurring pattern. Engine shape:
+  `magecraft(CreateToken { def: stx_pest_token() })`.
+- **`magecraft_mint_inkling` shortcut** — Silverquill (W/B) variant
+  using `inkling_token()`. Currently 4 cards in `silverquill.rs` use
+  the long-form pattern (Inkling Penmaster, Silverquill Quillscribe,
+  Inkling Confessor, Silverquill Inkletter); a one-liner would
+  match Lorehold's new `magecraft_mint_spirit`.
+- **`magecraft_mint_fractal` shortcut** — Quandrix (G/U) variant
+  with the 0/0 base body + N counters from the existing
+  `create_token_with_counter` helper composition. Pairs with Quandrix
+  Symmetrist II (b141) and the Fractal-mint cycle.
+- **`etb_double_counters` primitive** — Quandrix Symmetrist's
+  "double the +1/+1 counters on each creature you control" payoff
+  is currently approximated as fixed +1/+1 counter adds. A general
+  "for each creature you control, add CountersOn(self) more +1/+1
+  counters" primitive would land the printed payoff exactly.
+- **`magecraft_mill_each_opp(N)` shortcut** — Witherbloom / Dimir
+  mill template ("Whenever you cast IS, each opp mills N"). No
+  current STX card uses this, but it's a natural fit for future
+  Witherbloom mill-control archetypes.
+- **`SelectionRequirement::PowerAtMost(N)` already wired** — Power
+  filter on `target_filtered` works; lets future "+1/+1 to target
+  creature with power ≤ N" Silverquill / Witherbloom mid-curve
+  payoffs ship without engine work.
+- **CR 501 phase-level priority audit** — promoted to ✅ in batch
+  141. Next audit candidates are CR 502 (Untap, partial — Phasing
+  ⏳, Day/Night ⏳, untap-prevention statics ⏳) and CR 511
+  (End of Combat, ✅ as of batch 55). The Beginning Phase audit
+  exposed no engine gap at the phase-umbrella level — each child
+  step owns its own turn-based actions per CR 501.1.

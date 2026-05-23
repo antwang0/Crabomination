@@ -10646,3 +10646,149 @@ pub fn quandrix_lifestream_b136() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 141 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Symmetrist II (b141) — {2}{G}{U} 3/3 Human Wizard. ETB
+/// Fractal token with 3 +1/+1 counters. Heavy go-wide Fractal payoff.
+pub fn quandrix_symmetrist_ii_b141() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Symmetrist II (b141)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(create_token_with_counter(
+            PlayerRef::You,
+            1,
+            fractal_token(),
+            CounterType::PlusOnePlusOne,
+            3,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sage (b141) — {1}{U} 1/3 Human Wizard. Magecraft Scry 1 +
+/// Draw 1. Spellslinger card-selection engine.
+pub fn quandrix_sage_b141() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry_and_draw;
+    CardDefinition {
+        name: "Quandrix Sage (b141)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalcraft (b141) — {G}{U} Instant. AddCounter(+1/+1) +
+/// Scry 1 on target creature you control. 2-mana combat trick with
+/// selection.
+pub fn quandrix_fractalcraft_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalcraft (b141)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Wanderer (b141) — {1}{G}{U} 2/2 Fractal Druid Trample.
+/// Magecraft put a +1/+1 counter on self.
+pub fn fractal_wanderer_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Wanderer (b141)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

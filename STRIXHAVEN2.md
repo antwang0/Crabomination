@@ -22,7 +22,76 @@ Two adjacent catalogs:
 | STX (327 cards) | 1919 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 139:
+Push (claude/modern_decks branch — current head — **post-batch 141:
+21 more Strixhaven synthesised cards across all five colleges
+(4 Silverquill, 4 Witherbloom, 5 Lorehold, 4 Prismari, 4 Quandrix).
+3 new shortcut helpers: `dies_ping_creature`, `on_other_dies_mint_token`,
+`magecraft_mint_spirit`. Tests: 3976 → 3997 (21 new b141 card tests).
+All tests pass; cargo clippy clean.
+
+- **Silverquill (W/B, 4 cards)** — Inkling Lifeharvester (b141)
+  ({2}{W}{B} 3/3 Inkling Cleric Flying + Lifelink ETB drain 1),
+  Silverquill Penblade (b141) ({W}{B} Instant — Drain 1 + PumpPT +1/+1
+  EOT target friendly creature), Silverquill Initiate (b141) ({W} 1/2
+  Human Cleric magecraft Surveil 1), Inkling Quill-Knight (b141)
+  ({3}{W}{B} 4/3 Inkling Knight Flying + Vigilance ETB Inkling token
+  + drain 1).
+- **Witherbloom (B/G, 4 cards)** — Witherbloom Pestmage (b141)
+  ({1}{B}{G} 2/3 Plant Warlock ETB Pest + Surveil 1), Witherbloom
+  Pestbloom (b141) ({3}{B}{G} Sorcery — 3 Pest tokens), Witherbloom
+  Lifedrinker (b141) ({2}{B} 3/2 Vampire Warlock Lifelink magecraft
+  drain 1), Witherbloom Pestcaller II (b141) ({2}{B}{G} 3/3 Plant
+  Warlock on-other-dies → mint Pest).
+- **Lorehold (R/W, 5 cards)** — Lorehold Stormcleric (b141)
+  ({2}{R}{W} 3/3 Spirit Cleric Haste ETB Spirit token), Lorehold
+  Pyrosage (b141) ({1}{R} 2/1 Spirit Shaman magecraft ping-each-opp
+  1), Lorehold Spiritforge (b141) ({3}{R}{W} Sorcery — 2 Spirit
+  tokens + GainLife 2), Lorehold Ember-Soldier (b141) ({2}{R} 3/2
+  Spirit Soldier Haste on-attack ping target opp creature 1),
+  Lorehold Sparkscholar III (b141) ({2}{R}{W} 2/2 Spirit Wizard
+  magecraft mint Spirit token via the new `magecraft_mint_spirit()`
+  helper).
+- **Prismari (U/R, 4 cards)** — Prismari Magma-Channeler (b141)
+  ({1}{U}{R} 2/3 Human Wizard magecraft Treasure), Prismari Pyromage
+  (b141) ({1}{R} 2/2 Elemental Wizard magecraft ping-any 1), Prismari
+  Tidalstorm (b141) ({U}{R} Instant — DealDamage 2 + Draw 1), Prismari
+  Embergeist (b141) ({2}{U}{R} 3/3 Spirit Elemental Flying magecraft
+  Loot).
+- **Quandrix (G/U, 4 cards)** — Quandrix Symmetrist II (b141)
+  ({2}{G}{U} 3/3 Human Wizard ETB Fractal w/ 3 counters), Quandrix
+  Sage (b141) ({1}{U} 1/3 Human Wizard magecraft Scry 1 + Draw 1),
+  Quandrix Fractalcraft (b141) ({G}{U} Instant — AddCounter +1/+1 on
+  target friendly creature + Scry 1), Fractal Wanderer (b141)
+  ({1}{G}{U} 2/2 Fractal Druid Trample magecraft +1/+1 counter on
+  self).
+
+Engine: 3 new shortcut helpers added in `effect::shortcut` to collapse
+recurring patterns surfaced during batch 141 implementation:
+- `dies_ping_creature(amount: i32)` — "dies → DealDamage to target
+  creature" (mirror of `dies_ping_any` / `dies_drain` for the
+  creature-only target case; Mogg Fanatic template).
+- `on_other_dies_mint_token(definition, count)` — "another creature
+  you control dies → mint N copies of `definition`" (Witherbloom
+  aristocrats template; used by Witherbloom Pestcaller II b141).
+- `magecraft_mint_spirit()` — "on IS cast → mint a 2/2 R/W Spirit
+  token" (Lorehold-specific sibling of `magecraft_mint_token`; used
+  by Lorehold Sparkscholar III b141).
+
+Cards exercise: `etb_drain`, `etb_mint_token`, `etb_mint_token_and_
+drain`, `etb`, `magecraft`, `magecraft_drain_each_opp`, `magecraft_
+loot`, `magecraft_mint_spirit` (NEW), `magecraft_ping_any`,
+`magecraft_ping_each_opp`, `magecraft_scry_and_draw`, `magecraft_
+self_pump`, `magecraft_surveil`, `magecraft_treasure`, `on_other_
+dies_mint_token` (NEW), `create_token_with_counter`, and the
+`target_filtered` helper.
+
+Also adds a new CR 501 (Beginning Phase) audit row to TODO.md —
+promoted to ✅ (no engine gap at the phase-level umbrella; child
+steps own their own turn-based actions). Updates CR 401 (Library)
+summary to reflect that 401.7 is ✅ as of batch 138 (the previous
+summary still listed it as a pending promotion gate).
+
+Push (claude/modern_decks branch — post-batch 139:
 15 more Strixhaven synthesised cards across all five colleges (3 per
 school). All cards use existing primitives — no new shortcut helpers
 required. Tests: 3960 → 3975 (15 new b139 card tests). All tests

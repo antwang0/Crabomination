@@ -14,9 +14,9 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    dies_drain, dies_mint_token, drain, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    dies_drain, dies_mint_token, drain, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, on_attack_drain,
-    on_other_dies, target_filtered,
+    on_other_dies, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{cost, b, g, generic, Color, ManaCost};
@@ -12862,6 +12862,139 @@ pub fn witherbloom_plantlord_b134() -> CardDefinition {
                 toughness: 1,
             },
         }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 141 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Pestmage (b141) — {1}{B}{G} 2/3 Plant Warlock.
+/// ETB mint Pest + Surveil 1. Pest engine that smooths draws.
+pub fn witherbloom_pestmage_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestmage (b141)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+            Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestbloom (b141) — {3}{B}{G} Sorcery. Create 3 Pest
+/// tokens. Heavy mid-game Pest swarm-and-drain payoff.
+pub fn witherbloom_pestbloom_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbloom (b141)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifedrinker (b141) — {2}{B} 3/2 Vampire Warlock
+/// Lifelink. Magecraft drain 1.
+pub fn witherbloom_lifedrinker_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifedrinker (b141)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestcaller II (b141) — {2}{B}{G} 3/3 Plant Warlock.
+/// On-another-dies trigger mint a Pest. Aristocrat go-wide engine.
+pub fn witherbloom_pestcaller_ii_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestcaller II (b141)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

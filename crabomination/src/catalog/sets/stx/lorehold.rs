@@ -13439,3 +13439,177 @@ pub fn lorehold_ember_cleric_b138() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 141 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Stormcleric (b141) — {2}{R}{W} 3/3 Spirit Cleric Haste.
+/// ETB mint Spirit token. 4-mana go-wide Spirit-tribal payoff with haste
+/// to enable an immediate attack with the newly minted token.
+pub fn lorehold_stormcleric_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stormcleric (b141)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrosage (b141) — {1}{R} 2/1 Spirit Shaman.
+/// Magecraft ping-each-opp 1.
+pub fn lorehold_pyrosage_b141() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_each_opp;
+    CardDefinition {
+        name: "Lorehold Pyrosage (b141)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritforge (b141) — {3}{R}{W} Sorcery. Create two Spirit
+/// tokens + you gain 2 life. Lorehold go-wide token engine.
+pub fn lorehold_spiritforge_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritforge (b141)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Soldier (b141) — {2}{R} 3/2 Spirit Soldier Haste.
+/// Attack trigger ping 1 to target opp creature. Aggressive 3-drop with
+/// repeated burn-creature removal on attacks.
+pub fn lorehold_ember_soldier_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Soldier (b141)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkscholar III (b141) — {2}{R}{W} 2/2 Spirit Wizard.
+/// Magecraft mint a 2/2 R/W Spirit token. Uses the new
+/// `magecraft_mint_spirit()` helper. Lorehold spell-engine that grows
+/// the Spirit board on every IS cast.
+pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_spirit;
+    CardDefinition {
+        name: "Lorehold Sparkscholar III (b141)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_spirit()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

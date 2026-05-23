@@ -3448,6 +3448,58 @@ pub mod shortcut {
         })
     }
 
+    /// Dies-Ping-Creature shortcut: "When this creature dies, deal
+    /// `amount` damage to target creature." Mirror of `dies_ping_any`
+    /// / `dies_drain` for the creature-only target case. Used by
+    /// Mogg Fanatic-style "dies dealing N to a creature" cards.
+    ///
+    /// Push claude/modern_decks batch 141: shipped to collapse the
+    /// recurring "dies → ping creature" pattern.
+    pub fn dies_ping_creature(amount: i32) -> TriggeredAbility {
+        use crate::card::SelectionRequirement;
+        on_dies(Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(amount),
+        })
+    }
+
+    /// On-other-dies-Mint-Token shortcut: "Whenever another creature
+    /// you control dies, create one copy of `definition`." Witherbloom
+    /// aristocrats payoff that scales with sacrifice fodder. Mirror of
+    /// `dies_mint_token` for the another-dies event scope.
+    ///
+    /// Push claude/modern_decks batch 141: shipped to collapse the
+    /// recurring "another dies → mint" pattern (Witherbloom Pestcaller
+    /// II b141 + future aristocrats-style payoffs).
+    pub fn on_other_dies_mint_token(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+    ) -> TriggeredAbility {
+        on_other_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(count),
+            definition,
+        })
+    }
+
+    /// Magecraft-Mint-Spirit shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create one 2/2 R/W Spirit token."
+    /// Lorehold-specific sibling of `magecraft_mint_token` that uses
+    /// the shared `lorehold_spirit_token()` definition. Pulled into a
+    /// helper so future Lorehold mint-on-cast creatures collapse to
+    /// one line.
+    ///
+    /// Push claude/modern_decks batch 141: shipped per the TODO
+    /// suggestion under "Suggested next-up tasks (additions from batch
+    /// 129)" to collapse Lorehold Sparkscholar II's spell-mint pattern.
+    pub fn magecraft_mint_spirit() -> TriggeredAbility {
+        magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::catalog::lorehold_spirit_token(),
+        })
+    }
+
     /// Magecraft-Draw shortcut: "Whenever you cast or copy an instant
     /// or sorcery spell, draw a card." Wraps [`magecraft`] with the
     /// canonical Draw 1 body. Distinct from [`magecraft_loot`] which

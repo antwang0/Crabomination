@@ -14941,3 +14941,141 @@ pub fn silverquill_memorialist_ii_b138() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 141 ───────────────────────────────────────────────────────────────
+
+/// Inkling Lifeharvester (b141) — {2}{W}{B} 3/3 Inkling Cleric Flying
+/// + Lifelink. ETB drain 1. Classic Silverquill drain flyer.
+pub fn inkling_lifeharvester_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Lifeharvester (b141)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Penblade (b141) — {W}{B} Instant.
+/// Seq(Drain 1 + PumpPT +1/+1 EOT target friendly creature).
+/// 2-mana combat trick that doubles as drain.
+pub fn silverquill_penblade_b141() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penblade (b141)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Initiate (b141) — {W} 1/2 Human Cleric.
+/// Magecraft Surveil 1. 1-mana defender + selection on every spell.
+pub fn silverquill_initiate_b141() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_surveil;
+    CardDefinition {
+        name: "Silverquill Initiate (b141)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_surveil(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quill-Knight (b141) — {3}{W}{B} 4/3 Inkling Knight Flying +
+/// Vigilance. ETB mint Inkling token + drain 1. Aggressive go-wide drain
+/// finisher.
+pub fn inkling_quill_knight_b141() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_and_drain;
+    CardDefinition {
+        name: "Inkling Quill-Knight (b141)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_drain(inkling_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
