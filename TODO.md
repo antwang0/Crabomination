@@ -7919,6 +7919,46 @@ event and `on_unblocked()` shortcut. Open items to explore next:
   evasion abilities. Catalog has Flying / Reach / Menace / Unblockable;
   Skulk is the next ladder rung.
 
+### Suggested next-up tasks (additions from batch 129)
+
+Batch 129 added 30 STX synthesised cards across all five colleges
+focused on **tribal anthems** (Lorehold Spirit Banner, Witherbloom
+Vinetongue, Witherbloom Reaper-Lord, Quandrix Fractalbinder),
+landed the new `etb_mint_token_and_drain` shortcut helper, and added
+the first Skeleton-tribal cards (Bonewight + Reaper-Lord). Open items
+to explore next:
+
+- **Fractal-tribal "X +1/+1 counters per Fractal" payoff** — the new
+  Fractalbinder anthem combined with Quandrix Geometer/Bloomforge/
+  Bloomscatter creates a wide Fractal board. A Body of Research-style
+  "this creature enters with +1/+1 counters equal to the number of
+  Fractals you control" card would scale aggressively with the now-
+  filled Fractal pool. Engine has `Value::CountOf` already.
+- **Skeleton "All Skeletons have wither/menace/death-trigger" lord** —
+  Reaper-Lord (b129) gives anthem+menace. A 4-mana "Skeletons you
+  control have 'when this creature dies, return it to your hand'" or
+  "All your Skeletons have +1/+1 and deathtouch" tribal lord would
+  unlock Skeleton-tribal aristocrats decks.
+- **Spirit-tribal `magecraft_mint_spirit` shortcut** — Lorehold
+  Sparkscholar II (b129) uses `magecraft_mint_token(lorehold_spirit_
+  token(), 1)` — a 1-line `magecraft_mint_spirit()` helper would
+  collapse this for future Lorehold magecraft mint creatures.
+- **Plant subtype + Reach static** — Witherbloom Vinetongue (b129) is
+  the anthem half; a "Plants you control have reach" static would tie
+  the Plant pool (Sprawl-Vine, Verdant Sage, Mossfeeder, Sproutbinder,
+  Vinemaster, Pestcaller, Pest-Tender, Pledgemage) into a defensive
+  Reach engine vs Flying-heavy boards.
+- **Lectern-style noncreature Spirit-tribal lord** — Lorehold Lectern
+  (b129) is a 3-mana grant-Lifelink-to-Spirits artifact. Future cards
+  in this slot: "Spirits you control have indestructible" (4 mana
+  artifact), "Spirits you control have flying" (3-mana enchantment),
+  or a per-Spirit-mint trigger ("Whenever a Spirit enters under your
+  control, scry 1").
+- **Quandrix Doubler scaling up** — Doubler (b129) puts +1/+1 on each
+  Fractal at ETB. A higher-MV variant "Whenever you cast an instant or
+  sorcery, put a +1/+1 counter on each Fractal you control" would
+  collapse into Bloomscatter+ paws-up wins.
+
 ### Suggested next-up tasks (additions from batch 128)
 
 Batch 128 added 30 STX synthesised cards across all five colleges,

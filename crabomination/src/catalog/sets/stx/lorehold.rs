@@ -11639,3 +11639,391 @@ pub fn lorehold_pyrestone_b128() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 129 (push claude/modern_decks): new Lorehold cards ──────────────
+
+/// Lorehold Spirit Banner (b129) — {2}{R}{W}, 2/3 Spirit. Static
+/// "Other Spirit creatures you control get +1/+1." Spirit-tribal
+/// anthem mirroring Tenured Inkcaster for the Lorehold/Spirit pool
+/// (Aerialist, Ironbound, Bell-Ringer, Battlespirit, Skybinder,
+/// Honorbound, Veteran, Soulreaver, Sparkmender all benefit).
+pub fn lorehold_spirit_banner_b129() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Lorehold Spirit Banner (b129)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stoneglyph (b129) — {1}{R}{W}, 1/4 Spirit Cleric Defender.
+/// Activated `{R}{W}, {T}: Lorehold Stoneglyph deals 2 damage to any
+/// target.` — a 3-mana defender mana sink that pings each turn.
+pub fn lorehold_stoneglyph_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneglyph (b129)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[r(), w()]),
+            effect: Effect::DealDamage {
+                amount: Value::Const(2),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrespirit (b129) — {1}{R} 2/1 Spirit, Haste. Vanilla
+/// red-side Spirit aggressor that benefits from the Lorehold Spirit
+/// Banner anthem.
+pub fn lorehold_pyrespirit_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrespirit (b129)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Lectern (b129) — {3} Artifact. Static "Other Spirit
+/// creatures you control have lifelink." A noncreature Spirit-tribal
+/// payoff that costs no color and pairs with the Battlespirit haste
+/// finisher and the Bell-Ringer ETB.
+pub fn lorehold_lectern_b129() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Lorehold Lectern (b129)",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control have lifelink.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Memorist (b129) — {2}{W}, 2/2 Spirit Cleric. ETB returns
+/// target Spirit card with mana value ≤ 2 from your graveyard to your
+/// hand. Lorehold spirit-recursion engine in a 3-mana body.
+pub fn lorehold_memorist_b129() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Lorehold Memorist (b129)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkscholar Pt II (b129) — {3}{R}{W}, 3/3 Spirit Wizard.
+/// Magecraft mints a Lorehold Spirit token. Each instant or sorcery
+/// you cast adds a 2/2 R/W Spirit body to the board — Lorehold's
+/// answer to Inkling Penmaster but with a bigger body.
+pub fn lorehold_sparkscholar_ii_b129() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_token;
+    CardDefinition {
+        name: "Lorehold Sparkscholar II (b129)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Excavation (b129) — {2}{R}{W} Sorcery. Create two 2/2 R/W
+/// Spirit creature tokens. Lorehold's Defend-the-Campus equivalent at
+/// a cheaper rate (4 mana, 2 tokens vs Silverquill's 5 mana, 3 tokens).
+pub fn lorehold_excavation_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Excavation (b129)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: lorehold_spirit_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyreverse (b129) — {1}{R} Instant. Deal 2 damage to any
+/// target, gain 1 life. Lorehold's mini-Lightning Helix at a cheaper
+/// rate (2 mana, 2 damage + 1 life vs Helix's 2 mana, 3 + 3).
+pub fn lorehold_pyreverse_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyreverse (b129)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(2),
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkmender Pt II (b129) — {3}{W}, 3/4 Spirit Cleric
+/// Vigilance Lifelink. A defensive top-end body — premier Lorehold
+/// race breaker, scales powerfully with the Spirit Banner anthem.
+pub fn lorehold_sparkmender_ii_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkmender II (b129)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Embertongue (b129) — {2}{R}, 3/2 Human Wizard. Magecraft
+/// deals 1 damage to target opp creature — narrower than `ping_any`
+/// to keep the trigger creature-focused (combat support for the team).
+pub fn lorehold_embertongue_b129() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Lorehold Embertongue (b129)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            amount: Value::Const(1),
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

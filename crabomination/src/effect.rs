@@ -3500,4 +3500,31 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// ETB-Mint-And-Drain shortcut: "When this creature enters, create
+    /// one copy of `definition` and each opponent loses `amount` life
+    /// and you gain `amount` life." Wraps [`etb`] with
+    /// `Seq([CreateToken, Drain(amount)])`. Used by Witherbloom
+    /// Cauldronherder (b129, Pest mint + drain 2) and any future
+    /// "mint a body, drain the table" Witherbloom Pest cards.
+    ///
+    /// Push claude/modern_decks batch 129: collapses the 12-line
+    /// `Seq[CreateToken, Drain]` pattern at the call site.
+    pub fn etb_mint_token_and_drain(
+        definition: crate::card::TokenDefinition,
+        amount: i32,
+    ) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+        ]))
+    }
 }

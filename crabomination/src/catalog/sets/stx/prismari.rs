@@ -8887,3 +8887,139 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 129 (push claude/modern_decks): new Prismari cards ──────────────
+
+/// Prismari Sparkmaker (b129) — {2}{U}{R}, 3/3 Elemental Wizard.
+/// ETB Seq(mint Treasure + Scry 1). 4-mana fixing body that smooths
+/// the deck while accelerating mana — pairs with Prismari Magma Opus
+/// dreams.
+pub fn prismari_sparkmaker_b129() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    use crate::effect::shortcut::mint_treasures;
+    CardDefinition {
+        name: "Prismari Sparkmaker (b129)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            mint_treasures(1),
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempestmage (b129) — {1}{U}{R}, 2/2 Human Wizard Prowess.
+/// Magecraft draws a card. Aggressive 3-mana prowess body + magecraft
+/// engine — chains spells into more cards.
+pub fn prismari_tempestmage_b129() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_draw;
+    CardDefinition {
+        name: "Prismari Tempestmage (b129)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inkwave (b129) — {1}{U} Instant. Counter target spell
+/// unless its controller pays {2}. Standard Prismari soft counter at
+/// 2 mana.
+pub fn prismari_inkwave_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inkwave (b129)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormbolt (b129) — {2}{R} Instant. Deal 4 damage to
+/// target creature. Standard Prismari mid-cost burn at 3 mana,
+/// upgrades to 4 from Pyroblast's 3.
+pub fn prismari_stormbolt_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormbolt (b129)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

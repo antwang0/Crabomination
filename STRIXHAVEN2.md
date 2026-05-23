@@ -19,10 +19,65 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 1799 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 1829 (incl. synthesised variants) | 0 | 0 |
 | STA reprints (in STX boosters) | 47 | 0 | — |
 
-Push (claude/modern_decks branch — current head — **post-batch 128:
+Push (claude/modern_decks branch — current head — **post-batch 129:
+30 more Strixhaven synthesised cards across all five colleges, with
+the Lorehold Spirit-tribal anthem (Lorehold Spirit Banner) and Plant /
+Skeleton / Fractal tribal anthems unlocking three new tribal subpools.
+Tests: 3748 → 3778 (30 new b129 card tests). All tests pass.
+
+- **Lorehold (R/W, 10 cards)** — Lorehold Spirit Banner (b129) ({2}{R}{W}
+  2/3 Spirit, "Other Spirit creatures you control get +1/+1"), Lorehold
+  Stoneglyph (b129) ({1}{R}{W} 1/4 Spirit Cleric Defender, `{R}{W},{T}:
+  Deal 2 damage to any target`), Lorehold Pyrespirit (b129) ({1}{R} 2/1
+  Spirit Haste), Lorehold Lectern (b129) ({3} Artifact, "Other Spirit
+  creatures you control have lifelink"), Lorehold Memorist (b129)
+  ({2}{W} 2/2 Spirit Cleric ETB return Spirit MV≤2 from gy → hand),
+  Lorehold Sparkscholar II (b129) ({3}{R}{W} 3/3 Spirit Wizard
+  magecraft mint Spirit), Lorehold Excavation (b129) ({2}{R}{W}
+  Sorcery, create 2 Spirits), Lorehold Pyreverse (b129) ({1}{R}
+  Instant 2 dmg + GainLife 1), Lorehold Sparkmender II (b129) ({3}{W}
+  3/4 Spirit Cleric Vigilance + Lifelink), Lorehold Embertongue (b129)
+  ({2}{R} 3/2 Human Wizard magecraft ping opp creature 1).
+- **Witherbloom (B/G, 7 cards)** — Witherbloom Vinetongue (b129)
+  ({1}{G}{G} 3/3 Plant Druid, "Other Plant creatures get +1/+1"),
+  Witherbloom Bonewight (b129) ({2}{B} 2/2 Skeleton Warlock
+  Regenerate), Witherbloom Reaper-Lord (b129) ({2}{B}{B} 3/3 Skeleton
+  Warlock, "Other Skeletons get +1/+1 and have menace"), Witherbloom
+  Petalmaster (b129) ({1}{G} 2/2 Plant Druid magecraft +1/+1 counter
+  on target Plant), Witherbloom Pestswarm (b129) ({2}{B}{G} Sorcery
+  mint 3 Pests), Witherbloom Cauldronherder (b129) ({3}{B}{G} 4/3
+  Human Warlock ETB mint Pest + drain 2), Witherbloom Boneshroud (b129)
+  ({B} Instant target creature -2/-2 EOT).
+- **Prismari (U/R, 4 cards)** — Prismari Sparkmaker (b129) ({2}{U}{R}
+  3/3 Elemental Wizard ETB mint Treasure + Scry 1), Prismari Tempestmage
+  (b129) ({1}{U}{R} 2/2 Human Wizard Prowess magecraft Draw 1),
+  Prismari Inkwave (b129) ({1}{U} Instant Counter unless target's
+  controller pays {2}), Prismari Stormbolt (b129) ({2}{R} Instant 4
+  dmg to creature).
+- **Quandrix (G/U, 4 cards)** — Quandrix Fractalbinder (b129)
+  ({2}{G}{U} 3/3 Elf Wizard, "Other Fractal creatures get +1/+1"),
+  Quandrix Doubler (b129) ({2}{G}{U} 2/3 Merfolk Wizard ETB +1/+1
+  counter on each Fractal), Quandrix Bookworm (b129) ({1}{G}{U} 2/2
+  Elf Wizard magecraft +1/+1 counter on self), Quandrix Bloomscatter
+  (b129) ({3}{G}{U} Sorcery mint 2 2/2 Fractals via Seq[CreateToken,
+  AddCounter(LastCreatedTokens, +1/+1, 2)]).
+- **Silverquill (W/B, 4 cards)** — Silverquill Inkwriter (b129)
+  ({2}{W} 2/3 Human Cleric ETB GainLife 1 + Draw 1), Inkling
+  Stormpaper (b129) ({3}{W}{B} 4/4 Inkling Wizard Flying ETB drain 2
+  + mint Inkling), Silverquill Quillrender (b129) ({2}{B} Sorcery
+  drain 3), Inkling Loreward (b129) ({1}{W} 2/2 Inkling Cleric
+  Vigilance).
+
+Engine: no new primitives required — all cards composed from
+existing helpers (`magecraft_*`, `etb_*`, `dies_*`, `on_attack_*`,
+`mint_*`). Quandrix Bloomscatter exercised the existing
+`Selector::LastCreatedTokens` primitive for multi-token AddCounter
+which had been underused.
+
+Push (claude/modern_decks branch — **post-batch 128:
 30 more Strixhaven synthesised cards across all five colleges. The
 batch focuses on filling out Lorehold (R/W) further (8 new cards) and
 adds 7 each to Witherbloom and Silverquill, with 4 each to Prismari

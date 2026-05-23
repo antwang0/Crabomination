@@ -11256,3 +11256,281 @@ pub fn witherbloom_spellrot_b128() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 129 (push claude/modern_decks): new Witherbloom cards ──────────
+
+/// Witherbloom Vinetongue (b129) — {1}{G}{G}, 3/3 Plant Druid. Static
+/// "Other Plant creatures you control get +1/+1." Plant-tribal anthem
+/// for the Witherbloom Plant pool (Sprawl-Vine, Verdant Sage,
+/// Pestcaller, Pest-Tender, Vinemaster, etc.).
+pub fn witherbloom_vinetongue_b129() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Witherbloom Vinetongue (b129)",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Plant creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Plant))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bonewight (b129) — {2}{B}, 2/2 Skeleton Warlock.
+/// Activated `{B}: Regenerate this creature.` (legacy Skeleton
+/// regeneration template; reuses the engine's Keyword::Regenerate(n)
+/// keyword tag whose value is the mana cost). Skeleton-tribal early
+/// drop.
+pub fn witherbloom_bonewight_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bonewight (b129)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Regenerate(1)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reaper-Lord (b129) — {2}{B}{B}, 3/3 Skeleton Warlock.
+/// Static "Other Skeleton creatures you control get +1/+1 and have
+/// menace." Skeleton-tribal anthem + evasion grant. Pairs with
+/// Reaper-Hand (b128) and Bonewight (b129).
+pub fn witherbloom_reaper_lord_b129() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Witherbloom Reaper-Lord (b129)",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Other Skeleton creatures you control get +1/+1.",
+                effect: StaticEffect::PumpPT {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Skeleton))
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Other Skeleton creatures you control have menace.",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::HasCreatureType(CreatureType::Skeleton))
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    keyword: Keyword::Menace,
+                },
+            },
+        ],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Petalmaster (b129) — {1}{G}, 2/2 Plant Druid. Magecraft
+/// puts a +1/+1 counter on target Plant you control — Plant-tribal
+/// magecraft growth, pairs with the Vinetongue anthem.
+pub fn witherbloom_petalmaster_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Petalmaster (b129)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Plant))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestswarm (b129) — {2}{B}{G} Sorcery. Create three Pest
+/// tokens. Witherbloom's go-wide Pest minter at 4 mana — pairs with
+/// the Pest mascot lifegain riders.
+pub fn witherbloom_pestswarm_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestswarm (b129)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Cauldronherder (b129) — {3}{B}{G}, 4/3 Human Warlock.
+/// ETB Seq(mint Pest + drain 2). 5-mana drain-and-body — combo
+/// finisher for Witherbloom drain shells. Uses the new b129
+/// `etb_mint_token_and_drain` shortcut helper.
+pub fn witherbloom_cauldronherder_b129() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_and_drain;
+    CardDefinition {
+        name: "Witherbloom Cauldronherder (b129)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_drain(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Boneshroud (b129) — {B} Instant. Target creature gets
+/// -2/-2 EOT. Cheap point-removal — efficient for the small-creature
+/// slot, fits both Witherbloom and any Skeleton/Plant shell.
+pub fn witherbloom_boneshroud_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Boneshroud (b129)",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

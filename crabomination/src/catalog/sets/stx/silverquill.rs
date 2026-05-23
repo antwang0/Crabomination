@@ -13646,3 +13646,140 @@ pub fn inkling_watchwarden_b128() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 129 (push claude/modern_decks): new Silverquill cards ──────────
+
+/// Silverquill Inkwriter (b129) — {2}{W}, 2/3 Human Cleric. ETB Seq(
+/// GainLife 1 + Draw 1). 3-mana cantrip + lifegain body — feeds Light
+/// of Promise / Inkling Bloodscribe lifegain payoffs.
+pub fn silverquill_inkwriter_b129() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Silverquill Inkwriter (b129)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Stormpaper (b129) — {3}{W}{B}, 4/4 Inkling Wizard Flying.
+/// ETB Drain 2 + Inkling token mint — Lorehold's twin-mode finisher
+/// but with Inkling tribal payoff. Uses the new b129
+/// `etb_mint_token_and_drain` shortcut helper (mint Inkling + drain 2).
+pub fn inkling_stormpaper_b129() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_and_drain;
+    CardDefinition {
+        name: "Inkling Stormpaper (b129)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_and_drain(inkling_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillrender (b129) — {2}{B} Sorcery. Target opp loses
+/// 3 life, you gain 3. Sign-in-Blood-style drain at sorcery speed.
+pub fn silverquill_quillrender_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillrender (b129)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Loreward (b129) — {1}{W} 2/2 Inkling Cleric Vigilance.
+/// Tribal vigilance defender at 2 mana — premier early curve Inkling.
+pub fn inkling_loreward_b129() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Loreward (b129)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
