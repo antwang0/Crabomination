@@ -8433,6 +8433,52 @@ fn fiery_impulse_deals_two_damage_to_creature() {
 }
 
 #[test]
+fn fiery_impulse_deals_three_damage_with_spell_mastery() {
+    let mut g = two_player_game();
+    // Seed 2+ IS cards in your graveyard for spell mastery.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    // 3-toughness creature: Owlin Shieldmage is 2/3.
+    let target = g.add_card_to_battlefield(1, catalog::owlin_shieldmage());
+    let id = g.add_card_to_hand(0, catalog::fiery_impulse());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Fiery Impulse castable for {R}");
+    drain_stack(&mut g);
+
+    // Owlin Shieldmage is 2/3 — 3 damage kills it, 2 damage doesn't.
+    assert!(!g.battlefield.iter().any(|c| c.id == target),
+        "Spell mastery: 3-toughness creature dies to upgraded 3 damage");
+}
+
+#[test]
+fn fiery_impulse_deals_two_damage_without_spell_mastery() {
+    let mut g = two_player_game();
+    // Only ONE IS card in your graveyard — spell mastery NOT active.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let target = g.add_card_to_battlefield(1, catalog::owlin_shieldmage()); // 2/3
+    let id = g.add_card_to_hand(0, catalog::fiery_impulse());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(target)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Fiery Impulse castable for {R}");
+    drain_stack(&mut g);
+
+    // Owlin survives — 2 damage dealt (no spell mastery), 2 < 3 toughness.
+    assert!(g.battlefield.iter().any(|c| c.id == target),
+        "Without spell mastery: 3-toughness creature survives 2 damage");
+}
+
+#[test]
 fn searing_blood_deals_two_damage_to_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

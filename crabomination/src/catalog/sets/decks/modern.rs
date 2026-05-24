@@ -6856,17 +6856,36 @@ pub fn skullcrack() -> CardDefinition {
 /// creature. Spell mastery — if there are two or more instant and/or
 /// sorcery cards in your graveyard, it deals 3 damage instead.
 ///
-/// Spell-mastery scaling collapses to the base 2-damage line (no
-/// graveyard-instant-count predicate yet). Pulls double duty as a
-/// cheap creature-clearer at instant speed alongside Magma Spray.
+/// Push (claude/modern_decks): spell-mastery scaling now wires via
+/// `Effect::If { cond: SelectorCountAtLeast(IS-in-your-gy, 2),
+/// then: DealDamage 3, else_: DealDamage 2 }`. Uses the existing
+/// `Selector::CardsInZone` + `SelectorCountAtLeast` primitives.
 pub fn fiery_impulse() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::{Predicate, Selector};
+    let is_in_your_gy = Selector::CardsInZone {
+        who: PlayerRef::You,
+        zone: Zone::Graveyard,
+        filter: SelectionRequirement::HasCardType(CardType::Instant)
+            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+    };
     CardDefinition {
         name: "Fiery Impulse",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: is_in_your_gy,
+                n: Value::Const(2),
+            },
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }
