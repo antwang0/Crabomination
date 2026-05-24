@@ -62946,7 +62946,6 @@ fn bot_blocks_smart_value_trade() {
     g.step = TurnStep::DeclareBlockers;
     // Opp's 4/3 attacker.
     let beater_def = {
-        use crate::card::*;
         let mut def = catalog::grizzly_bears();
         def.name = "Big Bear";
         def.power = 4;

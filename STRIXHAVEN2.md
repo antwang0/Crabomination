@@ -19,15 +19,39 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-<<<<<<< HEAD
-| STX (327 cards) | 2291 (incl. synthesised variants — batches 155 + 156 add 49 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2351 (incl. synthesised variants — batches 155 + 156 + 157 add 109 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batch 157, claude/modern_decks): 60 additional new
+STX cards across all five colleges (16 Silverquill, 13 Witherbloom,
+12 Lorehold, 10 Quandrix, 10 Prismari) stacked on top of the b155/b156
+49 cards from the previous push. Each new card ships with at least one
+functionality test in `tests::stx`. No engine changes required for the
+card bodies — all compose against existing shortcut helpers. Engine
+improvements landed alongside the cards:
+- `Effect::FlipCoin` resolver now honours `Player.coin_flip_advantage`
+  (CR 705.3 — Krark's Thumb-style "flip 1+N times, pick best").
+- `CardDefinition.max_counters_of_kind: Option<(CounterType, u32)>`
+  + SBA pruning step (CR 122.4 — "can't have more than N counters"
+  cap). Helix Pinnacle (newly added) is the canonical exerciser.
+- `StackItem::Trigger.intervening_if: Option<Predicate>` re-checked
+  at resolve time (CR 603.4 second half).
+- `catalog::sets::stx::all_stx_card_factories()` (3008-entry slice)
+  exposed via `catalog::all_known_factories` so mid-game snapshots
+  involving STX cards round-trip through `lookup_by_name`.
+- Server `MatchStats` rolling-summary line now appends `p50≤X, p95≤Y`
+  percentile estimates from the duration histogram.
+- Client audit picker now includes an `AuditPool::Stx` filter row.
+- `pest_acolyte_b155` (existing) + `pest_acolyte_ii_b157` (new) —
+  the existing batch 155 name was preserved; the new b157 variant
+  uses the same template on a fresh-batch suffix to avoid the
+  name collision.
 
 Push (modern_decks, batches 155 + 156): 49 new STX cards across all
 five colleges (10 Witherbloom, 11 Lorehold, 9 Silverquill, 9 Quandrix,
 9 Prismari, plus the attack-anchor pattern in batch 156).
 
-Engine improvements in this stretch:
+Engine improvements in batches 155 + 156:
 - **Batch-fanout trigger fix** (`game/mod.rs:dispatch_triggers_for_events`):
   the dispatcher now fans out per-event for batch-friendly event kinds
   (Attacks, CreatureDied, CardDrawn, CardDiscarded, CardLeftGraveyard,
@@ -43,20 +67,6 @@ Engine improvements in this stretch:
 
 Previous push (modern_decks, batch 154): 40 new STX cards across all
 five colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
-=======
-| STX (327 cards) | 2302 (incl. synthesised variants — batch 155 adds 60 cards across all five colleges) | 0 | 0 |
-| STA reprints (in STX boosters) | 49 | 0 | — |
-
-Push (modern_decks, batch 155): 60 new STX cards across all five
-colleges (16 Silverquill, 13 Witherbloom, 12 Lorehold, 10 Quandrix,
-10 Prismari). Each new card ships with at least one functionality
-test in `tests::stx` exercising its primary play pattern (magecraft
-trigger, ETB, attack trigger, activated ability, etc.). No engine
-changes required — all bodies compose against existing primitives.
-
-Push (modern_decks, batch 154): 40 new STX cards across all five
-colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
->>>>>>> a0696a4 (modern_decks batch 155: 60 new STX cards across all 5 colleges)
 5 Prismari). Engine additions in this stretch:
 - `magecraft_mint_pest` / `magecraft_mint_inkling` /
   `magecraft_mint_fractal(N)` — magecraft-on-cast token-mint
