@@ -77,6 +77,13 @@ impl GameState {
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::HandSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].hand.len() as i32).unwrap_or(0),
             Value::GraveyardSizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].graveyard.len() as i32).unwrap_or(0),
+            Value::MaxGraveyardSize => self
+                .players
+                .iter()
+                .filter(|p| p.is_alive())
+                .map(|p| p.graveyard.len() as i32)
+                .max()
+                .unwrap_or(0),
             Value::LibrarySizeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].library.len() as i32).unwrap_or(0),
             Value::XFromCost => ctx.x_value as i32,
             Value::TriggerEventAmount => ctx.event_amount as i32,

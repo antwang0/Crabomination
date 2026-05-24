@@ -247,6 +247,12 @@ pub enum Value {
     LifeOf(PlayerRef),
     HandSizeOf(PlayerRef),
     GraveyardSizeOf(PlayerRef),
+    /// Maximum graveyard size across **every alive player** in the game.
+    /// Reads `players[*].graveyard.len()` and returns the max. Backs
+    /// "if a graveyard has 20 or more cards" payoffs (Visions of Beyond,
+    /// future Tombstalker / Mercurial Chemister-style scaling). Distinct
+    /// from `GraveyardSizeOf(p)` which only inspects a single player.
+    MaxGraveyardSize,
     /// Number of cards in `who`'s library. Used by Body of Research's
     /// "for each card in your library" Fractal-token scaling.
     LibrarySizeOf(PlayerRef),
@@ -987,6 +993,14 @@ pub enum Effect {
     /// or `LifeLost` event (delta < 0). Delta of 0 emits no event
     /// (matches CR 119.9 / 119.10 zero-life-change semantics).
     SetLifeTotal { who: Selector, amount: Value },
+    /// One-turn "[selected players] can't gain life this turn" lock.
+    /// Sets `Player.cannot_gain_life_this_turn = true` for each player
+    /// the selector resolves to. Cleared by `do_untap` at the start
+    /// of any new turn. Distinct from `StaticEffect::PlayerCannotGainLife`
+    /// — this is a one-shot effect with no source permanent to anchor
+    /// to (Skullcrack, Sulfurous Blast's flashback rider, future
+    /// one-turn lifegain locks).
+    LifeGainLockThisTurn { who: Selector },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
 
@@ -1686,6 +1700,7 @@ impl Effect {
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)
             }
+            Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
         }
     }
 

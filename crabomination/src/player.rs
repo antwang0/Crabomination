@@ -144,6 +144,14 @@ pub struct Player {
     /// style effects.
     #[serde(default)]
     pub cannot_gain_life: bool,
+    /// Sticky one-turn "you can't gain life" lock — separate from the
+    /// recomputed `cannot_gain_life` static. Set by `Effect::LifeGainLockThisTurn`
+    /// (Skullcrack, Rampaging Ferocidon's one-shot version), reset in
+    /// `do_untap`. Honored by `GameState::adjust_life` (treated identically
+    /// to `cannot_gain_life`, but persists across `compute_battlefield`
+    /// recomputes since no permanent backs it).
+    #[serde(default)]
+    pub cannot_gain_life_this_turn: bool,
     /// When true, decisions this player would make suspend via
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
@@ -171,6 +179,7 @@ impl Player {
             cards_exiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             creatures_cast_this_turn: 0,
+            cannot_gain_life_this_turn: false,
             first_spell_tax_charges: 0,
             sorceries_as_flash: false,
             poison_counters: 0,

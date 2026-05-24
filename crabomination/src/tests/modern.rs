@@ -8364,6 +8364,56 @@ fn skullcrack_deals_three_damage_to_player() {
 }
 
 #[test]
+fn skullcrack_locks_target_player_lifegain_for_the_turn() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Skullcrack castable");
+    drain_stack(&mut g);
+
+    // Target is now locked from gaining life.
+    assert!(g.players[1].cannot_gain_life_this_turn);
+    let life_after_bolt = g.players[1].life;
+    // Try to gain 5 life — should be a no-op.
+    g.adjust_life(1, 5);
+    assert_eq!(g.players[1].life, life_after_bolt,
+        "CR 119.7 — locked player can't gain life");
+    // Caster (seat 0) is not locked.
+    g.adjust_life(0, 5);
+    assert!(!g.players[0].cannot_gain_life_this_turn);
+}
+
+#[test]
+fn skullcrack_lifegain_lock_clears_at_next_untap() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Skullcrack castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].cannot_gain_life_this_turn);
+
+    // do_untap is called when the active player rotates. Run it
+    // directly to assert the per-turn flag clears for every player.
+    g.do_untap();
+    assert!(!g.players[1].cannot_gain_life_this_turn);
+    assert!(!g.players[0].cannot_gain_life_this_turn);
+}
+
+#[test]
 fn fiery_impulse_deals_two_damage_to_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
@@ -8715,6 +8765,63 @@ fn visions_of_beyond_draws_a_card() {
     // -1 cast +1 draw = 0 net hand change.
     assert_eq!(g.players[0].hand.len(), hand_before,
         "Visions of Beyond is a 1-mana cantrip");
+}
+
+#[test]
+fn visions_of_beyond_draws_three_with_twenty_card_graveyard() {
+    let mut g = two_player_game();
+    // Stack opponent's graveyard with 20 cards (any card type works).
+    for _ in 0..20 {
+        let id = g.add_card_to_library(1, catalog::island());
+        // Put it directly into the graveyard.
+        if let Some(pos) = g.players[1].library.iter().position(|c| c.id == id) {
+            let card = g.players[1].library.remove(pos);
+            g.players[1].graveyard.push(card);
+        }
+    }
+    assert_eq!(g.players[1].graveyard.len(), 20);
+    // Stock 4 cards in seat 0's library so the draw-3 has fodder.
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::visions_of_beyond());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Visions of Beyond castable for {U}");
+    drain_stack(&mut g);
+
+    // -1 cast +3 draw = +2 net hand change (the upgraded mode).
+    assert_eq!(g.players[0].hand.len(), hand_before + 2,
+        "Visions of Beyond draws 3 when a graveyard has 20+ cards");
+}
+
+#[test]
+fn visions_of_beyond_draws_one_with_nineteen_card_graveyard() {
+    let mut g = two_player_game();
+    // Just under the threshold — 19 cards.
+    for _ in 0..19 {
+        let id = g.add_card_to_library(1, catalog::island());
+        if let Some(pos) = g.players[1].library.iter().position(|c| c.id == id) {
+            let card = g.players[1].library.remove(pos);
+            g.players[1].graveyard.push(card);
+        }
+    }
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::visions_of_beyond());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Visions of Beyond castable for {U}");
+    drain_stack(&mut g);
+
+    // -1 cast +1 draw = 0 net hand change (the cantrip mode).
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Visions of Beyond draws 1 when no graveyard has 20+ cards");
 }
 
 #[test]

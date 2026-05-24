@@ -987,7 +987,7 @@ impl GameState {
     /// targeting `seat` on the floor.
     pub fn player_cannot_gain_life_now(&self, seat: usize) -> bool {
         use crate::effect::{PlayerStaticTarget, StaticEffect};
-        if self.players[seat].cannot_gain_life {
+        if self.players[seat].cannot_gain_life || self.players[seat].cannot_gain_life_this_turn {
             return true;
         }
         self.battlefield.iter().any(|src| {

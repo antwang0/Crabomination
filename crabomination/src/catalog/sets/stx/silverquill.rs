@@ -17135,9 +17135,9 @@ pub fn silverquill_smite_b151() -> CardDefinition {
     }
 }
 
-/// Silverquill Pen Striker (b151) — {1}{B} 2/2 Inkling Knight Flying
-/// + Lifelink. Mid-curve evasive lifelink body. Combos with Tenured
-/// Inkcaster anthem (+2/+2 → 4/4 flying lifelink for {1}{B}).
+/// Silverquill Pen Striker (b151) — `{1}{B}` 2/2 Inkling Knight with
+/// Flying and Lifelink. Mid-curve evasive lifelink body. Combos with
+/// Tenured Inkcaster's anthem (+2/+2) to swing as a 4/4.
 pub fn silverquill_pen_striker_b151() -> CardDefinition {
     CardDefinition {
         name: "Silverquill Pen Striker (b151)",

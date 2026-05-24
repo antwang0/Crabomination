@@ -662,6 +662,15 @@ impl GameState {
         // Clear Teferi, Time Raveler's "you may cast sorceries as though they
         // had flash" flag — it expires on the start of your next turn.
         self.players[p].sorceries_as_flash = false;
+        // Clear "this turn" lifegain locks across **every player** — CR
+        // "this turn" means the current turn, so a Skullcrack-style
+        // lock set during the previous turn expires before priority
+        // hits the new active player. Scoped wider than the per-player
+        // counters above because the lock applies to whichever player
+        // was targeted, not to the active player.
+        for q in 0..self.players.len() {
+            self.players[q].cannot_gain_life_this_turn = false;
+        }
     }
 
     pub(crate) fn do_cleanup(&mut self) {

@@ -596,6 +596,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LifeGainLockThisTurn { who } => {
+                for ent in self.resolve_selector(who, ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].cannot_gain_life_this_turn = true;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Drain { from, to, amount } => {
                 let amt = self.evaluate_value(amount, ctx).max(0) as u32;
                 if amt == 0 { return Ok(()); }

@@ -6827,18 +6827,27 @@ pub fn drown_in_the_loch() -> CardDefinition {
 /// Skullcrack — {1}{R} Instant. Target player can't gain life this turn.
 /// Skullcrack deals 3 damage to that player.
 ///
-/// The "can't gain life" rider collapses (no life-gain prevention
-/// primitive). Plays as a 3-damage instant against a target player —
-/// strictly Lava Spike at +1 mana but at instant speed.
+/// Push (claude/modern_decks): the "can't gain life this turn" rider
+/// is now wired via the new `Effect::LifeGainLockThisTurn` primitive,
+/// backed by `Player.cannot_gain_life_this_turn` (reset in `do_untap`
+/// across all players). The lock fires *before* the 3-damage Bolt so
+/// any drain-back-to-life interaction (Skullcrack into Lifelink)
+/// blocks the lifegain side. The "damage can't be prevented" rider is
+/// still omitted (no general damage-prevention layer).
 pub fn skullcrack() -> CardDefinition {
     CardDefinition {
         name: "Skullcrack",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Player),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            Effect::LifeGainLockThisTurn {
+                who: target_filtered(SelectionRequirement::Player),
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Player),
+                amount: Value::Const(3),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -7135,16 +7144,23 @@ pub fn repulse() -> CardDefinition {
 /// Visions of Beyond — {U} Instant. Draw a card. If a graveyard has 20 or
 /// more cards in it, draw three cards instead.
 ///
-/// The "20-card-graveyard" rider is collapsed (no graveyard-size
-/// `Predicate::ValueAtLeast` over the matched zone yet); resolves as a
-/// flat 1-card cantrip — gameplay-equivalent to Tezzeret's Gambit /
-/// Brainstorm at lower density.
+/// Push (claude/modern_decks): the 20-card-graveyard rider now wires
+/// via `Effect::If { cond: ValueAtLeast(MaxGraveyardSize, Const(20)),
+/// then: Draw(3), else_: Draw(1) }`. `MaxGraveyardSize` is the new
+/// `Value` variant that returns the largest graveyard among all alive
+/// players, matching the printed "a graveyard with twenty or more"
+/// (the printed text doesn't restrict to your own graveyard).
 pub fn visions_of_beyond() -> CardDefinition {
+    use crate::effect::Predicate;
     CardDefinition {
         name: "Visions of Beyond",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(Value::MaxGraveyardSize, Value::Const(20)),
+            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(3) }),
+            else_: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        },
         ..Default::default()
     }
 }
