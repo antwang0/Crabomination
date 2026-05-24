@@ -62155,3 +62155,88 @@ fn bot_blocks_smart_value_trade() {
     assert_eq!(blocks[0].0, blocker);
     assert_eq!(blocks[0].1, attacker);
 }
+
+// ── CR 603.4 — intervening 'if' clause re-check at resolve time ────────────
+
+#[test]
+fn cr_603_4_intervening_if_re_checked_at_resolve_time() {
+    // CR 603.4 — "If the condition isn't true at that time [resolve],
+    // the ability is removed from the stack and does nothing."
+    //
+    // Push a trigger directly onto the stack with an intervening_if
+    // predicate that's currently false, then drain. Verify the body
+    // never runs (life total unchanged).
+    use crate::card::Predicate;
+    use crate::effect::PlayerRef;
+    use crate::game::types::StackItem;
+
+    let mut g = two_player_game();
+    // Predicate that will be false: "your hand size is at least 100"
+    let pred = Predicate::ValueAtLeast(
+        crate::effect::Value::HandSizeOf(PlayerRef::You),
+        crate::effect::Value::Const(100),
+    );
+    // Body: gain 50 life — would be observable if it ran.
+    let body = crate::effect::Effect::GainLife {
+        who: crate::effect::Selector::You,
+        amount: crate::effect::Value::Const(50),
+    };
+    // Manufacture a trigger source so the resolution context has a
+    // valid `source` id.
+    let src = g.add_card_to_battlefield(0, catalog::island());
+    g.stack.push(StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(body),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        intervening_if: Some(pred),
+    });
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before,
+        "Trigger fizzled per CR 603.4 — body didn't run");
+}
+
+#[test]
+fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
+    // Sanity check: trigger with intervening_if = Some(true_predicate)
+    // resolves normally.
+    use crate::card::Predicate;
+    use crate::effect::PlayerRef;
+    use crate::game::types::StackItem;
+
+    let mut g = two_player_game();
+    // True predicate: "your hand size is at least 0" (always true)
+    let pred = Predicate::ValueAtLeast(
+        crate::effect::Value::HandSizeOf(PlayerRef::You),
+        crate::effect::Value::Const(0),
+    );
+    let body = crate::effect::Effect::GainLife {
+        who: crate::effect::Selector::You,
+        amount: crate::effect::Value::Const(7),
+    };
+    let src = g.add_card_to_battlefield(0, catalog::island());
+    g.stack.push(StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(body),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        intervening_if: Some(pred),
+    });
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 7,
+        "Trigger body ran — predicate held at resolve time");
+}

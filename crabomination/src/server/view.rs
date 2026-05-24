@@ -694,6 +694,7 @@ mod tests {
         trigger_source: None,
             mana_spent: 0,
             event_amount: 0,
+            intervening_if: None,
         });
         let v = project(&g, 0);
         assert_eq!(v.stack.len(), 2);

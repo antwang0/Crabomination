@@ -263,6 +263,60 @@ impl GameState {
             .map(|(s, e, c, _)| (s, e, c))
             .collect();
 
+        // CR 603.4 re-check half: keep `event.filter` predicates alive
+        // through to the push so the resolver can re-check at resolution
+        // time. Triggers that already failed the trigger-time check are
+        // discarded above; the predicates kept here are the ones that
+        // *passed* and must be re-checked on resolve per CR 603.4 (the
+        // "if condition isn't true at that time" half).
+        let triggers_with_filter: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = {
+            // Rebuild candidates so we can keep the filter even after the
+            // first pass. Mirrors the candidate gather above.
+            let active = self.active_player_idx;
+            let mut cands: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
+                .battlefield
+                .iter()
+                .flat_map(|c| {
+                    c.definition
+                        .triggered_abilities
+                        .iter()
+                        .filter(|t| t.event.kind == kind)
+                        .filter(|t| match t.event.scope {
+                            EventScope::AnyPlayer => true,
+                            EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
+                                c.controller == active
+                            }
+                            EventScope::OpponentControl => c.controller != active,
+                            EventScope::AnotherOfYours => false,
+                            EventScope::FromYourGraveyard => false,
+                        })
+                        .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
+                })
+                .collect();
+            if let Some(player) = self.players.get(active) {
+                for c in &player.graveyard {
+                    for t in &c.definition.triggered_abilities {
+                        if t.event.kind == kind
+                            && matches!(t.event.scope, EventScope::FromYourGraveyard)
+                        {
+                            cands.push((c.id, t.effect.clone(), c.owner, t.event.filter.clone()));
+                        }
+                    }
+                }
+            }
+            cands
+                .into_iter()
+                .filter(|(src, _eff, ctrl, filter)| {
+                    let Some(pred) = filter else { return true };
+                    let ctx = crate::game::effects::EffectContext::for_trigger(
+                        *src, *ctrl, None, 0,
+                    );
+                    self.evaluate_predicate(pred, &ctx)
+                })
+                .collect()
+        };
+        let _ = triggers;
+
         // Drain matching delayed triggers off the queue and queue them up
         // alongside the regular battlefield triggers. Fires-once triggers
         // are removed; this keeps `pact_of_negation`-style "next upkeep"
@@ -308,6 +362,7 @@ impl GameState {
                         subject: None,
                         event_amount: 0,
                         mode,
+                        intervening_if: None,
                     },
                     captured_target,
                 );
@@ -320,9 +375,10 @@ impl GameState {
                 subject: None,
                 event_amount: 0,
                 mode,
+                intervening_if: None,
             });
         }
-        for (source, effect, controller) in triggers {
+        for (source, effect, controller, intervening_if) in triggers_with_filter {
             let mode = self.pick_trigger_mode(&effect, source);
             queue.push(PendingTriggerPush {
                 source,
@@ -331,6 +387,7 @@ impl GameState {
                 subject: None,
                 event_amount: 0,
                 mode,
+                intervening_if,
             });
         }
         self.drain_trigger_queue(queue);
@@ -475,6 +532,7 @@ impl GameState {
                             trigger_source: None,
                             mana_spent: 0,
                             event_amount: 0,
+                            intervening_if: None,
                         });
                     }
 
@@ -519,6 +577,7 @@ impl GameState {
                                 ),
                                 mana_spent,
                                 event_amount: 0,
+                                intervening_if: None,
                             });
                         }
                     }
@@ -571,7 +630,31 @@ impl GameState {
                 trigger_source,
                 mana_spent,
                 event_amount,
+                intervening_if,
             } => {
+                // CR 603.4 — re-check the intervening 'if' clause as the
+                // ability resolves. "If the condition isn't true at that
+                // time, the ability is removed from the stack and does
+                // nothing." We pop the trigger off the stack the same way
+                // (the resolver caller already drained the StackItem) but
+                // skip running its `effect`.
+                if let Some(pred) = &intervening_if {
+                    let mut ctx = crate::game::effects::EffectContext::for_trigger(
+                        source,
+                        controller,
+                        target.clone(),
+                        mode.unwrap_or(0),
+                    );
+                    ctx.trigger_source = trigger_source.clone();
+                    ctx.event_amount = event_amount;
+                    ctx.x_value = x_value;
+                    if !self.evaluate_predicate(pred, &ctx) {
+                        // Trigger fizzles — no effect, no events.
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                        return Ok(events);
+                    }
+                }
                 let chosen_mode = mode.unwrap_or(0);
                 let mut trig_events = self.continue_trigger_resolution_with_source(
                     source,
@@ -974,6 +1057,7 @@ impl GameState {
                 trigger_source: None,
                     mana_spent: 0,
                     event_amount: 0,
+                    intervening_if: None,
                 });
             }
             // Persist: return to battlefield with -1/-1 counter if it had no -1/-1 counter.
@@ -1284,6 +1368,7 @@ impl GameState {
             trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
         vec![] // Trigger events are on the stack; callers resolve them via pass_priority.

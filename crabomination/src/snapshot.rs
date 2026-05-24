@@ -721,6 +721,7 @@ mod tests {
         trigger_source: None,
             mana_spent: 0,
             event_amount: 0,
+            intervening_if: None,
         });
 
         let snap = GameSnapshot::capture(&g);
@@ -749,6 +750,7 @@ mod tests {
         trigger_source: None,
             mana_spent: 0,
             event_amount: 0,
+            intervening_if: None,
         });
 
         let json = serde_json::to_string(&g).expect("serialize GameState");

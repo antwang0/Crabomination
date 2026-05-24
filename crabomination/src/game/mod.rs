@@ -2029,6 +2029,7 @@ impl GameState {
                 subject,
                 event_amount,
                 mode,
+                intervening_if: None,
             });
         }
         self.drain_trigger_queue(queue);
@@ -2120,6 +2121,7 @@ impl GameState {
             subject,
             event_amount,
             mode,
+            intervening_if,
         } = pending;
         self.stack.push(StackItem::Trigger {
             source,
@@ -2132,6 +2134,7 @@ impl GameState {
             trigger_source: subject,
             mana_spent: 0,
             event_amount,
+            intervening_if,
         });
     }
 
@@ -2221,6 +2224,7 @@ impl GameState {
         trigger_source: None,
             mana_spent: 0,
             event_amount: 0,
+            intervening_if: None,
         });
         self.give_priority_to_active();
 

@@ -172,6 +172,7 @@ impl GameState {
                 trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
         self.give_priority_to_active();
@@ -710,6 +711,7 @@ impl GameState {
                 trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
     }

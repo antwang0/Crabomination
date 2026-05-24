@@ -2244,7 +2244,7 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Imprisoned in the Moon. Promote to ✅ when (e) lands — current ✅
   reflects the four high-traffic dispatch sites all honoring the flag.
 
-- 🟡 **CR 603.4 — Intervening 'if' clause (trigger-time half)**
+- ✅ **CR 603.4 — Intervening 'if' clause (both halves now wired)**
   (push modern_decks audit, claude/modern_decks branch): "A triggered
   ability may read 'When/Whenever/At [trigger event], if [condition],
   [effect].' When the trigger event occurs, the ability checks
@@ -2252,22 +2252,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   it is; otherwise it does nothing. If the ability triggers, it
   checks the stated condition again as it resolves. If the condition
   isn't true at that time, the ability is removed from the stack and
-  does nothing." Push (modern_decks) fixes a long-standing bug in
-  `fire_step_triggers` (`game/stack.rs`) where the `EventSpec.filter`
-  predicate was **not** evaluated for step-begin triggers — only the
-  trigger's `kind` and `scope` were checked. Now every step-begin
-  trigger re-evaluates its filter predicate against the current game
-  state before being pushed onto the stack. **Half-implemented** —
-  the "check again at resolve time" half of CR 603.4 is still ⏳;
-  mid-resolve state changes between fire and resolve aren't
-  re-checked. Wires Triskaidekaphile's "if you have exactly 13 cards
-  in your hand, you win the game" upkeep gate exactly, plus future
-  Felidar Sovereign's "if you have 40 or more life" gate. Engine
-  site: `fire_step_triggers` splits candidate gathering from
-  filter-check + push so the predicate can call
-  `&self.evaluate_predicate` without holding the iter borrow. Tests:
-  `triskaidekaphile_wins_at_upkeep_with_exactly_thirteen_cards`,
-  `triskaidekaphile_does_not_win_at_upkeep_with_other_hand_size`.
+  does nothing." Earlier push (modern_decks) wired the trigger-time
+  half — `fire_step_triggers` now evaluates the trigger's
+  `EventSpec.filter` predicate against current game state before
+  pushing. **Now also wired the resolve-time half** (push
+  claude/modern_decks current sub-push): a new optional
+  `intervening_if: Option<Predicate>` field on `StackItem::Trigger`
+  + `PendingTriggerPush` propagates the predicate from
+  `fire_step_triggers` through to the trigger resolver. At resolve
+  time, the resolver re-evaluates the predicate against current
+  state; if false, the trigger fizzles (body skipped) per CR 603.4.
+  Engine sites: `fire_step_triggers` in `game/stack.rs` (passes
+  filter as intervening_if); `resolve_top_of_stack` in `game/stack.rs`
+  (re-checks at resolve). Tests:
+  `triskaidekaphile_wins_at_upkeep_with_exactly_thirteen_cards`
+  (existing — exercises trigger-time gate),
+  `triskaidekaphile_does_not_win_at_upkeep_with_other_hand_size`
+  (existing — fail-on-trigger-time path),
+  `cr_603_4_intervening_if_re_checked_at_resolve_time` (NEW — pushes
+  trigger directly with false predicate; verifies body never runs),
+  `cr_603_4_intervening_if_runs_when_true_at_resolve_time` (NEW —
+  control test, true predicate, body runs).
 
 - 🟡 **CR 115.3 / 115.5 — Target distinctness + self-targeting**
   (push modern_decks audit, claude/modern_decks branch): "The same

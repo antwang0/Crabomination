@@ -640,6 +640,7 @@ impl GameState {
                 trigger_source: None,
                     mana_spent: 0,
                     event_amount: 0,
+                    intervening_if: None,
                 });
             }
         }
@@ -1139,6 +1140,7 @@ impl GameState {
                 trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
     }
@@ -1210,6 +1212,7 @@ impl GameState {
                 trigger_source: Some(crate::game::effects::EntityRef::Card(source)),
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
     }
@@ -2109,6 +2112,7 @@ impl GameState {
                 trigger_source: Some(crate::game::effects::EntityRef::Card(cast_card)),
                 mana_spent,
                 event_amount: 0,
+                intervening_if: None,
             });
         }
     }
@@ -2849,6 +2853,7 @@ impl GameState {
                 trigger_source: None,
                 mana_spent: 0,
                 event_amount: 0,
+                intervening_if: None,
             });
             // CR 702.21: Ward also fires on activated abilities targeting
             // an opp's Ward permanent (the "or ability" half of 702.21a).

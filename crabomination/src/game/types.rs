@@ -296,6 +296,15 @@ pub struct PendingTriggerPush {
     /// when the trigger isn't modal.
     #[serde(default)]
     pub mode: Option<usize>,
+    /// CR 603.4 — intervening 'if' clause. When `Some(pred)`, the
+    /// resolver re-checks the predicate against the current game state
+    /// before running the trigger's body; failure means the trigger
+    /// fizzles. Populated by `fire_step_triggers` from the trigger's
+    /// `EventSpec.filter` when that filter is intended as a resolve-
+    /// time gate. Defaults to `None` for snapshot back-compat and for
+    /// triggers whose filter is intended only as a trigger-time gate.
+    #[serde(default)]
+    pub intervening_if: Option<crate::card::Predicate>,
 }
 
 /// Recorded where resolution suspended so it can resume after the decision.
@@ -601,6 +610,22 @@ pub enum StackItem {
         /// backwards-compatibility.
         #[serde(default)]
         event_amount: u32,
+        /// CR 603.4 — intervening 'if' clause that must be re-checked
+        /// as the trigger resolves. "When/Whenever/At [trigger event], if
+        /// [condition], [effect]." When `Some(pred)`, the trigger
+        /// resolver re-evaluates `pred` against the *current* game state
+        /// before running the body. If the predicate now evaluates to
+        /// false, the trigger does nothing (it's still removed from the
+        /// stack but its `effect` is not run). Populated by
+        /// `fire_step_triggers` from the trigger's `EventSpec.filter`
+        /// when that filter is intended as a resolve-time gate
+        /// (Triskaidekaphile-style "if you have exactly 13 cards in your
+        /// hand, …" upkeep gates and similar). Defaults to `None` for
+        /// snapshot backwards-compatibility and for triggers whose
+        /// `event.filter` is intended as a trigger-only gate (the
+        /// majority).
+        #[serde(default)]
+        intervening_if: Option<crate::card::Predicate>,
     },
 }
 
