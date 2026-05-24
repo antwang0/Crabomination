@@ -12523,3 +12523,100 @@ pub fn quandrix_algebraist_b151() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 153 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Counter-Squirrel (b153) — {G}{U} 2/2 Fractal Squirrel.
+/// Compact 2-mana Fractal body.
+pub fn quandrix_counter_squirrel_b153() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Counter-Squirrel (b153)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Squirrel],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Insight (b153) — {1}{U} Instant. Draw 2 cards.
+pub fn quandrix_insight_b153() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Insight (b153)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sage (b153) — {2}{G} 2/3 Elf Druid. ETB +1/+1 counter
+/// on target creature you control.
+pub fn quandrix_sage_b153() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Quandrix Sage (b153)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: tf(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

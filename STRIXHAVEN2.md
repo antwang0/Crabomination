@@ -19,25 +19,44 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2125 (incl. synthesised variants — batch 146 + 147 + 148 add 101 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2202 (incl. synthesised variants — batches 150 + 151 + 152 add 77 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batches 146 + 147 + 148): 101 new STX cards
+Push (modern_decks, batches 150 + 151 + 152): 77 new STX cards
 across all five colleges (Silverquill / Witherbloom / Lorehold /
 Quandrix / Prismari). Engine additions in this stretch:
-`StaticEffect::PlayerCannotLoseLife` (CR 119.8) gets its first
-representative card via Silverquill Lifeward (b146 — symmetric foil
-to Witherbloom Lifeglobe's PlayerCannotGainLife). Two new shortcut
-helpers — `magecraft_self_pump_and_drain(N)` and
-`etb_drain_and_draw_one(N)` — close common Witherbloom +
-Silverquill body shapes that appeared across the batch 147 / 148
-cards. Server: per-process MatchStats (bot/pair counts + avg
-duration) appended to each match-completion log line so operators
-can see a rolling rollup without grepping. Client: alt-hover
-tooltip now also surfaces effective keywords (after layer effects)
-and triggered ability labels ("ETB: Drain 1", "Magecraft: Draw a
-card", "Dies: Mill 2") via the new
-`PermanentView.triggered_ability_labels` field on the wire.
+- `Value::MaxGraveyardSize` — returns the largest graveyard among
+  all alive players. Backs Visions of Beyond's "if a graveyard has
+  20+, draw 3" rider (promoted 🟡 → ✅).
+- `Effect::LifeGainLockThisTurn { who }` + new
+  `Player.cannot_gain_life_this_turn` flag (reset across all
+  players in `do_untap`). Backs Skullcrack's "target can't gain
+  life this turn" rider (promoted 🟡 → ✅).
+- `PlayerRef::ControllerOf` now consults the stack via
+  `stack_caster_for_card` before falling back to `find_card_owner`.
+  Fixes Swan Song's Bird-token-to-countered-spell-controller in
+  multiplayer (promoted 🟡 → ✅).
+- `ManaCost::summary()` printed-Oracle renderer + the new
+  `color_pip_letter(c: Color)` helper. Replaces 40 lines of
+  duplicated WUBRG matching in `server/view.rs`.
+
+Server: per-process MatchStats now tracks min/max match duration
+(`served N matches: K bot, P pair; avg duration X (min Y, max Z)`)
+— operators can spot concession-on-turn-1 outliers and grindy
+long matches without slicing the logs.
+
+Client: counter tooltip keyword labels exposed full Ward cost
+shape (`Ward {2}`, `Ward—Pay 2 life`, `Ward—Sacrifice a creature`)
+plus Cycling / Flashback costs via `ManaCost::summary()`; Protection
+renders the color in lowercase. Explicit labels for Persist /
+Undying / CantBeCountered.
+
+Previous push (modern_decks, batches 146 + 147 + 148): 101 new STX
+cards. `StaticEffect::PlayerCannotLoseLife` (CR 119.8) and the
+shortcut helpers `magecraft_self_pump_and_drain(N)` /
+`etb_drain_and_draw_one(N)` landed. Server: MatchStats
+(bot/pair counts + avg duration). Client: alt-hover tooltip
+surfaces effective keywords + triggered ability labels.
 
 Push (modern_decks, batches 143 + 144 + 145): 80 new STX cards
 across all five colleges, including 10 cards with `Keyword::Cycling`
