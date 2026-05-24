@@ -237,6 +237,75 @@ fn project_permanent(
             .find_map(|(b, a)| (*b == card.id).then_some(*a)),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
+        triggered_ability_labels: project_triggered_ability_labels(card),
+    }
+}
+
+/// Generate one-line summaries per triggered ability for the client
+/// tooltip. Format: "Event: Effect" e.g. "ETB: Draw a card",
+/// "Magecraft: Drain 1", "Dies: Mill 2". The trigger-event prefix is
+/// inferred from the `EventSpec.kind` + `EventScope` pair via
+/// `trigger_event_label`; the effect body uses the existing
+/// `ability_effect_label`.
+fn project_triggered_ability_labels(card: &CardInstance) -> Vec<String> {
+    card.definition
+        .triggered_abilities
+        .iter()
+        .map(|t| {
+            let evt = trigger_event_label(&t.event);
+            let eff = ability_effect_label(&t.effect);
+            if evt.is_empty() {
+                eff.to_string()
+            } else {
+                format!("{evt}: {eff}")
+            }
+        })
+        .collect()
+}
+
+/// Short human label for a trigger event-spec. Used as the prefix in
+/// `project_triggered_ability_labels`. Returns an empty string for
+/// unrecognized event kinds so the caller can fall back to the bare
+/// effect label.
+fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
+    use crate::card::{EventKind, EventScope, Predicate};
+    // Magecraft pattern: SpellCast / YourControl with the IS-filter.
+    if matches!(event.kind, EventKind::SpellCast)
+        && matches!(event.scope, EventScope::YourControl)
+    {
+        // Check the filter for the canonical "instant or sorcery"
+        // gate — that's a magecraft trigger.
+        let is_magecraft = matches!(
+            &event.filter,
+            Some(Predicate::All(parts))
+                if parts.iter().any(|p| matches!(
+                    p, Predicate::EntityMatches { .. }
+                ))
+        ) || matches!(
+            &event.filter,
+            Some(Predicate::EntityMatches { .. })
+        );
+        if is_magecraft {
+            return "Magecraft";
+        }
+        return "Spell cast";
+    }
+    match (&event.kind, event.scope) {
+        (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
+        (EventKind::EntersBattlefield, EventScope::AnotherOfYours) => "Another ETB",
+        (EventKind::CreatureDied, EventScope::SelfSource) => "Dies",
+        (EventKind::CreatureDied, EventScope::AnotherOfYours) => "Other dies",
+        (EventKind::CreatureDied, EventScope::AnyPlayer) => "Creature dies",
+        (EventKind::Attacks, EventScope::SelfSource) => "Attacks",
+        (EventKind::Attacks, EventScope::AnotherOfYours) => "Another attacks",
+        (EventKind::CardCycled, EventScope::SelfSource) => "Cycle",
+        (EventKind::CardDrawn, EventScope::YourControl) => "On draw",
+        (EventKind::LifeGained, EventScope::YourControl) => "On lifegain",
+        (EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource) => "Combat dmg",
+        (EventKind::LandPlayed, EventScope::YourControl) => "Landfall",
+        (EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), _) => "Upkeep",
+        (EventKind::StepBegins(crate::game::types::TurnStep::End), _) => "End step",
+        _ => "",
     }
 }
 

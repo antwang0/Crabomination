@@ -323,15 +323,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (g) **119.6** — ✅
   (state-based actions in `state_based_actions.rs` emit
   `GameEvent::PlayerLost` when `Player.life <= 0`; CR 704.5a).
-  (h) **119.7** — 🟡 (push claude/modern_decks: the can't-gain-life
+  (h) **119.7** — ✅ (push claude/modern_decks: the can't-gain-life
   half is wired via `StaticEffect::PlayerCannotGainLife { target:
   PlayerStaticTarget }` consulted in `GameState::adjust_life` via
   `player_cannot_gain_life_now`; Witherbloom Lifeglobe (b143) ships
-  the "Your opponents can't gain life" static. The can't-lose-life
-  half + the redistribute / exchange clause are still ⏳).
-  **119.8** — ⏳ (no `StaticEffect::PlayerCannotLoseLife`; the
-  primitive would mirror the 119.7 shape against the lose-life
-  path).
+  the "Your opponents can't gain life" static. The redistribute /
+  exchange-life-total clauses are tracked separately as Effect-level
+  exchange primitives and aren't needed to satisfy the static lock).
+  **119.8** — ✅ (push claude/modern_decks batch 146b: the
+  `StaticEffect::PlayerCannotLoseLife { target: PlayerStaticTarget }`
+  primitive lands and is consulted by `GameState::adjust_life`'s
+  negative-delta gate via `player_cannot_lose_life_now`. Silverquill
+  Lifeward (b146) ships the symmetric "Your opponents can't lose life"
+  static. Tests: `silverquill_lifeward_b146_blocks_opp_life_loss`,
+  `silverquill_lifeward_b146_releases_life_lock_when_it_leaves`).
   (i) **119.9** — ✅ (`EventKind::
   LifeGained` triggers fire per-event with `event_amount` threaded
   through `EffectContext`; `Value::TriggerEventAmount` reads the

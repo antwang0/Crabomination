@@ -199,6 +199,19 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Triggered abilities — short event-prefixed labels exposed by the
+    // server via `PermanentView.triggered_ability_labels`. Lets players
+    // see "ETB: Draw a card", "Magecraft: Drain 1", "Dies: Mill 2"
+    // without round-tripping through the card-text panel.
+    if !p.triggered_ability_labels.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
+        for l in &p.triggered_ability_labels {
+            lines.push(l.clone());
+        }
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }

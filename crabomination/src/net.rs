@@ -336,6 +336,14 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// Compact one-line summary per triggered ability ("ETB: Draw a
+    /// card", "Magecraft: Drain 1", "Dies: Mill 2"). Lets the client
+    /// surface the printed trigger text in tooltips without round-
+    /// tripping the full `Effect` tree. Defaults to empty for older
+    /// clients. Populated by `project_permanent` via
+    /// `triggered_ability_label`.
+    #[serde(default)]
+    pub triggered_ability_labels: Vec<String>,
 }
 
 impl PermanentView {
