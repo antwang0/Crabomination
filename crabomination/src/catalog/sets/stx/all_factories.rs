@@ -3177,5 +3177,41 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_lectern_b160,
         super::silverquill::inkling_penbearer_b160,
         super::silverquill::silverquill_inkstrike_b160,
+        // ── batch 161 (modern_decks): lorehold ──
+        super::lorehold::lorehold_pyrescholar_b161,
+        super::lorehold::lorehold_cavalcade_b161,
+        super::lorehold::lorehold_wallflame_b161,
+        super::lorehold::lorehold_reckoner_b161,
+        super::lorehold::lorehold_spectralfist_b161,
+        super::lorehold::lorehold_pyreknight_b161,
+        super::lorehold::lorehold_tutorpriest_b161,
+        super::lorehold::lorehold_sparkspirit_b161,
+        super::lorehold::lorehold_ghostbinder_b161,
+        super::lorehold::lorehold_crackleflame_b161,
+        // ── batch 161 (modern_decks): quandrix ──
+        super::quandrix::quandrix_wavetiller_b161,
+        super::quandrix::quandrix_pondkeeper_b161,
+        super::quandrix::quandrix_bricelegate_b161,
+        super::quandrix::quandrix_spellblossom_b161,
+        super::quandrix::fractal_tidemind_b161,
+        super::quandrix::quandrix_riverbase_b161,
+        // ── batch 161 (modern_decks): prismari ──
+        super::prismari::prismari_tideforge_b161,
+        super::prismari::prismari_sparksmith_b161,
+        super::prismari::prismari_goblinforge_b161,
+        super::prismari::prismari_voidshaper_b161,
+        // ── batch 161 (modern_decks): witherbloom ──
+        super::witherbloom::witherbloom_vinekeeper_b161,
+        super::witherbloom::witherbloom_vinebound_b161,
+        super::witherbloom::witherbloom_sapwarden_b161,
+        super::witherbloom::pest_crawler_b161,
+        super::witherbloom::witherbloom_drainmage_b161,
+        super::witherbloom::witherbloom_soulgift_b161,
+        // ── batch 161 (modern_decks): silverquill ──
+        super::silverquill::silverquill_inkmaster_b161,
+        super::silverquill::inkling_quillsoldier_b161,
+        super::silverquill::silverquill_penkeeper_b161,
+        super::silverquill::silverquill_quillsaint_b161,
+        super::silverquill::inkling_vowscribe_b161,
     ]
 }
