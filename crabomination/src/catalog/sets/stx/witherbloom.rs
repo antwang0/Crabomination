@@ -14171,3 +14171,178 @@ pub fn witherbloom_lifeglyph_b146() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 147 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Bloomscribe (b147) — {1}{B}{G} 2/2 Pest Warlock.
+/// Magecraft +1/+1 counter on self + drain 1. Uses the new
+/// `magecraft_self_pump_and_drain(1)` helper.
+pub fn witherbloom_bloomscribe_b147() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump_and_drain;
+    CardDefinition {
+        name: "Witherbloom Bloomscribe (b147)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump_and_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Scarcasterer (b147) — {2}{B}{G} 3/3 Human Warlock.
+/// ETB drain 1 + draw 1. Uses the new `etb_drain_and_draw_one(1)`
+/// helper.
+pub fn witherbloom_scarcasterer_b147() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_draw_one;
+    CardDefinition {
+        name: "Witherbloom Scarcasterer (b147)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_draw_one(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Forager (b147) — {G} 1/1 Elf Druid. ETB Mill 1 + GainLife 1.
+/// Cheap 1-drop self-mill body.
+pub fn witherbloom_forager_b147() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Forager (b147)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Festering Specter (b147) — {3}{B} 3/2 Pest Spirit Flying.
+/// Dies → each opp loses 2 life. Aristocrat finisher.
+pub fn witherbloom_festering_specter_b147() -> CardDefinition {
+    use crate::effect::shortcut::dies_lose_life_each_opp;
+    CardDefinition {
+        name: "Witherbloom Festering Specter (b147)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_lose_life_each_opp(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifelink Sigil (b147) — {1}{G} Sorcery. Target creature
+/// you control gains lifelink EOT and gets +1/+1 EOT.
+pub fn witherbloom_lifelink_sigil_b147() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifelink Sigil (b147)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

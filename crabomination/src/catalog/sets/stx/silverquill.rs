@@ -16329,3 +16329,168 @@ pub fn silverquill_lifeward_b146() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 147 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Penmaster (b147) — {1}{W}{B} 2/2 Inkling Wizard Flying.
+/// Magecraft +1/+1 counter on this creature + drain 1. Uses the new
+/// `magecraft_self_pump_and_drain(1)` helper — scales aggressively in
+/// spell shells.
+pub fn silverquill_penmaster_b147() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump_and_drain;
+    CardDefinition {
+        name: "Silverquill Penmaster (b147)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump_and_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Cantorscribe (b147) — {2}{W}{B} 3/3 Inkling Cleric.
+/// ETB drain 1 + draw 1. Uses the new `etb_drain_and_draw_one(1)`
+/// helper. 4-mana value body that converts attrition into cards.
+pub fn silverquill_cantorscribe_b147() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_draw_one;
+    CardDefinition {
+        name: "Silverquill Cantorscribe (b147)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_draw_one(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkdrip (b147) — {W}{B} Instant. Drain 2 + Gain 1 life.
+/// 2-mana instant Drain Life — 3-life swing.
+pub fn silverquill_inkdrip_b147() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkdrip (b147)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Lifesong (b147) — {2}{W} 2/3 Inkling Bard Lifelink + Vigilance.
+/// 3-mana double-keyword defensive body.
+pub fn inkling_lifesong_b147() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Lifesong (b147)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Aggressor (b147) — {1}{B} 2/2 Inkling Rogue Menace.
+/// On-attack: each opp loses 1 life. 2-mana attrition aggressor.
+pub fn silverquill_aggressor_b147() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_drain;
+    CardDefinition {
+        name: "Silverquill Aggressor (b147)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

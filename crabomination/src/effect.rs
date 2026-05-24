@@ -3802,4 +3802,48 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// Magecraft trigger that grows the source AND drains each opponent:
+    /// "Whenever you cast or copy an instant or sorcery spell, put a
+    /// +1/+1 counter on this creature and each opponent loses `amount`
+    /// life and you gain `amount` life." A common Witherbloom "build-
+    /// your-own-Apprentice" shape — see Witherbloom Reapcaster (b146)
+    /// for the original card. The Seq order matters: counter ride before
+    /// the drain so SBA-evaluated counter pump is visible to "if you
+    /// gained life" payoffs that fire on the drain.
+    pub fn magecraft_self_pump_and_drain(amount: i32) -> TriggeredAbility {
+        use crate::card::CounterType;
+        magecraft(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+        ]))
+    }
+
+    /// ETB trigger that drains each opponent AND draws you a card:
+    /// "When this creature enters, each opponent loses `amount` life,
+    /// you gain `amount` life, and you draw a card." A Silverquill /
+    /// Witherbloom mid-curve value body shape. Closes a recurring
+    /// pattern observed in batch 146 (`Inkling Decree`, `Inkling
+    /// Bloodscribe` future revisions).
+    pub fn etb_drain_and_draw_one(amount: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
 }
