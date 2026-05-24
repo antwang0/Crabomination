@@ -15162,3 +15162,407 @@ pub fn witherbloom_cauldronkeeper_b152() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 154 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Pestmancer II (b154) — {1}{B}{G} 2/2 Human Warlock.
+/// Magecraft → mint a Pest token via the new `magecraft_mint_pest()`
+/// shortcut. Sister to the original Witherbloom Pestmancer (uses the
+/// long-form magecraft+CreateToken body) — this variant exercises the
+/// new helper end-to-end.
+pub fn witherbloom_pestmancer_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_pest;
+    CardDefinition {
+        name: "Witherbloom Pestmancer II (b154)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_pest()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestreplica (b154) — {2}{B} 2/2 Pest Warlock.
+/// Self-replacing — on death mints a fresh Pest token via the new
+/// `dies_mint_pest()` shortcut. Same shape as Pest Swarmer but at
+/// the 3-mana slot with a stronger frontline body.
+pub fn witherbloom_pestreplica_b154() -> CardDefinition {
+    use crate::effect::shortcut::dies_mint_pest;
+    CardDefinition {
+        name: "Witherbloom Pestreplica (b154)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_pest()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Boneharvester (b154) — {3}{B} 3/3 Zombie Warlock.
+/// ETB mints 2 Pest tokens + magecraft drain 1.
+pub fn witherbloom_boneharvester_b154() -> CardDefinition {
+    use super::shared::stx_pest_token;
+    CardDefinition {
+        name: "Witherbloom Boneharvester (b154)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2), magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Decaymage (b154) — {B}{G} 1/2 Plant Druid.
+/// Magecraft AddCounter(+1/+1, Self) via the new
+/// `magecraft_add_counter_self()` shortcut.
+pub fn witherbloom_decaymage_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_self;
+    CardDefinition {
+        name: "Witherbloom Decaymage (b154)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Mawcap (b154) — {1}{B}{G} 2/2 Pest Beast. ETB mints 1 Pest +
+/// CreatureDied/SelfSource → gain 2 life. Solid mid-curve aristocrat
+/// that pays you off twice (death-trigger + Pest body).
+pub fn pest_mawcap_b154() -> CardDefinition {
+    use crate::effect::shortcut::{dies_gain_life};
+    CardDefinition {
+        name: "Pest Mawcap (b154)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1), dies_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mossglobe (b154) — {1}{G} Artifact. {T}: Add {B} or
+/// {G}. {2}, {T}, Sacrifice: Gain 3 life. A green-flavored Witherbloom
+/// ramp + life-recoup artifact.
+pub fn witherbloom_mossglobe_b154() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    CardDefinition {
+        name: "Witherbloom Mossglobe (b154)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: ManaCost::default(),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Black, Value::Const(1)),
+                },
+                ..ActivatedAbility::default()
+            },
+            ActivatedAbility {
+                mana_cost: ManaCost::default(),
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(Color::Green, Value::Const(1)),
+                },
+                ..ActivatedAbility::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(2)]),
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                ..ActivatedAbility::default()
+            },
+        ],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Champion (b154) — {2}{B}{G} 3/3 Pest Soldier. Static: Other
+/// Pest creatures you control get +1/+1 (Pest tribal anthem on a
+/// Pest body — pairs with Witherbloom Pest-Lord, Vinemaster, etc.).
+pub fn pest_champion_b154() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Pest Champion (b154)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Pest creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifedrain (b154) — {3}{B}{G} Sorcery. Drain 5 (each
+/// opp loses 5, you gain 5). 5-mana 10-life-swing finisher.
+pub fn witherbloom_lifedrain_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifedrain (b154)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(5),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestbinder (b154) — {2}{B} 2/3 Plant Warlock.
+/// ETB mints a Pest + `{1}{B}, Sac a Pest: -2/-2 EOT to target
+/// creature` activation (canonical Pest sac-removal engine).
+pub fn witherbloom_pestbinder_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestbinder (b154)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), b()]),
+            tap_cost: false,
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Pest),
+                1,
+            )),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            ..ActivatedAbility::default()
+        }],
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Crusader (b154) — {1}{B}{G} 2/2 Pest Knight, First Strike +
+/// Deathtouch. Aggressive sword-of-feast-and-famine combat profile.
+pub fn pest_crusader_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Crusader (b154)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reborn (b154) — {3}{B}{G} Sorcery. Return all creature
+/// cards from your graveyard to the battlefield. Mass reanimation —
+/// game-ending swing for grindy mirrors.
+pub fn witherbloom_reborn_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reborn (b154)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature,
+            },
+            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -15666,3 +15666,291 @@ pub fn lorehold_pyromancer_b152() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 154 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Spirit-Surger (b154) — {2}{R}{W} 3/3 Spirit Cleric.
+/// Attacks/SelfSource → mint a 2/2 R/W Spirit token via the new
+/// `on_attack_mint_lorehold_spirit()` shortcut. Per-attack token
+/// engine on a beefy body.
+pub fn lorehold_spirit_surger_b154() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_mint_lorehold_spirit;
+    CardDefinition {
+        name: "Lorehold Spirit-Surger (b154)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_mint_lorehold_spirit()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Reflux (b154) — {R}{W} Instant. Seq(DealDamage 2 any
+/// target + GainLife 2). 2-mana micro-Lightning-Helix.
+pub fn lorehold_reflux_b154() -> CardDefinition {
+    use crate::effect::shortcut::{gain_life, deal};
+    CardDefinition {
+        name: "Lorehold Reflux (b154)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            deal(2, target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            )),
+            gain_life(2),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlespirit (b154) — {3}{R}{W} 3/3 Spirit Soldier
+/// First Strike + Vigilance. ETB mints a 2/2 R/W Spirit token.
+/// Aggressive token + finisher body.
+pub fn lorehold_battlespirit_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battlespirit (b154)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cinderspeaker (b154) — {1}{R}{W} 2/2 Spirit Wizard.
+/// Magecraft ping target Creature/Player/Planeswalker for 1. Compact
+/// Lorehold magecraft engine.
+pub fn lorehold_cinderspeaker_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cinderspeaker (b154)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Smiterite (b154) — {2}{R} 3/2 Spirit Shaman, Haste.
+/// Magecraft +1/+0 self-pump EOT. Aggressive spell-slinger build-
+/// around — pairs with Galvanic Iteration / copy-spell triggers
+/// for stacked pumps.
+pub fn lorehold_smiterite_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Smiterite (b154)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Memoryflame (b154) — {2}{R}{W} Sorcery. Seq(Deal 3 dmg
+/// any target + Move target IS card from gy → hand). 4-mana burn +
+/// graveyard recursion combo.
+pub fn lorehold_memoryflame_b154() -> CardDefinition {
+    use crate::effect::shortcut::deal;
+    CardDefinition {
+        name: "Lorehold Memoryflame (b154)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            deal(3, target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            )),
+            Effect::Move {
+                what: Selector::one_of(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                }),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Banner (b154) — {2}{R}{W} 2/2 Spirit. Static:
+/// Other Spirit creatures you control get +1/+0. Spirit-tribal
+/// anthem complement to Quintorius / Tenured Inkcaster shapes.
+pub fn lorehold_spirit_banner_b154() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Lorehold Spirit-Banner (b154)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Spirit creatures you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stratagem (b154) — {3}{R}{W} Sorcery. Seq(CreateToken(2
+/// lorehold_spirit_token) + DealDamage 3 to opp). 5-mana 2 bodies +
+/// 3 dmg to opp burst — Lorehold finisher slot.
+pub fn lorehold_stratagem_b154() -> CardDefinition {
+    use crate::effect::shortcut::deal;
+    CardDefinition {
+        name: "Lorehold Stratagem (b154)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            deal(3, Selector::Player(PlayerRef::EachOpponent)),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

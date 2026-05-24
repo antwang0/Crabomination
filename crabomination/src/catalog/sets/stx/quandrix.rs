@@ -12588,7 +12588,6 @@ pub fn quandrix_insight_b153() -> CardDefinition {
 /// Quandrix Sage (b153) — {2}{G} 2/3 Elf Druid. ETB +1/+1 counter
 /// on target creature you control.
 pub fn quandrix_sage_b153() -> CardDefinition {
-    use crate::card::SelectionRequirement;
     use crate::effect::shortcut::target_filtered as tf;
     CardDefinition {
         name: "Quandrix Sage (b153)",
@@ -12609,6 +12608,179 @@ pub fn quandrix_sage_b153() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 154 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Fractalsmith (b154) — {1}{G}{U} 2/2 Human Wizard.
+/// Magecraft → mint a 0/0 G/U Fractal with one +1/+1 counter on it
+/// via the new `magecraft_mint_fractal(1)` shortcut. The on-cast
+/// Fractal engine — pairs with Quandrix mages for the +1/+1 counter
+/// snowball plan.
+pub fn quandrix_fractalsmith_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_fractal;
+    CardDefinition {
+        name: "Quandrix Fractalsmith (b154)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_fractal(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Equationmage (b154) — {G}{U} 1/2 Merfolk Wizard. Magecraft
+/// AddCounter(+1/+1, Self) via `magecraft_add_counter_self()` — same
+/// shape as Pensive Professor's secondary half but at 2-mana.
+pub fn quandrix_equationmage_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_self;
+    CardDefinition {
+        name: "Quandrix Equationmage (b154)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Riftguard (b154) — {3}{G}{U} 3/4 Fractal Wizard Reach.
+/// ETB target creature you control gets two +1/+1 counters. Solid
+/// 5-mana counters-payoff body — pairs with Quandrix Counter-Squirrel
+/// (b153) to power the snowball.
+pub fn quandrix_riftguard_b154() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Quandrix Riftguard (b154)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: tf(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tidesinger (b154) — {2}{U} 2/3 Merfolk Wizard. Magecraft
+/// Draw 1 via the existing `magecraft_draw(1)`. Compact spell-slinger
+/// payoff at 3-mana.
+pub fn quandrix_tidesinger_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidesinger (b154)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Calculation (b154) — {2}{G}{U} Sorcery. Seq(CreateToken
+/// 0/0 Fractal + AddCounter (+1/+1, LastCreatedToken, 4) + Draw 1).
+/// 4-mana Fractal mint at 4/4 + cantrip.
+pub fn quandrix_calculation_b154() -> CardDefinition {
+    use crate::effect::shortcut::{draw, mint_fractals};
+    CardDefinition {
+        name: "Quandrix Calculation (b154)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            mint_fractals(1),
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+            draw(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

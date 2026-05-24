@@ -17355,7 +17355,6 @@ pub fn silverquill_sacrificemage_b152() -> CardDefinition {
 /// Magecraft +1/+0 EOT to target friendly Inkling. Pumps Inkling
 /// army on cast.
 pub fn inkling_tactician_b152() -> CardDefinition {
-    use crate::card::SelectionRequirement;
     CardDefinition {
         name: "Inkling Tactician (b152)",
         cost: cost(&[generic(2), w()]),
@@ -17380,6 +17379,216 @@ pub fn inkling_tactician_b152() -> CardDefinition {
             duration: Duration::EndOfTurn,
         })],
         static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 154 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inkmancer (b154) — {1}{W}{B} 2/2 Inkling Wizard,
+/// Flying. Magecraft → mint a 1/1 W/B flying Inkling token via the
+/// new `magecraft_mint_inkling()` shortcut. Self-replicating
+/// magecraft body — the Silverquill counterpart to Sedgemoor Witch /
+/// Witherbloom Pestmancer II.
+pub fn silverquill_inkmancer_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_mint_inkling;
+    CardDefinition {
+        name: "Silverquill Inkmancer (b154)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_mint_inkling()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Recitalist (b154) — {1}{W} 1/2 Human Cleric.
+/// Magecraft self-pump +1/+1 self-counter via the new
+/// `magecraft_add_counter_self()` shortcut.
+pub fn silverquill_recitalist_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_self;
+    CardDefinition {
+        name: "Silverquill Recitalist (b154)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pacifier (b154) — {2}{W} 2/3 Human Soldier Vigilance.
+/// ETB tap target opp creature via `etb_tap_opp_creature()` — defensive
+/// tempo-pressure body.
+pub fn silverquill_pacifier_b154() -> CardDefinition {
+    use crate::effect::shortcut::etb_tap_opp_creature;
+    CardDefinition {
+        name: "Silverquill Pacifier (b154)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_tap_opp_creature()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Drainreaver (b154) — {3}{W}{B} 3/3 Inkling Knight Flying.
+/// ETB Drain 3 + magecraft Drain 1. Sustained Silverquill drain
+/// engine.
+pub fn inkling_drainreaver_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Drainreaver (b154)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(3), magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quilledict (b154) — {2}{W}{B} Sorcery. Seq(Drain 3 +
+/// CreateToken 2 Inklings). 4-mana drain + token combo.
+pub fn silverquill_quilledict_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quilledict (b154)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(3),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Standardbearer (b154) — {3}{W} 2/4 Inkling Soldier Flying +
+/// Vigilance. Static: Other Inkling creatures you control get +1/+1.
+/// Premium Inkling-tribal lord at the 4-mana slot — stacks with
+/// Tenured Inkcaster (+2/+2) for combo anthem on Inkling tokens.
+pub fn inkling_standardbearer_b154() -> CardDefinition {
+    use crate::card::StaticAbility;
+    CardDefinition {
+        name: "Inkling Standardbearer (b154)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

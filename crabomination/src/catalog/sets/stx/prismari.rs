@@ -11863,7 +11863,6 @@ pub fn prismari_elementalist_b153() -> CardDefinition {
 /// Prismari Spellsplash (b153) — {2}{R} Sorcery. Deal 4 damage to
 /// target creature.
 pub fn prismari_spellsplash_b153() -> CardDefinition {
-    use crate::card::SelectionRequirement;
     CardDefinition {
         name: "Prismari Spellsplash (b153)",
         cost: cost(&[generic(2), r()]),
@@ -11876,6 +11875,166 @@ pub fn prismari_spellsplash_b153() -> CardDefinition {
         effect: Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 154 ───────────────────────────────────────────────────────────────
+
+/// Prismari Treasurelord (b154) — {2}{U}{R} 3/3 Human Wizard.
+/// Magecraft Treasure mint via `magecraft_treasure()`. Compact ramp +
+/// engine top-end.
+pub fn prismari_treasurelord_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Treasurelord (b154)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inferno (b154) — {3}{R} Instant. Deal 5 damage to target
+/// creature or planeswalker. 4-mana hard burn.
+pub fn prismari_inferno_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inferno (b154)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(5),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tempestmage (b154) — {1}{U} 1/2 Human Wizard.
+/// Magecraft self-pump +1/+1 EOT — small-body scaling magecraft.
+pub fn prismari_tempestmage_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tempestmage (b154)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Crashbinder (b154) — {3}{U}{R} 4/4 Elemental Wizard.
+/// Magecraft loot via `magecraft_loot()` — premium top-end value
+/// engine. The body scales naturally with spell-heavy shells.
+pub fn prismari_crashbinder_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Crashbinder (b154)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkglyph (b154) — {1}{R} Instant. Deal 3 damage to any
+/// target — clean Prismari burn at the 2-mana slot.
+pub fn prismari_sparkglyph_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkglyph (b154)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

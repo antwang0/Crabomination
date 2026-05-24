@@ -3861,4 +3861,100 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// Magecraft-Mint-Pest shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create a 1/1 B/G Pest token with
+    /// 'When this token attacks, you gain 1 life.'" Wraps
+    /// [`magecraft`] with the shared `stx_pest_token()` mint body.
+    /// Pulled out per the TODO suggestion under "Suggested next-up
+    /// tasks" — collapses the Witherbloom Pestmancer / Sedgemoor
+    /// Witch-template mint pattern to one line.
+    pub fn magecraft_mint_pest() -> TriggeredAbility {
+        magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::catalog::stx_pest_token(),
+        })
+    }
+
+    /// Magecraft-Mint-Inkling shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create a 1/1 W/B Inkling token with
+    /// flying." Wraps [`magecraft`] with the shared `inkling_token()`
+    /// mint body. Silverquill counterpart to [`magecraft_mint_spirit`]
+    /// (Lorehold) and [`magecraft_mint_pest`] (Witherbloom).
+    pub fn magecraft_mint_inkling() -> TriggeredAbility {
+        magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::catalog::inkling_token(),
+        })
+    }
+
+    /// Magecraft-Mint-Fractal shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create a 0/0 G/U Fractal token with
+    /// X +1/+1 counters on it" — `count` controls the number of
+    /// counters stamped via [`crate::card::CounterType::PlusOnePlusOne`]
+    /// against [`Selector::LastCreatedToken`]. Pairs with the printed
+    /// "Quandrix mage casts a spell → 1/1 Fractal" cycle. Wraps
+    /// [`magecraft`] with `Seq[CreateToken(0/0 Fractal), AddCounter]`.
+    pub fn magecraft_mint_fractal(counters: i32) -> TriggeredAbility {
+        use crate::card::CounterType;
+        magecraft(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::catalog::fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(counters),
+            },
+        ]))
+    }
+
+    /// Dies-Mint-Pest shortcut: "When this creature dies, create a
+    /// 1/1 B/G Pest token." Wraps [`on_dies`] with the shared
+    /// `stx_pest_token()` mint body. Pulled out per the TODO
+    /// suggestion: collapses Witherbloom Pest-Spawner-template
+    /// on-death replacement bodies (Pest Swarmer / future Pest cards
+    /// that self-replace on death) to one line.
+    pub fn dies_mint_pest() -> TriggeredAbility {
+        on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::catalog::stx_pest_token(),
+        })
+    }
+
+    /// On-attack-mint-Spirit shortcut: "Whenever this creature
+    /// attacks, create a 2/2 R/W Spirit token." Wraps [`on_attack`]
+    /// with the shared `lorehold_spirit_token()` mint body. Lorehold
+    /// counterpart to attack-trigger token engines — fills the slot
+    /// for Spirit-tribal "attack mints a Spirit" creatures.
+    pub fn on_attack_mint_lorehold_spirit() -> TriggeredAbility {
+        on_attack(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: crate::catalog::lorehold_spirit_token(),
+        })
+    }
+
+    /// Magecraft-AddCounter-Self shortcut: "Whenever you cast or copy
+    /// an instant or sorcery spell, put a +1/+1 counter on this
+    /// creature." Wraps [`magecraft`] with an `AddCounter` body
+    /// targeting `Selector::This`. Used by self-growing magecraft
+    /// bodies (Pensive Professor secondary trigger, Inkling
+    /// Bookbinder, Inkling Calligraphist, Silverquill Soulbinder,
+    /// Witherbloom Sproutchant, etc.) — currently inlined ~15 times
+    /// across `stx::*`; the helper collapses each call site to one
+    /// line and locks in the Self selector against future renames.
+    pub fn magecraft_add_counter_self() -> TriggeredAbility {
+        use crate::card::CounterType;
+        magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })
+    }
 }
