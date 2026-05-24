@@ -3951,6 +3951,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 ## Suggested next-up tasks
 
+- ✅ **STX batches 158 + 159 — 90 synthesised cards across all five
+  schools + new shortcut helper + 6 CR rule lock-in tests + server
+  view label expansion + summoning-sick UI tooltip** (push
+  claude/modern_decks batches 158/159 done). Cards: 22 Silverquill,
+  18 Witherbloom, 16 Quandrix (b158), 16 Lorehold, 11 Prismari + 7
+  cross-school b159. Tests: 4488 → 4584 (96 new tests). All compose
+  against existing shortcut helpers. New engine helper:
+  `effect::shortcut::etb_drain_and_counter_self(N)` — ETB drains N
+  then puts a +1/+1 counter on self (Silverquill Soulbinder II
+  template). CR lock-ins: CR 502.3 untap + stun-counter, CR 121
+  basic draw, CR 117.5 SBA-before-priority for lethal damage + zero
+  toughness. Server: trigger_event_label gained 17 more EventKind
+  × EventScope combos. Client: counter_tooltip surfaces
+  "(summoning sick)" for fresh creatures.
+
 - ✅ **STX batches 135 + 136 + 137 — 43 more synthesised cards plus
   two new shortcut helpers** (push claude/modern_decks batches 135/136/137
   done). Added 4-per-school cards across batches 135 and 136 (20+20=40
