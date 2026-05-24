@@ -3135,5 +3135,47 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         // ── shared (2 factories) ──
         super::shared::inkling_summoning,
         super::shared::tend_the_pests,
+        // ── batch 160 (modern_decks): witherbloom ──
+        super::witherbloom::witherbloom_bramblegrowth_b160,
+        super::witherbloom::pest_marauder_b160,
+        super::witherbloom::witherbloom_wreathweaver_b160,
+        super::witherbloom::witherbloom_despairfeeder_b160,
+        super::witherbloom::pest_vinetiller_b160,
+        super::witherbloom::witherbloom_vinepetal_b160,
+        super::witherbloom::witherbloom_drainspore_b160,
+        super::witherbloom::pest_tilledigger_b160,
+        // ── batch 160 (modern_decks): quandrix ──
+        super::quandrix::quandrix_bracketscribe_b160,
+        super::quandrix::quandrix_hexer_b160,
+        super::quandrix::quandrix_counterlord_b160,
+        super::quandrix::quandrix_spirescribe_b160,
+        super::quandrix::quandrix_mathadept_b160,
+        super::quandrix::quandrix_doublecast_b160,
+        super::quandrix::fractal_scaler_b160,
+        super::quandrix::quandrix_tideforge_b160,
+        // ── batch 160 (modern_decks): prismari ──
+        super::prismari::prismari_brushflare_b160,
+        super::prismari::prismari_stormbinder_b160,
+        super::prismari::prismari_spellscribe_b160,
+        super::prismari::prismari_magmadancer_b160,
+        super::prismari::prismari_sparkthrower_b160,
+        super::prismari::prismari_treasureforge_b160,
+        // ── batch 160 (modern_decks): lorehold ──
+        super::lorehold::lorehold_spectralguard_b160,
+        super::lorehold::lorehold_sparkpriest_b160,
+        super::lorehold::lorehold_bonewright_b160,
+        super::lorehold::lorehold_recallsmith_b160,
+        super::lorehold::lorehold_ghostflame_b160,
+        super::lorehold::lorehold_pyresage_b160,
+        super::lorehold::lorehold_recoverer_b160,
+        // ── batch 160 (modern_decks): silverquill ──
+        super::silverquill::silverquill_scribecadet_b160,
+        super::silverquill::inkling_coursemate_b160,
+        super::silverquill::silverquill_penblade_b160,
+        super::silverquill::silverquill_pendrop_b160,
+        super::silverquill::inkling_verseknight_b160,
+        super::silverquill::silverquill_lectern_b160,
+        super::silverquill::inkling_penbearer_b160,
+        super::silverquill::silverquill_inkstrike_b160,
     ]
 }
