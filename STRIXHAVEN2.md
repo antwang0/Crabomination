@@ -19,8 +19,24 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2351 (incl. synthesised variants — batches 155 + 156 + 157 add 109 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2435 (incl. synthesised variants — batches 155 + 156 + 157 + 158 + 159 add 193 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 158 + 159, claude/modern_decks): 84
+additional new STX cards across all five colleges (21 Silverquill,
+18 Witherbloom, 16 Lorehold, 16 Quandrix, 11 Prismari + 2 Lorehold
+b158 misc) stacked on top of the b157 60 cards. Each new card ships
+with at least one functionality test in `tests::stx`. No engine
+changes for the card bodies — all compose against existing shortcut
+helpers. Engine + server improvements landed alongside the cards:
+- `server::view::trigger_event_label` — 17 more EventKind × EventScope
+  combos labelled (DealsCombatDamageToPlayer/YourControl, CardLeft
+  Graveyard/AnyPlayer, sacrifice variants, draw/discard/lifegain/
+  lifeloss anyplayer variants, attack variants).
+- 6 new CR rule lock-in tests added — CR 502.3 (untap step untaps
+  controlled permanents + stun counter interposition), CR 121 (basic
+  draw moves one card library→hand), CR 117.5 (SBA before priority:
+  lethal damage + zero-toughness creature dies).
 
 Push (modern_decks, batch 157, claude/modern_decks): 60 additional new
 STX cards across all five colleges (16 Silverquill, 13 Witherbloom,
