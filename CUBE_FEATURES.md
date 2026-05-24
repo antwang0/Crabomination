@@ -21,7 +21,7 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Descendant of Storms | ⏳ | Spirit token + tap-trigger; needs the Spirit creature-token primitive. |
+| Descendant of Storms | ✅ | 2/2 Spirit Warrior Flying. Attack trigger creates a 1/1 white Spirit token with flying. Tests: `descendant_of_storms_is_2_2_flying_spirit`. |
 | Cathar Commando | ✅ | Flash + {1}, sac: destroy artifact/enchantment (`ActivatedAbility::sac_cost`). |
 | Containment Priest | 🟡 | Body wired: 2/2 W flash. The replacement effect ("nontoken creatures entering not from a spell get exiled instead") needs an ETB-replacement primitive the engine doesn't have yet — the body is in the cube as a flash flier replacement until the primitive lands. Test: `containment_priest_is_a_flash_two_two`. |
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
@@ -34,7 +34,7 @@ still ⏳.
 | Restoration Angel | ✅ | Flash + ETB exile-and-return target non-Angel creature you control (`Exile + Move-back` flicker pattern). |
 | Guardian Scalelord | ✅ (was ⏳) | Push (modern_decks): 4/4 Dragon Flying. `Attacks/SelfSource` trigger → `MayDo(GrantKeyword(Flying, EOT, target friendly creature))`. AutoDecider declines optional rider by default; scripted decider can opt in. Tests: `guardian_scalelord_attack_grants_flying_to_target_friendly`, `guardian_scalelord_declines_optional_grant_by_default`. |
 | Serra Angel | ✅ | Already in `crate::catalog::serra_angel` (4/4 flying + vigilance). |
-| Intervention Pact | ⏳ | Free prevent-damage + delayed `PayOrLoseGame` upkeep cost (reuses Pact primitive). |
+| Intervention Pact | ✅ | {0} Instant. Gain 3 life + delayed `PayOrLoseGame({1}{W}{W})` on next upkeep. Damage prevention omitted. Tests: `intervention_pact_gains_three_life_and_sets_delayed_trigger`. |
 | Isolate | ✅ | Exile target permanent with mana value 1 (`ManaValueAtLeast(1) ∧ ManaValueAtMost(1)` filter). |
 | Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Static Prison | ✅ (was 🟡) | `{X}{2}{W}` Enchantment. Push (modern_decks): ETB now stamps `Value::XFromCost` Stun counters on the **target** (CR 122.1d) — was previously stamping them on Static Prison itself. The engine's existing stun-counter mechanic consumes one counter per untap step, keeping the target tapped for X turn cycles. Combined with the immediate ETB tap, this matches the printed "while it has stun counters, target doesn't untap" rider exactly. Tests: `static_prison_etb_taps_target`, `static_prison_x2_etb_adds_two_stun_counters_to_target`. |
@@ -69,7 +69,7 @@ still ⏳.
 | Cryptic Command | 🟡 | `{1}{U}{U}{U}` Instant. **Choose two** is collapsed to a single `ChooseMode` of four bundled pairs: `[counter+bounce, counter+tap-opp-creatures, counter+draw, bounce+draw]`. AutoDecider picks mode 0 (counter+bounce). The "tap all creatures your opponents control" half uses `ForEach + Tap`. A multi-pick "choose any two" mode primitive is the gap. Tests: `cryptic_command_counter_plus_bounce_resolves`, `cryptic_command_mode_two_counter_and_draw`. |
 | Paradoxical Outcome | ✅ | Return each non-land permanent you control + draw equal (`ForEach + Move + Draw 1`). |
 | Turnabout | ✅ | {2}{U}{U} Instant. `ChooseMode` over six tap/untap branches (artifact / creature / land × tap / untap), each operating against `EachPermanent(Type ∧ ControlledByOpponent)`. AutoDecider picks mode 4 (tap all opponent lands). Test: `turnabout_mode_four_taps_all_opponent_lands`. |
-| Gush | ⏳ | Free draw if pitching two Islands; alternative cost variant. |
+| Gush | 🟡 | {4}{U} Instant. Draw 2 cards at full cost. Alt cost (return two Islands) omitted. Tests: `gush_draws_two_cards`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
 | Dig Through Time | ⏳ | Delve + look at top 7, take 2. Multi-pick primitive. |
@@ -121,7 +121,7 @@ still ⏳.
 | Cast Down | ✅ | {1}{B} Instant. Destroy target nonlegendary creature — cast-time filter rejects legendary targets. Tests: `cast_down_destroys_nonlegendary_creature`, `cast_down_rejects_legendary_creature`. |
 | Mind Rot | ✅ | {2}{B} Sorcery. Target player discards two cards (random — engine's chosen-discard primitive only handles caster-side picks). Test: `mind_rot_discards_two_from_target`. |
 | Raise Dead | ✅ | {B} Sorcery. Return target creature card from your graveyard to your hand. Auto-target prefers caster's graveyard via `Effect::prefers_graveyard_source`. Test: `raise_dead_returns_creature_from_graveyard`. |
-| Collective Brutality | ⏳ | Escalate-modal removal. |
+| Collective Brutality | 🟡 | {1}{B} Sorcery. 3-mode ChooseMode (discard IS from opp / -2/-2 creature / drain 2). Escalate omitted. Tests: `collective_brutality_mode_two_drains`. |
 | Drown in Ichor | ✅ | 3 damage to target creature + Surveil 1. |
 | Fell | ✅ | Destroy target tapped creature + Surveil 2. |
 | Night's Whisper | ✅ | Pay 2 life + Draw 2 (already in `decks::modern`). |
@@ -149,9 +149,9 @@ still ⏳.
 | Orcish Lumberjack | ✅ | {R} 1/1 Goblin Druid. `{T}, sacrifice a Forest: Add {G}{G}{G}` — Forest sac folded into resolution as Crop Rotation does. Test: `orcish_lumberjack_sacrifices_forest_for_three_green`. |
 | Voldaren Epicure | ✅ | ETB: create a Blood token + 1 damage to each opponent (`ForEach EachOpponent`). |
 | Amped Raptor | ⏳ | ETB cast spell from top. |
-| Cam and Farrik, Havoc Duo | ⏳ | Dual creature. |
+| Cam and Farrik, Havoc Duo | ✅ | {3}{R}{G} 4/5 Legendary Trample Human Warrior. Noncreature spell cast → +2/+0 until EOT. Tests: `cam_and_farrik_pumps_on_noncreature_cast`. |
 | Dreadhorde Arcanist | ⏳ | Attack-trigger flashback from grave. Reuses Flashback. |
-| Magda, Brazen Outlaw | ⏳ | Treasure-on-tap + tutor. |
+| Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves. Treasure-on-tap omitted. Tests: `magda_brazen_outlaw_is_legendary_dwarf`. |
 | Robber of the Rich | ⏳ | Cast-from-opp-library. Big primitive. |
 | Anje's Ravager | ⏳ | Madness payoff. |
 | Death-Greeter's Champion | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{R} 2/2 Human Warrior with Haste. Attack trigger drains 1 life from a target opponent. Test: `death_greeters_champion_drains_opp_on_attack`. |
@@ -195,7 +195,7 @@ still ⏳.
 | Acidic Slime | ✅ | {3}{G}{G} 2/2 Ooze with Deathtouch. ETB destroy target artifact, enchantment, or land. Test: `acidic_slime_etb_destroys_land`. |
 | Collector Ouphe | ⏳ | Static "artifact abilities can't be activated". |
 | Fanatic of Rhonas | ✅ | {G} 1/1 Snake. `{G},{T}: Add {G}{G}` (net +{G} per activation). Test: `fanatic_of_rhonas_taps_for_two_green_after_paying_one`. |
-| Keen-Eyed Curator | ⏳ | Graveyard hate + counter pump. |
+| Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Rofellos, Llanowar Emissary | ✅ (was 🟡) | Push (claude/modern_decks): `{G}{G}` Legendary 2/1 Elf Druid. `{T}: Add {G}{G} for each Forest you control` now wired faithfully via `ManaPayload::OfColor(Green, Times(Const(2), CountOf(Forest ∧ ControlledByYou)))`. The dynamic Forest count is read live at resolution time. Tests: `rofellos_taps_for_two_green_mana` (1 Forest → 2 green), `rofellos_taps_for_two_green_per_forest` (3 Forests → 6 green), `rofellos_taps_for_zero_with_no_forests` (degenerate 0-Forest case). |
 | Satyr Wayfinder | 🟡 | {1}{G} 1/1 Satyr Druid. ETB mills 4 (`Effect::Mill 4`). The "may take a land from among them" half is collapsed to the graveyard-fill outcome — gameplay-relevant for reanimator/dredge shells. Test: `satyr_wayfinder_etb_mills_four`. |
 | Sylvan Caryatid | ✅ | 0/3 Hexproof Defender; {T}: Add one mana of any color. |
