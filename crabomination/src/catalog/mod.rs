@@ -1,7 +1,7 @@
 //! Card catalog — factory functions for every implemented Magic: The Gathering card.
 //! Cards are grouped by the set in which they first appeared.
 
-mod sets;
+pub mod sets;
 
 // Re-export everything so callers use `catalog::some_card()`.
 pub use sets::all::*;

@@ -104,6 +104,11 @@ pub fn save_audited_cards(set: &AuditedCards) {
 pub enum AuditPool {
     Cube,
     Sos,
+    /// Strixhaven 2021 base set — exposed via
+    /// `crabomination::catalog::sets::stx::all_stx_card_factories`. Lets
+    /// the audit picker surface STX cards (real + synthesised b-suffixed
+    /// variants) alongside the cube / SoS catalogs.
+    Stx,
     BrgDemo,
     GoryoDemo,
     RofellosCommander,
@@ -113,6 +118,7 @@ impl AuditPool {
     pub const ALL: &'static [AuditPool] = &[
         AuditPool::Cube,
         AuditPool::Sos,
+        AuditPool::Stx,
         AuditPool::BrgDemo,
         AuditPool::GoryoDemo,
         AuditPool::RofellosCommander,
@@ -122,6 +128,7 @@ impl AuditPool {
         match self {
             AuditPool::Cube => "Cube",
             AuditPool::Sos => "SoS",
+            AuditPool::Stx => "STX",
             AuditPool::BrgDemo => "BRG Demo",
             AuditPool::GoryoDemo => "Goryo Demo",
             AuditPool::RofellosCommander => "Rofellos",
@@ -184,6 +191,14 @@ pub fn catalog() -> Vec<CatalogEntry> {
         tag(&cube, AuditPool::Cube);
         let sos: Vec<CardFactory> = all_sos_cards();
         tag(&sos, AuditPool::Sos);
+        // STX (Strixhaven 2021) catalog — large but bounded; tagging by
+        // function pointer keeps the dedup cheap. Exposes the real STX
+        // printed cards + the synthesised batch-suffixed variants to
+        // the audit picker.
+        tag(
+            crabomination::catalog::sets::stx::all_stx_card_factories(),
+            AuditPool::Stx,
+        );
         tag(crabomination::demo::brg_combo_deck(), AuditPool::BrgDemo);
         tag(crabomination::demo::goryos_vengeance_deck(), AuditPool::GoryoDemo);
         tag(
