@@ -85,11 +85,9 @@ pub fn disentomb() -> CardDefinition {
 }
 
 /// Vandalblast — {R} Sorcery. Destroy target artifact you don't control.
-///
-/// Approximation: the Overload {4}{R} mode (destroy each artifact you
-/// don't control) is omitted — Overload as an alternate-cost mode isn't
-/// modeled yet. Single-target version is wired faithfully.
+/// Overload {4}{R}: destroy each artifact you don't control.
 pub fn vandalblast() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Vandalblast",
         cost: cost(&[r()]),
@@ -110,7 +108,25 @@ pub fn vandalblast() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(4), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Artifact
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
+            }),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

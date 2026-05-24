@@ -7186,15 +7186,10 @@ pub fn witherbloom_drainage() -> CardDefinition {
 /// (You may cast this spell for its overload cost. If you do, change its
 /// text by replacing all instances of 'target' with 'each.')"
 ///
-/// Push (modern_decks): single-target {1}{R} body wired faithfully — 4
-/// damage to a target creature. The Overload {4}{R}{R} alternative cost
-/// (which would deal 4 damage to each creature you don't control) is
-/// engine-wide ⏳ (no Overload primitive — the same alt-cost-implies-
-/// mode gap shared with Burst Lightning's kicker, Devastating Mastery's
-/// alt cost). Body-mode burn is the headline play pattern at {1}{R} — a
-/// strict-better Murderous Cut for red removal in any Lorehold / Prismari
-/// shell.
+/// Both modes wired: single-target {1}{R} → 4 damage to target creature;
+/// Overload {4}{R}{R} → 4 damage to each creature you don't control.
 pub fn mizzium_mortars() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Mizzium Mortars",
         cost: cost(&[generic(1), r()]),
@@ -7213,7 +7208,26 @@ pub fn mizzium_mortars() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(4), r(), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(4),
+                }),
+            }),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
