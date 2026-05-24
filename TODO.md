@@ -8065,3 +8065,34 @@ added a per-process duration histogram to MatchStats, and locked in
   catalog-only and don't appear in any deck pool. A future
   `synthesised_pool()` helper in `cube.rs` could surface the b150+
   batch cards for testing purposes.
+
+### Suggested next-up tasks (additions from batches 164/165)
+
+Batches 164 + 165 added 64 STX cards across all five colleges (14
+Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
+4 CR lock-in tests (119.1, 119.3, 704.5f, 401.1), exposed
+`spells_cast_this_turn` to the server PlayerView, and added
+`SetNoMaxHandSize` / `FlipCoin` labels to the server's
+`ability_effect_label`. Open items:
+
+- **Prismari Cannonade and board-sweeper patterns** — the
+  `EachPermanent(Creature)` DealDamage pattern used by Cannonade is
+  symmetric (hits your own creatures too). A conditional sweep like
+  "deals 2 to each creature your opponents control" would need the
+  existing `ControlledByOpponent` filter. Cards like Anger of the
+  Gods / Pyroclasm fit this mold — a future batch could add those.
+- **Quandrix Tidebinder bounce with power filter** — the
+  `Move(PowerAtMost(2) → Hand(Owner))` pattern is clean. Future
+  cards like Man-o'-War / Reflector Mage with unconditional bounce
+  could simplify to `Move(Creature → Hand(Owner))`. Document
+  the pattern difference.
+- **Quandrix Spellgrafter ETB counter** — the `etb(AddCounter(
+  target Creature, +1/+1))` pattern works end-to-end. Future
+  Quandrix scaling payoffs (Fractal-specific counters) could use
+  the same pattern with `HasCreatureType(Fractal)` filter.
+- **Storm count display** — `spells_cast_this_turn` is now in
+  PlayerView. A client-side UI element could show the storm count
+  in the HUD when it's ≥ 2, enabling storm-oriented gameplay.
+- **Refactor Witherbloom self-mill ETB pattern** — Deathcoach's
+  `etb(Mill(You, 2))` should be a shortcut (`etb_self_mill(N)`) if
+  more Witherbloom self-mill creatures are added.
