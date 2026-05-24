@@ -15698,3 +15698,255 @@ pub fn witherbloom_stride_b154() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 155 (modern_decks) — 8 new Witherbloom cards ──────────────────────
+
+/// Pest Acolyte (b155) — {B}{G} 2/2 Pest. On-attack: gain 1 life.
+/// Aggressive Witherbloom 2-drop with chip-lifegain — pairs with
+/// Blech, Loafing Pest's "whenever you gain life" pump.
+pub fn pest_acolyte_b155() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_gain_life;
+    CardDefinition {
+        name: "Pest Acolyte (b155)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bramblelord II (b155) — {3}{B}{G} 4/4 Plant Druid Trample.
+/// ETB drains 2. The Witherbloom finisher template — chunky beater
+/// + life swing on entry.
+pub fn witherbloom_bramblelord_ii_b155() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bramblelord II (b155)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Bramble Sprout (b155) — {1}{G} 1/1 Plant. On death: drain 1.
+/// Cheap chump-blocker with mild value tail — the "dies → drain"
+/// template from Pest tokens applied to a Plant.
+pub fn bramble_sprout_b155() -> CardDefinition {
+    CardDefinition {
+        name: "Bramble Sprout (b155)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinegrowth II (b155) — {2}{B}{G} 3/3 Plant Warlock.
+/// Magecraft: drain 1 (each opp loses 1, you gain 1). The classic
+/// Apprentice template at the 3-drop slot.
+pub fn witherbloom_vinegrowth_ii_b155() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Witherbloom Vinegrowth II (b155)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Whisperer (b155) — {2}{B} 2/2 Pest Rogue. On-attack: mint a
+/// Pest token. Witherbloom token-snowball template.
+pub fn pest_whisperer_b155() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_create_token;
+    CardDefinition {
+        name: "Pest Whisperer (b155)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_create_token(stx_pest_token())],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mossdrinker (b155) — {3}{G} 2/4 Plant Druid Reach.
+/// ETB gain 3 life. Witherbloom blocker with a stabilization
+/// life-tail.
+pub fn witherbloom_mossdrinker_b155() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mossdrinker (b155)",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Quagsong (b155) — {1}{B}{G} Sorcery. Seq(Drain 2 +
+/// Surveil 2). 3-mana 2-drain + 2-surveil — Witherbloom card-
+/// selection + life swing.
+pub fn witherbloom_quagsong_b155() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Quagsong (b155)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(2),
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Surger (b155) — {2}{B}{G} 3/2 Pest Beast. On-death: mint a
+/// Pest token. The classic "two Pests for one card" Witherbloom
+/// resilient template.
+pub fn pest_surger_b155() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Surger (b155)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
