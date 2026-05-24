@@ -102,18 +102,95 @@ impl Bot for RandomBot {
                     // Filter on `controller`, not `owner`: cards that have
                     // changed control (Threaten / Mind Control / etc.) are
                     // attacked WITH by the new controller, not the original
-                    // owner. Mismatching here would have us declare attackers
-                    // we don't actually control — the engine rejects with
-                    // `NotYourPriority` and the bot loop deadlocks.
-                    let attacks: Vec<Attack> = state
+                    // owner.
+                    let mut attackers: Vec<crate::card::CardId> = state
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == seat && c.can_attack())
-                        .map(|c| Attack {
-                            attacker: c.id,
-                            target: AttackTarget::Player(target_player),
+                        .map(|c| c.id)
+                        .collect();
+                    // Find opponent planeswalkers in loyalty-ascending
+                    // order. The bot will redirect attacks at PWs whose
+                    // current loyalty is at-or-below our total attacking
+                    // power — finishing off the walker. Each PW consumes
+                    // up to its loyalty worth of attackers; the rest
+                    // attack the player.
+                    let mut walker_targets: Vec<(crate::card::CardId, u32)> = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| {
+                            c.definition.is_planeswalker()
+                                && c.controller != seat
+                                && state.players[c.controller].is_alive()
+                        })
+                        .map(|c| {
+                            let loyalty = c
+                                .counters
+                                .iter()
+                                .find_map(|(k, v)| {
+                                    matches!(k, crate::card::CounterType::Loyalty)
+                                        .then_some(*v)
+                                })
+                                .unwrap_or(0);
+                            (c.id, loyalty)
                         })
                         .collect();
+                    walker_targets.sort_by_key(|(_, l)| *l);
+                    let total_power: i32 = attackers
+                        .iter()
+                        .filter_map(|id| {
+                            state.battlefield.iter().find(|c| c.id == *id).map(|c| c.power())
+                        })
+                        .sum();
+                    let mut attacks: Vec<Attack> = Vec::new();
+                    for (pw_id, loyalty) in walker_targets {
+                        // Only redirect when we can plausibly finish it
+                        // off (total attacking power >= loyalty). Avoids
+                        // throwing 1-power chumps at a 5-loyalty walker.
+                        if (total_power as u32) < loyalty || loyalty == 0 {
+                            continue;
+                        }
+                        // Pull as many attackers as the walker's loyalty
+                        // for this redirect, picking smallest-power
+                        // first so we keep beefy beaters for the player
+                        // when possible. (Suicide-by-blocker is still
+                        // not modeled here.)
+                        let mut budget = loyalty as i32;
+                        attackers.sort_by_key(|id| {
+                            state
+                                .battlefield
+                                .iter()
+                                .find(|c| c.id == *id)
+                                .map(|c| c.power())
+                                .unwrap_or(0)
+                        });
+                        let mut remaining: Vec<crate::card::CardId> = Vec::new();
+                        for id in attackers.drain(..) {
+                            let pow = state
+                                .battlefield
+                                .iter()
+                                .find(|c| c.id == id)
+                                .map(|c| c.power())
+                                .unwrap_or(0);
+                            if budget > 0 && pow > 0 {
+                                attacks.push(Attack {
+                                    attacker: id,
+                                    target: AttackTarget::Planeswalker(pw_id),
+                                });
+                                budget -= pow;
+                            } else {
+                                remaining.push(id);
+                            }
+                        }
+                        attackers = remaining;
+                    }
+                    // Remaining attackers go at the player.
+                    for id in attackers {
+                        attacks.push(Attack {
+                            attacker: id,
+                            target: AttackTarget::Player(target_player),
+                        });
+                    }
                     Some(GameAction::DeclareAttackers(attacks))
                 } else {
                     Some(GameAction::PassPriority)

@@ -62027,3 +62027,87 @@ fn pest_hivebreeder_b156_mints_pest_on_other_creature_death() {
         .filter(|c| c.is_token && c.definition.name == "Pest").count();
     assert_eq!(pests_after, pests_before + 1, "should mint a Pest on death");
 }
+
+// ── Bot AI lock-ins (push: planeswalker attack heuristic) ──────────────────
+
+#[test]
+fn bot_attacks_finishable_planeswalker_with_proper_power() {
+    // The bot's DeclareAttackers handler now redirects attacks at an
+    // opponent's planeswalker when our total attacking power can finish
+    // it off in one swing. Lock-in: with a 5-loyalty PW + a 5-power
+    // attacker (Grizzly Bears pumped to 5/5 with +1/+1 counters), the
+    // bot should aim AT the walker.
+    use crate::server::bot::{Bot, RandomBot};
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(beater);
+    // Pump bear to 5/5 via three +1/+1 counters.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == beater) {
+        c.add_counters(CounterType::PlusOnePlusOne, 3);
+    }
+    // Opp's planeswalker (Dellian Fel: 5 base loyalty).
+    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+    let loyalty = g.battlefield.iter().find(|c| c.id == pw).unwrap()
+        .counter_count(CounterType::Loyalty);
+    assert!(loyalty >= 1, "PW should have loyalty");
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let mut bot = RandomBot::new();
+    let action = bot.next_action(&g, 0);
+    // Bot should DeclareAttackers with the beater aimed at the walker
+    // since 5 power finishes off a 5-loyalty walker.
+    match action {
+        Some(GameAction::DeclareAttackers(attacks)) => {
+            let aimed_at_pw = attacks.iter().any(|a| {
+                matches!(a.target, AttackTarget::Planeswalker(p) if p == pw)
+            });
+            assert!(
+                aimed_at_pw,
+                "bot should aim at the finishable PW (loyalty {loyalty}); got {attacks:?}",
+            );
+        }
+        other => panic!("expected DeclareAttackers, got {other:?}"),
+    }
+}
+
+#[test]
+fn bot_does_not_aim_at_walker_too_tough_to_finish() {
+    // Symmetric lock-in: when the bot's attacking power is below the
+    // walker's loyalty, the bot should NOT throw attackers at the
+    // walker.
+    use crate::server::bot::{Bot, RandomBot};
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let beater = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(beater);
+    let pw = g.add_card_to_battlefield(1, catalog::professor_dellian_fel());
+    // Walker has full base loyalty (5); our 2-power bear can't finish it.
+    let loyalty = g.battlefield.iter().find(|c| c.id == pw).unwrap()
+        .counter_count(CounterType::Loyalty);
+    let our_power: i32 = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_creature())
+        .map(|c| c.power())
+        .sum();
+    assert!((our_power as u32) < loyalty);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let mut bot = RandomBot::new();
+    let action = bot.next_action(&g, 0);
+    match action {
+        Some(GameAction::DeclareAttackers(attacks)) => {
+            let aimed_at_pw = attacks.iter().any(|a| {
+                matches!(a.target, AttackTarget::Planeswalker(_))
+            });
+            assert!(
+                !aimed_at_pw,
+                "bot should NOT aim at a walker it can't finish off; got {attacks:?}",
+            );
+        }
+        other => panic!("expected DeclareAttackers, got {other:?}"),
+    }
+}
