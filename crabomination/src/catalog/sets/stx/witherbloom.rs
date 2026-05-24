@@ -17405,3 +17405,167 @@ pub fn witherbloom_ravager_b158() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 159 (modern_decks) — More Witherbloom cards ──────────────────────
+
+/// Witherbloom Stinger (b159) — {1}{B} 1/2 Plant Insect Deathtouch.
+/// Cheap 2-mana deathtouch trade body.
+pub fn witherbloom_stinger_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Stinger (b159)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Sapling (b159) — {1}{G} 1/3 Pest Plant Reach.
+/// 2-mana anti-flier Pest.
+pub fn pest_sapling_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Sapling (b159)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bonebinder (b159) — {2}{B}{G} 2/2 Plant Warlock.
+/// ETB Drain 1 + Pest token. 4-mana double payoff.
+pub fn witherbloom_bonebinder_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bonebinder (b159)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            crate::effect::shortcut::drain(1),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Sapfeeder (b159) — {2}{G} 2/3 Pest Beast.
+/// Magecraft gain 1 life.
+pub fn pest_sapfeeder_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Sapfeeder (b159)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Necrotomb (b159) — {1}{B}{G} Sorcery.
+/// Each opp mills 3.
+pub fn witherbloom_necrotomb_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necrotomb (b159)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

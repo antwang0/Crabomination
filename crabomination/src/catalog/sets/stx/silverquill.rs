@@ -19473,3 +19473,192 @@ pub fn inkling_heraldscribe_b158() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 159 (modern_decks) — More Silverquill cards ──────────────────────
+
+/// Inkling Lawkeeper (b159) — {1}{W} 1/3 Inkling Soldier Flying + Vigilance.
+/// 2-mana defensive evasive vigilance Inkling.
+pub fn inkling_lawkeeper_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Lawkeeper (b159)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Director (b159) — {3}{W}{B} 4/4 Vampire Bard Lifelink.
+/// 5-mana lifelink finisher.
+pub fn silverquill_pen_director_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen-Director (b159)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Sketch (b159) — {1}{W}{B} Instant.
+/// Drain 1 + Draw 1. 3-mana drain-cantrip.
+pub fn silverquill_pen_sketch_b159() -> CardDefinition {
+    use crate::effect::shortcut::drain_and_draw;
+    CardDefinition {
+        name: "Silverquill Pen-Sketch (b159)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_draw(1),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Stalwart (b159) — {2}{B} 3/2 Inkling Knight.
+/// 3-mana aggressive Inkling body.
+pub fn inkling_stalwart_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Stalwart (b159)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen-Sage (b159) — {2}{W}{B} 2/4 Vampire Wizard.
+/// ETB Seq(Scry 1 + GainLife 2). 4-mana defensive scaling.
+pub fn silverquill_pen_sage_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen-Sage (b159)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Pen-Adept (b159) — {W}{B} 2/2 Inkling Wizard.
+/// Magecraft self-pump +1/+1 EOT.
+pub fn inkling_pen_adept_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Pen-Adept (b159)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
