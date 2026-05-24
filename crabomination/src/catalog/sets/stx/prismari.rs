@@ -50,6 +50,7 @@ pub fn prismari_pledgemage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -108,6 +109,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -153,6 +155,7 @@ pub fn prismari_drakelord() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -198,6 +201,7 @@ pub fn prismari_emberseer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -246,6 +250,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -294,6 +299,7 @@ pub fn symmetry_sage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -339,6 +345,7 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -383,6 +390,7 @@ pub fn prismari_looter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -430,6 +438,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -474,6 +483,7 @@ pub fn prismari_drakeward() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -522,6 +532,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -560,6 +571,7 @@ pub fn prismari_storm_caller() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -610,6 +622,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -658,6 +671,7 @@ pub fn prismari_volley() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -698,6 +712,7 @@ pub fn prismari_stormcaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -737,6 +752,7 @@ pub fn prismari_sparkmaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -783,6 +799,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -822,6 +839,7 @@ pub fn prismari_alchemist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -866,6 +884,7 @@ pub fn prismari_cantrip() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -915,6 +934,7 @@ pub fn prismari_flarespark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -966,6 +986,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1012,6 +1033,7 @@ pub fn prismari_initiate() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1065,6 +1087,7 @@ pub fn prismari_spellbinder() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1110,6 +1133,7 @@ pub fn prismari_treasurer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1162,6 +1186,7 @@ pub fn prismari_embershaper() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1207,6 +1232,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1248,6 +1274,7 @@ pub fn prismari_mindwave() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1295,6 +1322,7 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1336,6 +1364,7 @@ pub fn prismari_stormspire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1390,6 +1419,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1437,6 +1467,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1475,6 +1506,7 @@ pub fn prismari_spell_shaper() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1522,6 +1554,7 @@ pub fn prismari_stormgaze() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1570,6 +1603,7 @@ pub fn prismari_vortexweaver() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1608,6 +1642,7 @@ pub fn prismari_quickfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1658,6 +1693,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1693,6 +1729,7 @@ pub fn prismari_pyreburst() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1758,6 +1795,7 @@ pub fn prismari_vorthos() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1803,6 +1841,7 @@ pub fn prismari_cinderspark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1859,6 +1898,7 @@ pub fn prismari_tempo_adept() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1909,6 +1949,7 @@ pub fn prismari_hotburst() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1959,6 +2000,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -1999,6 +2041,7 @@ pub fn prismari_mindkindler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2042,6 +2085,7 @@ pub fn prismari_embergem() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2105,6 +2149,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2150,6 +2195,7 @@ pub fn prismari_spitfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2199,6 +2245,7 @@ pub fn prismari_wildform() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2244,6 +2291,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2295,6 +2343,7 @@ pub fn prismari_drakeforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2335,6 +2384,7 @@ pub fn prismari_sparkdrake() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2378,6 +2428,7 @@ pub fn prismari_lavalifter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2426,6 +2477,7 @@ pub fn prismari_spelltheorist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2467,6 +2519,7 @@ pub fn prismari_stormwriter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2511,6 +2564,7 @@ pub fn prismari_igniter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2570,6 +2624,7 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2613,6 +2668,7 @@ pub fn prismari_magmaboon() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2654,6 +2710,7 @@ pub fn prismari_tideburst() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2690,6 +2747,7 @@ pub fn prismari_tempest_caller() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2735,6 +2793,7 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2779,6 +2838,7 @@ pub fn prismari_sparksong() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2811,6 +2871,7 @@ pub fn prismari_glasscaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2857,6 +2918,7 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2891,6 +2953,7 @@ pub fn prismari_tideforger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2939,6 +3002,7 @@ pub fn prismari_splashcaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -2972,6 +3036,7 @@ pub fn prismari_embertongue() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3010,6 +3075,7 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3064,6 +3130,7 @@ pub fn prismari_sparkpainter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3105,6 +3172,7 @@ pub fn prismari_burning_lesson() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3141,6 +3209,7 @@ pub fn prismari_sparkscribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3173,6 +3242,7 @@ pub fn prismari_ember_adept() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3208,6 +3278,7 @@ pub fn prismari_sparkflare() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3239,6 +3310,7 @@ pub fn prismari_flameforger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3278,6 +3350,7 @@ pub fn prismari_stormfront() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3310,6 +3383,7 @@ pub fn prismari_eruption_mage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3354,6 +3428,7 @@ pub fn prismari_flamescribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3391,6 +3466,7 @@ pub fn prismari_sparkriot() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3422,6 +3498,7 @@ pub fn prismari_pyrosage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3468,6 +3545,7 @@ pub fn prismari_spellforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3500,6 +3578,7 @@ pub fn prismari_b35_pyromage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3537,6 +3616,7 @@ pub fn prismari_stormforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3567,6 +3647,7 @@ pub fn prismari_mirror_mage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3613,6 +3694,7 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3649,6 +3731,7 @@ pub fn prismari_eddy() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3682,6 +3765,7 @@ pub fn prismari_dazzler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3714,6 +3798,7 @@ pub fn prismari_cinderpoet() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3755,6 +3840,7 @@ pub fn prismari_pyrocaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3791,6 +3877,7 @@ pub fn prismari_drift() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3825,6 +3912,7 @@ pub fn prismari_sparkbolt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3856,6 +3944,7 @@ pub fn prismari_stormrider() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3888,6 +3977,7 @@ pub fn prismari_hothead() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3924,6 +4014,7 @@ pub fn prismari_cantrip_bolt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3954,6 +4045,7 @@ pub fn prismari_wildmage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -3988,6 +4080,7 @@ pub fn prismari_stormbearer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4028,6 +4121,7 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4063,6 +4157,7 @@ pub fn prismari_tempestmage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4104,6 +4199,7 @@ pub fn prismari_cinderdrake() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4138,6 +4234,7 @@ pub fn prismari_cinderbolt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4180,6 +4277,7 @@ pub fn prismari_stormblade() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4222,6 +4320,7 @@ pub fn prismari_maestro() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4258,6 +4357,7 @@ pub fn prismari_emberscribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4294,6 +4394,7 @@ pub fn prismari_treasurer_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4333,6 +4434,7 @@ pub fn prismari_quickcast() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4367,6 +4469,7 @@ pub fn prismari_starcaller() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4402,6 +4505,7 @@ pub fn prismari_scryer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4441,6 +4545,7 @@ pub fn prismari_inferno_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4473,6 +4578,7 @@ pub fn prismari_glasshammer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4506,6 +4612,7 @@ pub fn prismari_skywarp() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4549,6 +4656,7 @@ pub fn prismari_stagewright() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4582,6 +4690,7 @@ pub fn prismari_soundsmith() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4621,6 +4730,7 @@ pub fn prismari_pyroartist() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4653,6 +4763,7 @@ pub fn prismari_brushpyre() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4690,6 +4801,7 @@ pub fn prismari_blastcaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4724,6 +4836,7 @@ pub fn prismari_oddsmaker() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4760,6 +4873,7 @@ pub fn prismari_glassforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4798,6 +4912,7 @@ pub fn prismari_emberweaver() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4839,6 +4954,7 @@ pub fn prismari_skyflare() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4876,6 +4992,7 @@ pub fn prismari_volcanic_song() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4908,6 +5025,7 @@ pub fn prismari_inkjet_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4941,6 +5059,7 @@ pub fn prismari_scribbler() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -4985,6 +5104,7 @@ pub fn prismari_skyspark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5026,6 +5146,7 @@ pub fn prismari_embershout() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5058,6 +5179,7 @@ pub fn prismari_stormcoil() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5095,6 +5217,7 @@ pub fn prismari_treasurespark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5135,6 +5258,7 @@ pub fn prismari_burnscribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5174,6 +5298,7 @@ pub fn prismari_treasurespell() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5209,6 +5334,7 @@ pub fn prismari_sparkmage_v3() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5247,6 +5373,7 @@ pub fn prismari_embergale() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5278,6 +5405,7 @@ pub fn prismari_stormgale() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5321,6 +5449,7 @@ pub fn prismari_flamewright() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5362,6 +5491,7 @@ pub fn prismari_cantrip_spark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5399,6 +5529,7 @@ pub fn prismari_dragonkin() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5433,6 +5564,7 @@ pub fn prismari_sparktwister() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5464,6 +5596,7 @@ pub fn prismari_spelljay() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5496,6 +5629,7 @@ pub fn prismari_quickburn() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5534,6 +5668,7 @@ pub fn prismari_spellscribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5573,6 +5708,7 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5612,6 +5748,7 @@ pub fn prismari_tidesinger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5643,6 +5780,7 @@ pub fn prismari_searbolt() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5674,6 +5812,7 @@ pub fn prismari_inkflame() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5706,6 +5845,7 @@ pub fn prismari_bonfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5746,6 +5886,7 @@ pub fn prismari_snapcaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5776,6 +5917,7 @@ pub fn prismari_pyrolancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5807,6 +5949,7 @@ pub fn prismari_drakemage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5837,6 +5980,7 @@ pub fn prismari_cinder_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5882,6 +6026,7 @@ pub fn prismari_pyroceptor() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5921,6 +6066,7 @@ pub fn prismari_coinforger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -5966,6 +6112,7 @@ pub fn prismari_flashforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6009,6 +6156,7 @@ pub fn prismari_riftspark() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6039,6 +6187,7 @@ pub fn prismari_sparkwing() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6079,6 +6228,7 @@ pub fn prismari_cantrip_mage() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6119,6 +6269,7 @@ pub fn prismari_firebrand() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6152,6 +6303,7 @@ pub fn prismari_emberveil() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6182,6 +6334,7 @@ pub fn prismari_firechord() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6213,6 +6366,7 @@ pub fn prismari_drakekin() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6253,6 +6407,7 @@ pub fn prismari_inscribe() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6284,6 +6439,7 @@ pub fn prismari_pyremaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6317,6 +6473,7 @@ pub fn prismari_cinderpath() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6353,6 +6510,7 @@ pub fn prismari_searstorm() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6391,6 +6549,7 @@ pub fn prismari_embertide() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6424,6 +6583,7 @@ pub fn prismari_stormcaller() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6454,6 +6614,7 @@ pub fn prismari_embershock() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6491,6 +6652,7 @@ pub fn prismari_spellscholar() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6521,6 +6683,7 @@ pub fn prismari_reverberator() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6558,6 +6721,7 @@ pub fn prismari_volcanist_b55() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6591,6 +6755,7 @@ pub fn prismari_sparkleap() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6634,6 +6799,7 @@ pub fn prismari_flamewriter() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6674,6 +6840,7 @@ pub fn prismari_cinderchant() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6704,6 +6871,7 @@ pub fn prismari_skydrake() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6741,6 +6909,7 @@ pub fn prismari_floodfire() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6775,6 +6944,7 @@ pub fn prismari_pyromage_b57() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6807,6 +6977,7 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6838,6 +7009,7 @@ pub fn prismari_sparkscribe_b57() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6871,6 +7043,7 @@ pub fn prismari_apprentice_b58() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6902,6 +7075,7 @@ pub fn prismari_flamewriter_b58() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6934,6 +7108,7 @@ pub fn prismari_tideflame() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -6979,6 +7154,7 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7011,6 +7187,7 @@ pub fn prismari_emberglyph() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7042,6 +7219,7 @@ pub fn prismari_iceforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7073,6 +7251,7 @@ pub fn prismari_flameseer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7114,6 +7293,7 @@ pub fn prismari_artificer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7147,6 +7327,7 @@ pub fn prismari_spell_smith_b60() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7177,6 +7358,7 @@ pub fn prismari_fluxshaper() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7222,6 +7404,7 @@ pub fn prismari_glassblower() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7253,6 +7436,7 @@ pub fn prismari_blast_apprentice() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7287,6 +7471,7 @@ pub fn prismari_sparkscribe_b61() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7329,6 +7514,7 @@ pub fn prismari_emberforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7359,6 +7545,7 @@ pub fn prismari_torchsmith() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7390,6 +7577,7 @@ pub fn prismari_iceshaper() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7436,6 +7624,7 @@ pub fn prismari_smiteforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7469,6 +7658,7 @@ pub fn prismari_sparksinger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7501,6 +7691,7 @@ pub fn prismari_pyreforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7540,6 +7731,7 @@ pub fn prismari_goldcaster() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7581,6 +7773,7 @@ pub fn prismari_echoflame() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7612,6 +7805,7 @@ pub fn prismari_loresprite() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7659,6 +7853,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7691,6 +7886,7 @@ pub fn prismari_combustomancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7729,6 +7925,7 @@ pub fn prismari_sparkforger() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7759,6 +7956,7 @@ pub fn prismari_flashbinder() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7801,6 +7999,7 @@ pub fn prismari_tidefurnace() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7831,6 +8030,7 @@ pub fn prismari_embergloss() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7862,6 +8062,7 @@ pub fn prismari_stormtide() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7894,6 +8095,7 @@ pub fn prismari_glassflame() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7924,6 +8126,7 @@ pub fn prismari_cinderdancer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7955,6 +8158,7 @@ pub fn prismari_tidescryer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -7997,6 +8201,7 @@ pub fn prismari_magmaforge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8028,6 +8233,7 @@ pub fn prismari_mistwarden() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8062,6 +8268,7 @@ pub fn prismari_cinderspell() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8100,6 +8307,7 @@ pub fn prismari_sparkbearer() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8131,6 +8339,7 @@ pub fn prismari_stormcaller_b68() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8162,6 +8371,7 @@ pub fn prismari_flarewinder() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8204,6 +8414,7 @@ pub fn prismari_brewbinder() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8244,6 +8455,7 @@ pub fn prismari_ember_surge() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8278,6 +8490,7 @@ pub fn prismari_blazewright_b125() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8318,6 +8531,7 @@ pub fn prismari_riftscholar_b125() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8359,6 +8573,7 @@ pub fn prismari_sparkshow_b125() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8401,6 +8616,7 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8433,6 +8649,7 @@ pub fn prismari_cinderscholar_b126() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8463,6 +8680,7 @@ pub fn prismari_riftrider_b126() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8494,6 +8712,7 @@ pub fn prismari_sparkstudent_b126() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8534,6 +8753,7 @@ pub fn prismari_tempest_skipper_b126() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8575,6 +8795,7 @@ pub fn prismari_coil_caller_b126() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8617,6 +8838,7 @@ pub fn prismari_sparkbolt_b127() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8647,6 +8869,7 @@ pub fn prismari_flarescholar_b127() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8677,6 +8900,7 @@ pub fn prismari_mistscholar_b127() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8707,6 +8931,7 @@ pub fn prismari_surgebearer_b127() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8742,6 +8967,7 @@ pub fn prismari_ember_wave_b127() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8776,6 +9002,7 @@ pub fn prismari_stormcrafter_b128() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8808,6 +9035,7 @@ pub fn prismari_firebrand_b128() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8839,6 +9067,7 @@ pub fn prismari_tide_surger_b128() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8874,6 +9103,7 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8916,6 +9146,7 @@ pub fn prismari_sparkmaker_b129() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8948,6 +9179,7 @@ pub fn prismari_tempestmage_b129() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -8979,6 +9211,7 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9010,6 +9243,7 @@ pub fn prismari_stormbolt_b129() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9043,6 +9277,7 @@ pub fn prismari_emberseer_b130() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9074,6 +9309,7 @@ pub fn prismari_inktrickster_b130() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9105,6 +9341,7 @@ pub fn prismari_burnstrike_b130() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9149,6 +9386,7 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9179,6 +9417,7 @@ pub fn prismari_inkpyromancer_b131() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9219,6 +9458,7 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9252,6 +9492,7 @@ pub fn prismari_sparkscholar_ii_b132() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9283,6 +9524,7 @@ pub fn prismari_glasswright_b132() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9320,6 +9562,7 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9351,6 +9594,7 @@ pub fn prismari_tempest_scribe_b132() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9390,6 +9634,7 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9421,6 +9666,7 @@ pub fn prismari_wave_surger_b133() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9452,6 +9698,7 @@ pub fn prismari_magma_cleric_b133() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9486,6 +9733,7 @@ pub fn prismari_sparkmage_b135() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9527,6 +9775,7 @@ pub fn prismari_splash_b135() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9559,6 +9808,7 @@ pub fn prismari_glasswright_ii_b135() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9598,6 +9848,7 @@ pub fn prismari_stormcaller_b135() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9644,6 +9895,7 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9674,6 +9926,7 @@ pub fn prismari_burnpaste_b136() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9714,6 +9967,7 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9754,6 +10008,7 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9785,6 +10040,7 @@ pub fn prismari_embersinger_b138() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9819,6 +10075,7 @@ pub fn prismari_surgebolt_b138() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9849,6 +10106,7 @@ pub fn prismari_wavecaller_b138() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9891,6 +10149,7 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9923,6 +10182,7 @@ pub fn prismari_flarewright_b139() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9965,6 +10225,7 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -9998,6 +10259,7 @@ pub fn prismari_glassflinger_b136() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10030,6 +10292,7 @@ pub fn prismari_magma_channeler_b141() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10061,6 +10324,7 @@ pub fn prismari_pyromage_b141() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10101,6 +10365,7 @@ pub fn prismari_tidalstorm_b141() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10132,6 +10397,7 @@ pub fn prismari_embergeist_b141() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10166,6 +10432,7 @@ pub fn prismari_surgemage_b142() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10206,6 +10473,7 @@ pub fn prismari_cinderwave_b142() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10237,6 +10505,7 @@ pub fn prismari_tidemaster_b142() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10268,6 +10537,7 @@ pub fn prismari_pyrocaster_b142() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10298,6 +10568,7 @@ pub fn prismari_magmarush_b142() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10330,6 +10601,7 @@ pub fn prismari_pyroartist_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10366,6 +10638,7 @@ pub fn prismari_cantripflinger_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10397,6 +10670,7 @@ pub fn prismari_stormcaster_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10437,6 +10711,7 @@ pub fn prismari_cantriplord_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10467,6 +10742,7 @@ pub fn prismari_elementalmage_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10505,6 +10781,7 @@ pub fn prismari_stormgust_b144() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10534,6 +10811,7 @@ pub fn prismari_ember_cantor_b144() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10567,6 +10845,7 @@ pub fn prismari_frosthand_b145() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10597,6 +10876,7 @@ pub fn prismari_magmasplitter_b145() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10627,6 +10907,7 @@ pub fn prismari_wavecraft_b144() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10661,6 +10942,7 @@ pub fn prismari_volcanist_b143() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10694,6 +10976,7 @@ pub fn prismari_pyromage_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10728,6 +11011,7 @@ pub fn prismari_volcanic_spell_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10764,6 +11048,7 @@ pub fn prismari_sleetcaster_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10795,6 +11080,7 @@ pub fn prismari_treasurer_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10825,6 +11111,7 @@ pub fn prismari_mage_champion_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10866,6 +11153,7 @@ pub fn prismari_charge_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10897,6 +11185,7 @@ pub fn prismari_reflectionist_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10927,6 +11216,7 @@ pub fn prismari_pyrolancer_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -10962,6 +11252,7 @@ pub fn prismari_tidemage_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11002,6 +11293,7 @@ pub fn prismari_surge_b146() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11035,6 +11327,7 @@ pub fn prismari_embercaller_b147() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11065,6 +11358,7 @@ pub fn prismari_tidescribe_b147() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11095,6 +11389,7 @@ pub fn prismari_flamekind_b147() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11126,6 +11421,7 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11157,6 +11453,7 @@ pub fn prismari_arcanist_b147() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11190,6 +11487,7 @@ pub fn prismari_sparkmage_b148() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11226,6 +11524,7 @@ pub fn prismari_splashmage_b148() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11266,6 +11565,7 @@ pub fn prismari_treasurehunter_b148() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11296,6 +11596,7 @@ pub fn prismari_brawler_b148() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11332,6 +11633,7 @@ pub fn prismari_mindstrike_b148() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11364,6 +11666,7 @@ pub fn prismari_etherealist_b149() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11394,6 +11697,7 @@ pub fn prismari_stormbringer_b149() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11426,6 +11730,7 @@ pub fn prismari_pyromage_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11457,6 +11762,7 @@ pub fn prismari_tidemage_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11487,6 +11793,7 @@ pub fn prismari_galemaster_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11517,6 +11824,7 @@ pub fn prismari_stormcaller_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11547,6 +11855,7 @@ pub fn prismari_treasure_smith_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11580,6 +11889,7 @@ pub fn prismari_inferno_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11617,6 +11927,7 @@ pub fn prismari_aetherwave_b150() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11649,6 +11960,7 @@ pub fn prismari_brawler_b151() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11685,6 +11997,7 @@ pub fn prismari_inferno_tide_b151() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11715,6 +12028,7 @@ pub fn prismari_glassblower_b151() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11746,6 +12060,7 @@ pub fn prismari_wavecaller_b151() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11776,6 +12091,7 @@ pub fn prismari_stormcrest_b151() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11811,6 +12127,7 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11842,6 +12159,7 @@ pub fn prismari_elementalist_b153() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11872,6 +12190,7 @@ pub fn prismari_spellsplash_b153() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11905,6 +12224,7 @@ pub fn prismari_treasurelord_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11937,6 +12257,7 @@ pub fn prismari_inferno_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11967,6 +12288,7 @@ pub fn prismari_tempestmage_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -11998,6 +12320,7 @@ pub fn prismari_crashbinder_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12032,6 +12355,7 @@ pub fn prismari_sparkglyph_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12073,6 +12397,7 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12103,6 +12428,7 @@ pub fn prismari_flameseeker_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12134,6 +12460,7 @@ pub fn prismari_calligrapher_b154() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12167,6 +12494,7 @@ pub fn prismari_combustion_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12198,6 +12526,7 @@ pub fn elemental_stormcaller_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12228,6 +12557,7 @@ pub fn prismari_surge_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12258,6 +12588,7 @@ pub fn prismari_looter_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12288,6 +12619,7 @@ pub fn elemental_brawler_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12324,6 +12656,7 @@ pub fn prismari_treasure_spawner_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12356,6 +12689,7 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12393,6 +12727,7 @@ pub fn elemental_whirlwind_b155() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -12432,6 +12767,7 @@ pub fn prismari_pyromancer_b156() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }

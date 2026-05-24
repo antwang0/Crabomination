@@ -50,6 +50,7 @@ pub fn graduation_day() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -119,6 +120,7 @@ pub fn living_history() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -163,6 +165,7 @@ pub fn comforting_counsel() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -239,6 +242,7 @@ pub fn primary_research() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -317,6 +321,7 @@ pub fn additive_evolution() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }

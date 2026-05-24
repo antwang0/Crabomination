@@ -37,6 +37,7 @@ pub fn glorious_anthem() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -79,6 +80,7 @@ pub fn animate_dead() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }

@@ -62,6 +62,7 @@ pub fn galazeth_prismari() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -122,6 +123,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -192,6 +194,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -277,6 +280,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -365,6 +369,7 @@ pub fn shadrix_silverquill() -> CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }

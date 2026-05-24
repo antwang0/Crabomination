@@ -2798,6 +2798,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -5441,6 +5442,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -5523,6 +5525,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -10049,6 +10052,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -16293,6 +16297,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -16339,6 +16344,7 @@ fn set_life_total_higher_emits_life_gained() {
         base_loyalty: 0, loyalty_abilities: vec![],
         alternative_cost: None, back_face: None, opening_hand: None,
         enters_with_counters: None, exile_on_resolve: false,
+        max_counters_of_kind: None,
         affinity_filter: None,
     };
 
@@ -16394,6 +16400,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -49919,6 +49926,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -49959,6 +49967,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -49996,6 +50005,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     }
@@ -62338,4 +62348,44 @@ fn cr_705_3_no_advantage_means_one_flip_one_result() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before - 5,
         "Without advantage, tails fires the lose-life branch");
+}
+
+// ── CR 122.4 — max counters of a kind SBA ──────────────────────────────────
+
+#[test]
+fn cr_122_4_excess_counters_pruned_by_sba() {
+    use crate::card::{CardDefinition, CardType};
+    use crate::mana::cost;
+
+    let mut g = two_player_game();
+    let def = CardDefinition {
+        name: "Pinnacle Test (synthetic)",
+        cost: cost(&[]),
+        card_types: vec![CardType::Artifact],
+        max_counters_of_kind: Some((CounterType::PlusOnePlusOne, 3)),
+        ..Default::default()
+    };
+    let id = g.add_card_to_battlefield(0, def);
+    {
+        let c = g.battlefield_find_mut(id).expect("on bf");
+        c.add_counters(CounterType::PlusOnePlusOne, 7);
+    }
+    let _ = g.check_state_based_actions();
+    let after = g.battlefield_find(id).expect("on bf");
+    assert_eq!(after.counter_count(CounterType::PlusOnePlusOne), 3,
+        "Excess counters pruned down to the cap (3)");
+}
+
+#[test]
+fn cr_122_4_no_cap_default_means_counters_not_pruned() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("on bf");
+        c.add_counters(CounterType::PlusOnePlusOne, 12);
+    }
+    let _ = g.check_state_based_actions();
+    let after = g.battlefield_find(bear).expect("on bf");
+    assert_eq!(after.counter_count(CounterType::PlusOnePlusOne), 12,
+        "Bear has no cap — counters survive SBA");
 }

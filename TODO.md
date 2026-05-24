@@ -1097,8 +1097,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (l) **122.3** +1/+1 vs -1/-1 cancellation as SBA — ✅
   (`check_state_based_actions` line 637-661 deducts `min(plus, minus)`
   of each kind).
-  (m) **122.4** — ⏳ (no
-  `Modification::MaxCountersOfKind` rule).
+  (m) **122.4** — ✅ (push claude/modern_decks current sub-push): new
+  `CardDefinition.max_counters_of_kind: Option<(CounterType, u32)>`
+  field + SBA pruning step in `check_state_based_actions`. Cards
+  that bake a counter cap into their printed text now drop excess
+  counters back to the cap as state-based actions. Tests:
+  `cr_122_4_excess_counters_pruned_by_sba` (synthetic card with
+  cap=3, 7 stamped → SBA prunes to 3),
+  `cr_122_4_no_cap_default_means_counters_not_pruned` (control —
+  bear with no cap keeps all 12). Promotion-enables Helix Pinnacle
+  (storage counter cap) once the card lands in the catalog.
   (n) **122.5** — ✅ (the `Effect::MoveCounter
   { from, to, kind, amount }` primitive at `effect.rs:883` walks the
   source's counter pool, deducts up to `amount`, and adds to the

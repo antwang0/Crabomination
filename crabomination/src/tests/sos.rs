@@ -147,6 +147,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -1889,6 +1890,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };
@@ -2375,6 +2377,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
     };

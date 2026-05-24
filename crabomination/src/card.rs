@@ -546,6 +546,18 @@ pub struct CardDefinition {
     /// CardDefinition initialisations pick up the new field automatically.
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+    /// CR 122.4 — "This permanent can't have more than N counters of
+    /// `kind` on it." When this card has more than `max` counters of
+    /// `kind` on it, the state-based-action sweep removes the excess
+    /// (down to exactly `max`). Used by cards that bake a counter cap
+    /// into their printed text (e.g. Helix Pinnacle's "can't have more
+    /// than 100 storage counters" check, custom storage permanents).
+    ///
+    /// Defaults to `None` via `#[serde(default)]` for snapshot back-
+    /// compat. Cards without an explicit cap aren't subject to the
+    /// SBA pruning step.
+    #[serde(default)]
+    pub max_counters_of_kind: Option<(CounterType, u32)>,
     /// CR 701.x — "Exile this spell" rider for instants and sorceries that
     /// route to exile instead of their owner's graveyard after resolution.
     /// Used by Strixhaven's "Then exile this spell" wording (Awaken the

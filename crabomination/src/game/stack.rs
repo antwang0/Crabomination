@@ -900,6 +900,20 @@ impl GameState {
             }
         }
 
+        // CR 122.4 — "An effect can set the maximum number of counters of a
+        // kind that a permanent can have." If a permanent has more than its
+        // printed cap, the SBA prunes the excess down to the cap. Uses the
+        // new `CardDefinition.max_counters_of_kind: Option<(CounterType,
+        // u32)>` field — None ⇒ no cap, the default.
+        for card in &mut self.battlefield {
+            if let Some((kind, max)) = card.definition.max_counters_of_kind {
+                let current = card.counters.get(&kind).copied().unwrap_or(0);
+                if current > max {
+                    *card.counters.entry(kind).or_insert(0) = max;
+                }
+            }
+        }
+
         // Legend rule: if two+ legendaries with the same name share a controller,
         // keep the newest (highest CardId) and sacrifice the rest.
         let legend_victims: Vec<CardId> = {
