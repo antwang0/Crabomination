@@ -1755,6 +1755,7 @@ pub fn snuff_out() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+            effect_override: None,
         }),
         back_face: None,
         opening_hand: None,
@@ -3671,6 +3672,7 @@ pub fn boomerang() -> CardDefinition {
 /// omitted (no overload primitive yet). Cast-time filter pins the target
 /// to opponent-controlled nonland permanents.
 pub fn cyclonic_rift() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Cyclonic Rift",
         cost: cost(&[generic(1), u()]),
@@ -3693,7 +3695,26 @@ pub fn cyclonic_rift() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(6), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::Move {
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
+                }),
+            }),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

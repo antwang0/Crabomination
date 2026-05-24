@@ -5632,6 +5632,33 @@ fn cyclonic_rift_bounces_opponent_nonland_permanent() {
     assert!(g.players[1].hand.iter().any(|c| c.id == opp_bear));
 }
 
+#[test]
+fn cyclonic_rift_overload_bounces_all_opponent_nonland_permanents() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let own_bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::cyclonic_rift());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Cyclonic Rift Overload for {6}{U}");
+    drain_stack(&mut g);
+
+    // Both opponent creatures should be bounced.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear1));
+    assert!(!g.battlefield.iter().any(|c| c.id == bear2));
+    // Own creature should remain.
+    assert!(g.battlefield.iter().any(|c| c.id == own_bear));
+}
+
 /// Repeal: pays X = 2, bounces a CMC-2 creature, draws a card.
 #[test]
 fn repeal_with_x_two_bounces_two_drop_and_cantrips() {

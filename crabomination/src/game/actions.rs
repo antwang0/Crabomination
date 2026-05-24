@@ -1897,6 +1897,13 @@ impl GameState {
             }
         }
 
+        // Overload / alt-effect override: swap the spell's resolution
+        // effect to the alternative version so it resolves with "each"
+        // instead of "target" semantics (or whatever the override says).
+        if let Some(override_effect) = alt.effect_override {
+            card.definition.effect = override_effect;
+        }
+
         auto_events.push(GameEvent::SpellCast {
             player: p,
             card_id,

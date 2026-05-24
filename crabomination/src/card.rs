@@ -672,6 +672,13 @@ pub struct AlternativeCost {
     /// alt cost.
     #[serde(default)]
     pub exile_from_graveyard_count: u32,
+    /// Optional effect override when casting via the alternative cost.
+    /// When `Some`, the spell uses this effect instead of its normal
+    /// `definition.effect` on resolution. Powers Overload ("change each
+    /// instance of 'target' to 'each'") and similar alt-cost modes that
+    /// change the spell's resolution behavior.
+    #[serde(default)]
+    pub effect_override: Option<crate::effect::Effect>,
 }
 
 impl CardDefinition {
