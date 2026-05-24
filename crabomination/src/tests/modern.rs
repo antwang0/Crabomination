@@ -2,7 +2,7 @@
 //! (`catalog::sets::decks::modern`). Each card gets at least one test
 //! exercising its primary play pattern.
 
-use crate::card::CardType;
+use crate::card::{CardType, CounterType};
 use crate::catalog;
 use crate::decision::{DecisionAnswer, ScriptedDecider};
 use crate::game::*;
@@ -10721,4 +10721,69 @@ fn carnage_interpreter_etb_makes_each_opp_discard() {
     cast(&mut g, id);
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
         "Opp discards one card on ETB");
+}
+
+#[test]
+fn helix_pinnacle_x_activation_adds_charge_counters() {
+    let mut g = two_player_game();
+    let hp = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hp,
+        ability_index: 0,
+        target: None,
+        x_value: Some(5),
+    }).expect("Helix Pinnacle X=5 activation");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(hp).expect("on bf");
+    assert_eq!(c.counter_count(CounterType::Charge), 5,
+        "5 charge counters from X=5 activation");
+}
+
+#[test]
+fn helix_pinnacle_counter_cap_at_100() {
+    // Excess counters via X-activation get pruned to 100 by CR 122.4 SBA.
+    let mut g = two_player_game();
+    let hp = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    g.players[0].mana_pool.add_colorless(150);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hp,
+        ability_index: 0,
+        target: None,
+        x_value: Some(150),
+    }).expect("Helix Pinnacle X=150 activation");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(hp).expect("on bf");
+    assert_eq!(c.counter_count(CounterType::Charge), 100,
+        "Counter cap of 100 enforced by SBA");
+}
+
+#[test]
+fn helix_pinnacle_wins_at_upkeep_with_one_hundred_counters() {
+    let mut g = two_player_game();
+    let hp = g.add_card_to_battlefield(0, catalog::helix_pinnacle());
+    // Manually stamp 100 counters (bypass the activation mana cost for
+    // the upkeep-win test).
+    {
+        let c = g.battlefield_find_mut(hp).expect("on bf");
+        c.add_counters(CounterType::Charge, 100);
+    }
+    use crate::game::types::TurnStep;
+    // Walk to next upkeep (active player == 0, step == Upkeep, turn >= 2).
+    let mut iters = 0;
+    while !(g.active_player_idx == 0 && g.step == TurnStep::Upkeep && g.turn_number >= 2)
+        && iters < 200
+    {
+        let _ = g.pass_priority();
+        drain_stack(&mut g);
+        iters += 1;
+        if g.game_over.is_some() {
+            break;
+        }
+    }
+    drain_stack(&mut g);
+    assert!(g.game_over.is_some(),
+        "Helix Pinnacle wins at upkeep with 100 storage counters");
+    assert_eq!(g.game_over, Some(Some(0)),
+        "P0 (Helix controller) declared winner");
 }

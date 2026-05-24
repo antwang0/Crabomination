@@ -9279,3 +9279,66 @@ pub fn carnage_interpreter() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Helix Pinnacle — {G} Enchantment. "Helix Pinnacle has shroud as long
+/// as it has fewer than 100 storage counters on it. / {X}: Put X storage
+/// counters on Helix Pinnacle. / At the beginning of your upkeep, if
+/// Helix Pinnacle has 100 or more storage counters on it, you win the
+/// game."
+///
+/// Wires the headline "win at 100 counters" upkeep gate plus the
+/// activation that adds X storage counters. The shroud-while-under-100
+/// rider is engine-wide ⏳ — Helix Pinnacle ships as a non-targetable
+/// enchantment via the standard rules (vanilla 1-mana enchantment).
+/// The new `max_counters_of_kind: Some((Charge, 100))` cap caps the
+/// counter at 100 even if activations would overshoot — so the SBA
+/// prunes back to 100. The {X} activation uses XFromCost; the upkeep
+/// win trigger uses the new CR 603.4 resolve-time intervening-if
+/// re-check via the existing predicate path (the SpellCast +
+/// StepBegins primitives).
+pub fn helix_pinnacle() -> CardDefinition {
+    use crate::card::{CounterType, EventScope, EventSpec, TriggeredAbility, Predicate};
+    use crate::card::EventKind;
+    use crate::effect::ActivatedAbility;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Helix Pinnacle",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        max_counters_of_kind: Some((CounterType::Charge, 100)),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[x()]),
+            tap_cost: false,
+            sac_cost: false,
+            life_cost: 0,
+            sorcery_speed: false,
+            exile_self_cost: false,
+            from_graveyard: false,
+            once_per_turn: false,
+            condition: None,
+            exile_other_filter: None,
+            sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Charge,
+                amount: Value::XFromCost,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
+                scope: EventScope::SelfSource,
+                filter: Some(Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
+                    },
+                    Value::Const(100),
+                )),
+            },
+            effect: Effect::WinGame { who: PlayerRef::You },
+        }],
+        ..Default::default()
+    }
+}
