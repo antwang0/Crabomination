@@ -15541,3 +15541,128 @@ pub fn lorehold_sun_spirit_b151() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 152 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Spirit-Stalker (b152) — {1}{R} 2/2 Spirit Soldier Haste +
+/// Menace. Aggressive 2-mana attacker.
+pub fn lorehold_spirit_stalker_b152() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Stalker (b152)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Cleric (b152) — {1}{W} 1/3 Spirit Cleric.
+/// ETB gain 2 life + scry 1.
+pub fn lorehold_ember_cleric_b152() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Cleric (b152)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyre-Ancient (b152) — {4}{R}{W} 5/5 Spirit Giant Vigilance +
+/// Trample. Big finisher.
+pub fn lorehold_pyre_ancient_b152() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyre-Ancient (b152)",
+        cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyromancer (b152) — {2}{R} 2/2 Human Wizard. Magecraft 1
+/// damage to target creature/player.
+pub fn lorehold_pyromancer_b152() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyromancer (b152)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
