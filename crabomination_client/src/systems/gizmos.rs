@@ -32,6 +32,53 @@ pub struct PtModifiedGizmos;
 #[derive(Default, Reflect, GizmoConfigGroup)]
 pub struct AttackPlanGizmos;
 
+/// Overlay drawn around battlefield permanents enumerated as legal
+/// targets for a server `Decision::ChooseTarget` while the viewer is
+/// picking. Pulses the same yellow used elsewhere in the targeting
+/// vocabulary (player chip outline, blocker selection diamond).
+#[derive(Default, Reflect, GizmoConfigGroup)]
+pub struct LegalTargetGizmos;
+
+pub fn draw_legal_target_rings(
+    view: Res<CurrentView>,
+    targeting: Res<crate::game::TargetingState>,
+    legal: Res<crate::game::LegalTargets>,
+    time: Res<Time>,
+    bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
+    mut gizmos: Gizmos<LegalTargetGizmos>,
+) {
+    // Pulse rings whenever any targeting flow has populated `legal`.
+    // Cast-time targeting uses the catalog evaluator in
+    // `legal_target_filter::enumerate_for_cast`; decision-driven targets
+    // come from the engine's `Decision::ChooseTarget.legal`. Empty
+    // `legal.permanents` (callers that opted out, or filters the client
+    // evaluator can't pin down) draws nothing — the cursor falls back to
+    // the older "highlight everything clickable" behaviour.
+    if !targeting.active || legal.permanents.is_empty() {
+        return;
+    }
+    if view.0.is_none() {
+        return;
+    }
+    let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
+    let color = Color::srgb(pulse, pulse * 0.88, 0.0);
+    for (t, gid) in &bf_cards {
+        if !legal.permanents.contains(&gid.0) {
+            continue;
+        }
+        let center = t.translation + Vec3::Y * 0.2;
+        let n = 28;
+        let r = 1.2;
+        for i in 0..n {
+            let a0 = (i as f32) / (n as f32) * std::f32::consts::TAU;
+            let a1 = ((i + 1) as f32) / (n as f32) * std::f32::consts::TAU;
+            let p0 = center + Vec3::new(a0.cos() * r, 0.0, a0.sin() * r);
+            let p1 = center + Vec3::new(a1.cos() * r, 0.0, a1.sin() * r);
+            gizmos.line(p0, p1, color);
+        }
+    }
+}
+
 pub fn draw_blocking_gizmos(
     view: Res<CurrentView>,
     blocking: Res<BlockingState>,
@@ -168,6 +215,22 @@ pub fn draw_pt_modified_overlays(
         let dp = p.power - p.base_power;
         let dt = p.toughness - p.base_toughness;
         if dp == 0 && dt == 0 { continue; }
+        // Skip the ring when the P/T delta is fully explained by visible
+        // +1/+1 / -1/-1 counter coins on the card. The coins already
+        // communicate the modification, and the ring on top of them looks
+        // like a redundant tint over the card.
+        let plus = p
+            .counters
+            .iter()
+            .find_map(|(k, n)| (*k == crabomination::card::CounterType::PlusOnePlusOne).then_some(*n))
+            .unwrap_or(0) as i32;
+        let minus = p
+            .counters
+            .iter()
+            .find_map(|(k, n)| (*k == crabomination::card::CounterType::MinusOneMinusOne).then_some(*n))
+            .unwrap_or(0) as i32;
+        let counter_delta = plus - minus;
+        if dp == counter_delta && dt == counter_delta { continue; }
         let Some(&pos) = positions.get(&p.id) else { continue };
         let color = if dp > 0 && dt > 0 {
             Color::srgb(0.2, 0.95, 0.35)

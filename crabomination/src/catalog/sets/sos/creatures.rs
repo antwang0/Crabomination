@@ -928,7 +928,8 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
                 effect: Effect::AddCounter {
                     what: target_filtered(
                         SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::Const(1),
@@ -940,7 +941,7 @@ pub fn ascendant_dustspeaker() -> CardDefinition {
                     EventScope::ActivePlayer,
                 ),
                 effect: Effect::Move {
-                    what: target_filtered(SelectionRequirement::Any),
+                    what: target_filtered(SelectionRequirement::InGraveyard),
                     to: ZoneDest::Exile,
                 },
             },

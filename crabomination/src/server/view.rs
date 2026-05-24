@@ -125,6 +125,14 @@ fn known_card(card: &CardInstance) -> KnownCard {
             None
         }
     });
+    let (modal_descriptions, modal_needs_target) =
+        if let crate::effect::Effect::ChooseMode(modes) = &card.definition.effect {
+            let descs = modes.iter().map(|m| m.effect_short_text()).collect();
+            let needs = modes.iter().map(|m| m.requires_target()).collect();
+            (descs, needs)
+        } else {
+            (Vec::new(), Vec::new())
+        };
     KnownCard {
         id: card.id,
         name: card.definition.name.to_string(),
@@ -142,6 +150,8 @@ fn known_card(card: &CardInstance) -> KnownCard {
             .as_ref()
             .map(format_mana_cost_for_label)
             .unwrap_or_default(),
+        modal_descriptions,
+        modal_needs_target,
     }
 }
 

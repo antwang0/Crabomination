@@ -1884,6 +1884,123 @@ impl Effect {
         }
     }
 
+    /// Short human-readable summary of this effect's target shape, used
+    /// in trigger prompts ("<source name> — exile target card from a
+    /// graveyard"). Covers the common cases (Move-to-zone, Destroy,
+    /// Exile, AddCounter, DealDamage, PumpPT); returns an empty string
+    /// for effect shapes that aren't worth phrasing. Walks into Seq /
+    /// If / MayDo / ForEach to find the first informative inner effect.
+    pub fn effect_short_text(&self) -> String {
+        match self {
+            Effect::Move { to, .. } => match to {
+                ZoneDest::Exile => "exile target".into(),
+                ZoneDest::Hand(_) => "return target to its owner's hand".into(),
+                ZoneDest::Graveyard => "put target into its owner's graveyard".into(),
+                ZoneDest::Battlefield { .. } => "put target onto the battlefield".into(),
+                ZoneDest::Library { .. } => "put target into its owner's library".into(),
+            },
+            Effect::Destroy { .. } => "destroy target".into(),
+            Effect::Exile { .. } => "exile target".into(),
+            Effect::DealDamage { amount, .. } => match amount {
+                Value::Const(n) => format!("deal {n} damage to target"),
+                _ => "deal damage to target".into(),
+            },
+            Effect::AddCounter { kind, amount, .. } => match amount {
+                Value::Const(n) => format!("put {n} {kind:?} counter(s) on target"),
+                _ => format!("put {kind:?} counter(s) on target"),
+            },
+            Effect::PumpPT { power, toughness, .. } => match (power, toughness) {
+                (Value::Const(p), Value::Const(t)) => {
+                    format!("target gets {p:+}/{t:+} until end of turn")
+                }
+                _ => "pump target until end of turn".into(),
+            },
+            Effect::Tap { .. } => "tap target".into(),
+            Effect::Untap { .. } => "untap target".into(),
+            Effect::CounterSpell { .. } | Effect::CounterSpellToZone { .. } => {
+                "counter target spell".into()
+            }
+            Effect::Fight { .. } => "fight".into(),
+            Effect::CreateToken { count, definition, .. } => {
+                let n = match count {
+                    Value::Const(n) => *n,
+                    _ => 1,
+                };
+                let count_word = if n <= 1 { "a".to_string() } else { n.to_string() };
+                let pt = if definition.card_types.contains(&crate::card::CardType::Creature) {
+                    format!(" {}/{}", definition.power, definition.toughness)
+                } else {
+                    String::new()
+                };
+                let kw = if definition.keywords.is_empty() {
+                    String::new()
+                } else {
+                    let words: Vec<String> = definition
+                        .keywords
+                        .iter()
+                        .map(|k| format!("{k:?}").to_lowercase())
+                        .collect();
+                    format!(" with {}", words.join(", "))
+                };
+                let pluralised = if n > 1 && !definition.name.ends_with('s') {
+                    format!("{} tokens", definition.name)
+                } else {
+                    definition.name.clone()
+                };
+                format!("create {count_word}{pt} {pluralised}{kw}")
+            }
+            Effect::GrantKeyword { keyword, .. } => {
+                format!("grant {}", format!("{keyword:?}").to_lowercase())
+            }
+            Effect::Draw { amount, .. } => match amount {
+                Value::Const(n) => {
+                    if *n == 1 { "draw a card".into() } else { format!("draw {n} cards") }
+                }
+                _ => "draw cards".into(),
+            },
+            Effect::GainLife { amount, .. } => match amount {
+                Value::Const(n) => format!("gain {n} life"),
+                _ => "gain life".into(),
+            },
+            Effect::LoseLife { amount, .. } => match amount {
+                Value::Const(n) => format!("lose {n} life"),
+                _ => "lose life".into(),
+            },
+            Effect::Drain { amount, .. } => match amount {
+                Value::Const(n) => format!("each opponent loses {n} life, you gain {n} life"),
+                _ => "drain life".into(),
+            },
+            // Walk every child and concatenate the non-empty pieces. The
+            // earlier "first non-empty wins" version produced a misleading
+            // summary for cards like Artistic Process mode 2 — Seq([
+            // CreateToken, GrantKeyword]) returned the GrantKeyword text
+            // alone (CreateToken had no arm), dropping the headline create
+            // action.
+            Effect::Seq(v) => {
+                let parts: Vec<String> = v
+                    .iter()
+                    .map(|e| e.effect_short_text())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+                parts.join(", then ")
+            }
+            Effect::If { then, else_, .. } => {
+                let t = then.effect_short_text();
+                if !t.is_empty() {
+                    t
+                } else {
+                    else_.effect_short_text()
+                }
+            }
+            Effect::MayDo { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::DelayUntil { body, .. }
+            | Effect::Repeat { body, .. }
+            | Effect::ForEach { body, .. } => body.effect_short_text(),
+            _ => String::new(),
+        }
+    }
+
     /// True if a `Target::Player(_)` is a meaningful primary target for this
     /// effect. The auto-target heuristic uses this to skip player candidates
     /// when the effect actually operates on permanents — without it, an

@@ -66,6 +66,30 @@ pub struct TargetingState {
     /// `GameAction::SubmitDecision(DecisionAnswer::Target(t))` rather
     /// than `CastSpell` / `ActivateAbility`.
     pub pending_decision_target: bool,
+    /// Pre-chosen mode index for a modal spell (`Effect::ChooseMode`).
+    /// Set by the mode-pick modal before targeting opens so the eventual
+    /// `CastSpell` carries the right mode index. `None` for non-modal
+    /// casts.
+    pub pending_mode: Option<usize>,
+}
+
+/// Legal targets surfaced by the engine's `Decision::ChooseTarget`.
+/// Populated when the targeting cursor is satisfying a server prompt;
+/// drives the legal-target highlight rings and the player-chip outline so
+/// only legal seats / permanents pulse during the pick. Empty otherwise
+/// (spell / ability target picks fall through to the older
+/// "highlight everything clickable" path since the client doesn't know
+/// the filter for those yet).
+#[derive(Resource, Default)]
+pub struct LegalTargets {
+    pub permanents: std::collections::HashSet<CardId>,
+    pub players: std::collections::HashSet<usize>,
+    /// Printed source-card name (e.g. "Ascendant Dustspeaker") shown in
+    /// the hint banner.
+    pub source_name: String,
+    /// Short effect description (e.g. "exile target card from a
+    /// graveyard") shown after the source name.
+    pub description: String,
 }
 
 /// State for the activated-ability context menu (right-click on P0 battlefield card).
@@ -73,6 +97,19 @@ pub struct TargetingState {
 pub struct AbilityMenuState {
     pub card_id: Option<CardId>,
     pub spawn_pos: Vec2,
+}
+
+/// Hand card the viewer just clicked to cast that needs a "Choose one —"
+/// mode pick before the cast can be submitted (Artistic Process, Charms,
+/// the Command cycle). Cleared once a mode is picked or the user cancels.
+/// When `Some`, [`spawn_mode_pick_ui`] draws the picker modal; clicking a
+/// mode either casts immediately (`needs_target=false`) or arms the
+/// targeting cursor with `pending_mode` set (`needs_target=true`).
+#[derive(Resource, Default)]
+pub struct PendingModalCast {
+    pub card_id: Option<CardId>,
+    pub card_name: String,
+    pub modes: Vec<(String, bool)>,
 }
 
 /// State for the graveyard card browser popup.

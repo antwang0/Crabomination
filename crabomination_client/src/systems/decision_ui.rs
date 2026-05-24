@@ -13,7 +13,7 @@ use crabomination::{
     net::DecisionWire,
 };
 
-use crate::game::{GameLog};
+use crate::game::{GameLog, LegalTargets};
 use crate::net_plugin::{CurrentView, NetOutbox};
 use crate::scryfall;
 use crate::theme::{self, HoverTint, UiFonts};
@@ -119,7 +119,7 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             *mulligans_taken,
         )),
         DecisionWire::ChooseColor { source, .. } => Some(DecisionKey::ChooseColor(*source)),
-        DecisionWire::ChooseTarget { source, legal } => {
+        DecisionWire::ChooseTarget { source, legal, .. } => {
             Some(DecisionKey::ChooseTarget(*source, legal.clone()))
         }
         _ => None,
@@ -144,6 +144,7 @@ pub fn spawn_decision_ui(
     view: Res<CurrentView>,
     mut state: ResMut<DecisionUiState>,
     mut targeting: ResMut<crate::game::TargetingState>,
+    mut legal_targets: ResMut<LegalTargets>,
     existing: Query<Entity, With<DecisionModal>>,
     asset_server: Res<AssetServer>,
     ui_fonts: Res<UiFonts>,
@@ -164,6 +165,10 @@ pub fn spawn_decision_ui(
             targeting.active = false;
             targeting.pending_decision_target = false;
         }
+        legal_targets.permanents.clear();
+        legal_targets.players.clear();
+        legal_targets.source_name.clear();
+        legal_targets.description.clear();
         return;
     };
 
@@ -184,6 +189,10 @@ pub fn spawn_decision_ui(
                 targeting.active = false;
                 targeting.pending_decision_target = false;
             }
+            legal_targets.permanents.clear();
+            legal_targets.players.clear();
+            legal_targets.source_name.clear();
+            legal_targets.description.clear();
             return;
         }
     };
@@ -251,7 +260,7 @@ pub fn spawn_decision_ui(
             state.spawned_for = Some(key);
             spawn_discard_modal(&mut commands, &asset_server, &ui_fonts, hand, *count);
         }
-        DecisionWire::ChooseTarget { .. } => {
+        DecisionWire::ChooseTarget { legal, source_name, description, .. } => {
             // No modal — reuse the existing in-scene targeting cursor.
             // Flipping `pending_decision_target` flags `handle_game_input`
             // to submit picks as `DecisionAnswer::Target` instead of
@@ -263,6 +272,20 @@ pub fn spawn_decision_ui(
             targeting.pending_ability_index = None;
             targeting.back_face_pending = false;
             targeting.pending_decision_target = true;
+            legal_targets.permanents.clear();
+            legal_targets.players.clear();
+            for t in legal {
+                match t {
+                    Target::Permanent(id) => {
+                        legal_targets.permanents.insert(*id);
+                    }
+                    Target::Player(s) => {
+                        legal_targets.players.insert(*s);
+                    }
+                }
+            }
+            legal_targets.source_name = source_name.clone();
+            legal_targets.description = description.clone();
         }
         _ => {}
     }
@@ -1345,6 +1368,203 @@ fn spawn_choose_color_modal(
             }
         });
     });
+}
+
+// ── Mode pick (modal "Choose one —" spells) ───────────────────────────────
+
+/// Marker on a modal-spell `Modes:` panel; despawned together when the
+/// pick is submitted or cancelled.
+#[derive(Component)]
+pub struct ModalCastModal;
+
+#[derive(Component)]
+pub struct ModalCastButton(pub usize);
+
+#[derive(Component)]
+pub struct ModalCastCancel;
+
+/// Spawn / despawn the "Choose one —" picker for modal spells. Driven by
+/// the [`crate::game::PendingModalCast`] resource: when its `card_id`
+/// becomes `Some`, a modal lists every mode's short description; clicking
+/// a button either casts immediately (mode has no target) or arms the
+/// targeting cursor with `pending_mode` set.
+pub fn spawn_mode_pick_ui(
+    mut commands: Commands,
+    pending: Res<crate::game::PendingModalCast>,
+    existing: Query<Entity, With<ModalCastModal>>,
+    ui_fonts: Res<UiFonts>,
+) {
+    if pending.card_id.is_none() {
+        for e in &existing {
+            commands.entity(e).despawn();
+        }
+        return;
+    }
+    if existing.iter().next().is_some() {
+        return;
+    }
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(theme::OVERLAY_BG),
+            Button,
+            ModalCastModal,
+        ))
+        .id();
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(12.0),
+                align_items: AlignItems::Stretch,
+                min_width: Val::Px(360.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+    let name = pending.card_name.clone();
+    let modes = pending.modes.clone();
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new(format!("{name} — choose one")),
+            ui_fonts.tf(18.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+        for (idx, (desc, needs_target)) in modes.iter().enumerate() {
+            let label = if desc.is_empty() {
+                format!("Mode {}", idx + 1)
+            } else if *needs_target {
+                format!("{}. {} (pick target)", idx + 1, desc)
+            } else {
+                format!("{}. {}", idx + 1, desc)
+            };
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(16.0), Val::Px(10.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(theme::BUTTON_PRIMARY_BG),
+                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                ModalCastButton(idx),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(label),
+                    ui_fonts.tf(14.0),
+                    TextColor(theme::TEXT_PRIMARY),
+                    Pickable::IGNORE,
+                ));
+            });
+        }
+        p.spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(16.0), Val::Px(8.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(theme::BUTTON_TERTIARY_BG),
+            HoverTint::new(theme::BUTTON_TERTIARY_BG),
+            ModalCastCancel,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("Cancel"),
+                ui_fonts.tf(12.0),
+                TextColor(theme::TEXT_SECONDARY),
+                Pickable::IGNORE,
+            ));
+        });
+    });
+}
+
+pub fn handle_mode_pick_buttons(
+    outbox: Option<Res<NetOutbox>>,
+    view: Res<CurrentView>,
+    keyboard: Res<ButtonInput<KeyCode>>,
+    mut pending: ResMut<crate::game::PendingModalCast>,
+    mut targeting: ResMut<crate::game::TargetingState>,
+    mut legal_targets: ResMut<crate::game::LegalTargets>,
+    mut esc_consumed: ResMut<crate::systems::quality::EscConsumed>,
+    btns: Query<(&Interaction, &ModalCastButton), Changed<Interaction>>,
+    cancels: Query<&Interaction, (Changed<Interaction>, With<ModalCastCancel>)>,
+) {
+    if pending.card_id.is_none() {
+        return;
+    }
+    // Esc dismisses the modal pick — sibling to the Cancel button.
+    // Eat the keypress via `EscConsumed` so the same Esc doesn't also
+    // close the settings panel / trigger any other Esc-bound action.
+    if keyboard.just_pressed(KeyCode::Escape) {
+        pending.card_id = None;
+        pending.card_name.clear();
+        pending.modes.clear();
+        esc_consumed.0 = true;
+        return;
+    }
+    for i in &cancels {
+        if *i == Interaction::Pressed {
+            pending.card_id = None;
+            pending.card_name.clear();
+            pending.modes.clear();
+            return;
+        }
+    }
+    let Some(outbox) = outbox else { return };
+    for (i, btn) in &btns {
+        if *i != Interaction::Pressed {
+            continue;
+        }
+        let idx = btn.0;
+        let needs_target = pending.modes.get(idx).map(|(_, n)| *n).unwrap_or(false);
+        let card_id = pending.card_id.unwrap();
+        if needs_target {
+            targeting.active = true;
+            targeting.pending_card_id = Some(card_id);
+            targeting.pending_mode = Some(idx);
+            targeting.back_face_pending = false;
+            // Populate the highlight set from the chosen mode's slot-0
+            // filter so the user sees rings on legal creatures (the
+            // earlier path left it empty, which was the source of the
+            // "highlights players but not creatures" bug).
+            if let (Some(cv), name) = (&view.0, pending.card_name.clone())
+                && let Some(legal) = crate::systems::legal_target_filter::enumerate_for_cast(
+                    cv,
+                    &name,
+                    Some(idx),
+                )
+            {
+                *legal_targets = legal;
+            }
+        } else {
+            outbox.submit(GameAction::CastSpell {
+                card_id,
+                target: None,
+                additional_targets: vec![],
+                mode: Some(idx),
+                x_value: None,
+            });
+        }
+        pending.card_id = None;
+        pending.card_name.clear();
+        pending.modes.clear();
+        return;
+    }
 }
 
 /// Click handler for color buttons in the `ChooseColor` modal. Submits the

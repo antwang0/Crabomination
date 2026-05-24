@@ -8,5 +8,6 @@ pub mod game_over;
 pub mod game_ui;
 pub mod gizmos;
 pub mod kb_cursor;
+pub mod legal_target_filter;
 pub mod quality;
 pub mod ui;

@@ -229,6 +229,20 @@ pub struct KnownCard {
     /// cycle activation hint. Defaults to "" for older clients.
     #[serde(default)]
     pub cycling_cost_label: String,
+    /// One short description per mode for a "Choose one —" modal spell
+    /// (Artistic Process, Charms, the Command cycle, etc.). Drawn from
+    /// `Effect::ChooseMode(modes).iter().map(effect_short_text)`. Empty
+    /// when the card is non-modal. Drives the client's mode-pick modal:
+    /// when non-empty, clicking to cast surfaces the mode list and the
+    /// chosen index is threaded into `GameAction::CastSpell.mode`.
+    #[serde(default)]
+    pub modal_descriptions: Vec<String>,
+    /// Parallel to `modal_descriptions`: `true` at index `i` when mode
+    /// `i` carries a targeted slot. The client uses this to decide
+    /// whether to drop into the existing targeting cursor after the
+    /// mode pick or to fire the cast immediately.
+    #[serde(default)]
+    pub modal_needs_target: Vec<bool>,
 }
 
 /// One activated ability as projected for the client.
@@ -426,6 +440,19 @@ pub enum DecisionWire {
     ChooseTarget {
         source: CardId,
         legal: Vec<Target>,
+        /// Printed name of the source card (e.g. "Ascendant Dustspeaker").
+        /// Copied from the engine's `Decision::ChooseTarget.source_name`
+        /// at projection time so the client can show "<name> — <desc>"
+        /// in its trigger prompt without re-looking up the card. Empty
+        /// when the source can't be resolved (rare; pre-#TriggerTargetPick
+        /// snapshots).
+        #[serde(default)]
+        source_name: String,
+        /// Short human-readable rendering of the trigger's effect
+        /// (e.g. "exile target card from a graveyard"). May be empty
+        /// when the effect's shape isn't covered by `effect_short_text`.
+        #[serde(default)]
+        description: String,
     },
     ChooseMode {
         source: CardId,
@@ -492,10 +519,14 @@ pub enum DecisionWire {
 impl From<&Decision> for DecisionWire {
     fn from(d: &Decision) -> Self {
         match d {
-            Decision::ChooseTarget { source, legal } => DecisionWire::ChooseTarget {
-                source: *source,
-                legal: legal.clone(),
-            },
+            Decision::ChooseTarget { source, legal, source_name, description } => {
+                DecisionWire::ChooseTarget {
+                    source: *source,
+                    legal: legal.clone(),
+                    source_name: source_name.clone(),
+                    description: description.clone(),
+                }
+            }
             Decision::ChooseMode { source, num_modes } => DecisionWire::ChooseMode {
                 source: *source,
                 num_modes: *num_modes,

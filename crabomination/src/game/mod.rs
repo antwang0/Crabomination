@@ -2089,10 +2089,17 @@ impl GameState {
                     continue;
                 }
                 let remaining: Vec<PendingTriggerPush> = iter.collect();
+                let source_name = self
+                    .find_card_anywhere(pending.source)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                let description = pending.effect.effect_short_text();
                 self.pending_decision = Some(PendingDecision {
                     decision: Decision::ChooseTarget {
                         source: pending.source,
                         legal,
+                        source_name,
+                        description,
                     },
                     resume: ResumeContext::TriggerTargetPick {
                         pending,

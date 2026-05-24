@@ -613,11 +613,12 @@ pub fn lorehold_acolyte() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            // Target picker walks every zone (incl. graveyards) when the
-            // filter is `Any`, same as Ascendant Dustspeaker / Sundering
-            // Archaic's "{2}: gy → bottom of library" target shape.
+            // `InGraveyard` restricts the printed Oracle's "exile up to
+            // one target card from a graveyard" to actual graveyard
+            // residents — without it, the human picker enumerates every
+            // permanent in play as a legal target.
             effect: Effect::Move {
-                what: target_filtered(SelectionRequirement::Any),
+                what: target_filtered(SelectionRequirement::InGraveyard),
                 to: ZoneDest::Exile,
             },
         }],

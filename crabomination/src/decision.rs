@@ -26,7 +26,21 @@ use crate::mana::Color;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
     /// Pick a target satisfying the ability's selector.
-    ChooseTarget { source: CardId, legal: Vec<Target> },
+    ///
+    /// `source_name` is the printed name of the source card; `description`
+    /// is a short human-readable rendering of the effect ("exile target
+    /// card from a graveyard"). Both are populated at decision-construction
+    /// time so the UI can render a "<name> — <description>" prompt without
+    /// re-deriving them from the effect tree. Empty `description` is fine
+    /// for effects whose `effect_short_text` doesn't recognise the shape.
+    ChooseTarget {
+        source: CardId,
+        legal: Vec<Target>,
+        #[serde(default)]
+        source_name: String,
+        #[serde(default)]
+        description: String,
+    },
 
     /// Pick a mode index from a modal spell (e.g. Command suite).
     ChooseMode { source: CardId, num_modes: usize },

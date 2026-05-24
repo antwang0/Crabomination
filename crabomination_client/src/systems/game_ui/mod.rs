@@ -80,6 +80,8 @@ pub struct GameInputResources<'w> {
     pub card_names: ResMut<'w, crate::game::CardNames>,
     pub export_prompt: ResMut<'w, crate::systems::export_prompt::ExportPromptState>,
     pub debug_console: ResMut<'w, crate::systems::debug_console::DebugConsoleState>,
+    pub legal_targets: ResMut<'w, crate::game::LegalTargets>,
+    pub modal_cast: ResMut<'w, crate::game::PendingModalCast>,
 }
 /// Process `SwapFrontMaterial` markers: walk each entity's children,
 /// find the `FrontFaceMesh` child, swap its `MeshMaterial3d` to the
@@ -882,6 +884,7 @@ pub fn update_phase_chart(
 pub fn update_hint(
     view: Res<CurrentView>,
     targeting: Res<TargetingState>,
+    legal_targets: Res<crate::game::LegalTargets>,
     blocking: Res<BlockingState>,
     time: Res<Time>,
     mut q: Query<(&mut Text, &mut TextColor, &mut TextFont), With<HintText>>,
@@ -894,8 +897,18 @@ pub fn update_hint(
     }
     if targeting.active {
         let (msg, hint_color, hint_size) = if targeting.pending_decision_target {
+            let src = if legal_targets.source_name.is_empty() {
+                "A triggered ability".to_string()
+            } else {
+                legal_targets.source_name.clone()
+            };
+            let body = if legal_targets.description.is_empty() {
+                "needs a target".to_string()
+            } else {
+                legal_targets.description.clone()
+            };
             (
-                "⚡ A triggered ability needs a target. Click / Enter on a legal target.".to_string(),
+                format!("⚡ {src}: {body}. Click / Enter on a highlighted target."),
                 theme::ACCENT_BLUE,
                 15.0_f32,
             )
@@ -2300,6 +2313,23 @@ pub fn auto_advance_p0(
         return;
     }
 
+    // Hold priority on opp's DeclareAttackers when they declared
+    // attackers — without this, the auto-pass fires before the viewer
+    // sees who's swinging in, which makes the attacker lurch look like
+    // it appears for the first time during DeclareBlockers. Skipped
+    // when the opponent declined to attack (no `attacking`) so we
+    // don't add dead-air to attack-less turns. End Turn / Next Turn
+    // override the hold so the player can still skip the response
+    // window when they don't care.
+    if cv.step == TurnStep::DeclareAttackers
+        && cv.active_player != your_seat
+        && cv.battlefield.iter().any(|c| c.attacking)
+        && !ff.end_turn
+        && !ff.next_turn
+    {
+        return;
+    }
+
     // Don't auto-advance during interactive blocking when the viewer is
     // defending against any opponent's attack — *unless* there's nothing
     // to block: with Next Turn pressed, also skip blocker declaration when
@@ -2337,10 +2367,19 @@ pub fn auto_advance_p0(
     // want to cast a counterspell or other response before it resolves.
     use crabomination::net::{StackItemKind, StackItemView};
 
+    // Opponent stack items the viewer might want to respond to. Spells
+    // are obvious; triggers are also responsive windows (CR 116.5 — the
+    // active player passes priority first, the non-active player can
+    // cast instants in response to a trigger before it resolves). Without
+    // including triggers, an ETB / attack trigger on the bot's side
+    // resolves before the viewer ever sees a stack pop, which the user
+    // experiences as "the engine isn't pausing for priority at each
+    // phase."
     let stack_has_opp_spell = cv.stack.iter().any(|item| matches!(
         item,
         StackItemView::Known(k)
-            if k.controller != your_seat && k.kind == StackItemKind::Spell
+            if k.controller != your_seat
+                && matches!(k.kind, StackItemKind::Spell | StackItemKind::Trigger)
     ));
 
     let stack_is_own_triggers_only = !cv.stack.is_empty()
@@ -2400,6 +2439,8 @@ pub fn handle_game_input(
     let menu_state = &mut *r.menu_state;
     let ff = &mut *r.ff;
     let card_names = &mut *r.card_names;
+    let legal_targets = &mut *r.legal_targets;
+    let modal_cast = &mut *r.modal_cast;
 
     // Refresh the card-name lookup from the current view so the event
     // formatter can resolve any CardId it sees. Hand / battlefield /
@@ -2622,7 +2663,7 @@ pub fn handle_game_input(
                 // user can still keep clicking targets. Spell / ability
                 // targeting can still cancel back to normal mode.
                 if !targeting.pending_decision_target {
-                    cancel_targeting(&mut commands, targeting, &valid_targets);
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                 }
                 return;
             }
@@ -2633,50 +2674,88 @@ pub fn handle_game_input(
                 for (game_id, _owner) in &hovered_bf {
                     let target = Target::Permanent(game_id.0);
                     if is_decision {
+                        // Engine-driven `ChooseTarget`: only submit when
+                        // the click lands on an enumerated legal target,
+                        // so the user can't accidentally fire a no-op
+                        // decision that bounces back with a GameError.
+                        if !legal_targets.permanents.contains(&game_id.0) {
+                            continue;
+                        }
                         outbox.submit(GameAction::SubmitDecision(
                             crabomination::decision::DecisionAnswer::Target(target),
                         ));
-                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
                             outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
-                            cancel_targeting(&mut commands, targeting, &valid_targets);
+                            cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
+                        // Gate on the catalog-enumerated legal set when
+                        // it was populated. Empty set falls back to
+                        // "permissive" — same as ability targeting that
+                        // we can't pre-enumerate.
+                        let legal_set_populated = !legal_targets.permanents.is_empty()
+                            || !legal_targets.players.is_empty();
+                        let target_is_legal = match target {
+                            Target::Permanent(id) => legal_targets.permanents.contains(&id),
+                            Target::Player(s) => legal_targets.players.contains(&s),
+                        };
+                        if legal_set_populated && !target_is_legal {
+                            continue;
+                        }
+                        let mode = targeting.pending_mode;
                         let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                         } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                         };
                         outbox.submit(action);
-                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     }
                 }
                 for zone in &hovered_target_zone {
                     let target = Target::Player(zone.0);
                     if is_decision {
+                        if !legal_targets.players.contains(&zone.0) {
+                            continue;
+                        }
                         outbox.submit(GameAction::SubmitDecision(
                             crabomination::decision::DecisionAnswer::Target(target),
                         ));
-                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     } else if is_ability_target {
                         if let (Some(src), Some(idx)) = (targeting.pending_ability_source, targeting.pending_ability_index) {
                             outbox.submit(GameAction::ActivateAbility { card_id: src, ability_index: idx, target: Some(target), x_value: None });
-                            cancel_targeting(&mut commands, targeting, &valid_targets);
+                            cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                             return;
                         }
                     } else if let Some(pending_id) = targeting.pending_card_id {
+                        // Gate on the catalog-enumerated legal set when
+                        // it was populated. Empty set falls back to
+                        // "permissive" — same as ability targeting that
+                        // we can't pre-enumerate.
+                        let legal_set_populated = !legal_targets.permanents.is_empty()
+                            || !legal_targets.players.is_empty();
+                        let target_is_legal = match target {
+                            Target::Permanent(id) => legal_targets.permanents.contains(&id),
+                            Target::Player(s) => legal_targets.players.contains(&s),
+                        };
+                        if legal_set_populated && !target_is_legal {
+                            continue;
+                        }
+                        let mode = targeting.pending_mode;
                         let action = if cast_back {
-                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                            GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                         } else {
-                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                            GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                         };
                         outbox.submit(action);
-                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     }
                 }
@@ -2691,10 +2770,13 @@ pub fn handle_game_input(
                 let cast_back = targeting.back_face_pending;
                 let is_decision = targeting.pending_decision_target;
                 if is_decision {
+                    if !legal_targets.players.contains(&seat) {
+                        return;
+                    }
                     outbox.submit(GameAction::SubmitDecision(
                         crabomination::decision::DecisionAnswer::Target(target),
                     ));
-                    cancel_targeting(&mut commands, targeting, &valid_targets);
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                     return;
                 } else if is_ability_target {
                     if let (Some(src), Some(idx)) = (
@@ -2707,17 +2789,23 @@ pub fn handle_game_input(
                             target: Some(target),
                             x_value: None,
                         });
-                        cancel_targeting(&mut commands, targeting, &valid_targets);
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                         return;
                     }
                 } else if let Some(pending_id) = targeting.pending_card_id {
+                    let legal_set_populated = !legal_targets.permanents.is_empty()
+                        || !legal_targets.players.is_empty();
+                    if legal_set_populated && !legal_targets.players.contains(&seat) {
+                        return;
+                    }
+                    let mode = targeting.pending_mode;
                     let action = if cast_back {
-                        GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                        GameAction::CastSpellBack { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                     } else {
-                        GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode: None, x_value: None }
+                        GameAction::CastSpell { card_id: pending_id, target: Some(target), additional_targets: vec![], mode, x_value: None }
                     };
                     outbox.submit(action);
-                    cancel_targeting(&mut commands, targeting, &valid_targets);
+                    cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
                     return;
                 }
             }
@@ -2896,10 +2984,30 @@ pub fn handle_game_input(
                             card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None,
                         });
                     }
+                } else if !card.modal_descriptions.is_empty() {
+                    // Modal "Choose one —" spell: pop the mode-pick modal
+                    // and defer the cast until a mode is selected.
+                    modal_cast.card_id = Some(card.id);
+                    modal_cast.card_name = card.name.clone();
+                    modal_cast.modes = card
+                        .modal_descriptions
+                        .iter()
+                        .zip(card.modal_needs_target.iter().chain(std::iter::repeat(&false)))
+                        .map(|(d, nt)| (d.clone(), *nt))
+                        .collect();
                 } else if card.needs_target {
                     targeting.active = true;
                     targeting.pending_card_id = Some(card.id);
                     targeting.back_face_pending = false;
+                    if let Some(legal) =
+                        crate::systems::legal_target_filter::enumerate_for_cast(
+                            cv,
+                            &card.name,
+                            None,
+                        )
+                    {
+                        *legal_targets = legal;
+                    }
                 } else {
                     outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });
                 }
@@ -3054,6 +3162,7 @@ pub fn handle_game_input(
 fn cancel_targeting(
     commands: &mut Commands,
     targeting: &mut TargetingState,
+    legal: &mut crate::game::LegalTargets,
     valid_targets: &Query<Entity, With<ValidTarget>>,
 ) {
     targeting.active = false;
@@ -3062,6 +3171,11 @@ fn cancel_targeting(
     targeting.pending_ability_index = None;
     targeting.back_face_pending = false;
     targeting.pending_decision_target = false;
+    targeting.pending_mode = None;
+    legal.permanents.clear();
+    legal.players.clear();
+    legal.source_name.clear();
+    legal.description.clear();
     for entity in valid_targets.iter() {
         commands.entity(entity).remove::<ValidTarget>();
     }

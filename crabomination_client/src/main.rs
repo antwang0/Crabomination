@@ -58,8 +58,8 @@ use systems::game_ui::{
 };
 use systems::gizmos::{
     draw_attack_plan_gizmos, draw_attacker_overlays, draw_blocking_gizmos,
-    draw_pt_modified_overlays, draw_stack_arrows, AttackPlanGizmos, AttackerGizmos,
-    BlockingGizmos, PtModifiedGizmos, StackGizmos,
+    draw_legal_target_rings, draw_pt_modified_overlays, draw_stack_arrows, AttackPlanGizmos,
+    AttackerGizmos, BlockingGizmos, LegalTargetGizmos, PtModifiedGizmos, StackGizmos,
 };
 use systems::quality::{
     handle_quality_buttons, handle_settings_toggle, handle_speed_slider, reset_esc_consumed,
@@ -70,7 +70,7 @@ use systems::ui::{
     graveyard_browser, graveyard_card_hover_name, highlight_hovered_cards, peek_popup,
     pile_tooltip, reveal_popup, RevealPopupState,
 };
-use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, DecisionUiState};
+use systems::decision_ui::{spawn_decision_ui, handle_scry_toggles, handle_scry_reorder, handle_search_select, handle_put_on_library_select, handle_put_on_library_hand_click, handle_discard_select, update_put_on_library_count_text, update_put_on_library_visuals, handle_choose_color_buttons, handle_confirm, handle_mulligan_buttons, spawn_mode_pick_ui, handle_mode_pick_buttons, DecisionUiState};
 
 /// Marks the decorative ground plane so quality changes can update its mesh.
 #[derive(Component)]
@@ -143,6 +143,11 @@ fn main() {
         // tokens (Antiquities on the Loose, Group Project), so they
         // render with a missing-asset placeholder in the 3-D view.
         "Fractal", "Inkling", "Pest", "Spirit",
+        // Prismari Elemental (Artistic Process mode 2, Visionary's Dance,
+        // Muse's Encouragement, the rest of the elemental_token() callers).
+        // Was missing from the prefetch list, so the freshly-minted token
+        // entered with a placeholder front face on the battlefield.
+        "Elemental",
     ];
 
     let mut specs: Vec<CardImage> = fronts.into_iter().map(CardImage::Front).collect();
@@ -182,6 +187,7 @@ fn main() {
         .init_gizmo_group::<StackGizmos>()
         .init_gizmo_group::<PtModifiedGizmos>()
         .init_gizmo_group::<AttackPlanGizmos>()
+        .init_gizmo_group::<LegalTargetGizmos>()
         .add_systems(Startup, configure_gizmos)
         .insert_resource(DirectionalLightShadowMap { size: RenderQuality::default().shadow_map_size() })
         .insert_resource(gfx)
@@ -190,6 +196,8 @@ fn main() {
         .insert_resource(GameLog::default())
         .insert_resource(FastForward::default())
         .insert_resource(TargetingState::default())
+        .insert_resource(game::LegalTargets::default())
+        .insert_resource(game::PendingModalCast::default())
         .insert_resource(BlockingState::default())
         .insert_resource(AttackingState::default())
         .insert_resource(AltCastState::default())
@@ -421,6 +429,10 @@ fn main() {
         )
         .add_systems(
             Update,
+            draw_legal_target_rings.run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
             graveyard_card_hover_name
                 .after(graveyard_browser)
                 .run_if(in_state(AppState::InGame)),
@@ -493,6 +505,8 @@ fn main() {
                 handle_confirm,
                 handle_mulligan_buttons,
                 handle_choose_color_buttons,
+                spawn_mode_pick_ui,
+                handle_mode_pick_buttons,
             )
                 .chain()
                 .after(handle_game_input)
@@ -543,6 +557,8 @@ fn configure_gizmos(mut store: ResMut<GizmoConfigStore>) {
     config.line.width = 4.0;
     let (config, _) = store.config_mut::<AttackPlanGizmos>();
     config.line.width = 4.0;
+    let (config, _) = store.config_mut::<LegalTargetGizmos>();
+    config.line.width = 5.0;
 }
 
 fn setup(

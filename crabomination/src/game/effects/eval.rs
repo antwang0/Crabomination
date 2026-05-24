@@ -654,6 +654,10 @@ impl GameState {
                         Some(src_id) => *cid != src_id,
                         None => true,
                     },
+                    R::InGraveyard => self
+                        .players
+                        .iter()
+                        .any(|p| p.graveyard.iter().any(|c| c.id == *cid)),
                     // CR-spec: "the greatest mana value among [filter] they
                     // control" — the candidate must (a) match `inner` and
                     // (b) have an MV ≥ every other matching permanent under
@@ -754,6 +758,10 @@ impl GameState {
             // (a card in a graveyard search can't be the source on the
             // battlefield).
             R::OtherThanSource => true,
+            R::InGraveyard => self
+                .players
+                .iter()
+                .any(|p| p.graveyard.iter().any(|c| c.id == card.id)),
             // Battlefield-only ("greatest MV among controlled" walks the
             // battlefield in the static variant; library searches don't
             // surface this filter).

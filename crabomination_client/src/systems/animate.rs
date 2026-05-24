@@ -168,8 +168,18 @@ pub fn update_combat_lurch_targets(
                 l.target_offset = target_offset;
             }
             None if target_progress > 0.0 => {
+                // Snap to the lurch position on first insertion — the
+                // slow lerp from 0 → target tended to bleed into the next
+                // combat step when the viewer received their first
+                // "attacking" view late (declare-attackers happens on the
+                // bot's tick; the human's first frame with `attacking:
+                // true` may arrive at the step boundary). Snapping makes
+                // the lunge an instant "this creature is committed"
+                // indicator, which is what the visual is actually
+                // communicating — there's no narrative value in watching
+                // the slide.
                 commands.entity(entity).insert(CombatLurch {
-                    progress: 0.0,
+                    progress: target_progress,
                     target_progress,
                     target_offset,
                 });

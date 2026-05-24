@@ -409,6 +409,14 @@ pub enum SelectionRequirement {
     /// targeting filters it routes through `evaluate_requirement_*`
     /// which read the source id from the resolution context.
     OtherThanSource,
+    /// True when the candidate card is currently in some player's graveyard
+    /// zone. Used to restrict zone-spanning trigger targets — e.g.
+    /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target
+    /// card from a graveyard", which must NOT be matchable by a
+    /// battlefield permanent. The companion `evaluate_requirement_static`
+    /// arm looks the candidate up in `players[*].graveyard`. Returns
+    /// false for non-Permanent targets and for cards in any other zone.
+    InGraveyard,
     /// True when the candidate has the greatest mana value among all
     /// permanents that match `inner` and are controlled by the same
     /// player as the candidate. Used by SOS End of the Hunt's

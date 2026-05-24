@@ -108,6 +108,7 @@ const PLAYER_CHIP_BORDER_TARGET: Color = Color::srgb(1.0, 0.88, 0.0);
 ///   *opponent* seats highlight in that case.
 pub fn update_player_chip_target_outline(
     targeting: Res<TargetingState>,
+    legal_targets: Res<crate::game::LegalTargets>,
     attacking: Res<crate::game::AttackingState>,
     view: Res<CurrentView>,
     time: Res<Time>,
@@ -127,13 +128,27 @@ pub fn update_player_chip_target_outline(
     let pulsed = Color::srgb(pulse, pulse * 0.88, 0.0);
 
     let targeting_active = targeting.active;
+    // Any targeting flow with an enumerated legal set (server-driven
+    // `Decision::ChooseTarget` OR cast-time targeting via the catalog
+    // evaluator) restricts the pulse to seats actually listed. Spell /
+    // ability targets we couldn't enumerate fall through to the "any
+    // seat is clickable" behaviour.
+    let have_legal_set = targeting_active
+        && (!legal_targets.players.is_empty() || !legal_targets.permanents.is_empty());
+    let legal_player_set = if have_legal_set {
+        Some(&legal_targets.players)
+    } else {
+        None
+    };
     let attack_pick = cv.step == TurnStep::DeclareAttackers
         && cv.active_player == your_seat
         && cv.priority == your_seat
         && attacking.last_added.is_some();
 
     for (panel, mut border) in &mut q {
-        let highlight = if targeting_active {
+        let highlight = if let Some(set) = legal_player_set {
+            set.contains(&panel.seat)
+        } else if targeting_active {
             true
         } else if attack_pick {
             panel.seat != your_seat
