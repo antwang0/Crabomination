@@ -64351,3 +64351,250 @@ fn witherbloom_reanimate_b158_returns_creature_from_graveyard() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == bear), "bear should be on battlefield");
 }
+
+// ── CR rule lock-in tests (push: modern_decks batch 158 audit) ─────────────
+
+/// CR 502.3 — The active player's untap step untaps all permanents they
+/// CONTROL, not just the ones they originally own. A creature stolen via
+/// Threaten / Mind Control + already attached to the active player should
+/// untap on their next untap step.
+#[test]
+fn cr_502_3_untap_step_untaps_controlled_permanents() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("on bf");
+        c.tapped = true;
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    let after = g.battlefield_find(bear).expect("on bf");
+    assert!(!after.tapped, "bear should be untapped after untap step");
+}
+
+/// CR 502.3 — Stun counter interposition: a permanent with a stun
+/// counter has the stun removed instead of untapping. Lock-in for the
+/// existing wired path.
+#[test]
+fn cr_502_3_stun_counter_blocks_untap_and_consumed() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("on bf");
+        c.tapped = true;
+        c.add_counters(CounterType::Stun, 1);
+    }
+    g.active_player_idx = 0;
+    g.do_untap();
+    let after = g.battlefield_find(bear).expect("on bf");
+    assert!(after.tapped, "bear stays tapped (stun interposed)");
+    assert_eq!(after.counter_count(CounterType::Stun), 0, "stun consumed");
+}
+
+/// CR 121 — A draw command moves one card from library top to hand.
+/// Lock-in: hand grows by 1, library shrinks by 1.
+#[test]
+fn cr_121_basic_draw_moves_one_card_library_to_hand() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let hand_before = g.players[0].hand.len();
+    let lib_before = g.players[0].library.len();
+    g.players[0].draw_top();
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert_eq!(g.players[0].library.len(), lib_before - 1);
+}
+
+/// CR 117.5 — State-based actions are checked first when a player would
+/// receive priority. A creature with lethal damage dies before the
+/// opponent can act. Lock-in: bear with 2+ damage and 2 toughness dies
+/// during `check_state_based_actions`, no priority window allows saving.
+#[test]
+fn cr_117_5_lethal_damage_triggers_sba_before_priority() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("on bf");
+        c.damage = 2;
+    }
+    let _ = g.check_state_based_actions();
+    // Bear with 2 damage and 2 toughness → dead via 704.5g
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "bear should be in graveyard via SBA");
+}
+
+/// CR 117.5 — When the active player's creature would die from -1/-1
+/// counters dropping toughness to 0, the SBA fires before priority.
+#[test]
+fn cr_117_5_zero_toughness_sba_kills_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    {
+        let c = g.battlefield_find_mut(bear).expect("on bf");
+        c.add_counters(CounterType::MinusOneMinusOne, 2);
+    }
+    let _ = g.check_state_based_actions();
+    // Bear's base toughness 2 − 2 -1/-1 counters = 0 → dies via 704.5f
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "bear with 0 toughness should die via SBA");
+}
+
+// ── batch 158 — Extra cards across schools ─────────────────────────────────
+
+#[test]
+fn fractal_researcher_b158_etb_draws_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::fractal_researcher_b158());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Researcher castable");
+    drain_stack(&mut g);
+    // -1 cast +1 draw = 0
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_multiplier_ii_b158_mints_fractal_with_three_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_multiplier_ii_b158());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Multiplier castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal")
+        .expect("Fractal minted");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+#[test]
+fn quandrix_sapiens_b158_is_a_four_mana_reach_elf() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_sapiens_b158());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Reach));
+    assert_eq!(c.definition.power, 3);
+    assert_eq!(c.definition.toughness, 3);
+}
+
+#[test]
+fn fractal_recursion_b158_returns_creature_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fractal_recursion_b158());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Recursion castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn lorehold_pyremage_b158_is_a_two_mana_haste_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyremage_b158());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Haste));
+    assert_eq!(c.definition.power, 2);
+}
+
+#[test]
+fn lorehold_spectral_lance_b158_burns_three_and_mints_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_spectral_lance_b158());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spectral-Lance castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 3);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit")
+        .count();
+    assert_eq!(spirits, 1);
+}
+
+#[test]
+fn lorehold_recallmage_b158_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_recallmage_b158());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Recallmage castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn lorehold_spectral_watcher_b158_etb_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::lorehold_spectral_watcher_b158());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spectral-Watcher castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before);
+}
+
+#[test]
+fn pest_bloomer_b158_etb_mints_pest() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_bloomer_b158());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bloomer castable");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pest")
+        .count();
+    assert_eq!(pests, 1);
+}
+
+#[test]
+fn witherbloom_coursebinder_b158_is_a_five_mana_trample_beast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_coursebinder_b158());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Trample));
+    assert_eq!(c.definition.power, 4);
+    assert_eq!(c.definition.toughness, 4);
+}
+
+#[test]
+fn witherbloom_ravager_b158_magecraft_drains_with_deathtouch() {
+    let mut g = two_player_game();
+    let _r = g.add_card_to_battlefield(0, catalog::witherbloom_ravager_b158());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + drain 1
+    assert_eq!(g.players[1].life, life1_before - 3 - 1);
+}
