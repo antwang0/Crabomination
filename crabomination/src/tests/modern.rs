@@ -10787,3 +10787,75 @@ fn helix_pinnacle_wins_at_upkeep_with_one_hundred_counters() {
     assert_eq!(g.game_over, Some(Some(0)),
         "P0 (Helix controller) declared winner");
 }
+
+// ── New cube cards (push claude/modern_decks) ──────────────────────────
+
+#[test]
+fn collective_brutality_mode_two_drains() {
+    let mut g = two_player_game();
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::collective_brutality());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("Collective Brutality castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2);
+    assert_eq!(g.players[0].life, my_life + 2);
+}
+
+#[test]
+fn cam_and_farrik_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let cam = g.add_card_to_battlefield(0, catalog::cam_and_farrik());
+    g.clear_sickness(cam);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let p_before = g.battlefield.iter().find(|c| c.id == cam).unwrap().power();
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let p_after = g.battlefield.iter().find(|c| c.id == cam).unwrap().power();
+    assert_eq!(p_after, p_before + 2);
+}
+
+#[test]
+fn magda_brazen_outlaw_is_legendary_dwarf() {
+    let card = catalog::magda_brazen_outlaw();
+    assert_eq!(card.name, "Magda, Brazen Outlaw");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+#[test]
+fn descendant_of_storms_is_2_2_flying_spirit() {
+    let card = catalog::descendant_of_storms();
+    assert_eq!(card.name, "Descendant of Storms");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn keen_eyed_curator_etb_adds_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::keen_eyed_curator());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let curator = g.battlefield.iter().find(|c| c.definition.name == "Keen-Eyed Curator")
+        .expect("Curator on bf");
+    assert_eq!(curator.counter_count(crate::card::CounterType::PlusOnePlusOne), 1);
+    assert_eq!(curator.power(), 4);
+}

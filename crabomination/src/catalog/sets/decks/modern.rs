@@ -9342,3 +9342,172 @@ pub fn helix_pinnacle() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push claude/modern_decks additions ──────────────────────────────────
+
+/// Collective Brutality — {1}{B} Sorcery.
+/// Escalate — Discard a card. Choose one or more —
+/// • Target opponent reveals hand; you choose IS card to discard.
+/// • Target creature gets -2/-2 until end of turn.
+/// • Target opponent loses 2 life and you gain 2 life.
+///
+/// Approximation: modeled as a 3-mode ChooseMode without escalate.
+pub fn collective_brutality() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Brutality",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            },
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Cam and Farrik, Havoc Duo — {3}{R}{G}, 4/5 Legendary Human Warrior.
+/// Trample. Whenever you cast a noncreature spell, +2/+0 until end of turn.
+pub fn cam_and_farrik() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Cam and Farrik, Havoc Duo",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Noncreature,
+                }),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Magda, Brazen Outlaw — {1}{R}, 2/1 Legendary Dwarf Berserker.
+/// Other Dwarves you control get +1/+0.
+/// Treasure-on-tap trigger omitted.
+pub fn magda_brazen_outlaw() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Magda, Brazen Outlaw",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        static_abilities: vec![StaticAbility {
+            description: "Other Dwarves you control get +1/+0.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::HasCreatureType(CreatureType::Dwarf)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: 1,
+                toughness: 0,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Descendant of Storms — {2}{W}, 2/2 Spirit Warrior.
+/// Flying. When this creature attacks, create a 1/1 white Spirit token
+/// with flying.
+pub fn descendant_of_storms() -> CardDefinition {
+    CardDefinition {
+        name: "Descendant of Storms",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Spirit".into(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![Keyword::Flying],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Spirit],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Keen-Eyed Curator — {2}{G}, 3/3 Elf Druid.
+/// ETB: +1/+1 counter on self + graveyard hate approximation.
+pub fn keen_eyed_curator() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Keen-Eyed Curator",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

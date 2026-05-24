@@ -275,6 +275,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ephemerate,
         glorious_anthem,
         serra_angel,
+        descendant_of_storms,
         thalia_guardian_of_thraben,
         // ranger_captain_of_eos 🟡 — sac-for-no-noncreature-spells static
         // omitted, but ETB tutor-for-MV≤1 is the marquee effect and
@@ -571,6 +572,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // tidehollow_sculler — 🟡 exile-until-LTB replaced by permanent discard
         phyrexian_arena,
         // bloodchiefs_thirst — 🟡 kicker mode (mana value ≤ 6) omitted
+        collective_brutality,
         deadly_dispute,
         // indulgent_tormentor — 🟡 opponent choice collapsed to always-drain-3
         damnation,
@@ -786,6 +788,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         lava_coil,
         jayas_greeting,
         volcanic_fallout,
+        cam_and_farrik,
+        magda_brazen_outlaw,
         stone_rain,
         earthquake,
         // chaos_warp      — 🟡 "reveal top card; cast if permanent" half omitted
@@ -923,6 +927,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sakura_tribe_elder,
         wood_elves,
         elvish_mystic,
+        keen_eyed_curator,
         harmonize,
         wild_mongrel,
         carnage_tyrant,
