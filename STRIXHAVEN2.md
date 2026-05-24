@@ -19,8 +19,25 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2024 (incl. synthesised variants) | 0 | 0 |
+| STX (327 cards) | 2125 (incl. synthesised variants — batch 146 + 147 + 148 add 101 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 146 + 147 + 148): 101 new STX cards
+across all five colleges (Silverquill / Witherbloom / Lorehold /
+Quandrix / Prismari). Engine additions in this stretch:
+`StaticEffect::PlayerCannotLoseLife` (CR 119.8) gets its first
+representative card via Silverquill Lifeward (b146 — symmetric foil
+to Witherbloom Lifeglobe's PlayerCannotGainLife). Two new shortcut
+helpers — `magecraft_self_pump_and_drain(N)` and
+`etb_drain_and_draw_one(N)` — close common Witherbloom +
+Silverquill body shapes that appeared across the batch 147 / 148
+cards. Server: per-process MatchStats (bot/pair counts + avg
+duration) appended to each match-completion log line so operators
+can see a rolling rollup without grepping. Client: alt-hover
+tooltip now also surfaces effective keywords (after layer effects)
+and triggered ability labels ("ETB: Drain 1", "Magecraft: Draw a
+card", "Dies: Mill 2") via the new
+`PermanentView.triggered_ability_labels` field on the wire.
 
 Push (modern_decks, batches 143 + 144 + 145): 80 new STX cards
 across all five colleges, including 10 cards with `Keyword::Cycling`
