@@ -11363,3 +11363,346 @@ pub fn fractal_genesis_b142() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 146 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Sumcaster (b146) — {2}{G}{U} 3/3 Fractal Druid Wizard.
+/// ETB: target creature you control gets a +1/+1 counter for each
+/// other creature you control. Scales hard with token-heavy boards.
+pub fn quandrix_sumcaster_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sumcaster (b146)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+            ))),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mathwitch (b146) — {1}{G}{U} 2/2 Elf Wizard. Magecraft Draw 1
+/// + Discard 1 (loot). Quandrix's flagship looter — strict upgrade over
+/// Quandrix Numericist's looter at +1 toughness.
+pub fn quandrix_mathwitch_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mathwitch (b146)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Caller (b146) — {2}{G}{U} 3/3 Fractal Druid. ETB mints a
+/// Fractal token (0/0 with N +1/+1 counters where N = your devotion to
+/// blue+green). Approximated as a flat 2/2 Fractal token (constant
+/// count) since the engine has no devotion primitive.
+pub fn fractal_caller_b146() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::etb_mint_token_with_counters;
+    CardDefinition {
+        name: "Fractal Caller (b146)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_with_counters(
+            fractal_token(),
+            1,
+            2,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Counterspell (b146) — {1}{U} Instant. Counter target spell
+/// unless its controller pays {2}. Stand-in for a "soft" Quandrix
+/// counter — see Lose Focus for the same shape at {U}.
+pub fn quandrix_counterspell_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Counterspell (b146)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: Selector::Target(0),
+            mana_cost: cost(&[generic(2)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sumstudent (b146) — {1}{G} 2/2 Elf Druid. Magecraft +1/+1
+/// counter on this creature. Self-growing 2-drop — Devout/Inkbinder
+/// pattern in the green slot.
+pub fn quandrix_sumstudent_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sumstudent (b146)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Reflector (b146) — {3}{U} 3/4 Fractal Wizard Flying.
+/// 4-mana flier with magecraft Scry 1. Defensive air with card filtering.
+pub fn quandrix_reflector_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Reflector (b146)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Field Trip (b146) — {2}{G} Sorcery. Search your library for
+/// a basic land, put it onto the battlefield tapped. Standard "Cultivate
+/// lite". The "Learn" half from the printed Field Trip is omitted —
+/// this is a slim variant.
+pub fn quandrix_field_trip_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Field Trip (b146)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mossbinder (b146) — {2}{G} 3/3 Elf Druid. ETB Search for a
+/// basic land + put onto bf tapped. Self-ramping value body.
+pub fn quandrix_mossbinder_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mossbinder (b146)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::IsBasicLand,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: true,
+            },
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mage-Apprentice (b146) — {G}{U} 2/2 Fractal Wizard. ETB
+/// gain 1 life + magecraft Scry 1. 2-mana double-trigger value body.
+pub fn quandrix_mage_apprentice_b146() -> CardDefinition {
+    use crate::effect::shortcut::etb_gain_life;
+    CardDefinition {
+        name: "Quandrix Mage-Apprentice (b146)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(1), magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Patternseeker (b146) — {1}{U} 1/2 Fractal Wizard Flying.
+/// Magecraft Draw 1. Quandrix's slim cantrip flier.
+pub fn quandrix_patternseeker_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Patternseeker (b146)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

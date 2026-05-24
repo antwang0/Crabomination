@@ -14354,3 +14354,344 @@ pub fn lorehold_cinderscholar_b143() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+
+// ── Batch 146 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Echocaller (b146) — {1}{R}{W} 2/3 Spirit Wizard. ETB returns
+/// target IS card from your gy → hand. 3-mana Pillardrop mini.
+pub fn lorehold_echocaller_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echocaller (b146)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Glyph (b146) — {R}{W} Sorcery. Mints a 2/2 R/W Spirit
+/// token (the shared `lorehold_spirit_token()` helper). 2-mana cheap
+/// token mint at sorcery speed.
+pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Glyph (b146)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lorehold_spirit_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Adept (b146) — {1}{R} 2/2 Spirit Wizard. Magecraft
+/// 1 damage to any target. Same shape as Lorehold Sparkflinger.
+pub fn lorehold_ember_adept_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Adept (b146)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresinger (b146) — {3}{R}{W} 3/3 Spirit Cleric Haste.
+/// ETB mints 2 Spirit tokens (the shared `lorehold_spirit_token()`).
+/// 5-mana hasty go-wide finisher.
+pub fn lorehold_pyresinger_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyresinger (b146)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Burst (b146) — {2}{R} Instant. Deals 3 damage to
+/// any target. 3-mana Shock-on-a-bigger-cost — flexible removal at
+/// instant tempo.
+pub fn lorehold_spirit_burst_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Burst (b146)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Soulrender (b146) — {2}{W} 2/4 Spirit Soldier Vigilance +
+/// Lifelink. 3-mana defensive double-keyword body. Stacks with
+/// Lorehold Anthemist for tribal-pump value.
+pub fn lorehold_soulrender_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Soulrender (b146)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battle-Sage (b146) — {2}{R}{W} 3/3 Spirit Cleric.
+/// Magecraft +1/+1 counter on target friendly Spirit. Spirit-tribal
+/// growth payoff.
+pub fn lorehold_battle_sage_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battle-Sage (b146)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrebound (b146) — {R} 1/1 Spirit Warrior Haste.
+/// Aggressive 1-drop Spirit hasher — feeds Lorehold Anthemist's
+/// pump and Quintorius's tribal value.
+pub fn lorehold_pyrebound_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrebound (b146)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Decree (b146) — {3}{R}{W} Sorcery. Seq(DealDamage 1
+/// to each opp creature + CreateToken 1 Spirit). 5-mana sweep + body.
+pub fn lorehold_spirit_decree_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Decree (b146)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(1),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Glyph-Strike (b146) — {1}{R} Instant. Deals 2 damage to
+/// target creature. Magecraft cantrip-style burn — feeds Lorehold
+/// Apprentice's drain trigger.
+pub fn lorehold_glyph_strike_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Glyph-Strike (b146)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

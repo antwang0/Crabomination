@@ -15940,3 +15940,352 @@ pub fn inkling_wraith_b145() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 146 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Inkmaster Adept (b146) — {2}{W}{B} 3/3 Inkling Wizard
+/// Flying. Magecraft target opp loses 1 life and you gain 1 life.
+/// 4-mana flier with magecraft drain — pairs with Tenured Inkcaster.
+pub fn silverquill_inkmaster_adept_b146() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Silverquill Inkmaster Adept (b146)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkglyph (b146) — {W}{B} Sorcery. Seq(Drain 2 + Scry 1).
+/// 2-mana drain + dig — strict upgrade to Silverquill Witness's
+/// magecraft drain at instant tempo without the body.
+pub fn silverquill_inkglyph_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkglyph (b146)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Pyrescribe (b146) — {1}{W} 2/2 Inkling Soldier. ETB GainLife 1
+/// + magecraft GainLife 1. 2-mana drip-life body that scales in
+/// spell-heavy shells.
+pub fn inkling_pyrescribe_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Pyrescribe (b146)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_gain_life(1),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkbinder (b146) — {1}{B} 2/1 Human Wizard. Magecraft
+/// target opp discards a card at random. 2-mana attrition-style
+/// magecraft body — pairs with Silverquill Hexbearer.
+pub fn silverquill_inkbinder_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkbinder (b146)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+            random: true,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Inkbearer (b146) — {3}{W}{B} 3/4 Inkling Knight Flying +
+/// Vigilance. ETB mints 1 Inkling token. 5-mana go-wide finisher.
+pub fn inkling_inkbearer_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Inkbearer (b146)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Ledgerblade (b146) — {1}{W} Instant. Seq(PumpPT(+1/+2 EOT)
+/// + GrantKeyword(Vigilance EOT)). 2-mana combat trick — strengthens
+/// the blocker and lets it crack back.
+pub fn silverquill_ledgerblade_b146() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Silverquill Ledgerblade (b146)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::Target(0),
+                power: Value::Const(1),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Vigilance,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Hex-Cleric (b146) — {2}{B} 3/2 Human Cleric Lifelink.
+/// ETB target opp loses 2 life. 3-mana lifelink finisher.
+pub fn silverquill_hex_cleric_b146() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Silverquill Hex-Cleric (b146)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Verseguard (b146) — {1}{W}{B} 2/3 Inkling Soldier Flying.
+/// Magecraft +1/+1 counter on this creature. 3-mana sticky magecraft
+/// flier that snowballs in spell-heavy shells.
+pub fn inkling_verseguard_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Verseguard (b146)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkriot (b146) — {3}{W}{B} Sorcery. Seq(CreateToken(2
+/// Inklings) + GainLife 2). 5-mana go-wide + life rider.
+pub fn silverquill_inkriot_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkriot (b146)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Wingblade (b146) — {W}{B} 2/2 Inkling Knight Flying.
+/// Aggressive 2-mana evasive Inkling — pairs with Tenured Inkcaster
+/// (+2/+2 anthem) and Inkling Banner-Bearer (+1/+0 anthem).
+pub fn inkling_wingblade_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Wingblade (b146)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

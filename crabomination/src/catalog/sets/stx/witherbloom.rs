@@ -13822,3 +13822,352 @@ pub fn witherbloom_necromage_b144() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 146 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Sap-Caller (b146) — {1}{B}{G} 2/3 Human Warlock.
+/// Magecraft drain 1. 3-mana Witherbloom Apprentice's slightly bigger
+/// cousin (one extra toughness).
+pub fn witherbloom_sap_caller_b146() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Witherbloom Sap-Caller (b146)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Wraith (b146) — {2}{B} 2/2 Pest Spirit. Dies → each opp loses 2
+/// life. Aristocrat-style death-drain — see Inkling Wraith for the
+/// Inkling mirror.
+pub fn pest_wraith_b146() -> CardDefinition {
+    use crate::effect::shortcut::dies_lose_life_each_opp;
+    CardDefinition {
+        name: "Pest Wraith (b146)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_lose_life_each_opp(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxicologist (b146) — {1}{G} 1/3 Human Druid.
+/// ETB Mill 2. Cheap self-mill body that feeds Witherbloom recursion.
+pub fn witherbloom_toxicologist_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxicologist (b146)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Mill {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reapcaster (b146) — {2}{B}{G} 3/3 Pest Warlock.
+/// Magecraft +1/+1 counter on this creature + drain 1. Scaling
+/// magecraft drain — see Silverquill Devout for the +1/+1-only flavor.
+pub fn witherbloom_reapcaster_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reapcaster (b146)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Spore-Cleric (b146) — {1}{B} 1/2 Pest Cleric. ETB mints
+/// one Pest token. 2-mana double-body — feeds Witherbloom Apprentice's
+/// magecraft drain via the Pest's own death-life trigger.
+pub fn witherbloom_spore_cleric_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Spore-Cleric (b146)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapveiler (b146) — {2}{G} 3/3 Pest Druid Deathtouch.
+/// 3-mana big-toughness deathtouch body — race-stalling defender that
+/// trades up.
+pub fn witherbloom_sapveiler_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapveiler (b146)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Withergrove (b146) — {3}{B}{G} Sorcery. Seq(Drain 3 +
+/// CreateToken(1 Pest)). 5-mana drain-and-body finisher.
+pub fn witherbloom_withergrove_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Withergrove (b146)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pest-Herder (b146) — {2}{B}{G} 2/4 Human Druid.
+/// Static "Other Pest creatures you control get +1/+1." Pest-tribal
+/// anthem at 4 mana.
+pub fn witherbloom_pest_herder_b146() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Witherbloom Pest-Herder (b146)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Pest creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Pest))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: 1,
+                toughness: 1,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Festerstalk (b146) — {B}{G} Instant. PumpPT(-3/-3 EOT)
+/// on target creature. 2-mana removal-for-3-toughness.
+pub fn witherbloom_festerstalk_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Festerstalk (b146)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::Const(-3),
+            toughness: Value::Const(-3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifeglyph (b146) — {1}{G} Sorcery. GainLife 5. Cheap
+/// 2-mana heal — bigger than Silverquill Heartmender's 4-life rider
+/// but loses the white flexibility.
+pub fn witherbloom_lifeglyph_b146() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifeglyph (b146)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(5),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
