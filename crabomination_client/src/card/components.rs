@@ -157,6 +157,7 @@ pub struct DeckCard {
 #[derive(Component)]
 pub struct CommandZoneCard {
     pub owner: usize,
+    #[allow(dead_code)]
     pub slot: usize,
 }
 
@@ -276,10 +277,12 @@ pub struct PlayerIcon {
     pub seat: usize,
 }
 
-/// Parent marker for the per-seat "player crest" — the disc + halo ring
-/// + floating life numeral cluster that represents the player on the
-/// 3-D table. Replaces the bare [`PlayerIcon`] disc as the player-stats
-/// anchor; the disc and ring child entities carry their own markers
+/// Parent marker for the per-seat "player crest" — the disc, halo ring,
+/// and floating life numeral cluster that represents the player on the
+/// 3-D table.
+///
+/// Replaces the bare [`PlayerIcon`] disc as the player-stats anchor;
+/// the disc and ring child entities carry their own markers
 /// ([`PlayerIcon`] / [`PlayerCrestRing`]) so per-mesh systems can find
 /// them without walking the hierarchy.
 #[derive(Component, Clone, Copy)]

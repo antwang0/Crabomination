@@ -80,7 +80,7 @@ pub fn update_alt_tooltip(
         return;
     };
 
-    if let Ok(_) = tooltip_q.single_mut() {
+    if tooltip_q.single_mut().is_ok() {
         // Existing tooltip — just refresh its text.
         if let Ok(mut text) = text_q.single_mut()
             && text.0 != body

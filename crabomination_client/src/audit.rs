@@ -150,14 +150,8 @@ pub struct AuditPoolFilter(pub Option<AuditPool>);
 /// Whether the picker shows cards that have already been verified.
 /// Defaults to *hidden* — the typical workflow is to clear unverified
 /// cards, so cards already checked off are noise.
-#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub struct ShowVerifiedCards(pub bool);
-
-impl Default for ShowVerifiedCards {
-    fn default() -> Self {
-        Self(false)
-    }
-}
 
 /// Catalog cache: deferred-build because `all_cube_cards` allocates
 /// and we want a fresh list per audit session in case the catalog

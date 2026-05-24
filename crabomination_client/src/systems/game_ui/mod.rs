@@ -2759,10 +2759,9 @@ pub fn handle_game_input(
                 if let Some(k) = known {
                     if k.has_alternative_cost {
                         r.alt_cast.pending = Some(card_id);
-                    } else if k.back_face_name.is_some() {
-                        if !r.flipped_hand.flipped.insert(card_id) {
+                    } else if k.back_face_name.is_some()
+                        && !r.flipped_hand.flipped.insert(card_id) {
                             r.flipped_hand.flipped.remove(&card_id);
-                        }
                     }
                 }
             } else if let Some((game_id, owner)) = hovered_bf.iter().next() {
@@ -2848,7 +2847,7 @@ pub fn handle_game_input(
                 menu_state.card_id = Some(card_id);
                 // Centre on the window if there's no cursor position.
                 menu_state.spawn_pos = windows.single().ok()
-                    .and_then(|w| Some(Vec2::new(w.width() * 0.5, w.height() * 0.5)))
+                    .map(|w| Vec2::new(w.width() * 0.5, w.height() * 0.5))
                     .unwrap_or(Vec2::new(400.0, 300.0));
             }
         }
@@ -2958,13 +2957,14 @@ pub fn handle_game_input(
         if in_main && activate
             && let Some((game_id, cz_card)) = hovered_command_zone.iter().next()
             && cz_card.owner == your_seat
-        {
-            if let Some(card) = cv.players[your_seat].command.iter().find_map(|h| {
+            && let Some(card) = cv.players[your_seat].command.iter().find_map(|h| {
                 if let crabomination::net::HandCardView::Known(k) = h && k.id == game_id.0 {
                     return Some(k.clone());
                 }
                 None
-            }) {
+            })
+        {
+            {
                 if card.needs_target {
                     // Reuse the targeting modal — when the user picks a
                     // target it submits CastSpell today. We mark the

@@ -309,7 +309,7 @@ pub fn update_opponent_panel_tint(
         .map(|c| c.power.max(0))
         .sum();
 
-    let threatened = viewer.life <= 5 || lethal_on_board >= viewer.life as i32;
+    let threatened = viewer.life <= 5 || lethal_on_board >= viewer.life;
     *bg = BackgroundColor(if threatened { theme::HUD_BG_DANGER } else { theme::HUD_BG });
 }
 

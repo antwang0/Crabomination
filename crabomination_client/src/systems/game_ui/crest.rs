@@ -95,7 +95,7 @@ fn ring_state_for_seat(
 
     let viewer_life = cv.players.iter().find(|p| p.seat == your_seat).map(|p| p.life).unwrap_or(20);
     let threatened = seat == your_seat
-        && (viewer_life <= 5 || lethal_on_board >= viewer_life as i32);
+        && (viewer_life <= 5 || lethal_on_board >= viewer_life);
     if threatened {
         return RingState {
             base: CREST_RING_THREAT_BASE,

@@ -198,7 +198,7 @@ pub fn handle_keyboard_cursor_input(
 
     // If the previous selection is no longer present, drop it.
     if let Some(sel) = cursor.selection
-        && !rows.iter().any(|(_, l)| l.iter().any(|s| *s == sel))
+        && !rows.iter().any(|(_, l)| l.contains(&sel))
     {
         cursor.selection = None;
     }

@@ -67,6 +67,7 @@ pub const PANEL_BG_SUNKEN: Color = Color::srgba(0.08, 0.08, 0.14, 1.0);
 /// HUD strip background (semi-transparent, no panel border).
 pub const HUD_BG: Color = Color::srgba(0.0, 0.0, 0.0, 0.78);
 /// HUD background tinted blue — "active" / "info" feel.
+#[allow(dead_code)]
 pub const HUD_BG_INFO: Color = Color::srgba(0.0, 0.10, 0.22, 0.82);
 /// HUD background tinted red — error or danger banner.
 pub const HUD_BG_DANGER: Color = Color::srgba(0.25, 0.0, 0.0, 0.82);
