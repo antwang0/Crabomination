@@ -13979,7 +13979,7 @@ pub fn prismari_firefoot_b162() -> CardDefinition {
 }
 
 /// Prismari Stormbolt (b162) — {1}{U}{R} Instant.
-/// 3 damage to any target + Scry 1.
+/// 3 damage to any target + Scry 1
 pub fn prismari_stormbolt_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbolt (b162)",
@@ -13999,6 +13999,230 @@ pub fn prismari_stormbolt_b162() -> CardDefinition {
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 164 (modern_decks) — More Prismari ──────────────────────────────
+
+/// Prismari Blazetide (b164) — {2}{U}{R} 3/3 Elemental Wizard Trample.
+/// Magecraft: deal 1 damage to each opponent.
+pub fn prismari_blazetide_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Blazetide (b164)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spellfury (b164) — {1}{R} Instant.
+/// Deal 3 damage to target creature.
+pub fn prismari_spellfury_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellfury (b164)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            amount: Value::Const(3),
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spellwaver (b164) — {3}{U} 2/4 Elemental Wizard.
+/// ETB: draw a card.
+pub fn prismari_spellwaver_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellwaver (b164)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![{
+            use crate::effect::shortcut::etb_draw;
+            etb_draw(1)
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Fireweaver (b164) — {1}{U}{R} 2/2 Elemental Wizard Haste.
+/// Magecraft: loot (draw 1, discard 1).
+pub fn prismari_fireweaver_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Fireweaver (b164)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormcrash (b164) — {3}{R} Sorcery.
+/// 4 damage to target creature or player. Scry 1.
+pub fn prismari_stormcrash_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormcrash (b164)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: Selector::Target(0),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkdancer (b164) — {U}{R} 2/1 Elemental Wizard Haste.
+pub fn prismari_sparkdancer_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkdancer (b164)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Dracoshaper (b164) — {4}{U}{R} 4/4 Elemental Wizard Flying.
+/// Magecraft: create a Treasure token.
+pub fn prismari_dracoshaper_b164() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Dracoshaper (b164)",
+        cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![magecraft_treasure()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
