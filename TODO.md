@@ -5,6 +5,28 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XVII — 2026-05-24)
+
+- ✅ **`AlternativeCost.effect_override`** — new `Option<Effect>` field
+  on `AlternativeCost`. When a spell is cast via its alternative cost and
+  this field is `Some`, the spell resolves using the override effect
+  instead of its normal `definition.effect`. This unlocks **Overload**
+  and similar mechanics where the alt-cost changes the spell's resolution
+  behavior ("target" → "each"). Three cards wired:
+  - **Cyclonic Rift**: Overload {6}{U} → ForEach nonland permanent
+    opponents control, bounce to owner's hand.
+  - **Vandalblast**: Overload {4}{R} → ForEach artifact opponents control,
+    destroy.
+  - **Mizzium Mortars**: Overload {4}{R}{R} → ForEach creature opponents
+    control, deal 4 damage.
+  3 new tests covering all three Overload cards. 4762 tests passing.
+
+### Cards that could use Overload next
+- Blustersquall ({U} tap target creature / Overload {3}{U} tap each)
+- Electrickery ({R} 1 damage to target / Overload {1}{R} 1 to each)
+- Teleportal ({U}{R} unblockable / Overload {3}{U}{R} each your creature)
+- Street Spasm ({X}{R} damage to target / Overload {X}{X}{R}{R} each opp)
+
 ## MagicCompRules coverage audit
 
 Periodic spot-check of the rules document
