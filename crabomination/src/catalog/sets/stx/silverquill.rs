@@ -2385,7 +2385,6 @@ pub fn silverquill_lawkeeper() -> CardDefinition {
 /// engine: pair with Apprentice + Sorcery to mint Tenured-buffed 3/3
 /// fliers each spell.
 pub fn inkling_penmaster() -> CardDefinition {
-    use crate::catalog::sets::sos::inkling_token;
     CardDefinition {
         name: "Inkling Penmaster",
         cost: cost(&[generic(2), w(), b()]),
@@ -2400,11 +2399,7 @@ pub fn inkling_penmaster() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: inkling_token(),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_inkling()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

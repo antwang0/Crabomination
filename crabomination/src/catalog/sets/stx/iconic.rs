@@ -92,11 +92,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
         keywords: vec![Keyword::Menace, Keyword::Ward(crate::card::WardCost::generic(1))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: super::shared::stx_pest_token(),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -975,7 +971,6 @@ pub fn lorehold_spiritbringer() -> CardDefinition {
 /// is collapsed to a flat magecraft mint (auto-decider always mints) —
 /// engine has no per-trigger MayPay-with-mana-cost primitive yet.
 pub fn witherbloom_pestcaster() -> CardDefinition {
-    use crate::catalog::sets::stx::shared::stx_pest_token;
     CardDefinition {
         name: "Witherbloom Pestcaster",
         cost: cost(&[generic(2), b(), g()]),
@@ -990,11 +985,7 @@ pub fn witherbloom_pestcaster() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: stx_pest_token(),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_pest()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1392,11 +1383,7 @@ pub fn prismari_vandal() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: crate::game::effects::treasure_token(),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_treasure()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -800,7 +800,6 @@ pub fn prismari_ember_channeler() -> CardDefinition {
 /// Galazeth Prismari for explosive midgame mana. Slot into Prismari
 /// big-spell shells (Magma Opus, Crackle with Power).
 pub fn prismari_alchemist() -> CardDefinition {
-    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Prismari Alchemist",
         cost: cost(&[generic(2), u(), r()]),
@@ -815,11 +814,7 @@ pub fn prismari_alchemist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: treasure_token(),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_treasure()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
