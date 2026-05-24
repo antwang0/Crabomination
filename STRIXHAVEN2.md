@@ -19,8 +19,19 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2435 (incl. synthesised variants — batches 155 + 156 + 157 + 158 + 159 add 193 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2499 (incl. synthesised variants — batches 155–165 add 257 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 164 + 165, claude/modern_decks): 64
+additional new STX cards across all five colleges (14 Lorehold, 14
+Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill). Each new
+card ships with at least one functionality test in `tests::stx`.
+Engine + server improvements landed alongside the cards:
+- `PlayerView.spells_cast_this_turn` exposed to clients (storm
+  count display enabler).
+- `ability_effect_label` covers `SetNoMaxHandSize` and `FlipCoin`.
+- 4 CR lock-in tests: CR 119.1 (starting life), CR 119.3 (gain
+  life), CR 704.5f (zero toughness SBA), CR 401.1 (library order).
 
 Push (modern_decks, batches 158 + 159, claude/modern_decks): 84
 additional new STX cards across all five colleges (21 Silverquill,
