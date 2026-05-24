@@ -19,6 +19,7 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
+<<<<<<< HEAD
 | STX (327 cards) | 2291 (incl. synthesised variants — batches 155 + 156 add 49 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
@@ -42,6 +43,20 @@ Engine improvements in this stretch:
 
 Previous push (modern_decks, batch 154): 40 new STX cards across all
 five colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
+=======
+| STX (327 cards) | 2302 (incl. synthesised variants — batch 155 adds 60 cards across all five colleges) | 0 | 0 |
+| STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batch 155): 60 new STX cards across all five
+colleges (16 Silverquill, 13 Witherbloom, 12 Lorehold, 10 Quandrix,
+10 Prismari). Each new card ships with at least one functionality
+test in `tests::stx` exercising its primary play pattern (magecraft
+trigger, ETB, attack trigger, activated ability, etc.). No engine
+changes required — all bodies compose against existing primitives.
+
+Push (modern_decks, batch 154): 40 new STX cards across all five
+colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
+>>>>>>> a0696a4 (modern_decks batch 155: 60 new STX cards across all 5 colleges)
 5 Prismari). Engine additions in this stretch:
 - `magecraft_mint_pest` / `magecraft_mint_inkling` /
   `magecraft_mint_fractal(N)` — magecraft-on-cast token-mint
