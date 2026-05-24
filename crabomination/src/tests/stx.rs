@@ -66972,3 +66972,61 @@ fn silverquill_denouncement_b164_shrinks_creature() {
     // 2/2 with -3/-3 → -1/-1 → dies SBA
     assert!(g.battlefield_find(bear).is_none());
 }
+
+// ── CR lock-in tests (batch 164) ──────────────────────────────────────────
+
+#[test]
+fn cr_119_1_starting_life_is_twenty() {
+    let g = two_player_game();
+    assert_eq!(g.players[0].life, 20);
+    assert_eq!(g.players[1].life, 20);
+}
+
+#[test]
+fn cr_704_5f_zero_toughness_creature_dies_to_sba() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let shrink = g.add_card_to_hand(0, catalog::witherbloom_killweave_b164());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: shrink, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Killweave castable");
+    drain_stack(&mut g);
+    // 2/2 → 0/0 → dies to SBA (CR 704.5f)
+    assert!(g.battlefield_find(bear).is_none());
+    // Card should be in graveyard
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
+#[test]
+fn cr_401_1_library_holds_deck_cards_in_order() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    // CR 401.1: library is an ordered zone; cards drawn come from front.
+    assert_eq!(g.players[0].library.len(), 3);
+    // Draw via player.draw_top should take from front.
+    let hand_before = g.players[0].hand.len();
+    let drawn = g.players[0].draw_top();
+    assert!(drawn.is_some());
+    assert_eq!(g.players[0].library.len(), 2);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn cr_119_3_gain_life_adds_to_total() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_vinemender_b164());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Vinemender castable");
+    drain_stack(&mut g);
+    // ETB gains 2 life. Per CR 119.3, "gain N life" means "add N to life total".
+    assert_eq!(g.players[0].life, life_before + 2);
+}

@@ -94,6 +94,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         cards_exiled_this_turn: player.cards_exiled_this_turn,
         instants_or_sorceries_cast_this_turn: player.instants_or_sorceries_cast_this_turn,
         creatures_cast_this_turn: player.creatures_cast_this_turn,
+        spells_cast_this_turn: player.spells_cast_this_turn,
         no_maximum_hand_size: player.no_maximum_hand_size,
         // Command zone is public — every viewer sees every card as
         // `Known`. We reuse `HandCardView` for the card shape since
@@ -570,6 +571,8 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::RevealUntilFind { .. } => "Reveal until find",
         Effect::AddFirstSpellTax { .. } => "Cost tax",
         Effect::Drain { .. } => "Drain",
+        Effect::SetNoMaxHandSize { .. } => "No max hand size",
+        Effect::FlipCoin { .. } => "Flip coin",
         Effect::Proliferate => "Proliferate",
         Effect::LookAtTop { .. } => "Look at top",
         Effect::ShuffleGraveyardIntoLibrary { .. } => "Shuffle into library",

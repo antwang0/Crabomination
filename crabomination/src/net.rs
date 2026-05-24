@@ -155,6 +155,10 @@ pub struct PlayerView {
     /// turn, …" payoffs.
     #[serde(default)]
     pub creatures_cast_this_turn: u32,
+    /// Total spells cast this turn (all types). Enables storm-count
+    /// display and cards with "if you've cast N spells this turn" gates.
+    #[serde(default)]
+    pub spells_cast_this_turn: u32,
     /// True if this player has no maximum hand size for the rest of the
     /// game (Wisdom of Ages, Reliquary Tower-style effects). Surfaced
     /// so UIs can suppress the cleanup-step discard warning when the
