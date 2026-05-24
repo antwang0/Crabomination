@@ -7891,3 +7891,56 @@ CR 501 (Beginning Phase) to ✅. Open items to explore next:
   (End of Combat, ✅ as of batch 55). The Beginning Phase audit
   exposed no engine gap at the phase-umbrella level — each child
   step owns its own turn-based actions per CR 501.1.
+
+### Suggested next-up tasks (additions from batches 150–153)
+
+Batches 150–153 added 83 STX cards across all five colleges, landed
+five new engine primitives (`Value::MaxGraveyardSize`,
+`Effect::LifeGainLockThisTurn`, `Player.cannot_gain_life_this_turn`,
+`PlayerRef::ControllerOf`-via-stack, `ManaCost::summary()` /
+`color_pip_letter()`), promoted four 🟡 cards (Swan Song, Visions
+of Beyond, Skullcrack, Fiery Impulse) to ✅, and added CR 117 /
+CR 405 / CR 119 explicit lock-in tests. Open items:
+
+- **`Selector::TargetFiltered` shortcut for spell-mastery gates** —
+  Fiery Impulse's spell-mastery test pattern (`SelectorCountAtLeast
+  { sel: CardsInZone(You, Graveyard, IS), n: Const(2) }`) is verbose;
+  a `Predicate::IsCardsInGraveyardAtLeast { who, filter, n }`
+  shortcut would tighten the spell-mastery / threshold idioms across
+  Searing Blaze, Fiery Impulse, Mishra's Bauble, Murderous Cut.
+- **`Effect::PreventDamageThisTurn`** — Skullcrack's "damage can't be
+  prevented" rider is still omitted (no general damage-prevention
+  layer). The prevention path is its own dual to `LifeGainLock`;
+  add `Player.damage_cannot_be_prevented_this_turn` + a "Damage
+  prevention" replacement registry consulted by `deal_damage_to_from`.
+  Same shape unblocks Furnace of Rath / Boil-style cards.
+- **Multi-target Skullcrack with player-or-creature target** — the
+  current Skullcrack only targets players. The printed Oracle is
+  "any target" (creature, planeswalker, or player). Promote the
+  cast-time filter from `Player` to
+  `Creature ∨ Player ∨ Planeswalker` and route the damage and
+  lifegain lock independently (the lock only applies when the
+  target is a player).
+- **Hybrid mana cost {2/W} support** — Spectral Procession's
+  printed cost is `{2/W}{2/W}{2/W}` (3 hybrid pips, each paid as
+  "2 generic OR 1 white"). The current Hybrid pip is `{a/b}` (1 of
+  either color); we need a `ManaSymbol::HybridGeneric(u32, Color)`
+  variant for the `{N/X}` shape. Unblocks Spectral Procession,
+  Reaper King, future hybrid-pricing cards.
+- **CR 614 — damage-replacement framework** — still 🟡 (no general
+  "would deal damage, do X instead" hook). Furnace of Rath / Gisela
+  / Heartless Hidetsugu are the canonical target cards. The
+  replacement primitive shape: `ReplacementEffect::DamageDoubled
+  { target_filter, multiplier }` consulted in
+  `deal_damage_to_from` before the amount is committed.
+- **Strategic Planning's "look-3-take-1" picker** — currently
+  approximated as Mill 3 + Draw 1, which preserves the graveyard
+  axis but collapses the choice. A `Effect::LookAtTopAndChoose
+  { count, take, take_to: ZoneDest, rest_to: ZoneDest }` primitive
+  would land Strategic Planning, Anticipate, Suspicious Stowaway,
+  and the printed Lesson "look at top of sideboard" path.
+- **Server: histogram of match durations** — `MatchStats` now
+  tracks avg + min + max. A small bucketed histogram (e.g. counts
+  per 30s bucket up to 10m, then 10m+ catch-all) would let
+  operators see the distribution shape at a glance without leaving
+  the per-match log line.
