@@ -18541,3 +18541,169 @@ pub fn lorehold_crackleflame_b161() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 162 (modern_decks) — More Lorehold ───────────────────────────────
+
+/// Lorehold Bonelord (b162) — {3}{R}{W} 4/4 Spirit Knight Vigilance Lifelink.
+/// 5-mana finisher.
+pub fn lorehold_bonelord_b162() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bonelord (b162)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spectralrider (b162) — {2}{R} 3/2 Spirit Knight Haste.
+/// 3-mana hasty Spirit.
+pub fn lorehold_spectralrider_b162() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectralrider (b162)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Brave (b162) — {1}{W} 2/2 Spirit Soldier First Strike Lifelink.
+/// 2-mana defensive cleric.
+pub fn lorehold_brave_b162() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Brave (b162)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battleweave (b162) — {2}{R}{W} Sorcery.
+/// 4 damage to any target + you gain 4 life.
+pub fn lorehold_battleweave_b162() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battleweave (b162)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(4),
+                to: Selector::Target(0),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spectralweaver (b162) — {1}{R}{W} 2/2 Spirit Wizard.
+/// ETB: 1 damage + gain 1 life.
+pub fn lorehold_spectralweaver_b162() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectralweaver (b162)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(1),
+                to: Selector::Target(0),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -3215,5 +3215,36 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_vowscribe_b161,
         // ── CR 502.3 PreventUntap card ──
         super::extras::strixhaven_stasis_glyph_b160,
+        // ── batch 162 (modern_decks): witherbloom ──
+        super::witherbloom::pest_stranglechoke_b162,
+        super::witherbloom::witherbloom_mosskeeper_b162,
+        super::witherbloom::pest_trampler_b162,
+        super::witherbloom::witherbloom_vinetwine_b162,
+        super::witherbloom::witherbloom_pestsower_b162,
+        super::witherbloom::witherbloom_sapseer_b162,
+        // ── batch 162 (modern_decks): prismari ──
+        super::prismari::prismari_sparkflower_b162,
+        super::prismari::prismari_burnscribe_b162,
+        super::prismari::prismari_spellslinger_b162,
+        super::prismari::prismari_firefoot_b162,
+        super::prismari::prismari_stormbolt_b162,
+        // ── batch 162 (modern_decks): quandrix ──
+        super::quandrix::quandrix_splashweaver_b162,
+        super::quandrix::fractal_echoweaver_b162,
+        super::quandrix::quandrix_tidemorph_b162,
+        super::quandrix::quandrix_sumcoach_b162,
+        super::quandrix::quandrix_wavelet_b162,
+        // ── batch 162 (modern_decks): lorehold ──
+        super::lorehold::lorehold_bonelord_b162,
+        super::lorehold::lorehold_spectralrider_b162,
+        super::lorehold::lorehold_brave_b162,
+        super::lorehold::lorehold_battleweave_b162,
+        super::lorehold::lorehold_spectralweaver_b162,
+        // ── batch 162 (modern_decks): silverquill ──
+        super::silverquill::silverquill_devotionseer_b162,
+        super::silverquill::inkling_plumefall_b162,
+        super::silverquill::silverquill_inksong_b162,
+        super::silverquill::silverquill_apprentice_ii_b162,
+        super::silverquill::inkling_sentry_b162,
     ]
 }
