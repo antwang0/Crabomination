@@ -64665,6 +64665,54 @@ fn inkling_pen_adept_b159_magecraft_self_pumps() {
     assert_eq!(g.battlefield_find(pa).unwrap().power(), pwr_before + 1);
 }
 
+#[test]
+fn silverquill_soulbinder_ii_b159_etb_drains_and_grows() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_soulbinder_ii_b159());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soulbinder castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0_before + 1);
+    assert_eq!(g.players[1].life, life1_before - 1);
+    let sb = g.battlefield.iter()
+        .find(|c| c.definition.name == "Silverquill Soulbinder II (b159)")
+        .expect("on bf");
+    assert_eq!(sb.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+/// Lock-in: the new `etb_drain_and_counter_self` shortcut produces an
+/// ETB trigger with Seq(Drain, AddCounter+1/+1 Self). Verified
+/// structurally so future refactors can't accidentally collapse it onto
+/// `etb_drain` alone.
+#[test]
+fn shortcut_etb_drain_and_counter_self_emits_drain_then_counter() {
+    use crate::card::{Effect, EventKind, EventScope, Selector, CounterType};
+    use crate::effect::shortcut::etb_drain_and_counter_self;
+    let ta = etb_drain_and_counter_self(2);
+    assert_eq!(ta.event.kind, EventKind::EntersBattlefield);
+    assert_eq!(ta.event.scope, EventScope::SelfSource);
+    match ta.effect {
+        Effect::Seq(steps) => {
+            assert_eq!(steps.len(), 2);
+            assert!(matches!(steps[0], Effect::Drain { .. }));
+            match &steps[1] {
+                Effect::AddCounter { what, kind, .. } => {
+                    assert!(matches!(what, Selector::This));
+                    assert_eq!(*kind, CounterType::PlusOnePlusOne);
+                }
+                _ => panic!("expected AddCounter as second step"),
+            }
+        }
+        _ => panic!("expected Seq"),
+    }
+}
+
 // ── batch 159 — Witherbloom cards ──────────────────────────────────────────
 
 #[test]

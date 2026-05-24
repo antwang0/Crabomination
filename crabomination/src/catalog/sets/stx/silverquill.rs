@@ -19662,3 +19662,35 @@ pub fn inkling_pen_adept_b159() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Silverquill Soulbinder II (b159) — {2}{W}{B} 2/3 Vampire Cleric.
+/// ETB Drain 1, then put a +1/+1 counter on self. Snowball drainer.
+pub fn silverquill_soulbinder_ii_b159() -> CardDefinition {
+    use crate::effect::shortcut::etb_drain_and_counter_self;
+    CardDefinition {
+        name: "Silverquill Soulbinder II (b159)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain_and_counter_self(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

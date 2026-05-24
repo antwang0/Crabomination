@@ -3994,4 +3994,23 @@ pub mod shortcut {
             2,
         )
     }
+
+    /// ETB-drain + add +1/+1 counter to self shortcut.
+    /// Models the "comes into play, drains N, then has a +1/+1
+    /// counter" cards (Silverquill Soulbinder template — drain then
+    /// scale). Wraps `etb` with a `Seq(Drain, AddCounter Self+1/+1)`.
+    pub fn etb_drain_and_counter_self(amount: i32) -> TriggeredAbility {
+        etb(Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))
+    }
 }

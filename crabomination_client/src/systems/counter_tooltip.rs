@@ -232,6 +232,14 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(tapped)"));
     }
 
+    // Summoning sickness: creatures that entered this turn can't attack
+    // or use {T} activated abilities (per CR 302.1). Show this in the
+    // tooltip so players don't accidentally tap a fresh creature
+    // expecting an attack.
+    if p.summoning_sick && p.card_types.contains(&CardType::Creature) {
+        lines.push(String::from("(summoning sick)"));
+    }
+
     if lines.is_empty() {
         None
     } else {

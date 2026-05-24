@@ -548,6 +548,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_stalwart_b159,
         super::silverquill::silverquill_pen_sage_b159,
         super::silverquill::inkling_pen_adept_b159,
+        super::silverquill::silverquill_soulbinder_ii_b159,
         // ── witherbloom (447 factories) ──
         super::witherbloom::witherbloom_apprentice,
         super::witherbloom::pest_summoning,
