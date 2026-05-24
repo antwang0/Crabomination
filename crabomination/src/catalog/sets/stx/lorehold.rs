@@ -17788,3 +17788,187 @@ pub fn lorehold_spectral_watcher_b158() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 159 (modern_decks) — More Lorehold cards ─────────────────────────
+
+/// Lorehold Pyrescholar (b159) — {2}{R} 2/3 Spirit Wizard.
+/// Magecraft 1 damage to each opp.
+pub fn lorehold_pyrescholar_b159() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_each_opp;
+    CardDefinition {
+        name: "Lorehold Pyrescholar (b159)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sentinel (b159) — {3}{W} 2/4 Spirit Soldier Vigilance.
+/// 4-mana defensive vigilance body.
+pub fn lorehold_sentinel_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sentinel (b159)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Mage (b159) — {R} 1/1 Spirit Wizard.
+/// Magecraft 1 damage to any target. Cheapest Lorehold ping engine.
+pub fn lorehold_ember_mage_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Mage (b159)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spectral Cavalry (b159) — {2}{R}{W} 3/3 Spirit Knight Haste.
+/// 4-mana hasty mid-range Spirit.
+pub fn lorehold_spectral_cavalry_b159() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectral Cavalry (b159)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlescroll (b159) — {3}{R}{W} Sorcery.
+/// Mint 2 Spirit tokens with haste EOT.
+pub fn lorehold_battlescroll_b159() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::card::ActivatedAbility;
+    let _ = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes::default(),
+        activated_abilities: vec![] as Vec<ActivatedAbility>,
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lorehold Battlescroll (b159)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: lorehold_spirit_token(),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Spirit))
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

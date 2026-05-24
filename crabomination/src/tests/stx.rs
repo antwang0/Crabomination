@@ -64720,6 +64720,76 @@ fn pest_sapfeeder_b159_magecraft_gains_life() {
     assert_eq!(g.players[0].life, life_before + 1);
 }
 
+// ── batch 159 — Lorehold cards ─────────────────────────────────────────────
+
+#[test]
+fn lorehold_pyrescholar_b159_magecraft_pings_each_opp() {
+    let mut g = two_player_game();
+    let _p = g.add_card_to_battlefield(0, catalog::lorehold_pyrescholar_b159());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt 3 + magecraft 1
+    assert_eq!(g.players[1].life, life1_before - 3 - 1);
+}
+
+#[test]
+fn lorehold_sentinel_b159_is_a_four_mana_vigilance_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_sentinel_b159());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(c.definition.power, 2);
+    assert_eq!(c.definition.toughness, 4);
+}
+
+#[test]
+fn lorehold_ember_mage_b159_magecraft_pings_any() {
+    let mut g = two_player_game();
+    let _e = g.add_card_to_battlefield(0, catalog::lorehold_ember_mage_b159());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 3 - 1);
+}
+
+#[test]
+fn lorehold_spectral_cavalry_b159_is_four_mana_haste_knight() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_spectral_cavalry_b159());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Haste));
+    assert_eq!(c.definition.power, 3);
+    assert_eq!(c.definition.toughness, 3);
+}
+
+#[test]
+fn lorehold_battlescroll_b159_mints_spirits_with_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_battlescroll_b159());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Battlescroll castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit")
+        .count();
+    assert_eq!(spirits, 2);
+}
+
 #[test]
 fn witherbloom_necrotomb_b159_mills_each_opp_three() {
     let mut g = two_player_game();

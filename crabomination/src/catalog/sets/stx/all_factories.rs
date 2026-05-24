@@ -1477,6 +1477,12 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::lorehold::lorehold_spectral_lance_b158,
         super::lorehold::lorehold_recallmage_b158,
         super::lorehold::lorehold_spectral_watcher_b158,
+        // batch 159 Lorehold (5)
+        super::lorehold::lorehold_pyrescholar_b159,
+        super::lorehold::lorehold_sentinel_b159,
+        super::lorehold::lorehold_ember_mage_b159,
+        super::lorehold::lorehold_spectral_cavalry_b159,
+        super::lorehold::lorehold_battlescroll_b159,
         // ── quandrix (352 factories) ──
         super::quandrix::quandrix_apprentice,
         super::quandrix::quandrix_pledgemage,
