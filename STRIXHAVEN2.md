@@ -19,26 +19,56 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2202 (incl. synthesised variants — batches 150 + 151 + 152 add 77 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2242 (incl. synthesised variants — batch 154 adds 40 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batches 150 + 151 + 152): 77 new STX cards
-across all five colleges (Silverquill / Witherbloom / Lorehold /
-Quandrix / Prismari). Engine additions in this stretch:
-- `Value::MaxGraveyardSize` — returns the largest graveyard among
-  all alive players. Backs Visions of Beyond's "if a graveyard has
-  20+, draw 3" rider (promoted 🟡 → ✅).
+Push (modern_decks, batch 154): 40 new STX cards across all five
+colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
+5 Prismari). Engine additions in this stretch:
+- `magecraft_mint_pest` / `magecraft_mint_inkling` /
+  `magecraft_mint_fractal(N)` — magecraft-on-cast token-mint
+  shortcuts for the Witherbloom / Silverquill / Quandrix templates.
+  Closes the Lorehold-side `magecraft_mint_spirit` parity gap.
+- `dies_mint_pest()` — self-replacing-Pest pattern shortcut.
+- `on_attack_mint_lorehold_spirit()` — per-attack Spirit minter.
+- `magecraft_add_counter_self()` — "magecraft → +1/+1 on self"
+  shortcut, used by ~15 prior call sites.
+- `cards_in_graveyard_at_least(filter, n)` + `spell_mastery_gate()`
+  Predicate shortcuts — collapse the canonical delirium /
+  spell-mastery / threshold idioms. Fiery Impulse refactored to
+  use `spell_mastery_gate()`.
+
+Server view: `PermanentView.static_ability_labels` — printed
+Oracle wording (`StaticAbility.description`) surfaced to the
+client alongside the existing `triggered_ability_labels` block.
+Tooltip exposure complete for both triggered + static abilities.
+
+Client tooltip: counter_tooltip renders the new
+`static_ability_labels` block under the triggered-abilities
+section.
+
+Server log: `MatchStats.duration_buckets` — 6-bucket histogram
+(<30s, 30s-1m, 1-2m, 2-5m, 5-10m, 10m+) appended to the rolling
+match-completion log as `| <30s:3 30s-1m:5 1-2m:7 …`. Lets
+operators see distribution shape without slicing logs.
+
+Rules: 3 new CR lock-in tests landed:
+- `cr_117_3a_no_player_gets_priority_during_untap_step`
+- `cr_117_7_response_resolves_first_lifo_stack_order`
+- `cr_119_8_player_cannot_lose_life_blocks_lose_life_paths`
+
+Previous push (modern_decks, batches 150 + 151 + 152): 77 new STX
+cards across all five colleges. Engine additions:
+- `Value::MaxGraveyardSize` — backs Visions of Beyond's draw-3
+  rider.
 - `Effect::LifeGainLockThisTurn { who }` + new
-  `Player.cannot_gain_life_this_turn` flag (reset across all
-  players in `do_untap`). Backs Skullcrack's "target can't gain
-  life this turn" rider (promoted 🟡 → ✅).
+  `Player.cannot_gain_life_this_turn` flag. Backs Skullcrack's
+  "target can't gain life this turn" rider.
 - `PlayerRef::ControllerOf` now consults the stack via
-  `stack_caster_for_card` before falling back to `find_card_owner`.
-  Fixes Swan Song's Bird-token-to-countered-spell-controller in
-  multiplayer (promoted 🟡 → ✅).
-- `ManaCost::summary()` printed-Oracle renderer + the new
-  `color_pip_letter(c: Color)` helper. Replaces 40 lines of
-  duplicated WUBRG matching in `server/view.rs`.
+  `stack_caster_for_card`. Fixes Swan Song's Bird-token controller
+  in multiplayer.
+- `ManaCost::summary()` printed-Oracle renderer + the
+  `color_pip_letter(c: Color)` helper.
 
 Server: per-process MatchStats now tracks min/max match duration
 (`served N matches: K bot, P pair; avg duration X (min Y, max Z)`)

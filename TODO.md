@@ -7857,21 +7857,24 @@ landed 3 new shortcut helpers (`dies_ping_creature`,
 `on_other_dies_mint_token`, `magecraft_mint_spirit`), and audited
 CR 501 (Beginning Phase) to ✅. Open items to explore next:
 
-- **`magecraft_mint_pest` shortcut** — mirror of `magecraft_mint_
-  spirit` for the Witherbloom (B/G) Pest token. With ~20 magecraft
-  + Pest-mint cards across SOS / STX (Pest Brewer, Pestmancer,
-  Witherbloom Pestcaller, etc.) a one-line helper would collapse
-  the recurring pattern. Engine shape:
-  `magecraft(CreateToken { def: stx_pest_token() })`.
-- **`magecraft_mint_inkling` shortcut** — Silverquill (W/B) variant
-  using `inkling_token()`. Currently 4 cards in `silverquill.rs` use
-  the long-form pattern (Inkling Penmaster, Silverquill Quillscribe,
-  Inkling Confessor, Silverquill Inkletter); a one-liner would
-  match Lorehold's new `magecraft_mint_spirit`.
-- **`magecraft_mint_fractal` shortcut** — Quandrix (G/U) variant
-  with the 0/0 base body + N counters from the existing
-  `create_token_with_counter` helper composition. Pairs with Quandrix
-  Symmetrist II (b141) and the Fractal-mint cycle.
+- ✅ **`magecraft_mint_pest` shortcut** (push modern_decks batch 154
+  done): mirror of `magecraft_mint_spirit` for the Witherbloom (B/G)
+  Pest token. Wraps `magecraft(CreateToken { def: stx_pest_token() })`
+  in a one-liner. Used by Witherbloom Pestmancer II (b154); lock-in
+  test `shortcut_magecraft_mint_pest_uses_magecraft_trigger_with_create_token_body`.
+- ✅ **`magecraft_mint_inkling` shortcut** (push modern_decks batch 154
+  done): Silverquill (W/B) variant using `inkling_token()`. Wraps
+  `magecraft(CreateToken { def: inkling_token() })`. Used by
+  Silverquill Inkmancer (b154); lock-in test
+  `shortcut_magecraft_mint_inkling_uses_inkling_token`. A future
+  cleanup pass can sweep the long-form bodies in `stx::silverquill`
+  (Inkling Penmaster, Silverquill Quillscribe, Inkling Confessor,
+  Silverquill Inkletter, etc.) onto the helper.
+- ✅ **`magecraft_mint_fractal(N)` shortcut** (push modern_decks
+  batch 154 done): Quandrix (G/U) variant with the 0/0 base body +
+  N counters from `Seq[CreateToken, AddCounter(LastCreatedToken, N)]`.
+  Used by Quandrix Fractalsmith (b154); lock-in test
+  `shortcut_magecraft_mint_fractal_seq_creates_token_then_stamps_counters`.
 - **`etb_double_counters` primitive** — Quandrix Symmetrist's
   "double the +1/+1 counters on each creature you control" payoff
   is currently approximated as fixed +1/+1 counter adds. A general
@@ -7939,8 +7942,59 @@ CR 405 / CR 119 explicit lock-in tests. Open items:
   { count, take, take_to: ZoneDest, rest_to: ZoneDest }` primitive
   would land Strategic Planning, Anticipate, Suspicious Stowaway,
   and the printed Lesson "look at top of sideboard" path.
-- **Server: histogram of match durations** — `MatchStats` now
-  tracks avg + min + max. A small bucketed histogram (e.g. counts
-  per 30s bucket up to 10m, then 10m+ catch-all) would let
-  operators see the distribution shape at a glance without leaving
-  the per-match log line.
+- ✅ **Server: histogram of match durations** (push modern_decks
+  batch 154 done): `MatchStats.duration_buckets: [u32; 6]` tracks
+  hits per bucket (<30s, 30s-1m, 1-2m, 2-5m, 5-10m, 10m+) and
+  `format_match_stats` appends the histogram as
+  `| <30s:3 30s-1m:5 1-2m:7 …` to the rolling log line. Lock-in
+  tests: `bucket_index_partitions_durations_into_six_buckets`,
+  `match_stats_observe_duration_increments_correct_bucket`,
+  `format_match_stats_includes_histogram_when_matches_present`,
+  `format_match_stats_omits_histogram_when_zero_matches`.
+
+### Suggested next-up tasks (additions from batch 154)
+
+Batch 154 added 40 STX cards across all five colleges, landed six
+new shortcut helpers (`magecraft_mint_pest`, `magecraft_mint_inkling`,
+`magecraft_mint_fractal(N)`, `dies_mint_pest`,
+`on_attack_mint_lorehold_spirit`, `magecraft_add_counter_self`,
+`cards_in_graveyard_at_least(filter, n)`, `spell_mastery_gate()`),
+exposed `PermanentView.static_ability_labels` to the client tooltip,
+added a per-process duration histogram to MatchStats, and locked in
+3 new CR rule tests (117.3a, 117.7, 119.8). Open items:
+
+- **Refactor existing magecraft-mint-token call sites onto the new
+  helpers** — `stx::silverquill` has ~4 long-form
+  `magecraft(CreateToken)` Inkling minters (Inkling Penmaster,
+  Silverquill Quillscribe, Inkling Confessor, Silverquill Inkletter,
+  Inkling Penmaster); `stx::witherbloom` has ~10 Pest minters; the
+  new shortcuts collapse each to a single line. Pure mechanical
+  refactor with zero behavior change; sweep with grep + Edit.
+- **Refactor existing `magecraft_add_counter_self` call sites** —
+  ~15 cards in `stx::*` inline the
+  `magecraft(AddCounter { what: Selector::This, ... })` body
+  (Inkling Bookbinder, Inkling Calligraphist, Silverquill Soulbinder,
+  Witherbloom Sproutchant, Quandrix Equationmage, Pensive Professor
+  secondary, etc.). The helper lock-in test exists; just need a
+  sweep.
+- **Sweep `cards_in_graveyard_at_least` call sites** — Fiery Impulse
+  is the canonical exerciser; future Searing Blaze / Murderous Cut /
+  Mishra's Bauble cards can use the helper. Also a candidate to use:
+  Tarmogoyf-style threshold gates if added.
+- **`Effect::PreventDamageThisTurn`** — Skullcrack's "damage can't be
+  prevented" rider is still ⏳. Same shape unblocks Furnace of
+  Rath / Boil-style cards. Tracked alongside CR 614 damage
+  replacement framework.
+- **Static-ability tooltip exposure for the client** — DONE: the
+  `static_ability_labels` field is now wired and the client tooltip
+  renders it. Future polish: a "click to expand" affordance for
+  long static descriptions on midrange/finisher creatures with
+  multi-clause statics.
+- **Bumping up SOS partial coverage** — the SOS catalog is 100%
+  ✅; the next layer of SOS work is verifying cube/sealed-pool
+  selectors for the new STX synthesised cards (`silverquill_*_b154`,
+  `witherbloom_*_b154`, etc.) — only the printed cards live in
+  `cube::all_cube_cards()` today. The synthesised cards are
+  catalog-only and don't appear in any deck pool. A future
+  `synthesised_pool()` helper in `cube.rs` could surface the b150+
+  batch cards for testing purposes.
