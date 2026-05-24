@@ -232,6 +232,21 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(tapped)"));
     }
 
+    // Marked damage: every creature with non-zero damage is one toughness-
+    // threshold away from death. Surface "marked: N damage" plus a
+    // (lethal? Y/N) shorthand so the player sees at a glance how close
+    // the creature is to dying. Push (claude/modern_decks batch 162) —
+    // covers CR 121-style damage tracking. Hidden when no damage marked
+    // (the common case for fresh permanents).
+    if p.damage > 0 && p.card_types.contains(&CardType::Creature) {
+        let lethal = if p.damage as i32 >= p.toughness {
+            " — LETHAL"
+        } else {
+            ""
+        };
+        lines.push(format!("(marked: {} damage{})", p.damage, lethal));
+    }
+
     // Summoning sickness: creatures that entered this turn can't attack
     // or use {T} activated abilities (per CR 302.1). Show this in the
     // tooltip so players don't accidentally tap a fresh creature
@@ -244,6 +259,85 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         None
     } else {
         Some(lines.join("\n"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_tooltip_body;
+    use crabomination::card::{CardType, CounterType};
+    use crabomination::net::PermanentView;
+
+    fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
+        PermanentView {
+            id: 0,
+            name: "Grizzly Bears".into(),
+            controller: 0,
+            owner: 0,
+            card_types: vec![CardType::Creature],
+            tapped: false,
+            damage,
+            summoning_sick: false,
+            power: 2,
+            toughness,
+            base_power: 2,
+            base_toughness: 2,
+            keywords: vec![],
+            counters: vec![],
+            attached_to: None,
+            is_token: false,
+            attacking: false,
+            blocking_attacker: None,
+            triggered_ability_labels: vec![],
+            static_ability_labels: vec![],
+            abilities: vec![],
+            loyalty_abilities: vec![],
+        }
+    }
+
+    #[test]
+    fn marked_damage_shows_when_creature_has_damage() {
+        let p = make_permanent_view(1, 2);
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("marked: 1 damage"), "got: {body}");
+        assert!(!body.contains("LETHAL"), "1 damage on a 2-tough body isn't lethal: {body}");
+    }
+
+    #[test]
+    fn marked_damage_calls_out_lethal_when_equal_or_greater_than_toughness() {
+        let p = make_permanent_view(2, 2);
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("marked: 2 damage"), "got: {body}");
+        assert!(body.contains("LETHAL"),
+            "2 damage on a 2-tough body should be flagged lethal: {body}");
+    }
+
+    #[test]
+    fn marked_damage_hidden_when_zero() {
+        let p = make_permanent_view(0, 2);
+        // No counters, no abilities, no other lines — body might be None.
+        let body = build_tooltip_body(&p);
+        if let Some(s) = body {
+            assert!(!s.contains("marked:"), "no damage marked, should not surface: {s}");
+        }
+    }
+
+    #[test]
+    fn marked_damage_unused_for_non_creature() {
+        let mut p = make_permanent_view(3, 2);
+        // Re-shape as an enchantment — damage on non-creatures is bogus,
+        // but if we ever stamp it (engine bug), the tooltip should hide it.
+        p.card_types = vec![CardType::Enchantment];
+        let body = build_tooltip_body(&p);
+        if let Some(s) = body {
+            assert!(!s.contains("marked:"), "non-creature should never surface damage: {s}");
+        }
+    }
+
+    // Silence unused-import warnings for items only used in some tests.
+    #[allow(dead_code)]
+    fn _ensure_counter_type_import_used() {
+        let _ = CounterType::PlusOnePlusOne;
     }
 }
 

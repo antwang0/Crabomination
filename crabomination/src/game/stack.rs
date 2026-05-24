@@ -671,10 +671,9 @@ impl GameState {
                 .iter()
                 .flat_map(|c| c.definition.static_abilities.iter())
                 .filter_map(|sa| match &sa.effect {
-                    StaticEffect::PreventUntap { applies_to } => match applies_to {
-                        crate::effect::Selector::EachPermanent(req) => Some(req.clone()),
-                        _ => None,
-                    },
+                    StaticEffect::PreventUntap {
+                        applies_to: crate::effect::Selector::EachPermanent(req),
+                    } => Some(req.clone()),
                     _ => None,
                 })
                 .collect();

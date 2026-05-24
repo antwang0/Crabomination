@@ -139,16 +139,57 @@ struct MatchStats {
     /// e.g. a sudden spike in the `<30s` bucket indicates many bots
     /// are conceding turn 1 (often a regression signal).
     duration_buckets: [u32; 6],
+    /// Per-format histogram of completed matches, indexed by the local
+    /// server `Format` discriminant (Demo / Cube). Lets operators see
+    /// the running cube-vs-demo split in the rolling summary line. Push
+    /// (claude/modern_decks batch 162).
+    format_buckets: [u64; FORMAT_BUCKET_COUNT],
+}
+
+/// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
+/// current `Format` enum variants (Demo, Cube) plus headroom for new
+/// formats added at the top of `main.rs`. New formats slot into the
+/// next free index via `format_index`.
+const FORMAT_BUCKET_COUNT: usize = 4;
+
+/// Map a local server `Format` (Demo / Cube) to its bucket index in
+/// `MatchStats.format_buckets`. Stable ordering — new formats append.
+fn format_index(f: Format) -> usize {
+    match f {
+        Format::Demo => 0,
+        Format::Cube => 1,
+    }
+}
+
+/// Reverse map for the format-bucket index. Returns `None` for the
+/// trailing reserved slots so the formatter can skip empty buckets.
+/// Used by `format_match_stats` to render `format=demo:7 cube:3` under
+/// the running summary.
+fn format_label_for_bucket(i: usize) -> Option<&'static str> {
+    match i {
+        0 => Some(Format::Demo.label()),
+        1 => Some(Format::Cube.label()),
+        _ => None,
+    }
 }
 
 impl MatchStats {
-    fn record_bot(&mut self, d: Duration) {
+    fn record_bot(&mut self, d: Duration, f: Format) {
         self.bot_matches += 1;
         self.observe_duration(d);
+        self.observe_format(f);
     }
-    fn record_pair(&mut self, d: Duration) {
+    fn record_pair(&mut self, d: Duration, f: Format) {
         self.pair_matches += 1;
         self.observe_duration(d);
+        self.observe_format(f);
+    }
+    /// Increment the per-format match count. Used by both `record_bot`
+    /// and `record_pair` so the per-format histogram covers every
+    /// completed match regardless of source.
+    fn observe_format(&mut self, f: Format) {
+        let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
+        self.format_buckets[idx] = self.format_buckets[idx].saturating_add(1);
     }
     /// Shared bookkeeping for both record paths — accumulates the
     /// total + tracks the new min/max envelope. Pulled out of the
@@ -306,6 +347,25 @@ fn format_match_stats(s: &MatchStats) -> String {
         out.push_str(" |");
         for (i, count) in s.duration_buckets.iter().enumerate() {
             out.push_str(&format!(" {}:{}", MatchStats::bucket_label(i), count));
+        }
+        // Per-format breakdown — only render buckets with a label and a
+        // hit, so demo-only deployments don't get a "cube:0" trailer.
+        // Format: " | format=demo:7 cube:3". Push (claude/modern_decks
+        // batch 162).
+        let format_chunks: Vec<String> = s
+            .format_buckets
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &count)| {
+                if count == 0 {
+                    return None;
+                }
+                format_label_for_bucket(i).map(|label| format!("{label}:{count}"))
+            })
+            .collect();
+        if !format_chunks.is_empty() {
+            out.push_str(" | format=");
+            out.push_str(&format_chunks.join(" "));
         }
     }
     out
@@ -590,7 +650,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_bot(duration);
+        s.record_bot(duration, format);
         *s
     };
     eprintln!(
@@ -636,7 +696,7 @@ fn run_pair_match(
     let duration = started.elapsed();
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-        s.record_pair(duration);
+        s.record_pair(duration, format);
         *s
     };
     eprintln!(
@@ -934,9 +994,9 @@ mod tests {
     #[test]
     fn match_stats_record_bot_and_pair() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(60));
-        s.record_pair(Duration::from_secs(120));
-        s.record_bot(Duration::from_secs(30));
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_pair(Duration::from_secs(120), Format::Demo);
+        s.record_bot(Duration::from_secs(30), Format::Demo);
         assert_eq!(s.total_matches(), 3);
         assert_eq!(s.bot_matches, 2);
         assert_eq!(s.pair_matches, 1);
@@ -947,7 +1007,7 @@ mod tests {
     #[test]
     fn format_match_stats_renders_summary() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(60));
+        s.record_bot(Duration::from_secs(60), Format::Demo);
         let line = format_match_stats(&s);
         assert!(line.contains("served 1 match"));
         assert!(line.contains("1 bot"));
@@ -957,8 +1017,8 @@ mod tests {
     #[test]
     fn format_match_stats_pluralizes_at_two() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(60));
-        s.record_pair(Duration::from_secs(120));
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_pair(Duration::from_secs(120), Format::Demo);
         let line = format_match_stats(&s);
         assert!(line.contains("served 2 matches"));
         assert!(line.contains("1 bot"));
@@ -975,10 +1035,10 @@ mod tests {
     #[test]
     fn match_stats_tracks_min_and_max_duration() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(60));
-        s.record_pair(Duration::from_secs(300));
-        s.record_bot(Duration::from_secs(30));
-        s.record_pair(Duration::from_secs(120));
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_pair(Duration::from_secs(300), Format::Demo);
+        s.record_bot(Duration::from_secs(30), Format::Demo);
+        s.record_pair(Duration::from_secs(120), Format::Demo);
         assert_eq!(s.min_duration, Some(Duration::from_secs(30)));
         assert_eq!(s.max_duration, Some(Duration::from_secs(300)));
     }
@@ -993,8 +1053,8 @@ mod tests {
     #[test]
     fn format_match_stats_includes_min_max_when_present() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(30));
-        s.record_pair(Duration::from_secs(300));
+        s.record_bot(Duration::from_secs(30), Format::Demo);
+        s.record_pair(Duration::from_secs(300), Format::Demo);
         let line = format_match_stats(&s);
         assert!(line.contains("min "), "should include min: {line}");
         assert!(line.contains("max "), "should include max: {line}");
@@ -1033,24 +1093,24 @@ mod tests {
     #[test]
     fn match_stats_observe_duration_increments_correct_bucket() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(15)); // bucket 0
-        s.record_bot(Duration::from_secs(45)); // bucket 1
-        s.record_bot(Duration::from_secs(100)); // bucket 2
-        s.record_bot(Duration::from_secs(180)); // bucket 3
-        s.record_bot(Duration::from_secs(500)); // bucket 4
-        s.record_bot(Duration::from_secs(700)); // bucket 5
+        s.record_bot(Duration::from_secs(15), Format::Demo); // bucket 0
+        s.record_bot(Duration::from_secs(45), Format::Demo); // bucket 1
+        s.record_bot(Duration::from_secs(100), Format::Demo); // bucket 2
+        s.record_bot(Duration::from_secs(180), Format::Demo); // bucket 3
+        s.record_bot(Duration::from_secs(500), Format::Demo); // bucket 4
+        s.record_bot(Duration::from_secs(700), Format::Demo); // bucket 5
         assert_eq!(s.duration_buckets, [1, 1, 1, 1, 1, 1]);
         // Two more matches in the <30s bucket
-        s.record_pair(Duration::from_secs(5));
-        s.record_pair(Duration::from_secs(20));
+        s.record_pair(Duration::from_secs(5), Format::Demo);
+        s.record_pair(Duration::from_secs(20), Format::Demo);
         assert_eq!(s.duration_buckets[0], 3);
     }
 
     #[test]
     fn format_match_stats_includes_histogram_when_matches_present() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(15));
-        s.record_pair(Duration::from_secs(700));
+        s.record_bot(Duration::from_secs(15), Format::Demo);
+        s.record_pair(Duration::from_secs(700), Format::Demo);
         let line = format_match_stats(&s);
         assert!(line.contains("<30s:1"), "1 in <30s bucket: {line}");
         assert!(line.contains("10m+:1"), "1 in 10m+ bucket: {line}");
@@ -1076,9 +1136,9 @@ mod tests {
         // 9 short, 1 long: p50 should land in the short bucket, p95 in
         // the long bucket.
         for _ in 0..9 {
-            s.record_bot(Duration::from_secs(10));
+            s.record_bot(Duration::from_secs(10), Format::Demo);
         }
-        s.record_bot(Duration::from_secs(2000));
+        s.record_bot(Duration::from_secs(2000), Format::Demo);
         assert_eq!(s.percentile(0.5), Duration::from_secs(30),
             "p50 lands in <30s bucket (upper bound 30s)");
         assert_eq!(s.percentile(0.95), Duration::from_secs(3600),
@@ -1088,7 +1148,7 @@ mod tests {
     #[test]
     fn percentile_p100_returns_max_bucket_upper_bound() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(5));
+        s.record_bot(Duration::from_secs(5), Format::Demo);
         assert_eq!(s.percentile(1.0), Duration::from_secs(30),
             "p100 with one sample = upper bound of its bucket");
     }
@@ -1096,8 +1156,8 @@ mod tests {
     #[test]
     fn format_match_stats_adds_percentile_when_at_least_two_matches() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(15));
-        s.record_pair(Duration::from_secs(15));
+        s.record_bot(Duration::from_secs(15), Format::Demo);
+        s.record_pair(Duration::from_secs(15), Format::Demo);
         let line = format_match_stats(&s);
         assert!(line.contains("p50≤"), "p50 estimate present: {line}");
         assert!(line.contains("p95≤"), "p95 estimate present: {line}");
@@ -1106,8 +1166,37 @@ mod tests {
     #[test]
     fn format_match_stats_omits_percentile_at_single_sample() {
         let mut s = MatchStats::default();
-        s.record_bot(Duration::from_secs(15));
+        s.record_bot(Duration::from_secs(15), Format::Demo);
         let line = format_match_stats(&s);
         assert!(!line.contains("p50"), "no p50 when only 1 sample: {line}");
+    }
+
+    #[test]
+    fn match_stats_tracks_per_format_counts() {
+        // Push (claude/modern_decks batch 162) — the new per-format
+        // histogram surfaces a `format=demo:N cube:M` breakdown in the
+        // rolling stats line so operators see cube-vs-demo split.
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_bot(Duration::from_secs(120), Format::Cube);
+        s.record_pair(Duration::from_secs(30), Format::Cube);
+        assert_eq!(s.format_buckets[format_index(Format::Demo)], 1);
+        assert_eq!(s.format_buckets[format_index(Format::Cube)], 2);
+        let line = format_match_stats(&s);
+        assert!(line.contains("format=demo:1 cube:2"),
+            "expected per-format breakdown in rolling line: {line}");
+    }
+
+    #[test]
+    fn match_stats_format_breakdown_omitted_when_only_one_format_used() {
+        // When only one format has hits, the other label should be
+        // silently dropped instead of rendering ":0".
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_bot(Duration::from_secs(30), Format::Demo);
+        let line = format_match_stats(&s);
+        assert!(line.contains("format=demo:2"), "demo bucket present: {line}");
+        assert!(!line.contains("cube:0"),
+            "cube:0 should not appear when no cube matches played: {line}");
     }
 }
