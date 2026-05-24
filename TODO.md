@@ -5172,6 +5172,19 @@ window into one trigger fire (similar to MTG's "looks back in time"
 rule for batch triggers). Same shape applies to `CardDiscarded`,
 `CreatureDied`, and any future per-zone-move event.
 
+**Per-event fan-out fix (push c4b7b14)**: The dispatcher previously
+broke after the first matching event per (source, trigger) pair,
+silently swallowing later events in the same batch. This was a
+regression for multi-attacker swings (Sparring Regimen) and any
+"whenever X happens" trigger over a batch of N events. The
+dispatcher now keeps iterating over events for batch-fanout-friendly
+event kinds (Attacks, CreatureDied, CardDrawn, CardDiscarded,
+CardLeftGraveyard, CounterAdded, Blocks, BecomesBlocked, LifeGained,
+LifeLost, BecameTarget) — one trigger fires per matching event,
+matching the printed Oracle wording. Other event kinds (ETB,
+StepBegins, …) keep the at-most-once guard because they don't emit
+duplicate events in a single batch.
+
 ### Spell-Side Predicate: Mana-Spent-On-Cast
 SOS introduces **Increment** ("if mana spent > this creature's P or T,
 +1/+1 counter") and **Opus** ("Whenever you cast an instant or sorcery,
@@ -5818,9 +5831,14 @@ respect "you may sacrifice" optionality (skip when the cheapest
 candidate is more valuable than the payoff).
 
 ### Planeswalker Targeting
-The bot never attacks planeswalkers.  Adding a heuristic that attacks a
-planeswalker when its loyalty is low enough to kill it this turn would make the
-bot more competitive.
+~~The bot never attacks planeswalkers.~~ Now redirects attackers at an
+opponent's planeswalker when total attacking power can finish it off in
+one swing (push claude/modern_decks `b34a23a`). Smallest-power-first
+allocation keeps beefy attackers free to face-attack the player when the
+walker fills up. Future improvement: handle chip attacks (attacking a
+walker we can't finish but that's still threatening) and the inverse case
+where a low-loyalty walker isn't worth committing trample beaters to
+because the opp can clean up with a blocker.
 
 ### Smarter Mana Rock Usage
 The bot taps mana rocks eagerly before knowing what it wants to cast.  A

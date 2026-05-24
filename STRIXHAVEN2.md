@@ -19,11 +19,29 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2242 (incl. synthesised variants — batch 154 adds 40 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2291 (incl. synthesised variants — batches 155 + 156 add 49 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batch 154): 40 new STX cards across all five
-colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
+Push (modern_decks, batches 155 + 156): 49 new STX cards across all
+five colleges (10 Witherbloom, 11 Lorehold, 9 Silverquill, 9 Quandrix,
+9 Prismari, plus the attack-anchor pattern in batch 156).
+
+Engine improvements in this stretch:
+- **Batch-fanout trigger fix** (`game/mod.rs:dispatch_triggers_for_events`):
+  the dispatcher now fans out per-event for batch-friendly event kinds
+  (Attacks, CreatureDied, CardDrawn, CardDiscarded, CardLeftGraveyard,
+  CounterAdded, Blocks, BecomesBlocked, LifeGained, LifeLost,
+  BecameTarget) so Sparring Regimen-style "whenever you attack" triggers
+  fire once per attacker in a multi-attacker batch.
+- **Bot AI planeswalker targeting** (`server/bot.rs`): the bot now
+  redirects attackers at finishable opp planeswalkers (smallest-power-
+  first allocation).
+- **Server view label coverage** (`server/view.rs`): expanded
+  `trigger_event_label` from ~12 cases to ~36, surfacing previously-
+  unrecognized trigger event kinds.
+
+Previous push (modern_decks, batch 154): 40 new STX cards across all
+five colleges (16 Witherbloom, 8 Lorehold, 7 Silverquill, 5 Quandrix,
 5 Prismari). Engine additions in this stretch:
 - `magecraft_mint_pest` / `magecraft_mint_inkling` /
   `magecraft_mint_fractal(N)` — magecraft-on-cast token-mint
