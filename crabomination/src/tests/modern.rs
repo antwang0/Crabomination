@@ -10859,3 +10859,34 @@ fn keen_eyed_curator_etb_adds_counter() {
     assert_eq!(curator.counter_count(crate::card::CounterType::PlusOnePlusOne), 1);
     assert_eq!(curator.power(), 4);
 }
+
+#[test]
+fn intervention_pact_gains_three_life_and_sets_delayed_trigger() {
+    let mut g = two_player_game();
+    let life_before = g.players[0].life;
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::intervention_pact());
+    // Free cast ({0})
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+    assert!(!g.delayed_triggers.is_empty(), "Should have a delayed PayOrLoseGame trigger");
+}
+
+#[test]
+fn gush_draws_two_cards() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::gush());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // Cast -1 (Gush) from hand + draw 2 = net +1
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}

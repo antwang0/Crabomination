@@ -8096,3 +8096,26 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
 - **Refactor Witherbloom self-mill ETB pattern** — Deathcoach's
   `etb(Mill(You, 2))` should be a shortcut (`etb_self_mill(N)`) if
   more Witherbloom self-mill creatures are added.
+
+### Suggested next-up tasks (additions from current session)
+
+- **Escalate keyword** — Collective Brutality is modeled as a
+  single-mode ChooseMode. The printed Escalate ("you may choose
+  additional modes; discard a card for each extra mode") would need
+  a multi-mode-with-additional-cost primitive. Low priority since
+  the single-mode version covers the primary play pattern.
+- **Treasure-on-tap triggers** — Magda, Brazen Outlaw's "whenever a
+  Dwarf you control becomes tapped, create a Treasure" needs a new
+  `EventKind::PermanentTapped` trigger scope (distinct from the
+  existing `GameEvent::PermanentTapped` which fires but isn't wired
+  as a trigger event). Would also unblock Carrot Cake's token-on-tap.
+- **Dwarf lord static self-exclusion** — Magda's "+1/+0 to other
+  Dwarves you control" is modeled as "+1/+0 to ALL Dwarves you
+  control" (including herself). Need an `exclude_source` flag on
+  `StaticEffect::PumpPT` to implement the "other" qualifier. The
+  layer system already has `AffectedPermanents::All { exclude_source }`
+  — just needs wiring.
+- **Spirit token helper** — Descendant of Storms creates an ad-hoc
+  Spirit token. A shared `spirit_token()` helper (like the existing
+  `pest_token()`, `inkling_token()`, `elemental_token()`) would
+  reduce boilerplate for future Spirit-tribal cards.

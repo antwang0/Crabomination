@@ -9511,3 +9511,52 @@ pub fn keen_eyed_curator() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Intervention Pact — {0} Instant.
+/// "Gain 3 life and prevent the next 3 damage that would be dealt to
+/// target player this turn. At the beginning of your next upkeep, pay
+/// {1}{W}{W}. If you don't, you lose the game."
+///
+/// Approximation: models gain 3 life + delayed PayOrLoseGame upkeep cost.
+/// The damage-prevention shield is omitted (no damage-prevention primitive).
+pub fn intervention_pact() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Intervention Pact",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::PayOrLoseGame {
+                    mana_cost: cost(&[generic(1), w(), w()]),
+                    life_cost: 0,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Gush — {4}{U} Instant.
+/// "Draw 2 cards. You may return two Islands you control to their owner's
+/// hand rather than pay this spell's mana cost."
+///
+/// Approximation: modeled at the {4}{U} cost with Draw 2. The alt cost
+/// (return two Islands) is omitted (no bounce-as-alt-cost primitive).
+pub fn gush() -> CardDefinition {
+    CardDefinition {
+        name: "Gush",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}

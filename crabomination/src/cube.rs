@@ -276,6 +276,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         glorious_anthem,
         serra_angel,
         descendant_of_storms,
+        intervention_pact,
         thalia_guardian_of_thraben,
         // ranger_captain_of_eos 🟡 — sac-for-no-noncreature-spells static
         // omitted, but ETB tutor-for-MV≤1 is the marquee effect and
@@ -426,6 +427,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         quantum_riddler,
         tishanas_tidebinder,
         // cryptic_command — 🟡 "choose two" collapsed to bundled pairs
+        gush,
         mystical_tutor,
         // dandan         — 🟡 "can attack only if defending player controls an Island" omitted
         turnabout,
