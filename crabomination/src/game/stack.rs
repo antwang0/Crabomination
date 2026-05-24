@@ -645,7 +645,7 @@ impl GameState {
                         target.clone(),
                         mode.unwrap_or(0),
                     );
-                    ctx.trigger_source = trigger_source.clone();
+                    ctx.trigger_source = trigger_source;
                     ctx.event_amount = event_amount;
                     ctx.x_value = x_value;
                     if !self.evaluate_predicate(pred, &ctx) {

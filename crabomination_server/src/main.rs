@@ -166,6 +166,51 @@ impl MatchStats {
         let idx = Self::bucket_index(d);
         self.duration_buckets[idx] = self.duration_buckets[idx].saturating_add(1);
     }
+    /// Estimate the `p`th-percentile match duration from the histogram.
+    /// `p` is a fraction in `[0.0, 1.0]`. Returns the upper edge of the
+    /// bucket containing the `p`-th sample (rounded up), so the estimate
+    /// is conservative — an actual median match may be shorter, but
+    /// reporting `≤ this` gives operators a useful upper bound on the
+    /// typical match length. Returns `Duration::ZERO` if no matches have
+    /// been recorded.
+    ///
+    /// The bucketing is coarse (6 buckets) so this is a *quantile-class*
+    /// rather than a true percentile — but enough for spotting drift in
+    /// match-length distribution shape over time. Used by
+    /// `format_match_stats` to surface `p50` and `p95` in the rolling
+    /// summary line.
+    fn percentile(&self, p: f32) -> Duration {
+        let total = self.total_matches();
+        if total == 0 {
+            return Duration::ZERO;
+        }
+        let p = p.clamp(0.0, 1.0);
+        // Target rank — 1-indexed so p=1.0 selects the last sample.
+        let target = (total as f32 * p).ceil().max(1.0) as u64;
+        let mut acc = 0u64;
+        for (i, &n) in self.duration_buckets.iter().enumerate() {
+            acc = acc.saturating_add(n as u64);
+            if acc >= target {
+                // Return the upper bound of bucket `i`.
+                return Self::bucket_upper_bound(i);
+            }
+        }
+        // Shouldn't reach here when total > 0, but fall back to the
+        // open-ended bucket's nominal upper bound.
+        Self::bucket_upper_bound(5)
+    }
+    /// Upper edge (inclusive estimate) of bucket `i` for percentile
+    /// reporting. Matches the cut points in `bucket_index`.
+    fn bucket_upper_bound(i: usize) -> Duration {
+        match i {
+            0 => Duration::from_secs(30),
+            1 => Duration::from_secs(60),
+            2 => Duration::from_secs(120),
+            3 => Duration::from_secs(300),
+            4 => Duration::from_secs(600),
+            _ => Duration::from_secs(3600),
+        }
+    }
     /// Map a duration onto its histogram bucket index. Buckets are
     /// power-of-rounded thresholds: 30s / 1m / 2m / 5m / 10m / 10m+.
     /// Anything strictly less than 30s lands in bucket 0; bucket 5
@@ -240,6 +285,17 @@ fn format_match_stats(s: &MatchStats) -> String {
             " (min {}, max {})",
             format_duration(mn),
             format_duration(mx),
+        ));
+    }
+    // Append percentile estimates from the histogram so operators see
+    // the distribution shape without manual bucket math. Skip on the
+    // first match to avoid degenerate `p50=p95=<30s` noise from a single
+    // sample.
+    if n >= 2 {
+        out.push_str(&format!(
+            " p50≤{}, p95≤{}",
+            format_duration(s.percentile(0.50)),
+            format_duration(s.percentile(0.95)),
         ));
     }
     // Append histogram only when at least one bucket has hits — keeps
@@ -1006,5 +1062,52 @@ mod tests {
         let s = MatchStats::default();
         let line = format_match_stats(&s);
         assert!(!line.contains("|"), "no histogram section when 0 matches: {line}");
+    }
+
+    #[test]
+    fn percentile_zero_when_no_matches() {
+        let s = MatchStats::default();
+        assert_eq!(s.percentile(0.5), Duration::ZERO);
+    }
+
+    #[test]
+    fn percentile_lands_in_correct_bucket() {
+        let mut s = MatchStats::default();
+        // 9 short, 1 long: p50 should land in the short bucket, p95 in
+        // the long bucket.
+        for _ in 0..9 {
+            s.record_bot(Duration::from_secs(10));
+        }
+        s.record_bot(Duration::from_secs(2000));
+        assert_eq!(s.percentile(0.5), Duration::from_secs(30),
+            "p50 lands in <30s bucket (upper bound 30s)");
+        assert_eq!(s.percentile(0.95), Duration::from_secs(3600),
+            "p95 lands in 10m+ bucket (upper bound 3600s)");
+    }
+
+    #[test]
+    fn percentile_p100_returns_max_bucket_upper_bound() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(5));
+        assert_eq!(s.percentile(1.0), Duration::from_secs(30),
+            "p100 with one sample = upper bound of its bucket");
+    }
+
+    #[test]
+    fn format_match_stats_adds_percentile_when_at_least_two_matches() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(15));
+        s.record_pair(Duration::from_secs(15));
+        let line = format_match_stats(&s);
+        assert!(line.contains("p50≤"), "p50 estimate present: {line}");
+        assert!(line.contains("p95≤"), "p95 estimate present: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_omits_percentile_at_single_sample() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(15));
+        let line = format_match_stats(&s);
+        assert!(!line.contains("p50"), "no p50 when only 1 sample: {line}");
     }
 }

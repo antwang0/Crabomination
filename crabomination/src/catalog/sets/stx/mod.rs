@@ -9,6 +9,7 @@
 
 pub use super::no_abilities;
 
+mod all_factories;
 mod extras;
 mod iconic;
 mod legends;
@@ -21,6 +22,7 @@ mod shared;
 mod silverquill;
 mod witherbloom;
 
+pub use all_factories::all_stx_card_factories;
 pub use extras::*;
 pub use iconic::*;
 pub use legends::*;

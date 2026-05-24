@@ -47,6 +47,14 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     for &f in crate::demo::goryos_vengeance_deck() {
         all.push(f);
     }
+    // STX (Strixhaven 2021) factory list — large but bounded; the
+    // dedup pass below removes any factory the cube/sos pools already
+    // exposed. Without this, mid-game snapshots involving STX
+    // permanents would fail snapshot-reload at the `name → factory`
+    // lookup stage.
+    for &f in crate::catalog::sets::stx::all_stx_card_factories() {
+        all.push(f);
+    }
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();
@@ -162,5 +170,21 @@ mod tests {
     #[test]
     fn lookup_returns_none_for_unknown_card() {
         assert!(lookup_by_name("This Card Does Not Exist").is_none());
+    }
+
+    #[test]
+    fn lookup_resolves_real_stx_cards_through_known_factories() {
+        // Real STX cards from the 327-card set should be reachable via
+        // snapshot deserialization (lookup_by_name → name_index →
+        // all_known_factories). Without an `all_stx_factories()` slice
+        // in the index, mid-game snapshots involving STX cards can't be
+        // round-tripped through the saved-state JSON path. The known-
+        // factories slice is queried lazily — this test stays cheap.
+        let def = lookup_by_name("Witherbloom Apprentice")
+            .expect("Witherbloom Apprentice should resolve via the STX catalog");
+        assert_eq!(def.name, "Witherbloom Apprentice");
+        let def = lookup_by_name("Spirited Companion")
+            .expect("Spirited Companion should resolve via the STX catalog");
+        assert_eq!(def.name, "Spirited Companion");
     }
 }
