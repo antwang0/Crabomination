@@ -5000,7 +5000,7 @@ pub fn quandrix_calligrapher_v2() -> CardDefinition {
 /// Quandrix counter package (Growth Curve doubles after).
 pub fn quandrix_equation_v2() -> CardDefinition {
     CardDefinition {
-        name: "Quandrix Equation II",
+        name: "Quandrix Equation (v2)",
         cost: cost(&[g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
@@ -7146,7 +7146,7 @@ pub fn quandrix_mathlord() -> CardDefinition {
 /// magecraft scaler.
 pub fn quandrix_geometer_b56() -> CardDefinition {
     CardDefinition {
-        name: "Quandrix Geometer II",
+        name: "Quandrix Geometer (b56)",
         cost: cost(&[generic(1), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],

@@ -1354,7 +1354,7 @@ pub fn prismari_stormspire() -> CardDefinition {
 /// boost.
 pub fn prismari_spellforger_b22() -> CardDefinition {
     CardDefinition {
-        name: "Prismari Sparkforger",
+        name: "Prismari Spellforger (b22)",
         cost: cost(&[generic(2), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -6754,7 +6754,7 @@ pub fn prismari_floodfire() -> CardDefinition {
 pub fn prismari_pyromage_b57() -> CardDefinition {
     use crate::effect::shortcut::magecraft_ping_any;
     CardDefinition {
-        name: "Prismari Pyromage II",
+        name: "Prismari Pyromage (b57)",
         cost: cost(&[generic(1), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -6817,7 +6817,7 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
 pub fn prismari_sparkscribe_b57() -> CardDefinition {
     use crate::effect::shortcut::etb_loot;
     CardDefinition {
-        name: "Prismari Sparkscribe II",
+        name: "Prismari Sparkscribe (b57)",
         cost: cost(&[generic(1), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -6945,7 +6945,7 @@ pub fn prismari_tideflame() -> CardDefinition {
 pub fn prismari_stormcaster_b58() -> CardDefinition {
     use crate::effect::shortcut::{etb, target_filtered};
     CardDefinition {
-        name: "Prismari Stormcaster",
+        name: "Prismari Stormcaster II",
         cost: cost(&[generic(2), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -7624,7 +7624,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
     use crate::effect::shortcut::etb;
     use crate::game::effects::treasure_token;
     CardDefinition {
-        name: "Prismari Stormcaller II",
+        name: "Prismari Stormcaller (b63)",
         cost: cost(&[generic(2), u(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],

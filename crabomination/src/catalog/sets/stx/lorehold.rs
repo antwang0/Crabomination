@@ -8658,13 +8658,13 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
     }
 }
 
-/// Lorehold Skirmish — {2}{R}, Sorcery. Creates a 2/2 R/W Spirit token
-/// with Haste EOT (Lorehold Skirmish-template). Pairs with attack-trigger
-/// payoffs.
+/// Lorehold Skirmish II — {2}{R}, Sorcery. Creates a 2/2 R/W Spirit
+/// token with Haste EOT (Lorehold Skirmish-template). Pairs with
+/// attack-trigger payoffs.
 pub fn lorehold_skirmish_v2() -> CardDefinition {
     use crate::effect::shortcut::create_token_with_keyword;
     CardDefinition {
-        name: "Lorehold Skirmish",
+        name: "Lorehold Skirmish II",
         cost: cost(&[generic(2), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
@@ -9402,8 +9402,10 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
 /// Lorehold Emberscribe II — {1}{R}{W}, 2/2 Spirit Wizard. Magecraft: deal
 /// 1 damage to any target. 3-mana Lorehold ping engine.
 pub fn lorehold_emberscribe_b59() -> CardDefinition {
+    // Renamed from "Lorehold Emberscribe II" to "(b59)" to disambiguate
+    // from the b30 variant `lorehold_emberscribe_v2`.
     CardDefinition {
-        name: "Lorehold Emberscribe II",
+        name: "Lorehold Emberscribe (b59)",
         cost: cost(&[generic(1), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],

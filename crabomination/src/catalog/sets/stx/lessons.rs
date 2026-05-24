@@ -1149,7 +1149,7 @@ pub fn advanced_cartography() -> CardDefinition {
 
 // ── Batch 32 (modern_decks) — Lesson expansion ──────────────────────────────
 
-/// Mascot Interpretation (Lesson) — {2}{W} Sorcery — Lesson (batch 32).
+/// Mascot Interpretation II (Lesson) — {2}{W} Sorcery — Lesson (batch 32).
 /// Synthesised Oracle: "Create a 2/2 white-and-black Inkling token with
 /// flying."
 pub fn mascot_lesson_b32() -> CardDefinition {
@@ -1169,7 +1169,7 @@ pub fn mascot_lesson_b32() -> CardDefinition {
         triggered_abilities: vec![],
     };
     CardDefinition {
-        name: "Mascot Interpretation",
+        name: "Mascot Interpretation II",
         cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],

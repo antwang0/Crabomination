@@ -8058,7 +8058,7 @@ pub fn pest_brewmaster() -> CardDefinition {
 pub fn witherbloom_pestcaller_b54() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
-        name: "Witherbloom Pestcaller II",
+        name: "Witherbloom Pestcaller (b54)",
         cost: cost(&[generic(2), b(), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],

@@ -10843,7 +10843,7 @@ pub fn silverquill_mortician() -> CardDefinition {
 /// Inkling — slots into Tenured Inkcaster + Inkling Verselord shells.
 pub fn inkling_sentinel_b55() -> CardDefinition {
     CardDefinition {
-        name: "Inkling Sentinel II",
+        name: "Inkling Sentinel (b55)",
         cost: cost(&[generic(2), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -11956,7 +11956,7 @@ pub fn inkling_calligrapher_b62() -> CardDefinition {
 pub fn silverquill_lecturer_b62() -> CardDefinition {
     use crate::effect::shortcut::{drain, etb};
     CardDefinition {
-        name: "Silverquill Lecturer II",
+        name: "Silverquill Lecturer (b62)",
         cost: cost(&[generic(2), w(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
