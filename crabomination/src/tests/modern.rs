@@ -1432,6 +1432,31 @@ fn vandalblast_destroys_opponent_artifact() {
 }
 
 #[test]
+fn vandalblast_overload_destroys_all_opponent_artifacts() {
+    let mut g = two_player_game();
+    let opp_ring1 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let opp_ring2 = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let mine_ring = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let vand = g.add_card_to_hand(0, catalog::vandalblast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: vand,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Vandalblast Overload for {4}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_ring1), "opp artifact 1 destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_ring2), "opp artifact 2 destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == mine_ring), "own artifact untouched");
+}
+
+#[test]
 fn natures_lore_fetches_a_forest_to_battlefield_untapped() {
     let mut g = two_player_game();
     let forest = g.add_card_to_library(0, catalog::forest());
