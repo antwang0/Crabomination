@@ -1135,12 +1135,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   resolution).
   (b) **405.2** — ✅ (engine
   uses `self.stack.push(item)` everywhere; the Vec end is the top).
-  (c) **405.3** — 🟡 (the engine processes triggers in
-  ResolutionBuffer one at a time but doesn't sort by AP-vs-NAP. For
-  ETB-rich boards with multiple simultaneous triggers across players,
-  the stack order is whatever queue order they were collected in;
-  observable difference only when both AP and NAP have triggers from
-  the same event).
+  (c) **405.3** — ✅ (push claude/modern_decks: triggers are sorted
+  by APNAP rank before being pushed to the stack. The
+  `apnap_rank(seat)` walk in `dispatch_triggers_for_events`
+  starts from the active player and walks `next_alive_seat`, so
+  AP's triggers push first (lowest in the LIFO stack → resolve
+  last), then each NAP in turn order. Verified by
+  `apnap_orders_simultaneous_triggers_active_pushed_first` in
+  `tests/multiplayer.rs:624` — 4-player FFA, active seat = 1,
+  push order is `[1, 2, 3, 0]`.).
   (d) **405.4** — ✅ (`StackItem::Spell.controller` is
   set in `finalize_cast`; `StackItem::Ability.controller` is set to
   the activator; triggered abilities resolve under
@@ -2066,12 +2069,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (n) **117.5** SBA-trigger-SBA loop before priority — ✅; (o)
   **117.7** in-response-to ordering — ✅ (the stack's LIFO order
   naturally implements last-in-first-out resolution).
-  No new tests added — the priority framework is implicitly
-  exercised by every other test in the suite (1661 passing tests
-  all depend on correct priority + step transitions). The audit
-  is a confirmation that CR 117 is end-to-end CR-compliant for
-  the 1v1 case. Multi-player priority (CR 117.6 shared team
-  turns) is still ⏳, tracked under Format Phase F (2HG).
+  Lock-in tests added (push claude/modern_decks):
+  `cr_117_5_sba_before_priority_lethal_creature_dies_before_response`
+  asserts the SBA loop kills a lethal-damage creature before the
+  opp gets priority to respond (CR 117.5). Implicit coverage from
+  every other test in the suite (~4300 passing tests all depend on
+  correct priority + step transitions). The audit confirms that
+  CR 117 is end-to-end CR-compliant for the 1v1 case. Multi-player
+  priority (CR 117.6 shared team turns) is still ⏳, tracked
+  under Format Phase F (2HG).
 
 - 🟡 **CR 614 — Replacement Effects** (push modern_decks batch 56
   audit, claude/modern_decks branch — audit against

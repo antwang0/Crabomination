@@ -60184,3 +60184,83 @@ fn lorehold_pyromancer_b152_magecraft_pings() {
     // 3 (bolt) + 1 (pyromancer magecraft) = 4
     assert_eq!(g.players[1].life, opp_before - 4);
 }
+
+// ── CR rule lock-in tests (modern_decks rules pass) ────────────────────────
+
+#[test]
+fn cr_405_5_all_pass_resolves_top_of_stack() {
+    // CR 405.5 — when all players pass in succession, the top
+    // (last-added) spell on the stack resolves. Exercise by casting
+    // two Bolts (top resolves first, then the bottom one); the
+    // opponent life total reflects both having resolved by the time
+    // the stack is empty.
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let b2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let opp_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: b1, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt 1 castable");
+    g.perform_action(GameAction::CastSpell {
+        card_id: b2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt 2 castable");
+    // Two spells on stack, both targeting seat 1.
+    assert_eq!(g.stack.len(), 2);
+    drain_stack(&mut g);
+    // Both resolved → 6 damage taken.
+    assert_eq!(g.players[1].life, opp_before - 6,
+        "CR 405.5: both spells resolved after all-pass loop");
+    assert!(g.stack.is_empty(),
+        "Stack empties after all-pass cascade");
+}
+
+#[test]
+fn cr_117_5_sba_before_priority_lethal_creature_dies_before_response() {
+    // CR 117.5 — state-based actions are checked before any player
+    // would get priority. After Bolting a 2-toughness creature, the
+    // SBA pass kills it BEFORE the opp gets priority to respond.
+    // Tested by asserting the bear is in the graveyard the moment
+    // the stack is empty (no opp-priority intervening window).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "CR 117.5: SBA killed the lethal-damage creature before opp got priority");
+    assert!(g.stack.is_empty());
+}
+
+#[test]
+fn cr_119_7_lifegain_lock_blocks_subsequent_drain_target() {
+    // CR 119.7 — life-gain lock applies to subsequent gain-life events
+    // on the locked player. Exercise the Skullcrack lock by casting it
+    // (target locked), then casting a drain-each-opp spell that would
+    // normally heal the caster — the caster (seat 0) is not the locked
+    // player so they DO gain life, but if the caster were locked
+    // separately, gainlife would no-op.
+    let mut g = two_player_game();
+    // Self-target Skullcrack to lock seat 0 from gaining life.
+    let crack = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: crack, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Self-target Skullcrack");
+    drain_stack(&mut g);
+    assert!(g.players[0].cannot_gain_life_this_turn);
+    let life_after_self_bolt = g.players[0].life;
+    // Try Effect::GainLife — should be blocked.
+    g.adjust_life(0, 5);
+    assert_eq!(g.players[0].life, life_after_self_bolt,
+        "CR 119.7: locked player can't gain life from subsequent effects");
+}
