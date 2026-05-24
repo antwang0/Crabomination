@@ -9,7 +9,7 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
@@ -7823,11 +7823,7 @@ pub fn prismari_embergloss() -> CardDefinition {
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -10923,11 +10919,7 @@ pub fn prismari_pyrolancer_b146() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

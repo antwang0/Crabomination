@@ -1386,7 +1386,6 @@ pub fn lorehold_anthemist() -> CardDefinition {
 /// (unlike Lorehold Pyrebrand's EOT pump) so the Bonepriest carries
 /// its bulk across turns.
 pub fn lorehold_bonepriest() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Lorehold Bonepriest",
         cost: cost(&[generic(1), r(), w()]),
@@ -1401,11 +1400,7 @@ pub fn lorehold_bonepriest() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4428,11 +4423,7 @@ pub fn lorehold_forgemaster() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

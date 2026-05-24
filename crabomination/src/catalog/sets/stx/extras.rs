@@ -18014,11 +18014,7 @@ pub fn quandrix_initiate() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -22707,11 +22703,7 @@ pub fn witherbloom_sapfeeder() -> CardDefinition {
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -23238,11 +23230,7 @@ pub fn quandrix_trampler() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -28990,11 +28978,7 @@ pub fn silverquill_auctioneer() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -29986,11 +29970,7 @@ pub fn quandrix_counterspeaker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -33287,8 +33267,6 @@ pub fn quandrix_cycloid() -> CardDefinition {
 /// Synthesised: "Magecraft — Whenever you cast or copy an instant or
 /// sorcery spell, put a +1/+1 counter on this creature."
 pub fn quandrix_symmetrybard() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Quandrix Symmetrybard",
         cost: cost(&[generic(2), g()]),
@@ -33303,11 +33281,7 @@ pub fn quandrix_symmetrybard() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -35649,7 +35623,6 @@ pub fn prismari_reshape_b119() -> CardDefinition {
 /// Synthesised: "Magecraft — Whenever you cast or copy an instant or
 /// sorcery spell, put a +1/+1 counter on this creature."
 pub fn quandrix_polymath_b119() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Quandrix Polymath (Batch 119)",
         cost: cost(&[g(), u()]),
@@ -35664,11 +35637,7 @@ pub fn quandrix_polymath_b119() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -36543,7 +36512,6 @@ pub fn prismari_crucible_b120() -> CardDefinition {
 /// Synthesised: "Magecraft — Whenever you cast or copy an instant or
 /// sorcery spell, put a +1/+1 counter on this creature."
 pub fn quandrix_apprentice_b120() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Quandrix Apprentice (Batch 120)",
         cost: cost(&[generic(1), g(), u()]),
@@ -36558,11 +36526,7 @@ pub fn quandrix_apprentice_b120() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::AddCounter {
-            what: Selector::This,
-            kind: CounterType::PlusOnePlusOne,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
