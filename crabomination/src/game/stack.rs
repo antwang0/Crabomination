@@ -250,61 +250,15 @@ impl GameState {
         // exactly 13 cards in your hand", Felidar Sovereign's "if you
         // have 40 or more life", Pact-style "if it's your turn", etc.).
         // The second-half of CR 603.4 — re-check the condition as the
-        // ability resolves — is still ⏳ (tracked in TODO.md).
-        let triggers: Vec<(CardId, Effect, usize)> = candidates
-            .into_iter()
-            .filter(|(src, _eff, ctrl, filter)| {
-                let Some(pred) = filter else { return true };
-                let ctx = crate::game::effects::EffectContext::for_trigger(
-                    *src, *ctrl, None, 0,
-                );
-                self.evaluate_predicate(pred, &ctx)
-            })
-            .map(|(s, e, c, _)| (s, e, c))
-            .collect();
-
-        // CR 603.4 re-check half: keep `event.filter` predicates alive
-        // through to the push so the resolver can re-check at resolution
-        // time. Triggers that already failed the trigger-time check are
-        // discarded above; the predicates kept here are the ones that
-        // *passed* and must be re-checked on resolve per CR 603.4 (the
-        // "if condition isn't true at that time" half).
-        let triggers_with_filter: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = {
-            // Rebuild candidates so we can keep the filter even after the
-            // first pass. Mirrors the candidate gather above.
-            let active = self.active_player_idx;
-            let mut cands: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> = self
-                .battlefield
-                .iter()
-                .flat_map(|c| {
-                    c.definition
-                        .triggered_abilities
-                        .iter()
-                        .filter(|t| t.event.kind == kind)
-                        .filter(|t| match t.event.scope {
-                            EventScope::AnyPlayer => true,
-                            EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
-                                c.controller == active
-                            }
-                            EventScope::OpponentControl => c.controller != active,
-                            EventScope::AnotherOfYours => false,
-                            EventScope::FromYourGraveyard => false,
-                        })
-                        .map(|t| (c.id, t.effect.clone(), c.controller, t.event.filter.clone()))
-                })
-                .collect();
-            if let Some(player) = self.players.get(active) {
-                for c in &player.graveyard {
-                    for t in &c.definition.triggered_abilities {
-                        if t.event.kind == kind
-                            && matches!(t.event.scope, EventScope::FromYourGraveyard)
-                        {
-                            cands.push((c.id, t.effect.clone(), c.owner, t.event.filter.clone()));
-                        }
-                    }
-                }
-            }
-            cands
+        // ability resolves — is now also wired (see
+        // `triggers_with_filter` below + the resolver's `intervening_if`
+        // branch).
+        // Single filter pass that keeps both halves of CR 603.4 alive: drop
+        // triggers whose intervening-if predicate is false right now (the
+        // trigger-time check), and preserve the predicate on the survivors
+        // so the resolver can re-check at resolution time.
+        let triggers_with_filter: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
+            candidates
                 .into_iter()
                 .filter(|(src, _eff, ctrl, filter)| {
                     let Some(pred) = filter else { return true };
@@ -313,9 +267,7 @@ impl GameState {
                     );
                     self.evaluate_predicate(pred, &ctx)
                 })
-                .collect()
-        };
-        let _ = triggers;
+                .collect();
 
         // Drain matching delayed triggers off the queue and queue them up
         // alongside the regular battlefield triggers. Fires-once triggers
