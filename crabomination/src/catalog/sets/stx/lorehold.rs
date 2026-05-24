@@ -15368,3 +15368,176 @@ pub fn lorehold_ember_strike_b150() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 151 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Skirmisher (b151) — {1}{R} 2/2 Spirit Soldier Haste.
+/// Aggressive 2-mana attacker.
+pub fn lorehold_skirmisher_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skirmisher (b151)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrelore (b151) — {3}{R}{W} Sorcery. Deal 4 damage to
+/// target creature you don't control + you gain 4 life.
+pub fn lorehold_pyrelore_b151() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Lorehold Pyrelore (b151)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(4),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Guide (b151) — {2}{R} 2/2 Spirit. Magecraft mint
+/// a 2/2 R/W Spirit token.
+pub fn lorehold_spirit_guide_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spirit-Guide (b151)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: lorehold_spirit_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlemage (b151) — {2}{W} 2/2 Spirit Wizard. ETB Vigilance
+/// to target creature you control until EOT.
+pub fn lorehold_battlemage_b151() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Lorehold Battlemage (b151)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::GrantKeyword {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Vigilance,
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sun-Spirit (b151) — {3}{W} 3/3 Spirit Cleric Flying.
+/// Solid evasive 4-mana flier.
+pub fn lorehold_sun_spirit_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sun-Spirit (b151)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

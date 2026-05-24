@@ -14833,3 +14833,166 @@ pub fn witherbloom_hatchling_b150() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 151 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Carrion-Eater (b151) — {3}{B} 3/3 Pest Insect.
+/// Deathtouch. Aggressive midrange Pest body.
+pub fn witherbloom_carrion_eater_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Carrion-Eater (b151)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Apothecary (b151) — {2}{B} 2/3 Pest Druid. ETB drain 1.
+/// Compact 3-mana defensive drain body.
+pub fn witherbloom_apothecary_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Apothecary (b151)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinedweller (b151) — {G} 1/2 Pest Spider. Reach.
+/// 1-mana evasion-blocker.
+pub fn witherbloom_vinedweller_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinedweller (b151)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Mire (b151) — {2}{B}{G} Sorcery. Drain 3 + you draw 1.
+/// 4-mana drain + cantrip.
+pub fn witherbloom_mire_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mire (b151)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(3),
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Pestmaster (b151) — {1}{B}{G} 2/2 Human Warlock.
+/// Magecraft +1/+1 counter on each Pest you control. Pest-tribal engine.
+pub fn witherbloom_pestmaster_b151() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Witherbloom Pestmaster (b151)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Pest)
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

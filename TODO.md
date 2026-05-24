@@ -994,12 +994,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   in scope has a color indicator that disagrees with its mana cost
   (Devoid is the canonical exception; not in the catalog).
   (c) **105.2a/b/c** monocolored / multicolored / colorless predicates
-  — 🟡 (`ColorSet.count_ones()` gives the count, but there's no
-  `is_monocolored()` / `is_multicolored()` / `is_colorless()` helper
-  named-and-exported; callers reconstruct the predicate inline. Engine
-  shape: add the three helpers on `ColorSet` so cards keying on
-  "multicolored" (Multicolored Charms, Naya Charm, Edgewall variants)
-  have a one-line query).
+  — ✅ (`ColorSet::is_monocolored()`, `::is_multicolored()`,
+  `::is_colorless()` exposed on the type since modern_decks
+  push X. The predicates back the `Monocolored`,
+  `Multicolored`, and `Colorless` `SelectionRequirement`s.).
   (d) **105.3** —
   ⏳ (no `StaticEffect::AddColor` / `StaticEffect::BecomeColor`
   primitive. Cards like Kasmina's Transmutation ("becomes a blue
@@ -6922,16 +6920,19 @@ resolution time" in the Suggested next-up tasks section.
   engine catches eliminated players at the next SBA cycle, observable
   difference only mid-cast). Tests: implicit across the suite.
 
-- ⏳ **AP-vs-NAP stack ordering for simultaneous triggers** (CR 405.3)
-  — fresh from the CR 405 audit. When a single event (ETB, attack,
-  combat damage) triggers abilities on both AP's and NAP's
-  permanents, the engine queues them in ResolutionBuffer in
-  arrival order. Printed Oracle says AP's triggers go on the
-  stack first (lowest), then each NAP in APNAP order, with
-  each player choosing internal ordering. Observable only when
-  multiple-controller ETB cascades stack-interact (e.g. an opp's
-  Pestpod-Lurker-on-ETB-mints-Pest triggers while you have a
-  Felisa-on-counter-bearing-dies trigger from the same combat).
+- ✅ **AP-vs-NAP stack ordering for simultaneous triggers** (CR 405.3)
+  — Wired in `dispatch_triggers_for_events` (game/mod.rs:1908).
+  When a single event (ETB, attack, combat damage) triggers
+  abilities on both AP's and NAP's permanents, the engine
+  sorts candidates by APNAP rank before pushing to the stack:
+  AP's triggers go on lowest (resolve last), then each NAP in
+  turn-order. Push order maintained by `apnap_rank(seat)` walking
+  `next_alive_seat` from the active player. Test:
+  `apnap_orders_simultaneous_triggers_active_pushed_first` in
+  `tests/multiplayer.rs:624` — 4-player game, active=1, four
+  pingers across all seats, assert stack push order is
+  `[1, 2, 3, 0]`. Also `apnap_skips_eliminated_seat_in_cycle`
+  for the mid-cycle elimination case.
 
 ### Suggested next-up tasks (additions from batch 30)
 

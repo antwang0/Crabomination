@@ -25,7 +25,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    drain, drain_and_surveil, etb_drain, etb_gain_life, etb_mint_token, magecraft,
+    drain, drain_and_surveil, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, magecraft_scry,
     on_attack_drain, on_attack_gain_life, target_filtered,
 };
@@ -16958,6 +16958,232 @@ pub fn inkling_edgewriter_b150() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 151 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Disciple (b151) — {W} 1/1 Human Cleric. Lifelink.
+/// Cheap 1-drop lifelink body.
+pub fn silverquill_disciple_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Disciple (b151)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Scout (b151) — {1}{B} 2/2 Inkling Scout Flying.
+/// Compact 2-mana flying body.
+pub fn inkling_scout_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Scout (b151)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sanctuary (b151) — {4}{W}{B} Enchantment.
+/// At the beginning of your upkeep, drain 1. Slow but steady drain.
+pub fn silverquill_sanctuary_b151() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Silverquill Sanctuary (b151)",
+        cost: cost(&[generic(4), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: drain(1),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Recruiter (b151) — {2}{W} 2/3 Human Cleric.
+/// ETB scry 1 + draw 1 (an Elvish-Visionary-with-scry shape).
+pub fn silverquill_recruiter_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Recruiter (b151)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Smite (b151) — {2}{B} Instant. Destroy target creature.
+/// Clean 3-mana hard removal.
+pub fn silverquill_smite_b151() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Silverquill Smite (b151)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pen Striker (b151) — {1}{B} 2/2 Inkling Knight Flying
+/// + Lifelink. Mid-curve evasive lifelink body. Combos with Tenured
+/// Inkcaster anthem (+2/+2 → 4/4 flying lifelink for {1}{B}).
+pub fn silverquill_pen_striker_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pen Striker (b151)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Conjurer (b151) — {3}{W}{B} 2/2 Human Wizard. ETB mints 2
+/// Inkling tokens. Token engine.
+pub fn inkling_conjurer_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Conjurer (b151)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(inkling_token(), 2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

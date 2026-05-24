@@ -12350,3 +12350,176 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 151 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Elf Caller (b151) — {G} 1/1 Elf Druid. Magecraft +1/+0 EOT
+/// to self.
+pub fn quandrix_elf_caller_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Elf Caller (b151)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractal Theorem (b151) — {1}{G}{U} Sorcery. Create a 0/0
+/// Fractal with X +1/+1 counters where X = your number of creatures.
+pub fn quandrix_fractal_theorem_b151() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Quandrix Fractal Theorem (b151)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::CountOf(Box::new(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ))),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Spellmage (b151) — {U} 1/1 Merfolk Wizard. Magecraft draw a
+/// card the first time you cast an IS spell each turn (approximated as
+/// every cast — no per-turn-once gate).
+pub fn quandrix_spellmage_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Spellmage (b151)",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Forest Sprite (b151) — {1}{G} 2/2 Fractal Plant. Mid-curve
+/// Fractal value body.
+pub fn quandrix_forest_sprite_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Forest Sprite (b151)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Algebraist (b151) — {2}{G}{U} 3/3 Elf Druid. ETB scry 2 +
+/// draw 1 — heavy card filter.
+pub fn quandrix_algebraist_b151() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Algebraist (b151)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
