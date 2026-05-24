@@ -61903,3 +61903,127 @@ fn cr_118_8_exile_from_graveyard_cost_pre_flight_no_mana_burned() {
     let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
     assert!(!pm_card.tapped, "source should not be tapped on failed activation");
 }
+
+// ── Batch 156: attack-anchor lock-in tests (multi-attacker fan-out) ────────
+
+#[test]
+fn lorehold_banner_b156_pumps_each_attacker_in_batch() {
+    // Push c4b7b14's batch-fanout fix: a multi-attacker swing fans the
+    // Lorehold Banner's "another attacks" trigger to each attacker.
+    let mut g = two_player_game();
+    let _banner = g.add_card_to_battlefield(0, catalog::lorehold_banner_b156());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+        Attack { attacker: b2, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both bears can attack");
+    drain_stack(&mut g);
+    let bear1 = g.battlefield.iter().find(|c| c.id == b1).unwrap();
+    let bear2 = g.battlefield.iter().find(|c| c.id == b2).unwrap();
+    // Each attacker should be 3/2 EOT (2/2 printed + 1/+0 EOT).
+    assert_eq!(bear1.power(), 3, "attacker 1 should be pumped");
+    assert_eq!(bear2.power(), 3, "attacker 2 should be pumped");
+}
+
+#[test]
+fn lorehold_marshal_b156_gains_life_per_other_attacker() {
+    let mut g = two_player_game();
+    let _marshal = g.add_card_to_battlefield(0, catalog::lorehold_marshal_b156());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+        Attack { attacker: b2, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both bears attack");
+    drain_stack(&mut g);
+    // Marshal fires once per attacker (both bears are "other"), so
+    // life should go up by 2.
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn silverquill_tactician_b156_mints_inkling_per_other_attacker() {
+    let mut g = two_player_game();
+    let _tact = g.add_card_to_battlefield(0, catalog::silverquill_tactician_b156());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+        Attack { attacker: b2, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both bears attack");
+    drain_stack(&mut g);
+    let inklings = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Inkling")
+        .count();
+    assert_eq!(inklings, 2, "should mint two Inklings (one per other-attacker)");
+}
+
+#[test]
+fn quandrix_mathematician_ii_b156_counters_each_attacker() {
+    let mut g = two_player_game();
+    let _m = g.add_card_to_battlefield(0, catalog::quandrix_mathematician_ii_b156());
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(b1);
+    g.clear_sickness(b2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: b1, target: AttackTarget::Player(1) },
+        Attack { attacker: b2, target: AttackTarget::Player(1) },
+    ]))
+    .expect("both bears attack");
+    drain_stack(&mut g);
+    let bear1 = g.battlefield.iter().find(|c| c.id == b1).unwrap();
+    let bear2 = g.battlefield.iter().find(|c| c.id == b2).unwrap();
+    assert_eq!(bear1.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert_eq!(bear2.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn pest_hivebreeder_b156_mints_pest_on_other_creature_death() {
+    // Use Lightning Bolt to kill the pest via real combat-damage / SBA
+    // flow so the unified dispatcher fires AnotherOfYours triggers
+    // (`remove_to_graveyard_with_triggers` only handles SelfSource).
+    let mut g = two_player_game();
+    let _hb = g.add_card_to_battlefield(0, catalog::pest_hivebreeder_b156());
+    let pest = g.add_card_to_battlefield(0, catalog::pest_acolyte_b155());
+    drain_stack(&mut g);
+    let pests_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pest").count();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(pest)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let pests_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pest").count();
+    assert_eq!(pests_after, pests_before + 1, "should mint a Pest on death");
+}

@@ -17914,3 +17914,43 @@ pub fn inkling_strider_b155() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 156 (modern_decks) — Silverquill broadcast-anchor cards ──────────
+
+/// Silverquill Tactician (b156) — {3}{W}{B} 2/4 Human Soldier. Whenever
+/// another creature you control attacks, mint a 1/1 W/B Inkling token
+/// with flying. Inkling fan-out per attacker.
+pub fn silverquill_tactician_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Tactician (b156)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -13050,3 +13050,43 @@ pub fn fractal_crusher_b155() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 156 (modern_decks) — Quandrix attack-anchor cards ────────────────
+
+/// Quandrix Mathematician II (b156) — {2}{G}{U} 3/3 Elf Wizard.
+/// Whenever another creature you control attacks, put a +1/+1
+/// counter on it. Multi-attacker counter snowball.
+pub fn quandrix_mathematician_ii_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mathematician II (b156)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

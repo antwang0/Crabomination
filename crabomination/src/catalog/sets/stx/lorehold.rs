@@ -16306,3 +16306,121 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 156 (modern_decks) — Lorehold attack-anchor cards ────────────────
+//
+// These cards exercise the new batch-fanout fix in the trigger dispatcher
+// (push c4b7b14): each attacker in a multi-attacker batch now correctly
+// fires "Another of yours attacks" triggers once per attacker.
+
+/// Lorehold Banner (b156) — {2}{R}{W} Enchantment. Whenever another
+/// creature you control attacks, that creature gets +1/+0 until end of
+/// turn. Multi-attacker pump anchor — exercises the per-attacker
+/// broadcast.
+pub fn lorehold_banner_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Banner (b156)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Marshal (b156) — {3}{R}{W} 3/3 Spirit Cleric. Whenever
+/// another creature you control attacks, you gain 1 life. Lifegain
+/// fan-out per attacker.
+pub fn lorehold_marshal_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Marshal (b156)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Banner-Bearer (b156) — {1}{R}{W} 1/3 Human Soldier. When
+/// another creature you control attacks, that creature gains haste
+/// until end of turn. Battlefield-wide haste enabler.
+pub fn lorehold_banner_bearer_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Banner-Bearer (b156)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -15950,3 +15950,100 @@ pub fn pest_surger_b155() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 156 (modern_decks) — Witherbloom counter / Pest payoff anchors ──
+
+/// Witherbloom Necromancer (b156) — {3}{B}{G} 2/3 Plant Wizard.
+/// Whenever another creature you control dies, you may pay {1}.
+/// If you do, return that card from your graveyard to the battlefield
+/// — collapsed to: drain 1 per other-creature-death (gy-reanimate
+/// requires UI prompt). Pure death-payoff anchor.
+pub fn witherbloom_necromancer_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Necromancer (b156)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(drain(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Hivebreeder (b156) — {2}{B}{G} 2/2 Pest Insect. Whenever
+/// another Pest you control dies, mint a Pest token. Pest snowball
+/// engine.
+pub fn pest_hivebreeder_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Hivebreeder (b156)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifedrinker (b156) — {1}{B}{G} 2/2 Vampire Warlock.
+/// Magecraft: drain 1 (Witherbloom Apprentice template at 3-drop).
+pub fn witherbloom_lifedrinker_b156() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Witherbloom Lifedrinker (b156)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

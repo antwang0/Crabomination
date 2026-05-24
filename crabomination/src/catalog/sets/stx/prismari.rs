@@ -12397,3 +12397,42 @@ pub fn elemental_whirlwind_b155() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 156 (modern_decks) — Prismari attack-anchor cards ────────────────
+
+/// Prismari Pyromancer (b156) — {3}{U}{R} 2/4 Elemental Wizard.
+/// Whenever another creature you control attacks, scry 1. Card-
+/// selection per attacker.
+pub fn prismari_pyromancer_b156() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyromancer (b156)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
