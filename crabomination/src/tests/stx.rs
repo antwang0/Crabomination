@@ -62240,3 +62240,102 @@ fn cr_603_4_intervening_if_runs_when_true_at_resolve_time() {
     assert_eq!(g.players[0].life, life_before + 7,
         "Trigger body ran — predicate held at resolve time");
 }
+
+// ── CR 705.3 — Krark's Thumb-style coin-flip advantage ─────────────────────
+
+#[test]
+fn cr_705_3_coin_flip_advantage_lets_tails_be_recovered() {
+    // Direct exercise of the new `Player.coin_flip_advantage` field:
+    // with advantage = 1, a flip-coin effect that would default to tails
+    // (via a ScriptedDecider that always returns Bool(false)) should
+    // still see heads on at least one of the two replayed flips.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::Effect;
+
+    let mut g = two_player_game();
+    g.players[0].coin_flip_advantage = 1;
+    // ScriptedDecider returning false twice then true means:
+    //   - Without advantage: 1 flip returns false → tails branch.
+    //   - With advantage=1:  2 flips. The first returns false, the
+    //     second returns false. heads_seen stays false → tails branch.
+    //   (To force heads_seen=true we'd need ≥1 Bool(true) in the script.)
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Bool(true),  // the SECOND replay wins
+    ]));
+
+    // Build a flip effect that adds +5 life on heads, -5 life on tails.
+    let body = Effect::FlipCoin {
+        count: crate::effect::Value::Const(1),
+        on_heads: Box::new(Effect::GainLife {
+            who: crate::effect::Selector::You,
+            amount: crate::effect::Value::Const(5),
+        }),
+        on_tails: Box::new(Effect::LoseLife {
+            who: crate::effect::Selector::You,
+            amount: crate::effect::Value::Const(5),
+        }),
+    };
+    // Drop it on the stack as a Trigger to exercise the resolver path.
+    let src = g.add_card_to_battlefield(0, catalog::island());
+    g.stack.push(crate::game::types::StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(body),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        intervening_if: None,
+    });
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    // With advantage=1, even though the first flip returned false, the
+    // second returned true → heads_seen = true → +5 life.
+    assert_eq!(g.players[0].life, life_before + 5,
+        "Coin-flip advantage lets us redeem a tails result");
+}
+
+#[test]
+fn cr_705_3_no_advantage_means_one_flip_one_result() {
+    // Without advantage, a single Bool(false) → tails branch.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::effect::Effect;
+
+    let mut g = two_player_game();
+    assert_eq!(g.players[0].coin_flip_advantage, 0, "default advantage is 0");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+
+    let body = Effect::FlipCoin {
+        count: crate::effect::Value::Const(1),
+        on_heads: Box::new(Effect::GainLife {
+            who: crate::effect::Selector::You,
+            amount: crate::effect::Value::Const(5),
+        }),
+        on_tails: Box::new(Effect::LoseLife {
+            who: crate::effect::Selector::You,
+            amount: crate::effect::Value::Const(5),
+        }),
+    };
+    let src = g.add_card_to_battlefield(0, catalog::island());
+    g.stack.push(crate::game::types::StackItem::Trigger {
+        source: src,
+        controller: 0,
+        effect: Box::new(body),
+        target: None,
+        mode: None,
+        x_value: 0,
+        converged_value: 0,
+        trigger_source: None,
+        mana_spent: 0,
+        event_amount: 0,
+        intervening_if: None,
+    });
+    let life_before = g.players[0].life;
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 5,
+        "Without advantage, tails fires the lose-life branch");
+}

@@ -347,12 +347,28 @@ impl GameState {
             // Bool(false) for tails.
             Effect::FlipCoin { count, on_heads, on_tails } => {
                 let n = self.evaluate_value(count, ctx).max(0);
+                // CR 705.3 — Krark's Thumb-style flip advantage. If the
+                // controller has `coin_flip_advantage` > 0, each flip is
+                // resolved as "do 1 + N extra flips and treat as heads
+                // if any came up heads." Standard 1-Thumb behaviour: 2
+                // flips, take the better one. Stacks: 2 Thumbs = 3
+                // flips, etc. The decider returns a `Bool` per flip and
+                // the engine performs the disjunction here.
+                let advantage = self.players.get(ctx.controller)
+                    .map(|p| p.coin_flip_advantage)
+                    .unwrap_or(0);
+                let extra_flips = advantage as usize;
                 for _ in 0..n {
-                    let answer = self.decider.decide(&crate::decision::Decision::CoinFlip {
-                        player: ctx.controller,
-                    });
-                    let heads = matches!(answer, crate::decision::DecisionAnswer::Bool(true));
-                    if heads {
+                    let mut heads_seen = false;
+                    for _ in 0..(extra_flips + 1) {
+                        let answer = self.decider.decide(&crate::decision::Decision::CoinFlip {
+                            player: ctx.controller,
+                        });
+                        if matches!(answer, crate::decision::DecisionAnswer::Bool(true)) {
+                            heads_seen = true;
+                        }
+                    }
+                    if heads_seen {
                         self.run_effect(on_heads, ctx, events)?;
                     } else {
                         self.run_effect(on_tails, ctx, events)?;

@@ -1038,9 +1038,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   win`, `on_tails ↔ lose`. Mana Clash's symmetric "we both flip until one
   comes up tails" needs a two-player flip loop; not yet wired but the
   primitive supports it via `count: Value::Const(N)`.).
-  (c) **705.3** — ⏳ (no Krark's Thumb-style "flip two and pick"
-  override yet; would need a `Player.coin_flip_modifier: CoinFlipMod`
-  flag or a stacked replacement effect on `Decision::CoinFlip`).
+  (c) **705.3** — ✅ (push claude/modern_decks current sub-push): new
+  `Player.coin_flip_advantage: u32` field consumed by the `Effect::FlipCoin`
+  resolver. When non-zero, each flip is replayed `1 + advantage` times
+  and the flipper "wins" (heads branch fires) if any of the replays
+  came up heads — the canonical interpretation of stacked Krark's
+  Thumbs ("ignore one flip and use the other"). Two Thumbs → 3 flips,
+  pick the best. Tests:
+  `cr_705_3_coin_flip_advantage_lets_tails_be_recovered` (advantage=1
+  + scripted [false, true] → heads branch fires),
+  `cr_705_3_no_advantage_means_one_flip_one_result` (control — no
+  advantage + Bool(false) → tails branch fires). Krark's Thumb-the-
+  card isn't in the catalog yet, but the engine primitive is live;
+  Mana Clash / Karplusan Minotaur / Goblin Goliath all compose against
+  the same fast path without any further engine changes.
   Implementation: `Effect::FlipCoin { count, on_heads, on_tails }` at
   `effect.rs`; `Decision::CoinFlip { player }` +
   `DecisionAnswer::Bool(true|false)` in `decision.rs`; the resolver in

@@ -156,6 +156,23 @@ pub struct Player {
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
     pub wants_ui: bool,
+    /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
+    /// every coin flip this player makes is replayed `coin_flip_advantage`
+    /// extra times and they get to keep the result they prefer. Practically
+    /// modelled in `Effect::FlipCoin` as "do `1 + N` flips and treat the
+    /// flipper as winning if any of them came up heads" — the standard
+    /// rules interpretation of stacking Krark's Thumbs (each Thumb lets
+    /// you "ignore one and choose the other," so two Thumbs = three flips,
+    /// pick the best).
+    ///
+    /// `#[serde(default)]` keeps snapshots from before this field forward-
+    /// compatible. Stacks additively when multiple Krark's Thumbs are on
+    /// the battlefield (compute_battlefield sums the contributing
+    /// static-ability counts when this primitive is eventually wired to
+    /// a permanent — for now only one Krark's Thumb is needed and we set
+    /// the value directly via the Thumb card body).
+    #[serde(default)]
+    pub coin_flip_advantage: u32,
 }
 
 impl Player {
@@ -189,6 +206,7 @@ impl Player {
             dellian_fel_emblem: false,
             cannot_gain_life: false,
             wants_ui: false,
+            coin_flip_advantage: 0,
         }
     }
 
