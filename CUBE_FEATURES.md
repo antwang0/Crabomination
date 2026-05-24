@@ -60,7 +60,7 @@ still ⏳.
 | Spell Snare | ✅ | Counter target spell with mana value 2 (CounterSpell + `ManaValueAt{Most,Least}(2)` sandwich). |
 | Cancel | ✅ | {1}{U}{U} Instant. Counter target spell. Test: `cancel_counters_a_spell`. |
 | Annul | ✅ | {U} Instant. Counter target artifact or enchantment spell — cast-time filter rejects instants/sorceries/creatures. Test: `annul_rejects_instant_target_at_cast_time`. |
-| Swan Song | 🟡 | Counter enchantment/instant/sorcery; 2/2 Flying Bird token. (Token goes to caster's opponents — equivalent in 2-player; engine has no `ControllerOf` lookup for stack/graveyard cards.) |
+| Swan Song | ✅ (was 🟡) | Push (claude/modern_decks): Counter enchantment/instant/sorcery; 2/2 Flying Bird token now goes to the **countered spell's controller** via `PlayerRef::ControllerOf(Target(0))`. Engine fix: `stack_caster_for_card` looks up the spell's `caster: usize` field, and `ControllerOf` now consults the stack before falling back to `find_card_owner`. Visible in multiplayer (3+) — previous `EachOpponent` approximation gave the token to two players instead of the right one. Tests: `swan_song_counters_enchantment_and_makes_a_bird`, `swan_song_in_three_player_gives_bird_to_countered_spell_controller`. |
 | Thought Scour | ✅ | Mill 2 + draw 1. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
 | Daze | 🟡 | Counter target spell unless its controller pays {1}. The "return an Island" alt cost is omitted (alt-cost model only supports exile-from-hand). |

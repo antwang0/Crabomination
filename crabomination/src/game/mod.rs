@@ -3025,6 +3025,22 @@ impl GameState {
         None
     }
 
+    /// Look up the caster (current controller) of a stack-resident spell
+    /// by card id. Used by `PlayerRef::ControllerOf` to resolve "this
+    /// spell's controller" — distinct from `find_card_owner`, which
+    /// returns the printed `owner` even on the stack. Returns `None` if
+    /// `id` is not currently a spell on the stack.
+    pub(crate) fn stack_caster_for_card(&self, id: CardId) -> Option<usize> {
+        for item in &self.stack {
+            if let crate::game::types::StackItem::Spell { card, caster, .. } = item
+                && card.id == id
+            {
+                return Some(*caster);
+            }
+        }
+        None
+    }
+
     /// Returns true if the permanent `id` has `kw` after all layer effects are applied.
     /// Falls back to `false` if the permanent is not on the battlefield.
     #[cfg(test)]

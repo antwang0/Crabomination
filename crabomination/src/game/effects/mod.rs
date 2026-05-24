@@ -3095,9 +3095,10 @@ impl GameState {
                 .resolve_selector(sel, ctx)
                 .into_iter()
                 .find_map(|e| match e {
-                    EntityRef::Permanent(cid) => self
+                    EntityRef::Permanent(cid) | EntityRef::Card(cid) => self
                         .battlefield_find(cid)
                         .map(|c| c.controller)
+                        .or_else(|| self.stack_caster_for_card(cid))
                         .or_else(|| self.find_card_owner(cid)),
                     _ => None,
                 }),

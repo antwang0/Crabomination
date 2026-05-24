@@ -1588,12 +1588,50 @@ fn swan_song_counters_enchantment_and_makes_a_bird() {
     drain_stack(&mut g);
     // Eidolon countered.
     assert!(g.players[1].graveyard.iter().any(|c| c.id == eid));
-    // Bird token created (under EachOpponent of caster — i.e. seat 1).
+    // Bird token created under the **countered spell's controller**
+    // (seat 1) — resolved through `PlayerRef::ControllerOf(Target(0))`
+    // via `stack_caster_for_card`.
     assert_eq!(g.battlefield.len(), bf_before + 1);
     let token = g.battlefield.last().unwrap();
     assert_eq!(token.definition.name, "Bird");
     assert_eq!(token.controller, 1);
     assert!(token.has_keyword(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn swan_song_in_three_player_gives_bird_to_countered_spell_controller() {
+    // 3-player game: seat 0 casts Swan Song on a spell seat 2 cast.
+    // The Bird should go to seat 2 (the countered spell's controller),
+    // not seat 1. Pre-fix this used EachOpponent which would have given
+    // a token to both opponents (seats 1 AND 2).
+    let mut g = crate::game::multi_player_game(3);
+    let eid = g.add_card_to_hand(2, catalog::hopeful_eidolon());
+    g.players[2].mana_pool.add(Color::White, 1);
+    g.active_player_idx = 2;
+    g.priority.player_with_priority = 2;
+    g.perform_action(GameAction::CastSpell {
+        card_id: eid, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Eidolon castable");
+    let swan = g.add_card_to_hand(0, catalog::swan_song());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.priority.player_with_priority = 0;
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: swan,
+        target: Some(Target::Permanent(eid)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    })
+    .expect("Swan Song castable");
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == eid));
+    // Exactly one new permanent — the Bird under seat 2.
+    assert_eq!(g.battlefield.len(), bf_before + 1);
+    let token = g.battlefield.last().unwrap();
+    assert_eq!(token.definition.name, "Bird");
+    assert_eq!(token.controller, 2,
+        "Bird should belong to the countered spell's controller (seat 2), not seat 1");
 }
 
 #[test]

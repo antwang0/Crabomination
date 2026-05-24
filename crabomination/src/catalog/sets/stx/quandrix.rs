@@ -12117,3 +12117,236 @@ pub fn fractal_eternity_b149() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 150 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Fractalweaver (b150) — {2}{G}{U} 2/2 Elf Druid. Magecraft
+/// scry 1 + draw 1 — light card-selection magecraft.
+pub fn quandrix_fractalweaver_b150() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalweaver (b150)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Spireshape (b150) — {3}{G}{U} 4/4 Fractal Druid. ETB
+/// mint a 2/2 Fractal token (0/0 base + 2 +1/+1 counters per
+/// `etb_mint_token_with_counters`).
+pub fn quandrix_spireshape_b150() -> CardDefinition {
+    use crate::effect::shortcut::etb_mint_token_with_counters;
+    CardDefinition {
+        name: "Quandrix Spireshape (b150)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_with_counters(quandrix_fractal_token(), 1, 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Hydromancer (b150) — {1}{U} 1/3 Merfolk Wizard. Magecraft
+/// draw a card. Strong card draw engine.
+pub fn quandrix_hydromancer_b150() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Hydromancer (b150)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Skyrider (b150) — {2}{U} 2/3 Fractal Bird Flying.
+/// Mid-curve evasive Fractal.
+pub fn quandrix_skyrider_b150() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Skyrider (b150)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Verdant Snake (b150) — {2}{G} 3/2 Fractal Snake Reach.
+/// Defensive Fractal body.
+pub fn quandrix_verdant_snake_b150() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Verdant Snake (b150)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Snake-Egg (b150) — {G} 0/1 Fractal Snake. Magecraft +1/+1
+/// counter on self — recursive growth body.
+pub fn quandrix_snake_egg_b150() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Snake-Egg (b150)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mind Curl (b150) — {1}{U} Instant. Counter target creature
+/// spell unless its controller pays {2}. Quench-style early counter.
+pub fn quandrix_mind_curl_b150() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    use crate::mana::cost as mc;
+    use crate::mana::generic as gc;
+    CardDefinition {
+        name: "Quandrix Mind Curl (b150)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature)),
+            ),
+            mana_cost: mc(&[gc(2)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

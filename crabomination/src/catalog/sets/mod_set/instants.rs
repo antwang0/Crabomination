@@ -533,12 +533,11 @@ pub fn daze() -> CardDefinition {
 /// Swan Song — {U} Instant. Counter target enchantment, instant, or sorcery
 /// spell. Its controller creates a 2/2 blue Bird creature token with flying.
 ///
-/// Approximation: instead of giving the token to the spell's controller,
-/// this version gives one to each of the caster's opponents — exactly
-/// equivalent in 2-player play and harmless in multiplayer (slightly more
-/// generous than the real text). The engine has no `ControllerOf` lookup
-/// for stack/graveyard cards, so we can't pin the token to the precise
-/// player whose spell got countered.
+/// Token target is the **countered spell's controller** via
+/// `PlayerRef::ControllerOf(Target(0))` — `stack_caster_for_card`
+/// resolves a stack-resident spell back to its caster. Pre-fix this
+/// was approximated as `EachOpponent` of the Swan Song caster
+/// (equivalent in 2-player play but wrong in multiplayer).
 pub fn swan_song() -> CardDefinition {
     CardDefinition {
         name: "Swan Song",
@@ -551,7 +550,7 @@ pub fn swan_song() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::CreateToken {
-                who: PlayerRef::EachOpponent,
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
                 count: Value::Const(1),
                 definition: TokenDefinition {
                     name: "Bird".into(),
