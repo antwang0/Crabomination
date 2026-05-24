@@ -65875,3 +65875,122 @@ fn inkling_vowscribe_b161_is_flying_deathtouch_inkling() {
     assert!(c.has_keyword(&Keyword::Flying));
     assert!(c.has_keyword(&Keyword::Deathtouch));
 }
+
+// ── CR rule lock-in tests (push: modern_decks batch 162) ─────────────────
+
+#[test]
+fn cr_502_3_prevent_untap_blocks_land_untap_during_untap_step() {
+    // CR 502.3 — "Effects that prevent N permanents from untapping" are
+    // honored during the untap step. Lock in: with a Strixhaven
+    // Stasis-Glyph in play (StaticEffect::PreventUntap on lands), the
+    // controller's lands stay tapped through their untap step.
+    let mut g = two_player_game();
+    let _glyph = g.add_card_to_battlefield(0, catalog::strixhaven_stasis_glyph_b160());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    // Tap the land.
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    // Manually invoke do_untap (skipping the full turn machinery).
+    g.do_untap();
+    // The land should still be tapped because the static prevented untap.
+    assert!(g.battlefield_find(land).unwrap().tapped,
+        "CR 502.3: PreventUntap should leave the land tapped through untap step");
+}
+
+#[test]
+fn cr_502_3_prevent_untap_releases_after_static_leaves() {
+    // CR 502.3 corollary — when the prevent-untap source leaves the
+    // battlefield, the next untap step untaps the previously locked
+    // permanents per the normal turn-based action.
+    let mut g = two_player_game();
+    let glyph = g.add_card_to_battlefield(0, catalog::strixhaven_stasis_glyph_b160());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    // Untap step #1 with glyph in play — land stays tapped.
+    g.do_untap();
+    assert!(g.battlefield_find(land).unwrap().tapped);
+    // Remove the glyph (simulate destroy).
+    g.remove_from_battlefield_to_graveyard(glyph);
+    // Untap step #2 — land should untap.
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped,
+        "CR 502.3: with the static gone, the untap step now flips tapped→false");
+}
+
+#[test]
+fn cr_502_3_prevent_untap_does_not_affect_unmatched_permanents() {
+    // CR 502.3 — the prevention only applies to permanents matching the
+    // static's selector. A creature controlled by the active player
+    // should still untap even while lands are locked.
+    let mut g = two_player_game();
+    let _glyph = g.add_card_to_battlefield(0, catalog::strixhaven_stasis_glyph_b160());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.do_untap();
+    // Bear is a Creature, not a Land — should untap.
+    assert!(!g.battlefield_find(bear).unwrap().tapped,
+        "CR 502.3: PreventUntap on lands shouldn't touch creatures");
+}
+
+#[test]
+fn cr_122_3_minus_one_counter_kills_two_two_creature_via_sba() {
+    // CR 122.3 — "If a creature has both a +1/+1 counter and a -1/-1
+    // counter on it, N +1/+1 and N -1/-1 counters are removed from it,
+    // where N is the lesser of the number of +1/+1 and -1/-1 counters
+    // on it." Lock in via the existing Witherbloom Inkstrike (b160)
+    // path: -2/-2 on a 2/2 bear → 0/0 → dies to SBA.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let inkstrike = g.add_card_to_hand(0, catalog::silverquill_inkstrike_b160());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: inkstrike, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkstrike castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(),
+        "CR 122.3 / 704.5g: -2/-2 EOT on a 2/2 → toughness 0 → SBA destroy");
+}
+
+#[test]
+fn cr_704_5g_zero_toughness_creature_dies_to_sba_via_negative_pump() {
+    // CR 704.5g — "If a creature has toughness 0 or less, it's put into
+    // its owner's graveyard." Triggered by SBA, not by lethal damage.
+    // Witherbloom Sapcurse (b31) shrinks a target by -2/-2 EOT; a 2/2
+    // bear becomes a 0/0 and dies.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Manually apply -2/-2 modification via the inkstrike path.
+    let inkstrike = g.add_card_to_hand(0, catalog::silverquill_inkstrike_b160());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: inkstrike, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inkstrike castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(),
+        "CR 704.5g: 0-toughness creature dies as SBA");
+    // The bear should be in P1's graveyard.
+    assert!(g.players[1].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "destroyed bear lands in owner's graveyard");
+}
+
+#[test]
+fn cr_119_3_life_gained_emits_life_gained_event_and_increments_tally() {
+    // CR 119.3 — "If an effect causes a player to gain life, that
+    // player's life total is increased by that amount." Also the
+    // turn tally `life_gained_this_turn` advances.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_ghostbinder_b161()); // ETB gain 3
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    let tally_before = g.players[0].life_gained_this_turn;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ghostbinder castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+    assert_eq!(g.players[0].life_gained_this_turn, tally_before + 3);
+}

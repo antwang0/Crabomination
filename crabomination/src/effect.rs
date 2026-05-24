@@ -2286,6 +2286,22 @@ pub enum StaticEffect {
     EtbTriggerTax {
         amount: u32,
     },
+    /// CR 502.3 — "Permanents matching `applies_to` don't untap during
+    /// their controllers' untap steps." The classic Stasis / Winter Orb /
+    /// Frozen Aether pattern. Read by `do_untap` in `game/stack.rs`:
+    /// for every battlefield permanent the engine would normally untap,
+    /// it first walks the static effects in play and skips the untap if
+    /// any active `PreventUntap` selector matches the permanent.
+    ///
+    /// The selector is evaluated against the candidate permanent (not
+    /// the source of the static), so a permanent-targeted prevention
+    /// ("nonbasic lands don't untap during their controllers' untap
+    /// steps" via `applies_to = EachPermanent(Nonland & Land)`) and a
+    /// global prevention ("creatures don't untap" via
+    /// `EachPermanent(Creature)`) both compose cleanly.
+    PreventUntap {
+        applies_to: Selector,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

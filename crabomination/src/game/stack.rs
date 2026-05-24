@@ -652,9 +652,60 @@ impl GameState {
         // tapped → false". Summoning sickness still clears
         // unconditionally since CR 302.1 / 506.4 attaches that to the
         // turn boundary, not the untap event.
+        //
+        // CR 502.3 untap-prevention — pre-compute the set of permanent
+        // ids that are blocked from untapping this step by collecting
+        // `StaticEffect::PreventUntap` selectors and intersecting them
+        // with controlled permanents. Summoning sickness still clears
+        // independently per CR 506.4 — the prevention only blocks the
+        // tapped→untapped flip, not the sickness clearance.
         use crate::card::CounterType;
+        use crate::card::SelectionRequirement;
+        use crate::effect::StaticEffect;
+        let prevented: std::collections::HashSet<crate::card::CardId> = {
+            let mut blocked = std::collections::HashSet::new();
+            // Walk static abilities in play and OR each PreventUntap
+            // selector's match set into the blocked set.
+            let prevent_filters: Vec<SelectionRequirement> = self
+                .battlefield
+                .iter()
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter_map(|sa| match &sa.effect {
+                    StaticEffect::PreventUntap { applies_to } => match applies_to {
+                        crate::effect::Selector::EachPermanent(req) => Some(req.clone()),
+                        _ => None,
+                    },
+                    _ => None,
+                })
+                .collect();
+            if !prevent_filters.is_empty() {
+                for c in &self.battlefield {
+                    if c.controller != p {
+                        continue;
+                    }
+                    for req in &prevent_filters {
+                        if self.evaluate_requirement(
+                            req,
+                            &crate::game::types::Target::Permanent(c.id),
+                            p,
+                        ) {
+                            blocked.insert(c.id);
+                            break;
+                        }
+                    }
+                }
+            }
+            blocked
+        };
         for card in &mut self.battlefield {
             if card.controller == p {
+                if prevented.contains(&card.id) {
+                    // CR 502.3 — untap is prevented. Summoning sickness still
+                    // clears per CR 506.4 (the turn-boundary tag, not the
+                    // untap event).
+                    card.summoning_sick = false;
+                    continue;
+                }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
                 } else {

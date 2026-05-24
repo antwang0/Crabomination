@@ -3334,7 +3334,11 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::PlayerCannotGainLife { .. }
             // PlayerCannotLoseLife — consulted dynamically by adjust_life /
             // damage paths via player_cannot_lose_life_now; no layer effect.
-            | StaticEffect::PlayerCannotLoseLife { .. } => vec![],
+            | StaticEffect::PlayerCannotLoseLife { .. }
+            // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
+            // effect since it gates a turn-based action rather than a
+            // characteristic.
+            | StaticEffect::PreventUntap { .. } => vec![],
         })
         .collect()
 }

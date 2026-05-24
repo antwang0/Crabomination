@@ -3213,5 +3213,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_penkeeper_b161,
         super::silverquill::silverquill_quillsaint_b161,
         super::silverquill::inkling_vowscribe_b161,
+        // ── CR 502.3 PreventUntap card ──
+        super::extras::strixhaven_stasis_glyph_b160,
     ]
 }

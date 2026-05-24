@@ -458,7 +458,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `instants_or_sorceries_cast_this_turn`,
   `creatures_cast_this_turn`, and Teferi's sorcery-as-instant flag.
   Effects that "prevent N permanents from untapping" (Frozen Aether /
-  Stasis-class effects) — ⏳ no `StaticEffect::PreventUntap` primitive.
+  Stasis-class effects) — ✅ (push claude/modern_decks batch 162): new
+  `StaticEffect::PreventUntap { applies_to: Selector }` primitive wired
+  into `do_untap`. Pre-computes the set of blocked permanent ids by
+  walking active statics; the untap-step loop skips the tapped→untapped
+  flip for any controlled permanent in the set. Summoning sickness still
+  clears per CR 506.4 (independent of the untap event). Demo card:
+  `Strixhaven Stasis-Glyph (b160)` — `{3}{U}` enchantment, "Lands you
+  control don't untap during your untap step." Tests:
+  `cr_502_3_prevent_untap_blocks_land_untap_during_untap_step`,
+  `cr_502_3_prevent_untap_releases_after_static_leaves`,
+  `cr_502_3_prevent_untap_does_not_affect_unmatched_permanents`.
   (d) **502.4** — ✅ (`enter_step`'s
   `TurnStep::Untap` arm at `game/stack.rs:101` calls `do_untap`,
   emits `TurnStarted`, then immediately calls `pass_priority()` to
@@ -467,9 +477,9 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   engine's stack-driven priority loop naturally enforces this.).
   Tests: `combat_tests.rs` exercises full turn loop including untap
   → upkeep → draw → main; stun-counter regression tests at
-  `tests::stx::stun_counter_*` cover (c). Promote to ✅ when 502.1
-  (Phasing) AND 502.2 (Day/Night) AND 502.3 untap-prevention
-  effects all land.
+  `tests::stx::stun_counter_*` cover (c); CR 502.3 prevent-untap is
+  locked in via `cr_502_3_prevent_untap_*` (push batch 162). Promote
+  to ✅ when 502.1 (Phasing) AND 502.2 (Day/Night) land.
 
 - ✅ **CR 503 — Upkeep Step** (push modern_decks batch 43,
   claude/modern_decks branch — audit against

@@ -39942,3 +39942,43 @@ pub fn strixhaven_cycle_glyph_b143() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Strixhaven Stasis-Glyph (b160) ─────────────────────────────────────────
+
+/// Strixhaven Stasis-Glyph (b160) — {3}{U} Enchantment.
+/// "Lands you control don't untap during your untap step."
+/// Wires the new `StaticEffect::PreventUntap` primitive (CR 502.3).
+/// Standalone test card — closes a long-standing engine gap.
+pub fn strixhaven_stasis_glyph_b160() -> CardDefinition {
+    CardDefinition {
+        name: "Strixhaven Stasis-Glyph (b160)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control don't untap during your untap step.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
