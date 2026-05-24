@@ -271,18 +271,48 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
     match (&event.kind, event.scope) {
         (EventKind::EntersBattlefield, EventScope::SelfSource) => "ETB",
         (EventKind::EntersBattlefield, EventScope::AnotherOfYours) => "Another ETB",
+        (EventKind::EntersBattlefield, EventScope::AnyPlayer) => "Any ETB",
         (EventKind::CreatureDied, EventScope::SelfSource) => "Dies",
         (EventKind::CreatureDied, EventScope::AnotherOfYours) => "Other dies",
         (EventKind::CreatureDied, EventScope::AnyPlayer) => "Creature dies",
+        (EventKind::CreatureSacrificed, EventScope::SelfSource) => "Sacrificed",
+        (EventKind::CreatureSacrificed, EventScope::YourControl) => "You sacrifice",
+        (EventKind::PermanentSacrificed, EventScope::YourControl) => "You sacrifice",
+        (EventKind::PermanentLeavesBattlefield, _) => "Leaves bf",
         (EventKind::Attacks, EventScope::SelfSource) => "Attacks",
+        (EventKind::Attacks, EventScope::YourControl) => "You attack",
         (EventKind::Attacks, EventScope::AnotherOfYours) => "Another attacks",
+        (EventKind::Blocks, EventScope::SelfSource) => "Blocks",
+        (EventKind::BecomesBlocked, EventScope::SelfSource) => "Becomes blocked",
+        (EventKind::AttacksAndIsntBlocked, EventScope::SelfSource) => "Unblocked",
         (EventKind::CardCycled, EventScope::SelfSource) => "Cycle",
+        (EventKind::CardCycled, EventScope::YourControl) => "You cycle",
         (EventKind::CardDrawn, EventScope::YourControl) => "On draw",
+        (EventKind::CardDrawn, EventScope::SelfSource) => "On self-draw",
+        (EventKind::CardDiscarded, EventScope::YourControl) => "On discard",
         (EventKind::LifeGained, EventScope::YourControl) => "On lifegain",
+        (EventKind::LifeGained, EventScope::AnyPlayer) => "Any lifegain",
+        (EventKind::LifeLost, EventScope::YourControl) => "On life loss",
+        (EventKind::LifeLost, EventScope::OpponentControl) => "Opp life loss",
         (EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource) => "Combat dmg",
+        (EventKind::DealsCombatDamageToCreature, EventScope::SelfSource) => "Combat dmg to crea",
         (EventKind::LandPlayed, EventScope::YourControl) => "Landfall",
+        (EventKind::LandPlayed, EventScope::AnyPlayer) => "Any landfall",
+        (EventKind::SpellCast, EventScope::OpponentControl) => "Opp casts",
+        (EventKind::SpellCast, EventScope::AnyPlayer) => "Any cast",
+        (EventKind::TurnBegins, _) => "Turn begins",
+        (EventKind::CardLeftGraveyard, EventScope::YourControl) => "GY leaves",
+        (EventKind::CounterAdded(_), EventScope::SelfSource) => "On counter",
+        (EventKind::AbilityActivated, _) => "Ability activated",
+        (EventKind::BecameTarget, EventScope::SelfSource) => "Becomes target",
+        (EventKind::StepBegins(crate::game::types::TurnStep::Untap), _) => "Untap step",
         (EventKind::StepBegins(crate::game::types::TurnStep::Upkeep), _) => "Upkeep",
+        (EventKind::StepBegins(crate::game::types::TurnStep::Draw), _) => "Draw step",
+        (EventKind::StepBegins(crate::game::types::TurnStep::PreCombatMain), _) => "Main 1",
+        (EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat), _) => "Begin combat",
+        (EventKind::StepBegins(crate::game::types::TurnStep::PostCombatMain), _) => "Main 2",
         (EventKind::StepBegins(crate::game::types::TurnStep::End), _) => "End step",
+        (EventKind::StepBegins(_), _) => "Step",
         _ => "",
     }
 }
@@ -990,5 +1020,38 @@ mod tests {
         // UI can flag opponents' commanders on the battlefield for
         // damage-tally tooltips.
         assert!(view_p1.players[0].commanders.contains(&atraxa));
+    }
+
+    #[test]
+    fn trigger_event_label_covers_another_attacks() {
+        // Sparring Regimen's "whenever a creature you control attacks"
+        // trigger is scoped `AnotherOfYours` on `EventKind::Attacks`.
+        // The view should surface this as "Another attacks: …" so the
+        // client tooltip renders the printed Oracle nicely. Push this
+        // run: lock the label so future label refactors can't drop it.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::sparring_regimen());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(
+            perm.triggered_ability_labels.iter().any(|s| s.starts_with("Another attacks")),
+            "expected 'Another attacks' label for Sparring Regimen's Attacks/AnotherOfYours trigger; got {:?}",
+            perm.triggered_ability_labels,
+        );
+    }
+
+    #[test]
+    fn trigger_event_label_covers_gy_leaves_your_control() {
+        // Spirit Mascot-style "whenever one or more cards leave your
+        // graveyard" should render as "GY leaves" in the view label.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::spirit_mascot());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(
+            perm.triggered_ability_labels.iter().any(|s| s.starts_with("GY leaves")),
+            "expected 'GY leaves' label for Spirit Mascot's CardLeftGraveyard trigger; got {:?}",
+            perm.triggered_ability_labels,
+        );
     }
 }
