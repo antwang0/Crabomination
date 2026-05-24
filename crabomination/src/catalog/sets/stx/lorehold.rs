@@ -14875,3 +14875,177 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 148 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Lightcaller (b148) — {2}{R}{W} 3/3 Spirit Cleric Lifelink.
+/// ETB DealDamage 2 to any target. 4-mana double-keyword aggro engine.
+pub fn lorehold_lightcaller_b148() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Lightcaller (b148)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Ember-Wraith (b148) — {3}{R} 4/2 Spirit Wizard Haste.
+/// Magecraft Treasure. 4-mana ramp/burn body.
+pub fn lorehold_ember_wraith_b148() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Ember-Wraith (b148)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![{
+            use crate::effect::shortcut::magecraft_treasure;
+            magecraft_treasure()
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cinderlist (b148) — {1}{R} Sorcery. DealDamage 2 to target
+/// creature OR player. 2-mana flexible burn.
+pub fn lorehold_cinderlist_b148() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cinderlist (b148)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skystalker (b148) — {3}{W} 2/4 Spirit Soldier Flying +
+/// Vigilance. 4-mana defensive flier.
+pub fn lorehold_skystalker_b148() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skystalker (b148)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spirit-Smith (b148) — {2}{R}{W} 3/3 Spirit Warrior. ETB
+/// mints 1 Spirit token + grants Haste EOT to it (via the layer-6
+/// keyword-grant path). 4-mana double-tempo body.
+pub fn lorehold_spirit_smith_b148() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_keyword;
+    CardDefinition {
+        name: "Lorehold Spirit-Smith (b148)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(create_token_with_keyword(
+            PlayerRef::You,
+            1,
+            lorehold_spirit_token(),
+            Keyword::Haste,
+            Duration::EndOfTurn,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
