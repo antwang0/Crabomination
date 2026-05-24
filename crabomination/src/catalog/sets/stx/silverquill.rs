@@ -16015,7 +16015,7 @@ pub fn silverquill_inkglyph_b146() -> CardDefinition {
 
 /// Inkling Pyrescribe (b146) — {1}{W} 2/2 Inkling Soldier. ETB GainLife 1
 /// + magecraft GainLife 1. 2-mana drip-life body that scales in
-/// spell-heavy shells.
+///   spell-heavy shells.
 pub fn inkling_pyrescribe_b146() -> CardDefinition {
     CardDefinition {
         name: "Inkling Pyrescribe (b146)",
@@ -16114,7 +16114,7 @@ pub fn inkling_inkbearer_b146() -> CardDefinition {
 
 /// Silverquill Ledgerblade (b146) — {1}{W} Instant. Seq(PumpPT(+1/+2 EOT)
 /// + GrantKeyword(Vigilance EOT)). 2-mana combat trick — strengthens
-/// the blocker and lets it crack back.
+///   the blocker and lets it crack back.
 pub fn silverquill_ledgerblade_b146() -> CardDefinition {
     use crate::effect::Duration;
     CardDefinition {
@@ -16279,6 +16279,46 @@ pub fn inkling_wingblade_b146() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Lifeward (b146) — {2}{W}{B} 2/4 Inkling Cleric Lifelink.
+/// Static: "Your opponents can't lose life." A foil for drain decks
+/// (locks Bolas-style life loss). Wires the existing
+/// `StaticEffect::PlayerCannotLoseLife` primitive end-to-end with a
+/// representative card — see CR 119.8.
+pub fn silverquill_lifeward_b146() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::{PlayerStaticTarget, StaticEffect};
+    CardDefinition {
+        name: "Silverquill Lifeward (b146)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Your opponents can't lose life.",
+            effect: StaticEffect::PlayerCannotLoseLife {
+                target: PlayerStaticTarget::EachOpponent,
+            },
+        }],
         base_loyalty: 0,
         loyalty_abilities: vec![],
         alternative_cost: None,

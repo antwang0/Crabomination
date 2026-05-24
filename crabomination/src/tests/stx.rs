@@ -58080,3 +58080,31 @@ fn prismari_surge_b146_deals_four_and_draws() {
     // -1 (cast) +1 (draw) = 0
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
+
+#[test]
+fn silverquill_lifeward_b146_blocks_opp_life_loss() {
+    let mut g = two_player_game();
+    let _lw = g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
+    let l1_before = g.players[1].life;
+    // Drain via direct adjust_life — blocked by the static.
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[1].life, l1_before, "opp can't lose life");
+    // Caster can still lose life
+    let l0_before = g.players[0].life;
+    g.adjust_life(0, -2);
+    assert_eq!(g.players[0].life, l0_before - 2);
+}
+
+#[test]
+fn silverquill_lifeward_b146_releases_life_lock_when_it_leaves() {
+    let mut g = two_player_game();
+    let lw = g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
+    // While in play: opp can't lose life
+    let l1_before = g.players[1].life;
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[1].life, l1_before);
+    // Remove it
+    g.battlefield.retain(|c| c.id != lw);
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[1].life, l1_before - 3);
+}

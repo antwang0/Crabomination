@@ -11410,7 +11410,7 @@ pub fn quandrix_sumcaster_b146() -> CardDefinition {
 
 /// Quandrix Mathwitch (b146) — {1}{G}{U} 2/2 Elf Wizard. Magecraft Draw 1
 /// + Discard 1 (loot). Quandrix's flagship looter — strict upgrade over
-/// Quandrix Numericist's looter at +1 toughness.
+///   Quandrix Numericist's looter at +1 toughness.
 pub fn quandrix_mathwitch_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathwitch (b146)",
