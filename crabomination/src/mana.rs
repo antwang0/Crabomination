@@ -206,6 +206,45 @@ impl ManaCost {
         seen.iter().filter(|b| **b).count() as u32
     }
 
+    /// Render this cost as a printed-Oracle-style string like
+    /// `{2}{W}{B}` or `{X}{R}{R}`. Used by client tooltips
+    /// (Cycling / Flashback / activated-ability cost labels) and the
+    /// server view's `format_mana_cost_for_label`. Free-cost {0} costs
+    /// render as `{0}` rather than the empty string so the renderer
+    /// always has something to display.
+    pub fn summary(&self) -> String {
+        if self.symbols.is_empty() {
+            return "{0}".into();
+        }
+        let mut s = String::new();
+        for sym in &self.symbols {
+            match sym {
+                ManaSymbol::Generic(n) => s.push_str(&format!("{{{n}}}")),
+                ManaSymbol::Colorless(n) => {
+                    for _ in 0..*n {
+                        s.push_str("{C}");
+                    }
+                }
+                ManaSymbol::Colored(col) => {
+                    s.push_str(&format!("{{{}}}", color_pip_letter(*col)));
+                }
+                ManaSymbol::Hybrid(a, b) => {
+                    s.push_str(&format!(
+                        "{{{}/{}}}",
+                        color_pip_letter(*a),
+                        color_pip_letter(*b),
+                    ));
+                }
+                ManaSymbol::Phyrexian(c) => {
+                    s.push_str(&format!("{{{}/P}}", color_pip_letter(*c)));
+                }
+                ManaSymbol::Snow => s.push_str("{S}"),
+                ManaSymbol::X => s.push_str("{X}"),
+            }
+        }
+        s
+    }
+
     /// Return a copy of this cost with X symbols replaced by Generic(x_value).
     pub fn with_x_value(&self, x_value: u32) -> ManaCost {
         ManaCost {
@@ -513,6 +552,20 @@ impl ManaPool {
             Color::Red => &mut self.red,
             Color::Green => &mut self.green,
         }
+    }
+}
+
+/// Single-letter MTG color identifier — used by every mana-cost
+/// label renderer (server view, client tooltip, debug dumps). Pulled
+/// out so the four-or-five duplicated `match c { White → 'W', … }`
+/// inlines in `view.rs` and `mana.rs` resolve to one definition.
+pub fn color_pip_letter(c: Color) -> char {
+    match c {
+        Color::White => 'W',
+        Color::Blue => 'U',
+        Color::Black => 'B',
+        Color::Red => 'R',
+        Color::Green => 'G',
     }
 }
 

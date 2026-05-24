@@ -239,3 +239,54 @@ fn color_set_all_five_is_multicolored() {
     assert!(!s.is_colorless());
     assert_eq!(s.len(), 5);
 }
+
+// ── ManaCost::summary() printed-Oracle rendering ────────────────────────────
+
+#[test]
+fn mana_cost_summary_renders_two_white_one_black() {
+    use crate::mana::{b, cost, generic, w};
+    let c = cost(&[generic(2), w(), b()]);
+    assert_eq!(c.summary(), "{2}{W}{B}");
+}
+
+#[test]
+fn mana_cost_summary_renders_x_pip() {
+    use crate::mana::{cost, r, x};
+    let c = cost(&[x(), x(), r()]);
+    assert_eq!(c.summary(), "{X}{X}{R}");
+}
+
+#[test]
+fn mana_cost_summary_renders_hybrid_pip() {
+    use crate::mana::{cost, hybrid, Color};
+    let c = cost(&[hybrid(Color::White, Color::Black)]);
+    assert_eq!(c.summary(), "{W/B}");
+}
+
+#[test]
+fn mana_cost_summary_renders_phyrexian_pip() {
+    use crate::mana::{cost, phyrexian, Color};
+    let c = cost(&[phyrexian(Color::Black)]);
+    assert_eq!(c.summary(), "{B/P}");
+}
+
+#[test]
+fn mana_cost_summary_renders_snow_pip() {
+    use crate::mana::{cost, snow_mana, u};
+    let c = cost(&[snow_mana(), u()]);
+    assert_eq!(c.summary(), "{S}{U}");
+}
+
+#[test]
+fn mana_cost_summary_renders_zero_for_empty_cost() {
+    use crate::mana::ManaCost;
+    let c = ManaCost::new(vec![]);
+    assert_eq!(c.summary(), "{0}");
+}
+
+#[test]
+fn mana_cost_summary_renders_colorless_pips() {
+    use crate::mana::{colorless, cost, generic};
+    let c = cost(&[generic(1), colorless(2)]);
+    assert_eq!(c.summary(), "{1}{C}{C}");
+}

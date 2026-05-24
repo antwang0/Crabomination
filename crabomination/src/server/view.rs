@@ -148,52 +148,16 @@ fn known_card(card: &CardInstance) -> KnownCard {
 /// labels. Mirrors how cost pips are rendered on Scryfall but with
 /// the curly-brace symbology preserved (the client font handles the
 /// rest). Pure helper — no game-state side effects.
+/// Render a ManaCost as its `{2}{W}{B}` printed-Oracle representation.
+/// Thin wrapper around `ManaCost::summary` — but special-cases the
+/// empty-cost case to the empty string rather than `{0}` since the
+/// server's existing callers (cycling cost label, etc.) prefer a
+/// blank slot to a literal `{0}` when the cost is structurally absent.
 fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
-    use crate::mana::{Color, ManaSymbol};
-    let mut s = String::new();
-    for sym in &c.symbols {
-        match sym {
-            ManaSymbol::Generic(n) => s.push_str(&format!("{{{n}}}")),
-            ManaSymbol::Colorless(n) => {
-                for _ in 0..*n {
-                    s.push_str("{C}");
-                }
-            }
-            ManaSymbol::Colored(col) => {
-                let ch = match col {
-                    Color::White => 'W',
-                    Color::Blue => 'U',
-                    Color::Black => 'B',
-                    Color::Red => 'R',
-                    Color::Green => 'G',
-                };
-                s.push_str(&format!("{{{ch}}}"));
-            }
-            ManaSymbol::Hybrid(a, b) => {
-                let l = |c: &Color| match c {
-                    Color::White => 'W',
-                    Color::Blue => 'U',
-                    Color::Black => 'B',
-                    Color::Red => 'R',
-                    Color::Green => 'G',
-                };
-                s.push_str(&format!("{{{}/{}}}", l(a), l(b)));
-            }
-            ManaSymbol::Phyrexian(c) => {
-                let ch = match c {
-                    Color::White => 'W',
-                    Color::Blue => 'U',
-                    Color::Black => 'B',
-                    Color::Red => 'R',
-                    Color::Green => 'G',
-                };
-                s.push_str(&format!("{{{ch}/P}}"));
-            }
-            ManaSymbol::Snow => s.push_str("{S}"),
-            ManaSymbol::X => s.push_str("{X}"),
-        }
+    if c.symbols.is_empty() {
+        return String::new();
     }
-    s
+    c.summary()
 }
 
 fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {

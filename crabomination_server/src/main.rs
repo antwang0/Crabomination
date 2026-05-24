@@ -125,16 +125,37 @@ struct MatchStats {
     pair_matches: u64,
     /// Total cumulative match duration (sum). Average = total / count.
     total_duration: Duration,
+    /// Shortest observed match duration. `None` until the first match
+    /// completes. Surfaces outlier-short games (instant disconnects,
+    /// concession-on-turn-1).
+    min_duration: Option<Duration>,
+    /// Longest observed match duration. `None` until the first match
+    /// completes. Surfaces stalls / long grindy games.
+    max_duration: Option<Duration>,
 }
 
 impl MatchStats {
     fn record_bot(&mut self, d: Duration) {
         self.bot_matches += 1;
-        self.total_duration += d;
+        self.observe_duration(d);
     }
     fn record_pair(&mut self, d: Duration) {
         self.pair_matches += 1;
+        self.observe_duration(d);
+    }
+    /// Shared bookkeeping for both record paths — accumulates the
+    /// total + tracks the new min/max envelope. Pulled out of the
+    /// recorders so the min/max maintenance is canonical at one site.
+    fn observe_duration(&mut self, d: Duration) {
         self.total_duration += d;
+        self.min_duration = Some(match self.min_duration {
+            None => d,
+            Some(m) => m.min(d),
+        });
+        self.max_duration = Some(match self.max_duration {
+            None => d,
+            Some(m) => m.max(d),
+        });
     }
     fn total_matches(&self) -> u64 {
         self.bot_matches + self.pair_matches
@@ -164,14 +185,22 @@ fn match_stats() -> &'static std::sync::Mutex<MatchStats> {
 /// included in the rollup.
 fn format_match_stats(s: &MatchStats) -> String {
     let n = s.total_matches();
-    format!(
+    let mut out = format!(
         "served {} match{}: {} bot, {} pair; avg duration {}",
         n,
         if n == 1 { "" } else { "es" },
         s.bot_matches,
         s.pair_matches,
         format_duration(s.avg_duration()),
-    )
+    );
+    if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
+        out.push_str(&format!(
+            " (min {}, max {})",
+            format_duration(mn),
+            format_duration(mx),
+        ));
+    }
+    out
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -833,5 +862,44 @@ mod tests {
         let s = MatchStats::default();
         let line = format_match_stats(&s);
         assert!(line.contains("served 0 matches"));
+    }
+
+    #[test]
+    fn match_stats_tracks_min_and_max_duration() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60));
+        s.record_pair(Duration::from_secs(300));
+        s.record_bot(Duration::from_secs(30));
+        s.record_pair(Duration::from_secs(120));
+        assert_eq!(s.min_duration, Some(Duration::from_secs(30)));
+        assert_eq!(s.max_duration, Some(Duration::from_secs(300)));
+    }
+
+    #[test]
+    fn match_stats_min_max_unset_before_any_record() {
+        let s = MatchStats::default();
+        assert_eq!(s.min_duration, None);
+        assert_eq!(s.max_duration, None);
+    }
+
+    #[test]
+    fn format_match_stats_includes_min_max_when_present() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(30));
+        s.record_pair(Duration::from_secs(300));
+        let line = format_match_stats(&s);
+        assert!(line.contains("min "), "should include min: {line}");
+        assert!(line.contains("max "), "should include max: {line}");
+        assert!(line.contains("30s"), "min 30s: {line}");
+        assert!(line.contains("5m"), "max 5m: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_omits_min_max_when_zero_matches() {
+        let s = MatchStats::default();
+        let line = format_match_stats(&s);
+        // No min/max parenthetical when no matches have been recorded.
+        assert!(!line.contains("min "));
+        assert!(!line.contains("max "));
     }
 }

@@ -228,6 +228,16 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 /// granted keywords doesn't blow out the tooltip line.
 fn keyword_label(kw: &crabomination::card::Keyword) -> String {
     use crabomination::card::Keyword as K;
+    use crabomination::mana::Color;
+    let color_word = |c: &Color| -> &'static str {
+        match c {
+            Color::White => "white",
+            Color::Blue => "blue",
+            Color::Black => "black",
+            Color::Red => "red",
+            Color::Green => "green",
+        }
+    };
     match kw {
         K::Flying => "Flying".into(),
         K::FirstStrike => "First Strike".into(),
@@ -244,11 +254,26 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Hexproof => "Hexproof".into(),
         K::Flash => "Flash".into(),
         K::Shroud => "Shroud".into(),
-        K::Ward(n) => format!("Ward {n:?}"),
-        K::Protection(c) => format!("Protection from {c:?}"),
-        K::Cycling(_) => "Cycling".into(),
-        K::Flashback(_) => "Flashback".into(),
+        // Surface Ward's cost as "Ward {2}" or "Ward—pay 2 life"
+        // instead of the prior `{:?}` shape that printed the raw
+        // enum variant text.
+        K::Ward(wc) => match wc {
+            crabomination::card::WardCost::Mana(c) => format!("Ward {}", c.summary()),
+            crabomination::card::WardCost::Life(n) => format!("Ward—Pay {n} life"),
+            crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
+        },
+        // Protection rolls up the color name in lowercase to match
+        // printed Oracle ("protection from white", not "from White").
+        K::Protection(c) => format!("Protection from {}", color_word(c)),
+        // Cycling / Flashback should expose their cost so the activator
+        // can see what they'd pay.
+        K::Cycling(cost) => format!("Cycling {}", cost.summary()),
+        K::Flashback(cost) => format!("Flashback {}", cost.summary()),
         K::Convoke => "Convoke".into(),
+        K::Persist => "Persist".into(),
+        K::Undying => "Undying".into(),
+        K::CantBeCountered => "Can't be countered".into(),
         _ => format!("{kw:?}"),
     }
 }
