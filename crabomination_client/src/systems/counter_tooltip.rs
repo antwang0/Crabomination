@@ -212,6 +212,22 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Static abilities — printed Oracle wording exposed by the server
+    // via `PermanentView.static_ability_labels`. Lets players see
+    // "Other Inkling creatures you control get +2/+2." or "Each
+    // opponent can't gain life." without scrolling through the card
+    // detail panel. Added per the TODO improvement "Static-ability
+    // tooltip exposure" — pairs with the existing
+    // `triggered_ability_labels` block above.
+    if !p.static_ability_labels.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
+        for l in &p.static_ability_labels {
+            lines.push(l.clone());
+        }
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }

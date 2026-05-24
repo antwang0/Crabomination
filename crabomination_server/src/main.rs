@@ -132,6 +132,13 @@ struct MatchStats {
     /// Longest observed match duration. `None` until the first match
     /// completes. Surfaces stalls / long grindy games.
     max_duration: Option<Duration>,
+    /// Bucketed histogram of match durations. Buckets:
+    /// `[0]` = under 30s, `[1]` = 30s-1m, `[2]` = 1-2m, `[3]` = 2-5m,
+    /// `[4]` = 5-10m, `[5]` = 10m+. Lets operators see the distribution
+    /// shape at a glance without leaving the per-match log line —
+    /// e.g. a sudden spike in the `<30s` bucket indicates many bots
+    /// are conceding turn 1 (often a regression signal).
+    duration_buckets: [u32; 6],
 }
 
 impl MatchStats {
@@ -156,6 +163,41 @@ impl MatchStats {
             None => d,
             Some(m) => m.max(d),
         });
+        let idx = Self::bucket_index(d);
+        self.duration_buckets[idx] = self.duration_buckets[idx].saturating_add(1);
+    }
+    /// Map a duration onto its histogram bucket index. Buckets are
+    /// power-of-rounded thresholds: 30s / 1m / 2m / 5m / 10m / 10m+.
+    /// Anything strictly less than 30s lands in bucket 0; bucket 5
+    /// is the open-ended `10m+` catch-all.
+    fn bucket_index(d: Duration) -> usize {
+        let s = d.as_secs();
+        if s < 30 {
+            0
+        } else if s < 60 {
+            1
+        } else if s < 120 {
+            2
+        } else if s < 300 {
+            3
+        } else if s < 600 {
+            4
+        } else {
+            5
+        }
+    }
+    /// Human-readable labels for the histogram buckets, parallel to
+    /// `duration_buckets`. Pulled out so the formatter and unit tests
+    /// can share the same labels.
+    fn bucket_label(i: usize) -> &'static str {
+        match i {
+            0 => "<30s",
+            1 => "30s-1m",
+            2 => "1-2m",
+            3 => "2-5m",
+            4 => "5-10m",
+            _ => "10m+",
+        }
     }
     fn total_matches(&self) -> u64 {
         self.bot_matches + self.pair_matches
@@ -199,6 +241,16 @@ fn format_match_stats(s: &MatchStats) -> String {
             format_duration(mn),
             format_duration(mx),
         ));
+    }
+    // Append histogram only when at least one bucket has hits — keeps
+    // the rolling log line tight pre-warmup. Format:
+    // " | <30s:3 30s-1m:5 1-2m:7 2-5m:2 5-10m:0 10m+:0" (zero buckets
+    // included for stability so log greppers can rely on the column).
+    if s.total_matches() > 0 {
+        out.push_str(" |");
+        for (i, count) in s.duration_buckets.iter().enumerate() {
+            out.push_str(&format!(" {}:{}", MatchStats::bucket_label(i), count));
+        }
     }
     out
 }
@@ -901,5 +953,58 @@ mod tests {
         // No min/max parenthetical when no matches have been recorded.
         assert!(!line.contains("min "));
         assert!(!line.contains("max "));
+    }
+
+    // ── duration-histogram tests ────────────────────────────────────────────
+
+    #[test]
+    fn bucket_index_partitions_durations_into_six_buckets() {
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(0)), 0);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(15)), 0);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(29)), 0);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(30)), 1);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(59)), 1);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(60)), 2);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(119)), 2);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(120)), 3);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(299)), 3);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(300)), 4);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(599)), 4);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(600)), 5);
+        assert_eq!(MatchStats::bucket_index(Duration::from_secs(3600)), 5);
+    }
+
+    #[test]
+    fn match_stats_observe_duration_increments_correct_bucket() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(15)); // bucket 0
+        s.record_bot(Duration::from_secs(45)); // bucket 1
+        s.record_bot(Duration::from_secs(100)); // bucket 2
+        s.record_bot(Duration::from_secs(180)); // bucket 3
+        s.record_bot(Duration::from_secs(500)); // bucket 4
+        s.record_bot(Duration::from_secs(700)); // bucket 5
+        assert_eq!(s.duration_buckets, [1, 1, 1, 1, 1, 1]);
+        // Two more matches in the <30s bucket
+        s.record_pair(Duration::from_secs(5));
+        s.record_pair(Duration::from_secs(20));
+        assert_eq!(s.duration_buckets[0], 3);
+    }
+
+    #[test]
+    fn format_match_stats_includes_histogram_when_matches_present() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(15));
+        s.record_pair(Duration::from_secs(700));
+        let line = format_match_stats(&s);
+        assert!(line.contains("<30s:1"), "1 in <30s bucket: {line}");
+        assert!(line.contains("10m+:1"), "1 in 10m+ bucket: {line}");
+        assert!(line.contains("30s-1m:0"), "stable column with 0 count: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_omits_histogram_when_zero_matches() {
+        let s = MatchStats::default();
+        let line = format_match_stats(&s);
+        assert!(!line.contains("|"), "no histogram section when 0 matches: {line}");
     }
 }

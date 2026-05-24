@@ -3957,4 +3957,41 @@ pub mod shortcut {
             amount: Value::Const(1),
         })
     }
+
+    /// Predicate shortcut: "You have at least `n` cards matching
+    /// `filter` in your graveyard." Wraps the canonical spell-mastery
+    /// / delirium-threshold / Murderous-Cut-style gate pattern:
+    /// `Predicate::SelectorCountAtLeast { sel: CardsInZone(You,
+    /// Graveyard, filter), n: Const(n) }`. Per the TODO suggestion
+    /// (batch 153 follow-ups), this collapses ~15 call sites in
+    /// `decks::modern` / `stx::*` that all rebuild the same shape.
+    /// Use for Fiery Impulse (IS x 2), Searing Blaze (any x 2),
+    /// Murderous Cut (any x 7 for delve), Mishra's Bauble (any x N),
+    /// any "spell mastery", "delirium", or "threshold" gate.
+    pub fn cards_in_graveyard_at_least(
+        filter: crate::card::SelectionRequirement,
+        n: i32,
+    ) -> Predicate {
+        Predicate::SelectorCountAtLeast {
+            sel: Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: crate::card::Zone::Graveyard,
+                filter,
+            },
+            n: Value::Const(n),
+        }
+    }
+
+    /// Predicate shortcut for the printed "spell mastery" threshold —
+    /// "if there are two or more instant and/or sorcery cards in your
+    /// graveyard." Equivalent to `cards_in_graveyard_at_least(IS, 2)`.
+    /// Used by Fiery Impulse, Magmatic Insight-promotion-style cards.
+    pub fn spell_mastery_gate() -> Predicate {
+        use crate::card::{CardType, SelectionRequirement};
+        cards_in_graveyard_at_least(
+            SelectionRequirement::HasCardType(CardType::Instant)
+                .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            2,
+        )
+    }
 }

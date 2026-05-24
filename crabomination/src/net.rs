@@ -344,6 +344,16 @@ pub struct PermanentView {
     /// `triggered_ability_label`.
     #[serde(default)]
     pub triggered_ability_labels: Vec<String>,
+    /// Compact descriptions of the printed static abilities ("Other
+    /// Inkling creatures you control get +2/+2.", "Each opponent
+    /// can't gain life.", "Spells you cast that target a creature
+    /// cost {2} less to cast."). Pulled straight from
+    /// `StaticAbility.description` so the client tooltip can render
+    /// the printed Oracle wording without the engine threading
+    /// `Effect`/`StaticEffect` trees over the wire. Defaults to
+    /// empty for older clients without this field.
+    #[serde(default)]
+    pub static_ability_labels: Vec<String>,
 }
 
 impl PermanentView {

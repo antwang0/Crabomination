@@ -202,7 +202,21 @@ fn project_permanent(
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
         triggered_ability_labels: project_triggered_ability_labels(card),
+        static_ability_labels: project_static_ability_labels(card),
     }
+}
+
+/// Project the printed `StaticAbility.description` strings as a flat
+/// `Vec<String>` for the client tooltip. Cards without static
+/// abilities yield an empty vector. The descriptions are 'static and
+/// stable across recomputes — they're the printed Oracle wording.
+fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
+    card.definition
+        .static_abilities
+        .iter()
+        .map(|s| s.description.to_string())
+        .filter(|d| !d.is_empty())
+        .collect()
 }
 
 /// Generate one-line summaries per triggered ability for the client
@@ -694,6 +708,36 @@ mod tests {
         let view = project(&state, 1);
         assert_eq!(view.players[0].graveyard.len(), 1);
         assert_eq!(view.players[0].graveyard[0].name, "Grizzly Bears");
+    }
+
+    #[test]
+    fn permanent_view_includes_static_ability_labels() {
+        // Tenured Inkcaster has a printed static "Other Inkling
+        // creatures you control get +2/+2." — the view should surface
+        // that description string in `static_ability_labels`.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::tenured_inkcaster());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(!perm.static_ability_labels.is_empty(),
+            "Tenured Inkcaster has a printed static — view must surface it");
+        assert!(
+            perm.static_ability_labels.iter().any(|s| s.contains("Inkling")),
+            "static_ability_labels should mention Inkling: {:?}",
+            perm.static_ability_labels,
+        );
+    }
+
+    #[test]
+    fn permanent_view_static_ability_labels_empty_for_vanilla_creature() {
+        // Grizzly Bears has no static abilities — the view's
+        // static_ability_labels should be empty.
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert!(perm.static_ability_labels.is_empty(),
+            "vanilla creature has no statics");
     }
 
     #[test]

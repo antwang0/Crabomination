@@ -6861,23 +6861,13 @@ pub fn skullcrack() -> CardDefinition {
 /// then: DealDamage 3, else_: DealDamage 2 }`. Uses the existing
 /// `Selector::CardsInZone` + `SelectorCountAtLeast` primitives.
 pub fn fiery_impulse() -> CardDefinition {
-    use crate::card::Zone;
-    use crate::effect::{Predicate, Selector};
-    let is_in_your_gy = Selector::CardsInZone {
-        who: PlayerRef::You,
-        zone: Zone::Graveyard,
-        filter: SelectionRequirement::HasCardType(CardType::Instant)
-            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-    };
+    use crate::effect::shortcut::spell_mastery_gate;
     CardDefinition {
         name: "Fiery Impulse",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: is_in_your_gy,
-                n: Value::Const(2),
-            },
+            cond: spell_mastery_gate(),
             then: Box::new(Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(3),

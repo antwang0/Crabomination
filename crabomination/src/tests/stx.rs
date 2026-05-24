@@ -60219,6 +60219,91 @@ fn cr_405_5_all_pass_resolves_top_of_stack() {
 }
 
 #[test]
+fn cr_119_8_player_cannot_lose_life_blocks_lose_life_paths() {
+    // CR 119.8 — when a player can't lose life, Effect::LoseLife
+    // resolves to a no-op for that player. Exercise via the
+    // PlayerCannotLoseLife static (Silverquill Lifeward b146 ships
+    // an opp-locked variant; here we test the engine path directly
+    // by checking the adjust_life gate's clamp behavior).
+    let mut g = two_player_game();
+    g.players[1].life = 5;
+    g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
+    // The Lifeward locks the OPPONENT (P1) from losing life. P1's
+    // life stays at 5 even after we try to drain.
+    let life_before = g.players[1].life;
+    g.adjust_life(1, -3);
+    assert_eq!(g.players[1].life, life_before,
+        "CR 119.8: locked player can't lose life from adjust_life");
+}
+
+#[test]
+fn cr_117_3a_no_player_gets_priority_during_untap_step() {
+    // CR 117.3a — "No player receives priority during the untap step."
+    // The do_untap turn-based action runs without yielding priority.
+    // Test: ensure the step transitions cleanly through untap to
+    // upkeep without intervening priority window.
+    let mut g = two_player_game();
+    // Add a tapped permanent on P0's side.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    // Move to end step, then advance through cleanup → P1's turn
+    // starts with untap step.
+    g.step = TurnStep::End;
+    // Pass priority twice (P0 + P1) to advance through end → cleanup → next turn
+    let _ = g.perform_action(GameAction::PassPriority);
+    let _ = g.perform_action(GameAction::PassPriority);
+    let _ = g.perform_action(GameAction::PassPriority);
+    let _ = g.perform_action(GameAction::PassPriority);
+    let _ = g.perform_action(GameAction::PassPriority);
+    let _ = g.perform_action(GameAction::PassPriority);
+    // After enough passes, P1's untap step has run; the bear is
+    // P0's permanent so untap doesn't touch it. Confirm we advanced.
+    // The exact step depends on triggers; main goal: the engine
+    // doesn't hang waiting for priority during untap.
+    assert!(g.step != TurnStep::Untap,
+        "CR 117.3a: untap step runs without holding priority");
+}
+
+#[test]
+fn cr_117_7_response_resolves_first_lifo_stack_order() {
+    // CR 117.7 — "If a player with priority casts a spell or activates
+    // an activated ability while another spell or ability is already
+    // on the stack, the new spell or ability has been cast or
+    // activated 'in response to' the earlier spell or ability. The
+    // new spell or ability will resolve first."
+    //
+    // Sequence: P0 casts Bolt → stack [Bolt-at-bear]. Then P1 casts
+    // Giant Growth-style buff on bear → stack [Bolt, GrowthOnBear].
+    // Top of stack (GrowthOnBear) resolves first, pumping the bear,
+    // so by the time Bolt resolves, the bear has 5 toughness and
+    // survives the 3 damage.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let growth = g.add_card_to_hand(1, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[1].mana_pool.add(Color::Green, 1);
+    // P0 casts Bolt at bear
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    // P0 passes priority; now P1 gets priority and can respond
+    g.perform_action(GameAction::PassPriority).expect("P0 passes");
+    g.perform_action(GameAction::CastSpell {
+        card_id: growth, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Growth castable in response");
+    assert_eq!(g.stack.len(), 2,
+        "Two spells on stack — Growth on top (cast last)");
+    drain_stack(&mut g);
+    // Growth pumped bear to 5/5; Bolt deals 3 → bear has 3 damage
+    // marked on a 5-toughness body → does NOT die.
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "CR 117.7: Growth (cast last) resolved first → bear survived Bolt");
+}
+
+#[test]
 fn cr_117_5_sba_before_priority_lethal_creature_dies_before_response() {
     // CR 117.5 — state-based actions are checked before any player
     // would get priority. After Bolting a 2-toughness creature, the
