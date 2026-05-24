@@ -5524,7 +5524,7 @@ pub fn quandrix_counterfold() -> CardDefinition {
 /// counter on each creature you control."
 pub fn quandrix_augurer() -> CardDefinition {
     CardDefinition {
-        name: "Quandrix Bountycaller",
+        name: "Quandrix Augurer",
         cost: cost(&[generic(3), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -7875,7 +7875,7 @@ pub fn quandrix_seer_b61() -> CardDefinition {
 /// Fractal body — a 2/2 for {U} with growth potential under doublers.
 pub fn fractal_mosspetal() -> CardDefinition {
     CardDefinition {
-        name: "Fractal",
+        name: "Fractal Mosspetal",
         cost: cost(&[generic(1), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
@@ -8065,7 +8065,7 @@ pub fn quandrix_numberminder() -> CardDefinition {
 /// potential under Tanazir / +1/+1 doublers.
 pub fn fractal_rookling() -> CardDefinition {
     CardDefinition {
-        name: "Fractal",
+        name: "Fractal Rookling",
         cost: cost(&[g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],

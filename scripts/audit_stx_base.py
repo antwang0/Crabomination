@@ -119,19 +119,49 @@ doc_todo = {n for n, s in status_by_card.items() if "⏳" in s}
 doc_card_names = set(status_by_card)
 
 
+def _strip_paren(s: str) -> str:
+    return re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+
+
+def _strip_roman_suffix(s: str) -> str:
+    """Strip trailing Roman numeral suffix like ' II', ' III', ' IV' used
+    by synthesised batch variants (e.g. 'Inkling Scrollwarden II' →
+    'Inkling Scrollwarden'). Returns the input unchanged when no suffix
+    matches."""
+    return re.sub(r"\s+(?:II|III|IV|V|VI|VII|VIII|IX|X)$", "", s).strip()
+
+
+# Pre-compute a parenthetical-stripped catalog name set so we can match
+# "Inkling Scrollwarden II" (doc) against "Inkling Scrollwarden (b68)"
+# (catalog) without false-positiving.
+catalog_strings_bare: set[str] = {
+    _strip_paren(s) for s in catalog_strings
+}
+
+
 def doc_name_matches_catalog(name: str) -> bool:
     """A doc row matches the catalog if either the full row name or any
     `//`-separated half (MDFC) is present in the catalog source. Also
     strips trailing parenthetical annotations like "(STA reprint)" so
-    that doc rows with provenance notes still match the catalog string."""
-    # Strip trailing parenthetical (e.g., "Mizzium Mortars (STA reprint)").
-    bare = re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+    that doc rows with provenance notes still match the catalog string.
+    Synthesised variants ('Inkling Scrollwarden II') are stripped to
+    their base name before matching against the parenthetical-stripped
+    catalog name set ('Inkling Scrollwarden')."""
+    bare = _strip_paren(name)
     candidates = [name, bare]
     for n in candidates:
         if n in catalog_strings:
             return True
+        # Compare against parenthetical-stripped catalog names so
+        # "Inkling Scrollwarden II" matches "Inkling Scrollwarden (b68)".
+        roman_stripped = _strip_roman_suffix(n)
+        if roman_stripped in catalog_strings_bare:
+            return True
         for half in n.split("//"):
-            if half.strip() in catalog_strings:
+            half = half.strip()
+            if half in catalog_strings:
+                return True
+            if _strip_roman_suffix(half) in catalog_strings_bare:
                 return True
     return False
 
