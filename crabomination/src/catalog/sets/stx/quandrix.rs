@@ -12792,3 +12792,74 @@ pub fn quandrix_calculation_b154() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Quandrix Wavebreaker (b154) — {3}{U} 3/3 Merfolk Wizard. ETB
+/// returns target nonland permanent to its owner's hand. Tempo + body.
+pub fn quandrix_wavebreaker_b154() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered as tf;
+    CardDefinition {
+        name: "Quandrix Wavebreaker (b154)",
+        cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: tf(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Bloomguard (b154) — {3}{G} 3/4 Elf Druid Reach.
+/// ETB +1/+1 counter on each creature you control. Mass +1/+1
+/// distribution body at 4-mana — strong with Doubling Season.
+pub fn quandrix_bloomguard_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Bloomguard (b154)",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

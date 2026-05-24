@@ -15954,3 +15954,103 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Lorehold Searingscholar (b154) — {2}{R} 2/3 Spirit Wizard.
+/// Magecraft Drain each opp 1 — Lorehold drain template at the 3-mana
+/// slot.
+pub fn lorehold_searingscholar_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Searingscholar (b154)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Cinderward (b154) — {2}{W} 2/4 Spirit Cleric Vigilance.
+/// ETB gain 3 life. Defensive lifegain anchor.
+pub fn lorehold_cinderward_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Cinderward (b154)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Strikeritual (b154) — {1}{R}{W} Sorcery. Seq(DealDamage
+/// 2 any target + CreateToken 1 Spirit). 3-mana burn + body.
+pub fn lorehold_strikeritual_b154() -> CardDefinition {
+    use crate::effect::shortcut::deal;
+    CardDefinition {
+        name: "Lorehold Strikeritual (b154)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            deal(2, target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            )),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: lorehold_spirit_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

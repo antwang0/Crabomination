@@ -61078,6 +61078,93 @@ fn quandrix_calculation_b154_mints_four_four_fractal_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before, "spell out, draw 1 in");
 }
 
+#[test]
+fn lorehold_searingscholar_b154_drains_each_opp_on_cast() {
+    let mut g = two_player_game();
+    let _ls = g.add_card_to_battlefield(0, catalog::lorehold_searingscholar_b154());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt: -3, magecraft drain: -1, total -4
+    assert_eq!(g.players[1].life, life1_before - 4);
+}
+
+#[test]
+fn lorehold_cinderward_b154_etb_gains_three_life() {
+    let mut g = two_player_game();
+    let lc = g.add_card_to_hand(0, catalog::lorehold_cinderward_b154());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: lc, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Cinderward castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+}
+
+#[test]
+fn lorehold_strikeritual_b154_burns_and_mints_spirit() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::lorehold_strikeritual_b154());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Strikeritual castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1, "Mints exactly one Spirit token");
+}
+
+#[test]
+fn quandrix_wavebreaker_b154_etb_bounces_target() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let wb = g.add_card_to_hand(0, catalog::quandrix_wavebreaker_b154());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: wb, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Wavebreaker castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear),
+        "Bear returned to opp's hand");
+}
+
+#[test]
+fn quandrix_bloomguard_b154_etb_fans_counters_on_each_friendly_creature() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bg = g.add_card_to_hand(0, catalog::quandrix_bloomguard_b154());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bg, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Bloomguard castable");
+    drain_stack(&mut g);
+    for id in [b1, b2] {
+        let c = g.battlefield_find(id).unwrap();
+        let counters: u32 = c.counters.iter()
+            .filter(|(k, _)| **k == CounterType::PlusOnePlusOne)
+            .map(|(_, n)| *n).sum();
+        assert_eq!(counters, 1, "Each friendly bear gets a +1/+1 counter");
+    }
+}
+
 // ── batch 154 — Prismari cards ─────────────────────────────────────────────
 
 #[test]
