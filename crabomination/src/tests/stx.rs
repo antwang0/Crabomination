@@ -58993,3 +58993,59 @@ fn prismari_stormbringer_b149_has_trample_and_haste() {
     assert!(c.has_keyword(&Keyword::Trample));
     assert!(c.has_keyword(&Keyword::Haste));
 }
+
+// ── CR 122 audit tests (rule-level fan-out from batch 146/147/148) ─────────
+
+#[test]
+fn cr_122_3_plus_one_and_minus_one_counters_cancel_on_witherbloom_reapcaster() {
+    // CR 122.3 — +1/+1 and -1/-1 counters cancel as a state-based action.
+    // Reapcaster's magecraft trigger drops a +1/+1 counter on it; we
+    // simultaneously seed a -1/-1 counter. After the next SBA pass, both
+    // counters should be at 0 (1 of each cancels to 0).
+    let mut g = two_player_game();
+    let rc = g.add_card_to_battlefield(0, catalog::witherbloom_reapcaster_b146());
+    if let Some(c) = g.battlefield_find_mut(rc) {
+        c.counters.insert(CounterType::MinusOneMinusOne, 1);
+    }
+    // Cast a bolt to trigger magecraft +1/+1 counter (the same Reapcaster
+    // also picks up the drain, but that's life-only and irrelevant here).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(rc).unwrap();
+    // After SBA: 1 +1/+1 and 1 -1/-1 cancel to 0 of each.
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0);
+    assert_eq!(c.counter_count(CounterType::MinusOneMinusOne), 0);
+}
+
+#[test]
+fn cr_122_6_etb_with_counters_doesnt_die_to_zero_toughness_sba() {
+    // CR 122.6/a — counters placed by `enters_with_counters` are applied
+    // BEFORE the next SBA pass, so a 0/0 fractal body that ETBs with
+    // +1/+1 counters survives the 0-toughness check (704.5f). Fractal
+    // Caller (b146) is the canonical exercise card — Fractal token has
+    // printed P/T 0/0 and the ETB drops 2 +1/+1 counters on it via
+    // `etb_mint_token_with_counters`.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fractal_caller_b146());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fractal Caller castable");
+    drain_stack(&mut g);
+    // Walk the battlefield to find the Fractal token (it's freshly minted,
+    // so it's the only token-typed Fractal creature).
+    let fractal = g.battlefield.iter().find(|c| c.is_token).expect("Fractal token");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2);
+    // Computed toughness should be 0 + 2 = 2, NOT 0 (which would have
+    // caused immediate SBA death).
+    let computed = g.compute_battlefield();
+    let f = computed.iter().find(|c| c.id == fractal.id).unwrap();
+    assert_eq!(f.toughness, 2);
+}

@@ -1111,7 +1111,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   suite — every Quandrix counter card (Calligrapher, Doublewright,
   Multiplier, Theorem Crafter, Aetherist) implicitly validates 122.3
   + 122.6/a; Felisa tests validate 122.2's "counters survive
-  graveyard-move" approximation. Promote to ✅ when 122.1b (keyword
+  graveyard-move" approximation. Push (modern_decks batch 149):
+  explicit CR 122 lock-in tests added —
+  `cr_122_3_plus_one_and_minus_one_counters_cancel_on_witherbloom_reapcaster`
+  (122.3 SBA cancellation: seed -1/-1, magecraft drops +1/+1, both
+  cancel) and
+  `cr_122_6_etb_with_counters_doesnt_die_to_zero_toughness_sba`
+  (122.6/a counters-applied-before-SBA: Fractal Caller's 0/0 token
+  ETBs with 2 +1/+1 counters via `etb_mint_token_with_counters` and
+  survives the 0-toughness SBA). Promote to ✅ when 122.1b (keyword
   counters), 122.4 (cap), 122.5 (general move), and 122.7 (Nth-counter
   threshold trigger) all land.
 
@@ -3468,19 +3476,23 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `dispatch_triggers_for_events` (a SelfSource CardCycled scope on
   a graveyard-resident source fires with `source = cycled card id`).
   Filler test cards: `strixhaven_cycle_glyph_b143` (vanilla cycle),
-  `strixhaven_cycle_decree_b145` (cycle → draw 3 trigger).
+  `strixhaven_cycle_decree_b145` (cycle → draw 3 trigger),
+  `silverquill_sage_b145` (defensive cycle-trigger anchor),
+  `witherbloom_vinegrower_b145` (Witherbloom Cycling 2-drop).
   Lock-in tests `cycling_discards_and_draws_a_card`,
   `cycling_rejects_without_mana_to_pay_the_cost`,
   `cycle_glyph_castable_as_a_sorcery_too`,
-  `cycle_decree_when_cycled_draws_three_cards`. UI: `KnownCard.has
-  _cycling` + `KnownCard.cycling_cost_label` exposed; client adds
-  C keypress to cycle the hovered hand card. Remaining ⏳: (a)
-  Typecycling per CR 702.29e ("Mountaincycling" / "Basic land-
-  cycling" → discard to tutor a matching land instead of drawing);
-  (b) Cycling-cost reduction (Astral Slide / Lightning Rift
-  activate when you cycle); (c) printed STA cycling reprints
-  (Decree of Pain, Akroma's Vengeance, Mystical Dispute via the
-  mystic-archive split).
+  `cycle_decree_when_cycled_draws_three_cards`,
+  `silverquill_sage_b145_can_be_cycled`,
+  `witherbloom_vinegrower_b145_can_be_cycled`. UI:
+  `KnownCard.has_cycling` + `KnownCard.cycling_cost_label`
+  exposed; client adds C keypress to cycle the hovered hand card.
+  Remaining ⏳: (a) Typecycling per CR 702.29e
+  ("Mountaincycling" / "Basic land-cycling" → discard to tutor a
+  matching land instead of drawing); (b) Cycling-cost reduction
+  (Astral Slide / Lightning Rift activate when you cycle); (c)
+  printed STA cycling reprints (Decree of Pain, Akroma's Vengeance,
+  Mystical Dispute via the mystic-archive split).
 - ⏳ **CR 704.5d (token cleanup)**: Already covered by SBA tokens.retain. ✅
 - 🟡 **CR 117.1 — Order of priority**: `pass_priority` walks the
   alive players in seat order. Multi-player APNAP ordering for
