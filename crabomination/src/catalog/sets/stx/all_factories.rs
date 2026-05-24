@@ -3296,5 +3296,37 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_verdict_b164,
         super::silverquill::inkling_duelist_b164,
         super::silverquill::silverquill_denouncement_b164,
+        // ── batch 165 (modern_decks): lorehold ──
+        super::lorehold::lorehold_flamebinder_b165,
+        super::lorehold::lorehold_sunweave_b165,
+        super::lorehold::lorehold_pyreguard_b165,
+        super::lorehold::lorehold_braveheart_b165,
+        super::lorehold::lorehold_fireshield_b165,
+        super::lorehold::lorehold_bonepreacher_b165,
+        // ── batch 165 (modern_decks): witherbloom ──
+        super::witherbloom::pest_deathbloom_b165,
+        super::witherbloom::witherbloom_witchlight_b165,
+        super::witherbloom::witherbloom_rootguard_b165,
+        super::witherbloom::witherbloom_pestkeeper_b165,
+        super::witherbloom::witherbloom_lifesurge_b165,
+        super::witherbloom::witherbloom_deathcoach_b165,
+        // ── batch 165 (modern_decks): prismari ──
+        super::prismari::prismari_stormchaser_b165,
+        super::prismari::prismari_flamebolt_b165,
+        super::prismari::prismari_stormwielder_b165,
+        super::prismari::prismari_cannonade_b165,
+        super::prismari::prismari_tidecaller_b165,
+        // ── batch 165 (modern_decks): quandrix ──
+        super::quandrix::quandrix_hydraformer_b165,
+        super::quandrix::quandrix_formulist_b165,
+        super::quandrix::quandrix_rootsinger_b165,
+        super::quandrix::quandrix_tidebinder_b165,
+        super::quandrix::quandrix_spellgrafter_b165,
+        // ── batch 165 (modern_decks): silverquill ──
+        super::silverquill::inkling_shadowcaster_b165,
+        super::silverquill::silverquill_spiritspeaker_b165,
+        super::silverquill::silverquill_vindict_b165,
+        super::silverquill::inkling_skywarden_b165,
+        super::silverquill::silverquill_deathmark_b165,
     ]
 }

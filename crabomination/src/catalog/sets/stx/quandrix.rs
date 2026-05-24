@@ -15154,3 +15154,172 @@ pub fn quandrix_waveweaver_b164() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 165 (modern_decks) — More Quandrix ──────────────────────────────
+
+/// Quandrix Hydraformer (b165) — {2}{G}{U} 3/3 Fractal Druid.
+/// ETB: draw a card.
+pub fn quandrix_hydraformer_b165() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Hydraformer (b165)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![{
+            use crate::effect::shortcut::etb_draw;
+            etb_draw(1)
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Formulist (b165) — {G}{U} 1/3 Elf Wizard.
+/// Magecraft: Scry 1.
+pub fn quandrix_formulist_b165() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Formulist (b165)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Rootsinger (b165) — {3}{G} 4/4 Elf Druid Trample.
+/// Big green body.
+pub fn quandrix_rootsinger_b165() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Rootsinger (b165)",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tidebinder (b165) — {1}{U} Instant.
+/// Return target creature with power ≤ 2 to owner's hand.
+pub fn quandrix_tidebinder_b165() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidebinder (b165)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::PowerAtMost(2)),
+            ),
+            to: crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::OwnerOf(
+                Box::new(Selector::Target(0)),
+            )),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Spellgrafter (b165) — {3}{G}{U} 3/3 Elf Wizard.
+/// ETB: put a +1/+1 counter on target creature.
+pub fn quandrix_spellgrafter_b165() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Spellgrafter (b165)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

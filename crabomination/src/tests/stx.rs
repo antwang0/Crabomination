@@ -67030,3 +67030,318 @@ fn cr_119_3_gain_life_adds_to_total() {
     // ETB gains 2 life. Per CR 119.3, "gain N life" means "add N to life total".
     assert_eq!(g.players[0].life, life_before + 2);
 }
+
+// ── Batch 165 (modern_decks) — Lorehold ───────────────────────────────────
+
+#[test]
+fn lorehold_flamebinder_b165_has_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_flamebinder_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Haste));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
+}
+
+#[test]
+fn lorehold_sunweave_b165_gains_five_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_sunweave_b165());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sunweave castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 5);
+}
+
+#[test]
+fn lorehold_pyreguard_b165_etb_pings_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_pyreguard_b165());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pyreguard castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1 - 2);
+}
+
+#[test]
+fn lorehold_braveheart_b165_has_lifelink() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_braveheart_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn lorehold_fireshield_b165_pumps_and_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_fireshield_b165());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fireshield castable");
+    drain_stack(&mut g);
+    let buffed = g.computed_permanent(bear).expect("Bear on bf");
+    assert_eq!(buffed.power, 4);
+    assert_eq!(buffed.toughness, 4);
+    assert!(buffed.keywords.contains(&Keyword::FirstStrike));
+}
+
+#[test]
+fn lorehold_bonepreacher_b165_etb_gains_three_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_bonepreacher_b165());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bonepreacher castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 3);
+}
+
+// ── Batch 165 (modern_decks) — Witherbloom ────────────────────────────────
+
+#[test]
+fn pest_deathbloom_b165_has_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::pest_deathbloom_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Deathtouch));
+}
+
+#[test]
+fn witherbloom_witchlight_b165_drains_two_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::witherbloom_witchlight_b165());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Witchlight castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 2);
+    assert_eq!(g.players[1].life, life1 - 2);
+    // -1 cast + 1 draw = same
+    assert_eq!(g.players[0].hand.len(), hand);
+}
+
+#[test]
+fn witherbloom_rootguard_b165_has_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_rootguard_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Reach));
+    assert_eq!(c.definition.toughness, 4);
+}
+
+#[test]
+fn witherbloom_lifesurge_b165_drains_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_lifesurge_b165());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lifesurge castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 3);
+    assert_eq!(g.players[1].life, life1 - 3);
+}
+
+#[test]
+fn witherbloom_deathcoach_b165_has_trample() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_deathcoach_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample));
+    assert_eq!(c.definition.power, 4);
+}
+
+// ── Batch 165 (modern_decks) — Prismari ───────────────────────────────────
+
+#[test]
+fn prismari_stormchaser_b165_magecraft_pumps_power() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::prismari_stormchaser_b165());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(sc).expect("Stormchaser on bf");
+    assert_eq!(c.power, 3); // 1 + 2
+}
+
+#[test]
+fn prismari_flamebolt_b165_deals_four_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_flamebolt_b165());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Flamebolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+#[test]
+fn prismari_stormwielder_b165_is_flying_looter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_stormwielder_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert_eq!(c.definition.power, 3);
+}
+
+#[test]
+fn prismari_cannonade_b165_deals_two_to_each_creature() {
+    let mut g = two_player_game();
+    let bear_a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_cannonade_b165());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cannonade castable");
+    drain_stack(&mut g);
+    // 2/2 bears take 2 damage → die
+    assert!(g.battlefield_find(bear_a).is_none());
+    assert!(g.battlefield_find(bear_b).is_none());
+}
+
+// ── Batch 165 (modern_decks) — Quandrix ───────────────────────────────────
+
+#[test]
+fn quandrix_hydraformer_b165_etb_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quandrix_hydraformer_b165());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hydraformer castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before); // -1 cast + 1 draw
+}
+
+#[test]
+fn quandrix_rootsinger_b165_has_trample() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_rootsinger_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample));
+    assert_eq!(c.definition.power, 4);
+}
+
+#[test]
+fn quandrix_spellgrafter_b165_etb_puts_counter_on_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_spellgrafter_b165());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spellgrafter castable");
+    drain_stack(&mut g);
+    let b = g.battlefield_find(bear).unwrap();
+    assert_eq!(b.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+// ── Batch 165 (modern_decks) — Silverquill ────────────────────────────────
+
+#[test]
+fn inkling_shadowcaster_b165_magecraft_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let _s = g.add_card_to_battlefield(0, catalog::inkling_shadowcaster_b165());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 magecraft draw = same
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn silverquill_vindict_b165_destroys_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_vindict_b165());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Vindict castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life_before + 2);
+}
+
+#[test]
+fn inkling_skywarden_b165_has_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_skywarden_b165());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn silverquill_deathmark_b165_shrinks_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_deathmark_b165());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Deathmark castable");
+    drain_stack(&mut g);
+    // 2/2 → 0/0 → dies
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, life_before + 1);
+}
