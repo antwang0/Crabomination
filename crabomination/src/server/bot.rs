@@ -8,7 +8,7 @@
 
 use rand::{RngExt, rng};
 
-use crate::card::{CardDefinition, CardId, Keyword};
+use crate::card::{CardDefinition, CardId};
 use crate::decision::{AutoDecider, Decider};
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, TurnStep};
@@ -384,10 +384,34 @@ fn pick_loyalty_ability(state: &GameState, seat: usize) -> Option<GameAction> {
     None
 }
 
+/// Test-visible wrapper for `pick_blocks` so external tests can exercise
+/// the blocker heuristic in isolation.
+pub fn pick_blocks_for_test(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
+    pick_blocks(state, seat)
+}
+
 fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
-    // Bot only blocks attackers that are targeting *this* seat (or a
-    // planeswalker controlled by this seat).
-    let attacker_data: Vec<(CardId, bool)> = state
+    // Improved blocker heuristic (push claude/modern_decks):
+    //   1. Build the candidate set of (attacker, attacker_power,
+    //      attacker_toughness, has_flying) attacking us.
+    //   2. Sort blockers by ascending power so cheap chumps get
+    //      assigned first; bigger blockers stay free for must-block
+    //      situations.
+    //   3. For each blocker, pick the **best** attacker it can block:
+    //      - Prefer attackers it can kill outright (blocker_power >=
+    //        attacker_toughness, with deathtouch granting kill on any
+    //        damage).
+    //      - Among kill-able attackers, prefer one that won't kill the
+    //        blocker (blocker_toughness > attacker_power); ties broken
+    //        by highest attacker_power (biggest value trade).
+    //      - If no clean kill exists, fall back to a chump-block to
+    //        save us from lethal damage when our life total is low
+    //        (< current incoming damage).
+    //   4. Each attacker can be assigned multiple blockers if a single
+    //      blocker can't kill it — the loop falls through to try the
+    //      next blocker.
+    use crate::card::Keyword;
+    let attacker_info: Vec<(CardId, i32, i32, bool)> = state
         .attacking()
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
@@ -396,42 +420,83 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 .battlefield
                 .iter()
                 .find(|c| c.id == atk.attacker)
-                .map(|a| (atk.attacker, a.has_keyword(&Keyword::Flying)))
+                .map(|a| {
+                    (
+                        atk.attacker,
+                        a.power(),
+                        a.toughness(),
+                        a.has_keyword(&Keyword::Flying),
+                    )
+                })
         })
         .collect();
+    let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _)| *p).sum();
+    let life_threatened = state.players[seat].life <= total_incoming;
 
-    // Same `controller` vs `owner` distinction as the attack filter:
-    // creatures stolen from us we no longer control, and creatures we
-    // stole are blockers we DO control.
-    let blockers: Vec<(CardId, bool, bool)> = state
+    let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = state
         .battlefield
         .iter()
         .filter(|c| c.controller == seat && c.can_block())
         .map(|c| {
             (
                 c.id,
+                c.power(),
+                c.toughness(),
                 c.has_keyword(&Keyword::Flying),
                 c.has_keyword(&Keyword::Reach),
+                c.has_keyword(&Keyword::Deathtouch),
             )
         })
         .collect();
+    blockers.sort_by_key(|(_, p, _, _, _, _)| *p);
 
-    let mut r = rng();
-    blockers
-        .into_iter()
-        .filter_map(|(blocker_id, blocker_flying, blocker_reach)| {
-            let legal: Vec<CardId> = attacker_data
-                .iter()
-                .filter(|(_, atk_flying)| !atk_flying || blocker_flying || blocker_reach)
-                .map(|(id, _)| *id)
-                .collect();
-            if legal.is_empty() {
-                None
-            } else {
-                Some((blocker_id, legal[r.random_range(0..legal.len())]))
+    // Track which attackers have already been damage-saturated by
+    // assigned blockers — if blocker total toughness >= attacker
+    // power, additional blockers on the same attacker are wasteful
+    // unless they bring deathtouch / first strike.
+    let mut attacker_damage_taken: std::collections::HashMap<CardId, i32> =
+        std::collections::HashMap::new();
+    let mut assignments: Vec<(CardId, CardId)> = Vec::new();
+
+    for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
+        // Pick the best attacker for this blocker.
+        let mut best: Option<(CardId, i32, bool)> = None; // (attacker, score, was_kill)
+        for (a_id, a_pow, a_tough, a_flying) in &attacker_info {
+            if *a_flying && !b_flying && !b_reach {
+                continue;
             }
-        })
-        .collect()
+            // Skip attackers that already have at least their toughness
+            // worth of damage queued unless we have deathtouch.
+            let queued = attacker_damage_taken.get(a_id).copied().unwrap_or(0);
+            if !b_dt && queued >= *a_tough {
+                continue;
+            }
+            let kills_attacker = b_dt || b_pow >= (a_tough - queued);
+            let dies_to_attacker = *a_pow >= b_tough;
+            // Scoring: clean trade (kill, don't die) > kill-and-die >
+            // chump (don't kill, die). Higher attacker power adds value.
+            let score = if kills_attacker && !dies_to_attacker {
+                1000 + *a_pow
+            } else if kills_attacker && dies_to_attacker {
+                500 + *a_pow
+            } else if life_threatened {
+                // Chump-block to stop lethal damage.
+                100 + *a_pow
+            } else {
+                continue;
+            };
+            if best.map(|(_, s, _)| s < score).unwrap_or(true) {
+                best = Some((*a_id, score, kills_attacker));
+            }
+        }
+        if let Some((a_id, _score, _kill)) = best {
+            assignments.push((b_id, a_id));
+            // Mark the damage queued so subsequent blockers can pile on
+            // attackers that aren't fully covered yet.
+            *attacker_damage_taken.entry(a_id).or_insert(0) += b_tough;
+        }
+    }
+    assignments
 }
 
 /// Find an untapped, non-land permanent the bot controls whose first

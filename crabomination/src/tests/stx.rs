@@ -62111,3 +62111,47 @@ fn bot_does_not_aim_at_walker_too_tough_to_finish() {
         other => panic!("expected DeclareAttackers, got {other:?}"),
     }
 }
+
+#[test]
+fn bot_blocks_smart_value_trade() {
+    // Push (this run): smarter blocker AI. With one 3/3 attacker
+    // attacking us and a 2/2 blocker, the blocker should still chump
+    // (life-threatened logic) when our life is low. With a 3/4
+    // blocker (clean kill, survives), it should block.
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.players[0].life = 5;
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    // Opp's 4/3 attacker.
+    let beater_def = {
+        use crate::card::*;
+        let mut def = catalog::grizzly_bears();
+        def.name = "Big Bear";
+        def.power = 4;
+        def.toughness = 3;
+        def
+    };
+    let attacker = g.add_card_to_battlefield(1, beater_def);
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack {
+        attacker,
+        target: AttackTarget::Player(0),
+    });
+    // Our 3/4 blocker — clean kill, survives.
+    let blocker_def = {
+        let mut def = catalog::grizzly_bears();
+        def.name = "Wall Bear";
+        def.power = 3;
+        def.toughness = 4;
+        def
+    };
+    let blocker = g.add_card_to_battlefield(0, blocker_def);
+    g.clear_sickness(blocker);
+
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert_eq!(blocks.len(), 1, "should block the attacker");
+    assert_eq!(blocks[0].0, blocker);
+    assert_eq!(blocks[0].1, attacker);
+}
