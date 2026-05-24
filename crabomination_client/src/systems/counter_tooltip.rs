@@ -164,6 +164,41 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    // Effective keywords (after layer effects). Show these so anthem
+    // effects ("All your creatures have Lifelink", Inkling Verselord)
+    // are visible even when the printed text doesn't include the
+    // keyword. Keep the list compact — one line, comma-separated.
+    if !p.keywords.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
+        let mut kw_strs: Vec<String> = p.keywords.iter().map(keyword_label).collect();
+        kw_strs.sort();
+        kw_strs.dedup();
+        lines.push(kw_strs.join(", "));
+    }
+
+    // Activated abilities — show the cost + effect label so players
+    // can see "this Witherbloom Pledgemage has {1}{B}, Pay 1 life:
+    // Draw a card" without clicking through to the activator UI.
+    let ability_lines: Vec<String> = p
+        .abilities
+        .iter()
+        .filter(|a| !a.is_mana)
+        .map(|a| {
+            let cost = if a.cost_label.is_empty() { "—".to_string() } else { a.cost_label.clone() };
+            format!("{}: {}", cost, a.effect_label)
+        })
+        .collect();
+    if !ability_lines.is_empty() {
+        if !lines.is_empty() {
+            lines.push(String::from("─────────"));
+        }
+        for l in ability_lines {
+            lines.push(l);
+        }
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }
@@ -172,6 +207,36 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         None
     } else {
         Some(lines.join("\n"))
+    }
+}
+
+/// Render a `Keyword` as a short human string for the tooltip. Keeps
+/// the labels short ("Lifelink", "First Strike") so a card with several
+/// granted keywords doesn't blow out the tooltip line.
+fn keyword_label(kw: &crabomination::card::Keyword) -> String {
+    use crabomination::card::Keyword as K;
+    match kw {
+        K::Flying => "Flying".into(),
+        K::FirstStrike => "First Strike".into(),
+        K::DoubleStrike => "Double Strike".into(),
+        K::Lifelink => "Lifelink".into(),
+        K::Vigilance => "Vigilance".into(),
+        K::Trample => "Trample".into(),
+        K::Deathtouch => "Deathtouch".into(),
+        K::Haste => "Haste".into(),
+        K::Menace => "Menace".into(),
+        K::Reach => "Reach".into(),
+        K::Defender => "Defender".into(),
+        K::Indestructible => "Indestructible".into(),
+        K::Hexproof => "Hexproof".into(),
+        K::Flash => "Flash".into(),
+        K::Shroud => "Shroud".into(),
+        K::Ward(n) => format!("Ward {n:?}"),
+        K::Protection(c) => format!("Protection from {c:?}"),
+        K::Cycling(_) => "Cycling".into(),
+        K::Flashback(_) => "Flashback".into(),
+        K::Convoke => "Convoke".into(),
+        _ => format!("{kw:?}"),
     }
 }
 

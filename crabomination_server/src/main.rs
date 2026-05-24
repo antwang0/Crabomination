@@ -107,6 +107,73 @@ struct SlotState {
     per_ip: HashMap<IpAddr, usize>,
 }
 
+/// Process-wide running counters of completed matches. Lets the server
+/// emit a rolling summary line ("served 42 matches: 31 bot, 11 pair;
+/// avg duration 4m13s") on each match completion alongside the per-match
+/// line. Updated by `run_bot_match` / `run_pair_match`; read in those
+/// same logging sites.
+///
+/// The struct holds raw totals; the formatted summary lives in
+/// `format_match_stats`. Wrapped in a `Mutex` so concurrent match
+/// threads can serialize their updates without an `Arc` allocation per
+/// thread (the SlotManager pattern uses `Arc<Mutex<…>>` because slot
+/// state has to outlive multiple owning threads; `MATCH_STATS` is a
+/// process-global `OnceLock` so a plain `Mutex<MatchStats>` suffices).
+#[derive(Debug, Default, Clone, Copy)]
+struct MatchStats {
+    bot_matches: u64,
+    pair_matches: u64,
+    /// Total cumulative match duration (sum). Average = total / count.
+    total_duration: Duration,
+}
+
+impl MatchStats {
+    fn record_bot(&mut self, d: Duration) {
+        self.bot_matches += 1;
+        self.total_duration += d;
+    }
+    fn record_pair(&mut self, d: Duration) {
+        self.pair_matches += 1;
+        self.total_duration += d;
+    }
+    fn total_matches(&self) -> u64 {
+        self.bot_matches + self.pair_matches
+    }
+    fn avg_duration(&self) -> Duration {
+        let n = self.total_matches();
+        if n == 0 {
+            Duration::ZERO
+        } else {
+            // saturating: the wrap-protection guard for the absurd "u64
+            // overflow" case in match counts (would need centuries of
+            // continuous play to hit).
+            Duration::from_secs(self.total_duration.as_secs().saturating_div(n))
+        }
+    }
+}
+
+static MATCH_STATS: std::sync::OnceLock<std::sync::Mutex<MatchStats>> = std::sync::OnceLock::new();
+
+fn match_stats() -> &'static std::sync::Mutex<MatchStats> {
+    MATCH_STATS.get_or_init(|| std::sync::Mutex::new(MatchStats::default()))
+}
+
+/// Format the running stats as a one-line summary appended to each
+/// match-completion log: `served N matches: K bot, P pair; avg
+/// duration X`. Read after the per-match update so the new match is
+/// included in the rollup.
+fn format_match_stats(s: &MatchStats) -> String {
+    let n = s.total_matches();
+    format!(
+        "served {} match{}: {} bot, {} pair; avg duration {}",
+        n,
+        if n == 1 { "" } else { "es" },
+        s.bot_matches,
+        s.pair_matches,
+        format_duration(s.avg_duration()),
+    )
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum SlotRefusal {
     GlobalCapReached,
@@ -383,11 +450,18 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
             SeatOccupant::Bot(Box::new(RandomBot::new())),
         ],
     );
+    let duration = started.elapsed();
+    let stats_snapshot = {
+        let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
+        s.record_bot(duration);
+        *s
+    };
     eprintln!(
-        "bot match ended ({}, format={}, duration={})",
+        "bot match ended ({}, format={}, duration={}) — {}",
         peer,
         format.label(),
-        format_duration(started.elapsed()),
+        format_duration(duration),
+        format_match_stats(&stats_snapshot),
     );
 }
 
@@ -422,12 +496,19 @@ fn run_pair_match(
         format.build(),
         vec![SeatOccupant::Human(a_seat), SeatOccupant::Human(b_seat)],
     );
+    let duration = started.elapsed();
+    let stats_snapshot = {
+        let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
+        s.record_pair(duration);
+        *s
+    };
     eprintln!(
-        "pair match ended ({} ↔ {}, format={}, duration={})",
+        "pair match ended ({} ↔ {}, format={}, duration={}) — {}",
         a_peer,
         b_peer,
         format.label(),
-        format_duration(started.elapsed()),
+        format_duration(duration),
+        format_match_stats(&stats_snapshot),
     );
 }
 
@@ -699,5 +780,58 @@ mod tests {
         });
         let (_s, _peer) = listener.accept().expect("blocking accept should work");
         let _c = second_connector.join().expect("second connector");
+    }
+
+    // ── MatchStats tests ────────────────────────────────────────────────────
+
+    #[test]
+    fn match_stats_starts_zero() {
+        let s = MatchStats::default();
+        assert_eq!(s.total_matches(), 0);
+        assert_eq!(s.bot_matches, 0);
+        assert_eq!(s.pair_matches, 0);
+        assert_eq!(s.total_duration, Duration::ZERO);
+        assert_eq!(s.avg_duration(), Duration::ZERO);
+    }
+
+    #[test]
+    fn match_stats_record_bot_and_pair() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60));
+        s.record_pair(Duration::from_secs(120));
+        s.record_bot(Duration::from_secs(30));
+        assert_eq!(s.total_matches(), 3);
+        assert_eq!(s.bot_matches, 2);
+        assert_eq!(s.pair_matches, 1);
+        assert_eq!(s.total_duration, Duration::from_secs(210));
+        assert_eq!(s.avg_duration(), Duration::from_secs(70));
+    }
+
+    #[test]
+    fn format_match_stats_renders_summary() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60));
+        let line = format_match_stats(&s);
+        assert!(line.contains("served 1 match"));
+        assert!(line.contains("1 bot"));
+        assert!(line.contains("0 pair"));
+    }
+
+    #[test]
+    fn format_match_stats_pluralizes_at_two() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60));
+        s.record_pair(Duration::from_secs(120));
+        let line = format_match_stats(&s);
+        assert!(line.contains("served 2 matches"));
+        assert!(line.contains("1 bot"));
+        assert!(line.contains("1 pair"));
+    }
+
+    #[test]
+    fn format_match_stats_zero_matches() {
+        let s = MatchStats::default();
+        let line = format_match_stats(&s);
+        assert!(line.contains("served 0 matches"));
     }
 }
