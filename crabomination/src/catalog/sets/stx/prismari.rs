@@ -11349,3 +11349,65 @@ pub fn prismari_mindstrike_b148() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 149 ───────────────────────────────────────────────────────────────
+
+/// Prismari Etherealist (b149) — {1}{U}{R} 2/2 Human Wizard Flying +
+/// Haste. Aggressive evasive 3-drop.
+pub fn prismari_etherealist_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Etherealist (b149)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormbringer (b149) — {3}{U}{R} 3/4 Elemental Trample +
+/// Haste. Top-curve aggressor.
+pub fn prismari_stormbringer_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormbringer (b149)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

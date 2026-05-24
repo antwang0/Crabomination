@@ -12055,3 +12055,65 @@ pub fn fractal_apprentice_ii_b148() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 149 ───────────────────────────────────────────────────────────────
+
+/// Quandrix Skystreaker (b149) — {1}{U} 1/2 Fractal Wizard Flying +
+/// Hexproof. 2-mana evasive sticky flier.
+pub fn quandrix_skystreaker_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Skystreaker (b149)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Hexproof],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Eternity (b149) — {3}{G}{U} 3/3 Fractal Druid Undying.
+/// Recursion-friendly Fractal body.
+pub fn fractal_eternity_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Eternity (b149)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Undying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -14514,3 +14514,97 @@ pub fn witherbloom_pestreaver_b148() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 149 ───────────────────────────────────────────────────────────────
+
+/// Witherbloom Rotchild (b149) — {1}{B} 1/1 Pest Warlock Persist.
+/// Recursion-friendly Pest body. Stacks with Felisa's +1/+1 anthem to
+/// dodge the Persist-counter death-loop.
+pub fn witherbloom_rotchild_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotchild (b149)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Persist],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Worm (b149) — {3}{B}{G} 4/4 Pest Spirit Undying.
+/// Reanimating Pest body — big body that comes back with +1/+1.
+pub fn witherbloom_worm_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Worm (b149)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Undying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Vinekeeper (b149) — {1}{G} 1/3 Elf Druid Reach +
+/// Deathtouch. 2-mana ground+air defender that trades up against any
+/// creature.
+pub fn witherbloom_vinekeeper_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinekeeper (b149)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach, Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

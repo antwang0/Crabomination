@@ -16676,3 +16676,68 @@ pub fn silverquill_lifesong_b148() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 149 ───────────────────────────────────────────────────────────────
+
+/// Silverquill Ink-Knight (b149) — {2}{W}{B} 3/2 Inkling Knight Flying +
+/// Lifelink + Indestructible. Tank evasive lifelinker for combat-heavy
+/// shells. Engine note: Indestructible blocks damage-from-zero-toughness
+/// only — `-N/-N` debuffs still kill it via the 0-toughness SBA path
+/// (CR 704.5f), matching the printed Indestructible interaction.
+pub fn silverquill_ink_knight_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ink-Knight (b149)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink, Keyword::Indestructible],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Soulpenitent (b149) — {1}{W} 1/3 Human Cleric Hexproof.
+/// 2-mana sticky defender — Hexproof body.
+pub fn silverquill_soulpenitent_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Soulpenitent (b149)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Hexproof],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

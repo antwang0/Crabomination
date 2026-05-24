@@ -15049,3 +15049,96 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 149 ───────────────────────────────────────────────────────────────
+
+/// Lorehold Echobreaker (b149) — {1}{R}{W} 2/2 Spirit Soldier Persist.
+/// Recursion-friendly Spirit body — on dying without a -1/-1 counter,
+/// returns with a -1/-1 counter on it (CR 702.79).
+pub fn lorehold_echobreaker_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echobreaker (b149)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Persist],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Eternal-Phoenix (b149) — {2}{R}{W} 2/2 Phoenix Spirit
+/// Flying + Haste + Undying. Recurring evasive haster.
+pub fn lorehold_eternal_phoenix_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Eternal-Phoenix (b149)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Undying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyre-Stalker (b149) — {3}{R} 4/3 Spirit Warrior Trample.
+/// 4-mana big trampler.
+pub fn lorehold_pyre_stalker_b149() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyre-Stalker (b149)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

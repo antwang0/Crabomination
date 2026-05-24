@@ -58884,3 +58884,112 @@ fn prismari_mindstrike_b148_burns_four_and_draws() {
     // -1 cast + 1 draw = 0
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
+
+// ── Batch 149 tests ─────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_echobreaker_b149_has_persist() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_echobreaker_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Persist));
+}
+
+#[test]
+fn lorehold_eternal_phoenix_b149_has_flying_haste_undying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_eternal_phoenix_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Haste));
+    assert!(c.has_keyword(&Keyword::Undying));
+}
+
+#[test]
+fn lorehold_pyre_stalker_b149_is_a_four_three_trampler() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyre_stalker_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.power(), 4);
+    assert_eq!(c.toughness(), 3);
+    assert!(c.has_keyword(&Keyword::Trample));
+}
+
+#[test]
+fn witherbloom_rotchild_b149_has_persist() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_rotchild_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Persist));
+}
+
+#[test]
+fn witherbloom_worm_b149_has_undying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_worm_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Undying));
+    assert_eq!(c.power(), 4);
+}
+
+#[test]
+fn witherbloom_vinekeeper_b149_has_reach_and_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinekeeper_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Reach));
+    assert!(c.has_keyword(&Keyword::Deathtouch));
+}
+
+#[test]
+fn silverquill_ink_knight_b149_has_three_keywords() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_ink_knight_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Lifelink));
+    assert!(c.has_keyword(&Keyword::Indestructible));
+}
+
+#[test]
+fn silverquill_soulpenitent_b149_has_hexproof() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_soulpenitent_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Hexproof));
+}
+
+#[test]
+fn quandrix_skystreaker_b149_is_a_flying_hexproof() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_skystreaker_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Hexproof));
+}
+
+#[test]
+fn fractal_eternity_b149_has_undying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::fractal_eternity_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Undying));
+}
+
+#[test]
+fn prismari_etherealist_b149_has_flying_and_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_etherealist_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn prismari_stormbringer_b149_has_trample_and_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::prismari_stormbringer_b149());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample));
+    assert!(c.has_keyword(&Keyword::Haste));
+}
