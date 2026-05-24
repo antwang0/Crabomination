@@ -59049,3 +59049,28 @@ fn cr_122_6_etb_with_counters_doesnt_die_to_zero_toughness_sba() {
     let f = computed.iter().find(|c| c.id == fractal.id).unwrap();
     assert_eq!(f.toughness, 2);
 }
+
+#[test]
+fn cr_116_3_priority_returns_to_player_after_play_land() {
+    // CR 116.3 — special actions (like PlayLand) don't pass priority;
+    // the active player retains priority after playing a land. Exercise
+    // the explicit path: play a Forest from hand and confirm priority
+    // stays with seat 0 (no auto-advance to opp).
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    g.perform_action(GameAction::PlayLand(forest))
+        .expect("Forest playable in main phase");
+    // CR 116.3: priority did NOT pass — seat 0 still has priority.
+    assert_eq!(g.priority.player_with_priority, 0,
+        "CR 116.3: PlayLand is a special action and doesn't reset priority");
+    // Stack should still be empty (special actions don't go on the stack).
+    assert!(g.stack.is_empty(),
+        "CR 405.6d: special actions don't use the stack");
+    // Land entered the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == forest),
+        "Forest is now in play");
+}

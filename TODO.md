@@ -977,8 +977,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   system idempotently re-checks who has priority via `priority.
   player_with_priority` and stack-empty state).
   Tests: implicit via the entire play-land test suite + the suspended-
-  spell tests; explicit `priority_returns_to_player_after_play_land`
-  could be added.
+  spell tests; push (modern_decks batch 149) lands explicit
+  `cr_116_3_priority_returns_to_player_after_play_land` that asserts
+  (1) priority stays with seat 0 after PlayLand, (2) the stack remains
+  empty (CR 405.6d), and (3) the land enters the battlefield.
 
 - 🟡 **CR 105 — Colors** (push modern_decks claude/modern_decks branch
   — audit against `MagicCompRules_20260417.txt`): The five-color
