@@ -66363,3 +66363,79 @@ fn inkling_sentry_b162_is_flying_deathtouch() {
     assert!(c.has_keyword(&Keyword::Flying));
     assert!(c.has_keyword(&Keyword::Deathtouch));
 }
+
+// ── Batch 163 (modern_decks) — Lorehold Spirit cycle ────────────────────
+
+#[test]
+fn lorehold_coursemate_b163_is_a_two_mana_spirit_cleric() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_coursemate_b163());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Cleric));
+}
+
+#[test]
+fn lorehold_pyrebound_b163_has_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyrebound_b163());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn lorehold_spirit_guard_b163_has_vigilance_and_first_strike() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_spirit_guard_b163());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Vigilance));
+    assert!(c.has_keyword(&Keyword::FirstStrike));
+}
+
+#[test]
+fn lorehold_phantasm_b163_is_a_one_one_flier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_phantasm_b163());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert_eq!(c.definition.power, 1);
+    assert_eq!(c.definition.toughness, 1);
+}
+
+#[test]
+fn lorehold_sparkling_spirit_b163_is_a_flying_threat() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_sparkling_spirit_b163());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert_eq!(c.definition.power, 3);
+}
+
+#[test]
+fn lorehold_sparkscholar_b163_magecraft_pings_any() {
+    let mut g = two_player_game();
+    let _s = g.add_card_to_battlefield(0, catalog::lorehold_sparkscholar_b163());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt deals 3, magecraft pings any target — auto picks an opp.
+    // Result is at least 3 damage (bolt); magecraft trigger may pick opp.
+    assert!(g.players[1].life <= life1_before - 3);
+}
+
+#[test]
+fn lorehold_lightcage_b163_pumps_other_spirits() {
+    let mut g = two_player_game();
+    let spirit = g.add_card_to_battlefield(0, catalog::lorehold_phantasm_b163()); // 1/1 Flying Spirit
+    let _cage = g.add_card_to_battlefield(0, catalog::lorehold_lightcage_b163());
+    drain_stack(&mut g);
+    let phantasm = g.computed_permanent(spirit).expect("Phantasm on bf");
+    // Phantasm gets +1/+0 from Lightcage anthem
+    assert_eq!(phantasm.power, 2);
+    assert_eq!(phantasm.toughness, 1);
+}

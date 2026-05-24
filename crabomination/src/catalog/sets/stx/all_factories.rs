@@ -3246,5 +3246,13 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_inksong_b162,
         super::silverquill::silverquill_apprentice_ii_b162,
         super::silverquill::inkling_sentry_b162,
+        // ── batch 163 (modern_decks): lorehold spirit cycle ──
+        super::lorehold::lorehold_coursemate_b163,
+        super::lorehold::lorehold_pyrebound_b163,
+        super::lorehold::lorehold_spirit_guard_b163,
+        super::lorehold::lorehold_phantasm_b163,
+        super::lorehold::lorehold_sparkling_spirit_b163,
+        super::lorehold::lorehold_sparkscholar_b163,
+        super::lorehold::lorehold_lightcage_b163,
     ]
 }
