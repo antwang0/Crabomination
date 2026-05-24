@@ -61809,3 +61809,97 @@ fn prismari_treasure_spawner_b155_mints_treasure_on_etb() {
         .count();
     assert_eq!(treasures, 1);
 }
+
+// ── Batch 155: CR rule lock-in tests ────────────────────────────────────────
+
+#[test]
+fn cr_506_5_attacks_trigger_fires_per_attacker_in_batch() {
+    // CR 506.5 / Sparring Regimen pattern: when multiple attackers are
+    // declared in one batch, the "whenever you attack" trigger (scoped
+    // YourControl on EventKind::Attacks) fires once per attacker. Each
+    // attacker should pick up its own +1/+1 counter.
+    let mut g = two_player_game();
+    let _regimen = g.add_card_to_battlefield(0, catalog::sparring_regimen());
+    let bear1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear1);
+    g.clear_sickness(bear2);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: bear1, target: AttackTarget::Player(1) },
+        Attack { attacker: bear2, target: AttackTarget::Player(1) },
+    ]))
+    .expect("bears can attack");
+    drain_stack(&mut g);
+    let b1 = g.battlefield.iter().find(|c| c.id == bear1).unwrap();
+    let b2 = g.battlefield.iter().find(|c| c.id == bear2).unwrap();
+    assert_eq!(b1.counter_count(CounterType::PlusOnePlusOne), 1,
+        "first attacker should pick up one +1/+1 counter");
+    assert_eq!(b2.counter_count(CounterType::PlusOnePlusOne), 1,
+        "second attacker should pick up one +1/+1 counter");
+}
+
+#[test]
+fn cr_603_attacks_trigger_broadcast_skips_opponent_anchors() {
+    // CR 603.6 — "Whenever YOU attack" triggers from a YourControl
+    // scoped Attacks listener should NOT fire when the OPPONENT
+    // declares attackers, because their broadcast walks the opponent's
+    // permanents (not yours). Lock-in: opponent attacks with their own
+    // creature, but my Sparring Regimen sits on the bf — no counter
+    // should land on the opponent's attacker.
+    let mut g = two_player_game();
+    let _regimen = g.add_card_to_battlefield(0, catalog::sparring_regimen());
+    drain_stack(&mut g);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(0),
+    }]))
+    .expect("opponent's bear can attack");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(
+        bear_card.counter_count(CounterType::PlusOnePlusOne),
+        0,
+        "opponent's attacker should NOT get my Regimen's counter"
+    );
+}
+
+#[test]
+fn cr_118_8_exile_from_graveyard_cost_pre_flight_no_mana_burned() {
+    // CR 118.8 — "If a player can't pay the costs of a spell or
+    // ability, they can't cast or activate it." Lock-in: when no
+    // graveyard card matches the exile-from-gy cost, activation is
+    // rejected before mana / tap is committed.
+    let mut g = two_player_game();
+    let pm = g.add_card_to_battlefield(0, catalog::lorehold_pledgemage());
+    g.clear_sickness(pm);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let pool_red = g.players[0].mana_pool.amount(Color::Red);
+    let pool_white = g.players[0].mana_pool.amount(Color::White);
+    let pool_colorless = g.players[0].mana_pool.colorless_amount();
+    // No card in graveyard — activation must be rejected and mana
+    // pool must NOT be drained.
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: pm,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "must reject without legal gy-exile target");
+    // Mana pool unchanged.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), pool_red);
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), pool_white);
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), pool_colorless);
+    // Source not tapped.
+    let pm_card = g.battlefield.iter().find(|c| c.id == pm).unwrap();
+    assert!(!pm_card.tapped, "source should not be tapped on failed activation");
+}

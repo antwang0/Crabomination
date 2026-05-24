@@ -1811,6 +1811,33 @@ impl GameState {
                 .iter()
                 .chain(self.granted_triggers(card.id));
             for ta in all_triggers {
+                // For batch-fanout-friendly event kinds (Attacks,
+                // CreatureDied, CardDrawn, CardDiscarded, CardLeftGraveyard,
+                // CounterAdded, BlockerDeclared, AttackerWentUnblocked,
+                // CardMilled, LifeGained, LifeLost) the trigger fires
+                // ONCE PER MATCHING EVENT — CR 603.6 "whenever X happens"
+                // fan-out. For other event kinds (ETB, StepBegins, …) we
+                // fire at most once per (source, trigger) pair because
+                // they don't naturally produce duplicate events in a
+                // single batch.
+                let fanout = matches!(
+                    ta.event.kind,
+                    crate::effect::EventKind::Attacks
+                        | crate::effect::EventKind::CreatureDied
+                        | crate::effect::EventKind::CreatureSacrificed
+                        | crate::effect::EventKind::PermanentSacrificed
+                        | crate::effect::EventKind::PermanentLeavesBattlefield
+                        | crate::effect::EventKind::CardDrawn
+                        | crate::effect::EventKind::CardDiscarded
+                        | crate::effect::EventKind::CardLeftGraveyard
+                        | crate::effect::EventKind::CounterAdded(_)
+                        | crate::effect::EventKind::Blocks
+                        | crate::effect::EventKind::BecomesBlocked
+                        | crate::effect::EventKind::AttacksAndIsntBlocked
+                        | crate::effect::EventKind::LifeGained
+                        | crate::effect::EventKind::LifeLost
+                        | crate::effect::EventKind::BecameTarget
+                );
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {
                         continue;
@@ -1825,7 +1852,9 @@ impl GameState {
                             event_amount: event_amount(ev),
                             triggered_by_etb: matches!(ev, GameEvent::PermanentEntered { .. }),
                         });
-                        break;
+                        if !fanout {
+                            break;
+                        }
                     }
                 }
             }
