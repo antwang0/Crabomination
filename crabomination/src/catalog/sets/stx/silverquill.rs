@@ -17555,6 +17555,94 @@ pub fn silverquill_quilledict_b154() -> CardDefinition {
     }
 }
 
+/// Silverquill Sentinel (b154) — {1}{W} 1/3 Human Soldier
+/// Vigilance. Magecraft GainLife 1 — defensive lifegain body.
+pub fn silverquill_sentinel_b154() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_gain_life as mgl;
+    CardDefinition {
+        name: "Silverquill Sentinel (b154)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![mgl(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sphereturn (b154) — {2}{W}{B} Instant. Drain 4
+/// (8-life swing). 4-mana instant-speed game-end drain.
+pub fn silverquill_sphereturn_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sphereturn (b154)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Bookwarden II (b154) — {1}{W}{B} 2/3 Inkling Cleric
+/// Flying + Lifelink. Compact value-stat Inkling at 3-mana.
+pub fn inkling_bookwarden_b154() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Bookwarden II (b154)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Inkling Standardbearer (b154) — {3}{W} 2/4 Inkling Soldier Flying +
 /// Vigilance. Static: Other Inkling creatures you control get +1/+1.
 /// Premium Inkling-tribal lord at the 4-mana slot — stacks with

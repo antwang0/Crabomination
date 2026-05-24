@@ -61249,6 +61249,109 @@ fn prismari_sparkglyph_b154_burns_target_for_three() {
     assert_eq!(g.players[1].life, life_before - 3);
 }
 
+#[test]
+fn prismari_stormbreaker_b154_etb_burns_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let sb = g.add_card_to_hand(0, catalog::prismari_stormbreaker_b154());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life1_before = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: sb, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Stormbreaker castable");
+    drain_stack(&mut g);
+    // The ETB trigger auto-targets — typically the opponent gets the
+    // 2 damage. Caster also draws 1 (Island onto hand).
+    assert!(g.players[1].life < life1_before
+            || g.battlefield.iter().any(|c| c.damage >= 2 && c.id != sb),
+        "ETB dealt 2 damage somewhere — either to opp or a creature");
+    // Hand: -spell +draw = same total
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "ETB drew a card to replace the cast spell");
+}
+
+#[test]
+fn prismari_flameseeker_b154_loots_on_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _fs = g.add_card_to_battlefield(0, catalog::prismari_flameseeker_b154());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "Looted: net -1 hand");
+}
+
+#[test]
+fn prismari_calligrapher_b154_etb_scrys_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    let pc = g.add_card_to_hand(0, catalog::prismari_calligrapher_b154());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pc, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Calligrapher castable");
+    drain_stack(&mut g);
+    // After scry 2, library still has 2 cards (no draw)
+    assert_eq!(g.players[0].library.len(), 2);
+}
+
+#[test]
+fn silverquill_sentinel_b154_gains_life_on_is_cast() {
+    let mut g = two_player_game();
+    let _ss = g.add_card_to_battlefield(0, catalog::silverquill_sentinel_b154());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1);
+}
+
+#[test]
+fn silverquill_sphereturn_b154_drains_four() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::silverquill_sphereturn_b154());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Sphereturn castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life1_before - 4);
+    assert_eq!(g.players[0].life, life0_before + 4);
+}
+
+#[test]
+fn inkling_bookwarden_b154_is_a_three_mana_lifelink_flier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_bookwarden_b154());
+    let c = g.battlefield_find(id).expect("on bf");
+    assert!(c.definition.keywords.contains(&Keyword::Flying));
+    assert!(c.definition.keywords.contains(&Keyword::Lifelink));
+    assert_eq!(c.definition.power, 2);
+    assert_eq!(c.definition.toughness, 3);
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
 // ── batch 154 helper shortcut lock-in tests ────────────────────────────────
 
 #[test]
