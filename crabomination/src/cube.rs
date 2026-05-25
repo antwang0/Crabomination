@@ -488,6 +488,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         back_to_basics,
         opposition,
         omniscience,
+        blustersquall,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -838,6 +839,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pigment_wrangler,
         // ── Cube expansion ──
         arclight_phoenix,
+        electrickery,
+        street_spasm,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -883,6 +886,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(visionarys_dance);
         v.push(abstract_paintmage);
         v.push(sanar_unfinished_genius);
+        v.push(teleportal);
     }
     if pair_contains(pair, Color::White) {
         v.push(rustvale_bridge);

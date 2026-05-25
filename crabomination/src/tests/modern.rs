@@ -10997,3 +10997,103 @@ fn opposition_is_4_mana_enchantment() {
     assert_eq!(card.name, "Opposition");
     assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
 }
+
+// ── Overload cards ────────────────────────────────────────────────────────────
+
+#[test]
+fn blustersquall_taps_target_creature() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blustersquall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == target).unwrap().tapped,
+        "Blustersquall should tap target creature");
+}
+
+#[test]
+fn blustersquall_overload_taps_all_opponent_creatures() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let own = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::blustersquall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == c1).unwrap().tapped);
+    assert!(g.battlefield.iter().find(|c| c.id == c2).unwrap().tapped);
+    assert!(!g.battlefield.iter().find(|c| c.id == own).unwrap().tapped,
+        "Own creatures should NOT be tapped by Overload");
+}
+
+#[test]
+fn electrickery_deals_1_to_target() {
+    let mut g = two_player_game();
+    let target = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::electrickery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(target)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let bear = g.battlefield.iter().find(|c| c.id == target).unwrap();
+    assert_eq!(bear.damage, 1, "Electrickery should deal 1 damage");
+}
+
+#[test]
+fn electrickery_overload_deals_1_to_each_opp_creature() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let c2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::electrickery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell, pitch_card: None, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    for id in [c1, c2] {
+        let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
+        assert_eq!(c.damage, 1, "Electrickery Overload should deal 1 to each");
+    }
+}
+
+#[test]
+fn teleportal_pumps_and_grants_unblockable() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::teleportal());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(creature)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert_eq!(c.power(), 3, "Should get +1/+0");
+    assert!(c.has_keyword(&crate::card::Keyword::Unblockable));
+}
+
+#[test]
+fn street_spasm_deals_x_to_non_flying() {
+    let card = catalog::street_spasm();
+    assert_eq!(card.name, "Street Spasm");
+    assert!(card.alternative_cost.is_some(), "Should have Overload alt cost");
+}

@@ -40182,3 +40182,251 @@ pub fn omniscience() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Blustersquall ─────────────────────────────────────────────────────────────
+
+/// Blustersquall — {U} Instant.
+/// "Tap target creature you don't control. / Overload {3}{U}
+/// (Tap each creature you don't control.)"
+pub fn blustersquall() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Blustersquall",
+        cost: cost(&[u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::Tap {
+                    what: Selector::TriggerSource,
+                }),
+            }),
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Electrickery ──────────────────────────────────────────────────────────────
+
+/// Electrickery — {R} Instant.
+/// "Electrickery deals 1 damage to target creature you don't control.
+/// / Overload {1}{R} (deals 1 damage to each creature you don't control.)"
+pub fn electrickery() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Electrickery",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
+            }),
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Teleportal ────────────────────────────────────────────────────────────────
+
+/// Teleportal — {U}{R} Sorcery.
+/// "Target creature you control gets +1/+0 and is unblockable this turn.
+/// / Overload {3}{U}{R} (Each creature you control gets +1/+0 and is
+/// unblockable this turn.)"
+pub fn teleportal() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Teleportal",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(3), u(), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Unblockable,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            }),
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Street Spasm ──────────────────────────────────────────────────────────────
+
+/// Street Spasm — {X}{R} Instant.
+/// "Street Spasm deals X damage to target creature without flying you
+/// don't control. / Overload {X}{X}{R}{R} (deals X damage to each
+/// creature without flying you don't control.)"
+pub fn street_spasm() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Street Spasm",
+        cost: cost(&[crate::mana::x(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+            ),
+            amount: Value::XFromCost,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[crate::mana::x(), crate::mana::x(), r(), r()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent)
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying).negate()),
+                ),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::XFromCost,
+                }),
+            }),
+        }),
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
