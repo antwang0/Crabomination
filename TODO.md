@@ -5,6 +5,36 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XX — 2026-05-25, session 3)
+
+### Rules implementations
+- ✅ **CR 704.5h — Deathtouch SBA**: creatures dealt any damage by a
+  source with deathtouch are destroyed by SBA regardless of toughness.
+  Added `dealt_deathtouch_damage` flag to `CardInstance`; set during
+  combat damage (attacker→blocker and blocker→attacker) and fight
+  resolution. Replaces the prior hack of forcing `damage = toughness`.
+  Flag cleared in `clear_end_of_turn_effects` (cleanup step).
+
+### New cards (14 CUBE staples)
+- ✅ Blade Splicer, Vendilion Clique, Torrential Gearhulk,
+  Kitesail Larcenist, Grave Titan, Shriekmaw, Phyrexian Obliterator,
+  Glorybringer, Inferno Titan, Thundermaw Hellkite, Craterhoof Behemoth,
+  Thragtusk, Courser of Kruphix, Wurmcoil Engine — all with tests.
+
+### Observations & future items from this session
+- **Copy-spell/permanent primitive** still blocks ~15 SOS cards
+  (Choreographed Sparks, Silverquill the Disputant, Applied Geometry,
+  Prismari the Inspiration, Social Snub, etc.) plus Cube staples
+  like Phantasmal Image. Highest-impact single primitive to add.
+- **Cast-from-exile pipeline** blocks another ~10 SOS cards (Archaic's
+  Agony, Flashback card, Improvisation Capstone, Nita, Quandrix the
+  Proof). Partially implemented via `GrantMayPlay`, but the full
+  "exile then may cast" loop isn't complete.
+- **Vehicle / Crew keyword** blocks Strixhaven Skycoach. Needs
+  `CrewN` keyword + "becomes creature until EOT" effect.
+- **Prepare mechanic** blocks Biblioplex Tomekeeper and Skycoach
+  Waypoint. Needs a per-permanent boolean flag.
+
 ## Recent additions (Push XIX — 2026-05-25, session 2)
 
 - ✅ **Clever Lumimancer** (STX): {W} 0/1 Human Wizard with Magecraft
