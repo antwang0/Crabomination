@@ -198,10 +198,17 @@ per-card status and notes.
 
 ## Known engine gaps surfaced by these catalogs
 
-- ~~**Prepare mechanic** (SOS colorless)~~ — ✅ shipped via the new
-  `CounterType::Prepared` (push: modern_decks current sub-push). The
-  prepared state is just a counter — `AddCounter`/`RemoveCounter` are
-  the toggles. Biblioplex Tomekeeper + Skycoach Waypoint are both ✅.
+- **Prepare mechanic** (SOS colorless) — 🟡 partial. Half 1 (MDFC
+  "prepare spell" creatures with a vanilla front + spell back) ships
+  via the engine's existing back-face plumbing. Half 2 (the flag
+  itself + payoff cards with `Prepare {cost}:` activated abilities
+  gated on the flag) is ⏳ pending. Today the toggles (Biblioplex
+  Tomekeeper, Skycoach Waypoint) correctly enforce the printed
+  "(Only creatures with prepare spells can become prepared.)"
+  reminder via `SelectionRequirement::HasBackFace` on their target
+  filters, and the `CounterType::Prepared` counter rides on the
+  permanent — but no card consumes it yet, so the flag has no
+  gameplay effect. See `.claude/prepared.md` for the design split.
   Engine bonus: the CR 700.2b modal-trigger mode-pick path now covers
   SelfSource ETB triggers (both push sites in `stack.rs` and
   `actions.rs`), unblocking any future modal ETB.

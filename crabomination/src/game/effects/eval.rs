@@ -690,6 +690,7 @@ impl GameState {
                         })
                     }
                     R::HasName(name) => card.definition.name == name.as_str(),
+                    R::HasBackFace => card.definition.back_face.is_some(),
                     _ => unreachable!("handled above"),
                 }
             }
@@ -769,6 +770,9 @@ impl GameState {
             // Name match works in any zone — used by Grandeur
             // activations that walk a hand for a same-named card.
             R::HasName(name) => card.definition.name == name.as_str(),
+            // Back-face check is a static property of the card
+            // definition — same answer in any zone.
+            R::HasBackFace => card.definition.back_face.is_some(),
             // Battlefield-state predicates can't be evaluated for library cards.
             R::Tapped | R::Untapped | R::WithCounter(_)
             | R::IsAttacking | R::IsBlocking | R::IsAttackingAlone | R::IsBlockingAlone

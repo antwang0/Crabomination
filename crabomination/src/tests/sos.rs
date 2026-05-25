@@ -10065,31 +10065,60 @@ fn skycoach_waypoint_taps_for_colorless() {
 
 #[test]
 fn skycoach_waypoint_prepare_activation_adds_prepared_counter() {
-    // {3}, {T}: Target creature becomes prepared.
+    // {3}, {T}: Target creature becomes prepared. The printed
+    // "(Only creatures with prepare spells can become prepared.)"
+    // reminder forces the target to have a back-face spell — use the
+    // Elite Interceptor // Rejoinder MDFC, whose front is a vanilla
+    // 1/2 creature with a back-face spell (the "prepare spell").
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    g.clear_sickness(land);
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    g.players[0].mana_pool.add_colorless(3);
+
+    let target = g.battlefield.iter().find(|c| c.id == mdfc).unwrap();
+    assert_eq!(
+        target.counter_count(CounterType::Prepared), 0,
+        "MDFC creature starts unprepared"
+    );
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), x_value: None })
+    .expect("Skycoach Waypoint {3}, {T}: prepare activation");
+    drain_stack(&mut g);
+
+    let prepared = g.battlefield.iter().find(|c| c.id == mdfc).unwrap();
+    assert_eq!(
+        prepared.counter_count(CounterType::Prepared), 1,
+        "MDFC creature should have one Prepared counter"
+    );
+    let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
+    assert!(c.tapped, "Waypoint should be tapped after prepare activation");
+}
+
+#[test]
+fn skycoach_waypoint_rejects_creature_without_prepare_spell() {
+    // Printed reminder: "(Only creatures with prepare spells can
+    // become prepared.)" A plain Grizzly Bears has no back face, so
+    // Waypoint's activation must NOT land a Prepared counter on it.
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
     g.clear_sickness(land);
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.players[0].mana_pool.add_colorless(3);
 
-    let target_bear = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(
-        target_bear.counter_count(CounterType::Prepared), 0,
-        "bear starts unprepared"
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None
+    });
+    assert!(
+        result.is_err(),
+        "prepare activation must be rejected against a creature with no back face"
     );
-
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None })
-    .expect("Skycoach Waypoint {3}, {T}: prepare activation");
-    drain_stack(&mut g);
-
-    let prepared = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    let bear_now = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(
-        prepared.counter_count(CounterType::Prepared), 1,
-        "bear should have one Prepared counter"
+        bear_now.counter_count(CounterType::Prepared), 0,
+        "bear without a back face must not receive a Prepared counter"
     );
-    let c = g.battlefield.iter().find(|c| c.id == land).unwrap();
-    assert!(c.tapped, "Waypoint should be tapped after prepare activation");
 }
 
 #[test]
@@ -10113,32 +10142,58 @@ fn skycoach_waypoint_prepare_rejected_without_three_mana() {
 
 #[test]
 fn biblioplex_tomekeeper_etb_prepares_target_creature() {
-    // ETB ChooseMode auto-picks mode 0 (becomes prepared).
+    // ETB ChooseMode auto-picks mode 0 (becomes prepared). The target
+    // must be a creature with a back-face "prepare spell" — use Elite
+    // Interceptor // Rejoinder.
+    let mut g = two_player_game();
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mdfc)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let prepared = g.battlefield.iter().find(|c| c.id == mdfc).unwrap();
+    assert_eq!(
+        prepared.counter_count(CounterType::Prepared), 1,
+        "auto-decider picks mode 0 → MDFC creature gets a Prepared counter"
+    );
+}
+
+#[test]
+fn biblioplex_tomekeeper_rejects_creature_without_prepare_spell() {
+    // Vanilla bear has no back face → not a legal prepare target.
+    // The ETB trigger should be unable to resolve onto the bear; the
+    // engine's auto-target picker has no legal Permanent target, so
+    // the trigger no-ops without adding a counter.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
     g.players[0].mana_pool.add_colorless(4);
 
-    g.perform_action(GameAction::CastSpell {
+    let _ = g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Tomekeeper castable for {4}");
+    });
     drain_stack(&mut g);
 
-    let prepared = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    let bear_now = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert_eq!(
-        prepared.counter_count(CounterType::Prepared), 1,
-        "auto-decider picks mode 0 → bear gets a Prepared counter"
+        bear_now.counter_count(CounterType::Prepared), 0,
+        "creature without a prepare spell (no back face) must not receive a Prepared counter"
     );
 }
 
 #[test]
 fn biblioplex_tomekeeper_etb_unprepares_via_scripted_mode_one() {
-    // Seed a Prepared counter on the bear, then ETB Tomekeeper with
-    // a scripted mode-1 decision — it should remove the counter.
+    // Seed a Prepared counter on an MDFC creature (the only legal
+    // prepare target), then ETB Tomekeeper with a scripted mode-1
+    // decision — it should remove the counter.
     let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield_find_mut(bear) {
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    if let Some(c) = g.battlefield_find_mut(mdfc) {
         c.counters.insert(CounterType::Prepared, 1);
     }
 
@@ -10147,36 +10202,37 @@ fn biblioplex_tomekeeper_etb_unprepares_via_scripted_mode_one() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(mdfc)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tomekeeper castable for {4}");
     drain_stack(&mut g);
 
-    let target = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    let target = g.battlefield.iter().find(|c| c.id == mdfc).unwrap();
     assert_eq!(
         target.counter_count(CounterType::Prepared), 0,
-        "mode 1 should remove the Prepared counter from the bear"
+        "mode 1 should remove the Prepared counter from the MDFC creature"
     );
 }
 
 #[test]
 fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
-    // Prepare a bear via Waypoint, then unprepare via Tomekeeper mode 1.
+    // Prepare an MDFC creature via Waypoint, then unprepare via
+    // Tomekeeper mode 1.
     let mut g = two_player_game();
     let land = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
     g.clear_sickness(land);
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: land, ability_index: 1, target: Some(Target::Permanent(bear)), x_value: None })
+        card_id: land, ability_index: 1, target: Some(Target::Permanent(mdfc)), x_value: None })
     .expect("Skycoach Waypoint prepare activation");
     drain_stack(&mut g);
 
     assert_eq!(
-        g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        g.battlefield.iter().find(|c| c.id == mdfc).unwrap()
             .counter_count(CounterType::Prepared), 1,
-        "Waypoint prepares the bear"
+        "Waypoint prepares the MDFC creature"
     );
 
     // Now ETB Tomekeeper with mode 1 to unprepare.
@@ -10185,15 +10241,15 @@ fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(mdfc)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Tomekeeper castable for {4}");
     drain_stack(&mut g);
 
     assert_eq!(
-        g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        g.battlefield.iter().find(|c| c.id == mdfc).unwrap()
             .counter_count(CounterType::Prepared), 0,
-        "Tomekeeper mode 1 unprepares the bear"
+        "Tomekeeper mode 1 unprepares the MDFC creature"
     );
 }
 

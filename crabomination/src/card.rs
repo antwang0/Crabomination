@@ -160,10 +160,14 @@ pub enum CounterType {
     /// variants don't collide.
     Growth,
     /// Prepared counter — SOS Prepare mechanic (Biblioplex Tomekeeper,
-    /// Skycoach Waypoint). A pure state flag with no inherent gameplay
-    /// effect; the "Only creatures with prepare spells can become
-    /// prepared" reminder is naturally enforced by having only these
-    /// two cards emit AddCounter(Prepared).
+    /// Skycoach Waypoint). A boolean state flag on a creature; in the
+    /// shipped set the flag itself has no payoff yet (Half 2 of the
+    /// mechanic is still pending — see `.claude/prepared.md`). The
+    /// printed "Only creatures with prepare spells can become prepared"
+    /// reminder is enforced at the *target* via
+    /// `SelectionRequirement::HasBackFace` on the AddCounter / Remove-
+    /// Counter selectors — a creature must have a back-face spell (a
+    /// "prepare spell") to be a legal target.
     Prepared,
 }
 
@@ -445,6 +449,15 @@ pub enum SelectionRequirement {
     /// `static_str_serde` adapter — the catalog passes a one-time
     /// `.to_string()` at definition time, negligible overhead.
     HasName(String),
+    /// True when the candidate has a back-face `CardDefinition` —
+    /// i.e. it's a double-faced card (MDFC). Used by the SOS Prepare
+    /// mechanic, whose printed reminder text reads "(Only creatures
+    /// with prepare spells can become prepared.)" A "prepare spell"
+    /// is a back-face spell on a creature, so the legal-target rule
+    /// reduces to `back_face.is_some()`. Without this predicate,
+    /// Biblioplex Tomekeeper / Skycoach Waypoint could illegally
+    /// prepare a vanilla creature with no back face.
+    HasBackFace,
     And(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Or(Box<SelectionRequirement>, Box<SelectionRequirement>),
     Not(Box<SelectionRequirement>),

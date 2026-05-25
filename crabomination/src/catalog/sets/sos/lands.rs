@@ -210,11 +210,16 @@ pub fn skycoach_waypoint() -> CardDefinition {
     use crate::card::{CounterType, SelectionRequirement};
     use crate::effect::shortcut::target_filtered;
     use crate::effect::ActivatedAbility;
+    // Printed reminder: "(Only creatures with prepare spells can
+    // become prepared.)" — restrict target to creatures whose
+    // definition has a back face (a "prepare spell").
     let prepare_target = ActivatedAbility {
         tap_cost: true,
         mana_cost: cost(&[generic(3)]),
         effect: Effect::AddCounter {
-            what: target_filtered(SelectionRequirement::Creature),
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasBackFace),
+            ),
             kind: CounterType::Prepared,
             amount: Value::Const(1),
         },

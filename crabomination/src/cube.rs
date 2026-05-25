@@ -29,7 +29,7 @@ use crate::game::GameState;
 use crate::mana::Color;
 use crate::player::Player;
 
-type CardFactory = fn() -> CardDefinition;
+pub type CardFactory = fn() -> CardDefinition;
 
 const COPY_CAP: u32 = 4;
 const BASICS_PER_COLOR: usize = 11;

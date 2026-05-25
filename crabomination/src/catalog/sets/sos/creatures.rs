@@ -5922,6 +5922,18 @@ pub fn essenceknit_scholar() -> CardDefinition {
 pub fn biblioplex_tomekeeper() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::target_filtered;
+    // Printed reminder: "(Only creatures with prepare spells can
+    // become prepared.)" In this set, a "prepare spell" is a back-face
+    // spell on a creature, so the legal-target rule reduces to
+    // `Creature ∧ HasBackFace`. Both modes share the same filter —
+    // unpreparing a creature with no back face is also illegal per
+    // the reminder text (and a no-op anyway since such a creature
+    // can never have acquired the counter through legal play).
+    let prepare_target = || {
+        target_filtered(
+            SelectionRequirement::Creature.and(SelectionRequirement::HasBackFace),
+        )
+    };
     CardDefinition {
         name: "Biblioplex Tomekeeper",
         cost: cost(&[generic(4)]),
@@ -5941,13 +5953,13 @@ pub fn biblioplex_tomekeeper() -> CardDefinition {
             effect: Effect::ChooseMode(vec![
                 // Mode 0: target creature becomes prepared.
                 Effect::AddCounter {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: prepare_target(),
                     kind: CounterType::Prepared,
                     amount: Value::Const(1),
                 },
                 // Mode 1: target creature becomes unprepared.
                 Effect::RemoveCounter {
-                    what: target_filtered(SelectionRequirement::Creature),
+                    what: prepare_target(),
                     kind: CounterType::Prepared,
                     amount: Value::Const(1),
                 },

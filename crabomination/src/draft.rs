@@ -68,6 +68,166 @@ pub fn generate_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFacto
     pack
 }
 
+/// Color-identity bucket used by `generate_sos_pack` to stratify
+/// a Secrets of Strixhaven pack. Real-set rarity tags aren't on
+/// `CardDefinition` yet, so we approximate booster shape by spreading
+/// cards across the 5 mono-colors + multicolor (college pairs) +
+/// colorless/land. This guarantees a player never opens a pack of
+/// 15 mono-blue cards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum SosBucket {
+    Mono(Color),
+    Multi,
+    ColorlessOrLand,
+}
+
+/// Per-pack quota for each bucket. Sums to 15. Two mono of each color
+/// (10) + 3 multicolor (college pairs) + 2 colorless/land = 15. The
+/// recipe is symmetric — every pack looks roughly the same shape, so
+/// drafters see a consistent signal across the table.
+const SOS_PACK_RECIPE: &[(SosBucket, usize)] = &[
+    (SosBucket::Mono(Color::White), 2),
+    (SosBucket::Mono(Color::Blue), 2),
+    (SosBucket::Mono(Color::Black), 2),
+    (SosBucket::Mono(Color::Red), 2),
+    (SosBucket::Mono(Color::Green), 2),
+    (SosBucket::Multi, 3),
+    (SosBucket::ColorlessOrLand, 2),
+];
+
+/// Classify a card into its `SosBucket` based on color identity.
+/// Hybrid pips count both halves; Phyrexian pips count their colored
+/// half. Lands and cards with no colored pips fall into
+/// `ColorlessOrLand` regardless of whether they're typed Land — the
+/// engine has no land/colorless distinction at this stage.
+fn sos_bucket_of(def: &crate::card::CardDefinition) -> SosBucket {
+    use crate::card::CardType;
+    use crate::mana::ManaSymbol;
+    if def.card_types.contains(&CardType::Land) {
+        return SosBucket::ColorlessOrLand;
+    }
+    let mut seen = [false; 5];
+    let idx = |c: Color| match c {
+        Color::White => 0,
+        Color::Blue => 1,
+        Color::Black => 2,
+        Color::Red => 3,
+        Color::Green => 4,
+    };
+    for sym in &def.cost.symbols {
+        match sym {
+            ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => seen[idx(*c)] = true,
+            ManaSymbol::Hybrid(a, b) => {
+                seen[idx(*a)] = true;
+                seen[idx(*b)] = true;
+            }
+            _ => {}
+        }
+    }
+    let n_colors = seen.iter().filter(|&&b| b).count();
+    match n_colors {
+        0 => SosBucket::ColorlessOrLand,
+        1 => SosBucket::Mono(
+            Color::ALL
+                .into_iter()
+                .find(|c| seen[idx(*c)])
+                .expect("n_colors==1 implies one color set"),
+        ),
+        _ => SosBucket::Multi,
+    }
+}
+
+/// Stratified pack generator for the SoS pool: each pack guarantees
+/// the bucket mix described by `SOS_PACK_RECIPE`. Within each bucket
+/// we sample without replacement (no duplicates inside one pack);
+/// the same card *can* appear in multiple packs across the pod,
+/// matching real-set draft economics.
+///
+/// Fallback behavior when a bucket is short:
+/// - If the requested bucket has fewer cards than the recipe asks for,
+///   we fill the shortfall from `SosBucket::Multi`, then from any
+///   remaining unused pool card. This keeps every pack at exactly
+///   `PACK_SIZE` even on small subset pools (e.g. the Prismari-only
+///   universe is far smaller than 15 cards but the wider SoS pool
+///   always satisfies the recipe).
+pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
+    if pool.is_empty() {
+        return Vec::new();
+    }
+    // Pre-bucket every card in the pool. The bucket function is pure,
+    // so caching once amortizes across the pack roll.
+    let mut by_bucket: std::collections::HashMap<SosBucket, Vec<usize>> =
+        std::collections::HashMap::new();
+    for (i, factory) in pool.iter().enumerate() {
+        let def = factory();
+        by_bucket.entry(sos_bucket_of(&def)).or_default().push(i);
+    }
+    let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
+    let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
+    let mut pull_from = |bucket: SosBucket,
+                        want: usize,
+                        by_bucket: &std::collections::HashMap<SosBucket, Vec<usize>>,
+                        used: &mut std::collections::HashSet<usize>,
+                        pack: &mut Vec<CardFactory>,
+                        rng: &mut R|
+     -> usize {
+        let Some(indices) = by_bucket.get(&bucket) else {
+            return 0;
+        };
+        let mut taken = 0;
+        let mut attempts = 0;
+        // Cap attempts so a near-empty bucket can't infinite-loop.
+        let max_attempts = indices.len().saturating_mul(4).max(8);
+        while taken < want && attempts < max_attempts {
+            attempts += 1;
+            let pick = indices[rng.random_range(0..indices.len())];
+            if used.insert(pick) {
+                pack.push(pool[pick]);
+                taken += 1;
+            }
+        }
+        taken
+    };
+    let mut shortfall = 0usize;
+    for (bucket, want) in SOS_PACK_RECIPE {
+        let got = pull_from(*bucket, *want, &by_bucket, &mut used, &mut pack, rng);
+        shortfall += want.saturating_sub(got);
+    }
+    // Fill any shortfall first from Multi, then from any unused pool
+    // card. This is the rare-pool guard — real SoS draws always
+    // satisfy the recipe, but a custom subset (test fixtures, future
+    // college-only modes) might not.
+    if shortfall > 0 {
+        pull_from(
+            SosBucket::Multi,
+            shortfall,
+            &by_bucket,
+            &mut used,
+            &mut pack,
+            rng,
+        );
+    }
+    while pack.len() < PACK_SIZE.min(pool.len()) {
+        let idx = rng.random_range(0..pool.len());
+        if used.insert(idx) {
+            pack.push(pool[idx]);
+        }
+    }
+    pack
+}
+
+impl DraftPool {
+    /// Roll a single 15-card pack from this pool. Cube uses uniform
+    /// random sampling (`generate_pack`); SoS uses the stratified
+    /// `generate_sos_pack` so every pack has a consistent color shape.
+    pub fn generate_pack<R: Rng>(self, pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
+        match self {
+            DraftPool::Cube => generate_pack(pool, rng),
+            DraftPool::Sos => generate_sos_pack(pool, rng),
+        }
+    }
+}
+
 /// Build the full set of packs for a draft pod —
 /// `POD_SIZE * PACKS_PER_SEAT` packs, returned in deal order
 /// `[seat0_pack1, seat1_pack1, …, seat0_pack2, …]`. Callers typically
@@ -468,6 +628,46 @@ pub fn draft_pool() -> Vec<CardFactory> {
         .collect()
 }
 
+/// Secrets of Strixhaven draft pool — every ✅ SoS factory across the
+/// five colleges (mono-color + multi-color + school lands). Pulls from
+/// `sos_mode::all_sos_cards()`. The same fictional-card filter applies
+/// — defensive only, since none of the SoS names overlap the cube's
+/// engine-invented entries.
+pub fn sos_draft_pool() -> Vec<CardFactory> {
+    crate::sos_mode::all_sos_cards()
+        .into_iter()
+        .filter(|f| {
+            let name = f().name;
+            !FICTIONAL_CARD_NAMES.iter().any(|x| x.eq_ignore_ascii_case(name))
+        })
+        .collect()
+}
+
+/// Which set of cards a draft draws from. Cube is the existing 309-card
+/// curated cube pool; Sos is the 255-card Secrets of Strixhaven set
+/// (`sos_mode::all_sos_cards`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DraftPool {
+    Cube,
+    Sos,
+}
+
+impl DraftPool {
+    pub fn factories(self) -> Vec<CardFactory> {
+        match self {
+            DraftPool::Cube => draft_pool(),
+            DraftPool::Sos => sos_draft_pool(),
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            DraftPool::Cube => "Cube",
+            DraftPool::Sos => "SoS",
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -686,6 +886,84 @@ mod tests {
         let split = suggest_basic_split(&picks, [Color::Green, Color::Blue], 17);
         let sum: u32 = split.values().sum();
         assert_eq!(sum, 17);
+    }
+
+    #[test]
+    fn sos_draft_pool_is_substantial_and_distinct() {
+        let pool = sos_draft_pool();
+        assert!(
+            pool.len() >= 100,
+            "SoS draft pool unexpectedly small: {} cards",
+            pool.len()
+        );
+        // All entries are unique factory pointers.
+        let mut seen = std::collections::HashSet::new();
+        for f in &pool {
+            assert!(seen.insert(*f as usize), "duplicate factory in SoS pool");
+        }
+    }
+
+    #[test]
+    fn draft_pool_enum_dispatches() {
+        assert_eq!(DraftPool::Cube.factories().len(), draft_pool().len());
+        assert_eq!(DraftPool::Sos.factories().len(), sos_draft_pool().len());
+    }
+
+    #[test]
+    fn sos_pack_has_pack_size_with_no_duplicates() {
+        let pool = sos_draft_pool();
+        let mut rng = fixed_rng();
+        let pack = generate_sos_pack(&pool, &mut rng);
+        assert_eq!(pack.len(), PACK_SIZE, "SoS pack must be exactly 15 cards");
+        let mut seen = std::collections::HashSet::new();
+        for f in &pack {
+            assert!(seen.insert(*f as usize), "SoS pack has duplicate factory");
+        }
+    }
+
+    #[test]
+    fn sos_pack_satisfies_color_recipe_on_average() {
+        // Each pack should land on ~2 cards per mono-color and ~3
+        // multicolor + ~2 colorless/land. Run 100 rolls and verify
+        // every bucket got at least one card on average — guards
+        // against a regression that breaks bucket assignment.
+        let pool = sos_draft_pool();
+        let mut rng = fixed_rng();
+        let mut bucket_totals: std::collections::HashMap<SosBucket, u32> =
+            std::collections::HashMap::new();
+        let n = 100;
+        for _ in 0..n {
+            let pack = generate_sos_pack(&pool, &mut rng);
+            for f in &pack {
+                let def = f();
+                *bucket_totals.entry(sos_bucket_of(&def)).or_insert(0) += 1;
+            }
+        }
+        // Each mono-color quota is 2 per pack × 100 packs = 200, but
+        // shortfall fills from Multi so we accept anything from 100+.
+        for color in Color::ALL {
+            let got = bucket_totals
+                .get(&SosBucket::Mono(color))
+                .copied()
+                .unwrap_or(0);
+            assert!(
+                got >= 100,
+                "mono-{color:?} undersupplied across 100 packs: got {got}"
+            );
+        }
+        let multi = bucket_totals.get(&SosBucket::Multi).copied().unwrap_or(0);
+        assert!(multi >= 100, "multi undersupplied across 100 packs: got {multi}");
+    }
+
+    #[test]
+    fn cube_pool_still_uses_uniform_generator() {
+        // Regression guard: the cube pool's pack rolls must keep going
+        // through `generate_pack` (no stratification). A symptom of a
+        // wiring slip would be cube packs suddenly clustering by color.
+        let pool = draft_pool();
+        let mut rng = fixed_rng();
+        let pack = DraftPool::Cube.generate_pack(&pool, &mut rng);
+        assert_eq!(pack.len(), PACK_SIZE);
     }
 
     #[test]

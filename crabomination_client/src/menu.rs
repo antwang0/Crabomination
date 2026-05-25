@@ -42,7 +42,40 @@ pub enum AppState {
     /// `AuditTarget` and transitions into `InGame` with an
     /// audit-tailored state (see `crate::audit::build_audit_state`).
     Audit,
+    /// 8-seat booster draft against 7 bots. Owned by
+    /// `crate::systems::draft::DraftPlugin`; cards are drawn from
+    /// either the cube pool or the Secrets of Strixhaven pool
+    /// depending on `PendingDraftFormat`. On completion the resulting
+    /// `DraftedDecks` resource is consumed by `start_net_session` so
+    /// the post-draft match plays out via the normal InGame path.
+    Drafting,
     InGame,
+}
+
+/// Set by the menu when the player picks "Draft"; read by the draft
+/// plugin to choose which card pool the booster packs sample from.
+/// Defaults to `Cube` so older save/restore paths still work.
+#[derive(Resource, Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PendingDraftFormat(pub MatchFormat);
+
+impl Default for PendingDraftFormat {
+    fn default() -> Self {
+        Self(MatchFormat::Cube)
+    }
+}
+
+/// Decks produced by `AppState::Drafting`'s opponent-select step. When
+/// present at the `OnEnter(AppState::InGame)` boundary,
+/// `start_net_session_from_menu` builds a 2-player match from these
+/// decks via `crabomination::draft::build_draft_match_state` instead
+/// of rolling a fresh random match. The resource is taken (drained) on
+/// consumption so a follow-up rematch / new-game falls back to the
+/// format's normal random path.
+#[derive(Resource, Clone, Debug)]
+pub struct DraftedDecks {
+    pub player_deck: Vec<crabomination::cube::CardFactory>,
+    pub opponent_deck: Vec<crabomination::cube::CardFactory>,
+    pub opponent_label: String,
 }
 
 /// Filled in by the menu when the user picks an option; drained by
@@ -171,6 +204,9 @@ struct LoadDebugStateButton;
 struct AuditCardsButton;
 
 #[derive(Component)]
+struct DraftButton;
+
+#[derive(Component)]
 struct HostButton;
 
 #[derive(Component)]
@@ -193,6 +229,7 @@ impl Plugin for MenuPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<AppState>()
             .init_resource::<PendingNetMode>()
+            .init_resource::<PendingDraftFormat>()
             .init_resource::<MenuFields>()
             .init_resource::<CliBootHint>()
             .add_systems(OnEnter(AppState::Menu), spawn_menu)
@@ -302,6 +339,11 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
 
                 // Play vs Bot
                 button(p, &tf, "Play vs Bot", BUTTON_PRIMARY_BG, PlayBotButton);
+
+                // Draft — opens the 8-seat booster draft for the
+                // selected format (Cube or SoS). Modern / Commander
+                // fall back to the Cube pool.
+                button(p, &tf, "Draft (Cube / SoS)", BUTTON_INFO_BG, DraftButton);
 
                 // Spectate Bot vs Bot
                 button(
@@ -609,11 +651,13 @@ fn refresh_format_toggle_visuals(
 fn handle_action_buttons(
     mut next_state: ResMut<NextState<AppState>>,
     mut pending: ResMut<PendingNetMode>,
+    mut pending_draft: ResMut<PendingDraftFormat>,
     fields: Res<MenuFields>,
     play_q: Query<&Interaction, (Changed<Interaction>, With<PlayBotButton>)>,
     spectate_q: Query<&Interaction, (Changed<Interaction>, With<SpectateBotsButton>)>,
     load_q: Query<&Interaction, (Changed<Interaction>, With<LoadDebugStateButton>)>,
     audit_q: Query<&Interaction, (Changed<Interaction>, With<AuditCardsButton>)>,
+    draft_q: Query<&Interaction, (Changed<Interaction>, With<DraftButton>)>,
     host_q: Query<&Interaction, (Changed<Interaction>, With<HostButton>)>,
     join_q: Query<&Interaction, (Changed<Interaction>, With<JoinButton>)>,
 ) {
@@ -622,6 +666,17 @@ fn handle_action_buttons(
         return;
     }
     let format = fields.format;
+    if draft_q.iter().any(|i| *i == Interaction::Pressed) {
+        // The draft plugin reads PendingDraftFormat at OnEnter; the
+        // resulting DraftedDecks resource will be consumed by
+        // start_net_session_from_menu when the user finishes drafting.
+        // Stash the underlying mode so the post-draft match plays as a
+        // local-bot game.
+        pending_draft.0 = format;
+        pending.0 = Some((NetMode::LocalBot, format));
+        next_state.set(AppState::Drafting);
+        return;
+    }
     if play_q.iter().any(|i| *i == Interaction::Pressed) {
         pending.0 = Some((NetMode::LocalBot, format));
         next_state.set(AppState::InGame);
@@ -726,10 +781,28 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     // Audit override: if the menu wrote a card name into `AuditTarget`
     // before entering InGame, build a tailored two-seat audit state
     // around that card instead of the chosen format.
+    //
+    // Draft override: if the user just finished an 8-seat draft, the
+    // draft plugin will have written a `DraftedDecks` resource. Take
+    // and consume it so a follow-up rematch falls back to the format's
+    // random path. Drafted decks beat the audit + format paths.
     let audit_card: Option<String> = world
         .get_resource::<crate::audit::AuditTarget>()
         .and_then(|t| t.0.clone());
-    let state = if let Some(name) = audit_card.as_deref() {
+    let drafted: Option<DraftedDecks> = world
+        .get_resource_mut::<DraftedDecks>()
+        .map(|r| (*r).clone());
+    if drafted.is_some() {
+        world.remove_resource::<DraftedDecks>();
+    }
+    let state = if let Some(decks) = drafted {
+        crabomination::draft::build_draft_match_state(
+            decks.player_deck,
+            decks.opponent_deck,
+            "You".into(),
+            decks.opponent_label,
+        )
+    } else if let Some(name) = audit_card.as_deref() {
         crate::audit::build_audit_state(name).unwrap_or_else(|| {
             eprintln!("audit: unknown card '{name}', falling back to {:?}", format);
             format.build_state()

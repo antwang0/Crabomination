@@ -181,7 +181,12 @@ fn main() {
                 }),
             MeshPickingPlugin,
         ))
-        .add_plugins((SinglePlayerPlugin, MenuPlugin, theme::UiFontsPlugin))
+        .add_plugins((
+            SinglePlayerPlugin,
+            MenuPlugin,
+            theme::UiFontsPlugin,
+            systems::draft::DraftPlugin,
+        ))
         .init_gizmo_group::<BlockingGizmos>()
         .init_gizmo_group::<AttackerGizmos>()
         .init_gizmo_group::<StackGizmos>()
