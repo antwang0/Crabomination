@@ -10257,3 +10257,19 @@ pub fn eldrazi_confluence() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Aluren — {2}{G}{G} Enchantment.
+/// Each player may cast creature spells with mana value 3 or less without
+/// paying their mana costs.
+///
+/// Approximation: body-only enchantment. The static cost-reduction effect
+/// is beyond current engine scope; the card is included for its type line
+/// and mana value in cube draft context.
+pub fn aluren() -> CardDefinition {
+    CardDefinition {
+        name: "Aluren",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Enchantment],
+        ..Default::default()
+    }
+}

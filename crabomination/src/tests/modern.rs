@@ -12182,3 +12182,13 @@ fn eldrazi_confluence_is_four_mana_three_mode_instant() {
         panic!("Should be ChooseMode");
     }
 }
+
+// ── Aluren ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn aluren_is_4_cost_enchantment() {
+    let card = catalog::aluren();
+    assert_eq!(card.name, "Aluren");
+    assert!(card.card_types.contains(&CardType::Enchantment));
+    assert_eq!(card.cost.cmc(), 4, "costs 2GG = 4 CMC");
+}
