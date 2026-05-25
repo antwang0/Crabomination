@@ -5,6 +5,42 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXI — 2026-05-25, session 4)
+
+### Server — view improvements
+- ✅ **`PermanentView.mana_cost_display`** — human-readable mana cost
+  string (e.g. "{2}{W}{B}") for tooltip rendering and CMC badge display.
+  Empty for tokens and lands.
+- ✅ **`PermanentView.creature_types`** — creature subtype names (e.g.
+  ["Human", "Wizard"]) for tribal-filter UIs and tooltip type-line
+  rendering. Empty for non-creatures.
+
+### New SOS cards (7 ⏳ → 🟡)
+- ✅ Mica, Reader of Ruins (Red 4/4, Ward—Pay 3 life)
+- ✅ The Dawning Archaic (Colorless 7/7, Reach)
+- ✅ Strixhaven Skycoach (3/2 Flying artifact, ETB land search)
+- ✅ Biblioplex Tomekeeper (3/4 Construct)
+- ✅ Skycoach Waypoint (Land, {T}: Add {C})
+- ✅ Prismari, the Inspiration (7/7 Elder Dragon, Flying)
+- ✅ Social Snub (Silverquill sacrifice sorcery)
+
+### Observations & future items from this session
+- **Affinity cost reduction** — Witherbloom the Balancer and several
+  cube cards need per-cast cost reduction that scales off creature
+  count. Generalising `StaticEffect::CostReduction.amount` to accept
+  a `Value` would unlock all Affinity-for-X patterns.
+- **Lesson sideboard** — Learn mechanic is still approximated as Draw 1.
+  A sideboard zone + `Effect::Learn` would promote all Learn cards at
+  once. Low engine cost, high card coverage.
+- ✅ **Prowess keyword enforcement** — already fully wired via the
+  engine's `flush_pending_triggers` path: creatures with
+  `Keyword::Prowess` auto-inject +1/+1 EOT pumps on noncreature
+  spell-cast. Cards with explicit `prowess()` triggers are skipped
+  to avoid doubling.
+- **Vehicle/Crew** — Strixhaven Skycoach is wired as a permanent
+  creature, not a Vehicle that needs crewing. Adding `Crew N` would
+  make Vehicle cards play correctly.
+
 ## Recent additions (Push XX — 2026-05-25, session 3)
 
 ### Rules implementations

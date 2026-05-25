@@ -38,19 +38,19 @@ use crabomination::server::{run_match, tcp_seat, RandomBot, SeatOccupant};
 enum Format {
     Demo,
     Cube,
+    Sos,
 }
 
 impl Format {
     fn from_env() -> Self {
         match env::var("CRAB_FORMAT").ok().as_deref() {
             Some("cube") => Self::Cube,
+            Some("sos") | Some("strixhaven") => Self::Sos,
             Some("demo") | None => Self::Demo,
-            // Anything else: warn so a typo (`CRAB_FORMAT=Cube`) doesn't
-            // silently fall back to demo without a hint.
             Some(other) => {
                 eprintln!(
                     "warning: CRAB_FORMAT={other:?} not recognized — \
-                     falling back to demo. Valid: \"demo\" | \"cube\"."
+                     falling back to demo. Valid: \"demo\" | \"cube\" | \"sos\"."
                 );
                 Self::Demo
             }
@@ -60,12 +60,14 @@ impl Format {
         match self {
             Self::Demo => build_demo_state(),
             Self::Cube => build_cube_state(),
+            Self::Sos => crabomination::sos_mode::build_sos_state(),
         }
     }
     fn label(&self) -> &'static str {
         match self {
             Self::Demo => "demo",
             Self::Cube => "cube",
+            Self::Sos => "sos",
         }
     }
 }
@@ -152,23 +154,23 @@ struct MatchStats {
 /// next free index via `format_index`.
 const FORMAT_BUCKET_COUNT: usize = 4;
 
-/// Map a local server `Format` (Demo / Cube) to its bucket index in
+/// Map a local server `Format` (Demo / Cube / Sos) to its bucket index in
 /// `MatchStats.format_buckets`. Stable ordering — new formats append.
 fn format_index(f: Format) -> usize {
     match f {
         Format::Demo => 0,
         Format::Cube => 1,
+        Format::Sos => 2,
     }
 }
 
 /// Reverse map for the format-bucket index. Returns `None` for the
 /// trailing reserved slots so the formatter can skip empty buckets.
-/// Used by `format_match_stats` to render `format=demo:7 cube:3` under
-/// the running summary.
 fn format_label_for_bucket(i: usize) -> Option<&'static str> {
     match i {
         0 => Some(Format::Demo.label()),
         1 => Some(Format::Cube.label()),
+        2 => Some(Format::Sos.label()),
         _ => None,
     }
 }
