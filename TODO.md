@@ -8192,3 +8192,31 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
   Spirit token. A shared `spirit_token()` helper (like the existing
   `pest_token()`, `inkling_token()`, `elemental_token()`) would
   reduce boilerplate for future Spirit-tribal cards.
+
+### Session observations (push claude/modern_decks — Prowess)
+
+- **Prowess auto-enforcement** — engine now injects +1/+1 EOT for
+  Prowess-keyword creatures when their controller casts a noncreature
+  spell, but only for creatures lacking their own SpellCast trigger
+  (avoids doubling for cards wired via `shortcut::prowess()`). Future
+  Prowess creatures can just carry `Keyword::Prowess` without needing
+  the explicit `TriggeredAbility`.
+- **Ward generic payment drain ordering** — the mana pool's generic
+  drain pass (Pass 6 in `ManaPool::pay`) drains colored mana before
+  colorless. This means Ward's generic cost can consume colored mana
+  needed for the spell itself. A smarter payment ordering (reserve
+  colored pips needed by queued costs) would make Ward+spell payment
+  smoother. Low priority since the triggered-ability Ward path handles
+  this at stack-resolution time (after the spell is already cast).
+- **Deathtouch outside combat** — `Effect::DealDamage` doesn't track
+  deathtouch on the damage source. In-combat deathtouch works because
+  the combat resolver inflates damage to toughness when a deathtouch
+  blocker/attacker is involved. Non-combat deathtouch (e.g. Prodigal
+  Pyromancer with Basilisk Collar) would need a `dealt_deathtouch`
+  flag on `CardInstance` checked in SBAs.
+- **Increment mechanic** — still blocked on mana-spent-on-cast
+  introspection. Several Strixhaven creatures (Pensive Professor,
+  Tester of the Tangential, Hungry Graffalon, Cuboid Colony, etc.)
+  carry a body-only 🟡 wire. Once `Player.mana_spent_on_last_cast`
+  or a `Value::ManaSpentOnCast` primitive lands, these can be
+  bulk-promoted.
