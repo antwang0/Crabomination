@@ -303,6 +303,14 @@ pub struct LibraryView {
 pub struct GraveyardCardView {
     pub id: CardId,
     pub name: String,
+    #[serde(default)]
+    pub card_types: Vec<CardType>,
+    #[serde(default)]
+    pub mana_cost: crate::mana::ManaCost,
+    #[serde(default)]
+    pub power: i32,
+    #[serde(default)]
+    pub toughness: i32,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so

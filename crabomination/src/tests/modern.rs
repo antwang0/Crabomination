@@ -11413,3 +11413,227 @@ fn elder_gargaroth_is_6_6_with_three_keywords() {
     assert!(card.keywords.contains(&Keyword::Trample));
     assert_eq!(card.triggered_abilities.len(), 2, "attack and block triggers");
 }
+
+// ── Push: new modern creatures ──────────────────────────────────────────
+
+#[test]
+fn blade_splicer_etb_creates_golem_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::blade_splicer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Blade Splicer castable");
+    drain_stack(&mut g);
+    // Blade Splicer (1/1) + Golem token (3/3)
+    assert_eq!(g.battlefield.len(), bf_before + 2);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Golem"),
+        "A 3/3 Golem token should be on the battlefield");
+}
+
+#[test]
+fn vendilion_clique_is_3_1_legendary_flash_flying() {
+    use crate::card::Keyword;
+    let card = catalog::vendilion_clique();
+    assert_eq!(card.name, "Vendilion Clique");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flash));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.supertypes.iter().any(|s| matches!(s, crate::card::Supertype::Legendary)));
+}
+
+#[test]
+fn torrential_gearhulk_is_5_6_artifact_flash() {
+    use crate::card::Keyword;
+    let card = catalog::torrential_gearhulk();
+    assert_eq!(card.name, "Torrential Gearhulk");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Flash));
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.card_types.contains(&CardType::Creature));
+}
+
+#[test]
+fn kitesail_larcenist_etb_exiles_opponent_nonland() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::kitesail_larcenist());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Kitesail Larcenist castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Opponent's creature should be exiled");
+}
+
+#[test]
+fn grave_titan_etb_creates_two_zombie_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::grave_titan());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    let bf_before = g.battlefield.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grave Titan castable");
+    drain_stack(&mut g);
+    // Grave Titan + 2 Zombies
+    assert_eq!(g.battlefield.len(), bf_before + 3);
+    let zombie_count = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Zombie")
+        .count();
+    assert_eq!(zombie_count, 2, "Should create 2 Zombie tokens on ETB");
+}
+
+#[test]
+fn shriekmaw_etb_destroys_nonblack_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::shriekmaw());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Shriekmaw castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Opponent's nonblack creature should be destroyed");
+}
+
+#[test]
+fn phyrexian_obliterator_is_5_8_trample() {
+    use crate::card::Keyword;
+    let card = catalog::phyrexian_obliterator();
+    assert_eq!(card.name, "Phyrexian Obliterator");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 8);
+    assert!(card.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn glorybringer_attack_deals_4_damage_to_opponent_creature() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let glory = g.add_card_to_battlefield(0, catalog::glorybringer());
+    g.clear_sickness(glory);
+    // Opponent has a 5-toughness creature
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: glory,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Glorybringer attacks");
+    drain_stack(&mut g);
+    // Grizzly Bears has 2 toughness; 4 damage kills it
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_creature),
+        "Glorybringer should deal 4 damage to the targeted creature, killing it");
+}
+
+#[test]
+fn inferno_titan_etb_deals_3_damage_to_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::inferno_titan());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Inferno Titan castable");
+    drain_stack(&mut g);
+    // Grizzly Bears has 2 toughness; 3 damage kills it
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == opp_bear),
+        "Inferno Titan ETB should deal 3 damage, killing the bear");
+}
+
+#[test]
+fn thundermaw_hellkite_is_5_5_flying_haste() {
+    use crate::card::Keyword;
+    let card = catalog::thundermaw_hellkite();
+    assert_eq!(card.name, "Thundermaw Hellkite");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB trigger");
+}
+
+#[test]
+fn craterhoof_behemoth_is_5_5_haste_trample() {
+    use crate::card::Keyword;
+    let card = catalog::craterhoof_behemoth();
+    assert_eq!(card.name, "Craterhoof Behemoth");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB pump trigger");
+}
+
+#[test]
+fn thragtusk_etb_gains_5_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::thragtusk());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Thragtusk castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 5,
+        "Thragtusk ETB should gain 5 life");
+}
+
+#[test]
+fn courser_of_kruphix_gains_life_on_land_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::courser_of_kruphix());
+    let land = g.add_card_to_hand(0, catalog::forest());
+    g.priority.player_with_priority = 0;
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::PlayLand(land))
+        .expect("Forest plays");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 1,
+        "Courser should gain 1 life when a land enters");
+}
+
+#[test]
+fn wurmcoil_engine_is_6_6_deathtouch_lifelink() {
+    use crate::card::Keyword;
+    let card = catalog::wurmcoil_engine();
+    assert_eq!(card.name, "Wurmcoil Engine");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Deathtouch));
+    assert!(card.keywords.contains(&Keyword::Lifelink));
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert_eq!(card.triggered_abilities.len(), 1, "death trigger");
+}

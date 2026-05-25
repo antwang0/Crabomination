@@ -1595,6 +1595,516 @@ pub fn temur_ascendancy() -> CardDefinition {
     }
 }
 
+// ── Blade Splicer ──────────────────────────────────────────────────────────
+
+/// Blade Splicer — {2}{W}, 1/1 Human Artificer. ETB: create a 3/3
+/// colorless Golem artifact creature token.
+pub fn blade_splicer() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Blade Splicer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Golem".into(),
+                    power: 3,
+                    toughness: 3,
+                    keywords: vec![],
+                    card_types: vec![CardType::Artifact, CardType::Creature],
+                    colors: vec![],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Golem],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Vendilion Clique ───────────────────────────────────────────────────────
+
+/// Vendilion Clique — {1}{U}{U}, 3/1 Legendary Faerie Wizard with Flash
+/// and Flying. Body only — the ETB hand-disruption ability is complex and
+/// omitted for now.
+pub fn vendilion_clique() -> CardDefinition {
+    CardDefinition {
+        name: "Vendilion Clique",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+// ── Torrential Gearhulk ────────────────────────────────────────────────────
+
+/// Torrential Gearhulk — {4}{U}{U}, 5/6 Artifact Creature — Construct
+/// with Flash. Body only — the ETB "cast instant from graveyard" ability
+/// is complex and omitted.
+pub fn torrential_gearhulk() -> CardDefinition {
+    CardDefinition {
+        name: "Torrential Gearhulk",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 6,
+        keywords: vec![Keyword::Flash],
+        ..Default::default()
+    }
+}
+
+// ── Kitesail Larcenist ─────────────────────────────────────────────────────
+
+/// Kitesail Larcenist — {2}{U}, 2/3 Human Pirate with Flying. ETB: exile
+/// target nonland permanent an opponent controls. No LTB return clause.
+pub fn kitesail_larcenist() -> CardDefinition {
+    CardDefinition {
+        name: "Kitesail Larcenist",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Grave Titan ────────────────────────────────────────────────────────────
+
+/// Grave Titan — {4}{B}{B}, 6/6 Giant with Deathtouch. ETB + whenever
+/// this attacks: create two 2/2 black Zombie creature tokens.
+pub fn grave_titan() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let zombie = TokenDefinition {
+        name: "Zombie".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Black],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let make_zombies = Effect::CreateToken {
+        who: PlayerRef::You,
+        count: Value::Const(2),
+        definition: zombie,
+    };
+    CardDefinition {
+        name: "Grave Titan",
+        cost: cost(&[generic(4), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: make_zombies.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: make_zombies,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Shriekmaw ──────────────────────────────────────────────────────────────
+
+/// Shriekmaw — {4}{B}, 3/2 Elemental with Menace. ETB: destroy target
+/// nonblack creature an opponent controls.
+pub fn shriekmaw() -> CardDefinition {
+    CardDefinition {
+        name: "Shriekmaw",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasColor(crate::mana::Color::Black).negate())
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Phyrexian Obliterator ──────────────────────────────────────────────────
+
+/// Phyrexian Obliterator — {B}{B}{B}{B}, 5/8 Phyrexian Horror with
+/// Trample. Body only — the damage-retaliation trigger is complex and
+/// omitted.
+pub fn phyrexian_obliterator() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Obliterator",
+        cost: cost(&[b(), b(), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 8,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+// ── Glorybringer ───────────────────────────────────────────────────────────
+
+/// Glorybringer — {3}{R}{R}, 4/4 Dragon with Flying and Haste. Whenever
+/// this attacks, deal 4 damage to target creature an opponent controls.
+pub fn glorybringer() -> CardDefinition {
+    CardDefinition {
+        name: "Glorybringer",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Inferno Titan ──────────────────────────────────────────────────────────
+
+/// Inferno Titan — {4}{R}{R}, 6/6 Giant. ETB + whenever this attacks:
+/// deal 3 damage to target creature.
+pub fn inferno_titan() -> CardDefinition {
+    let burn = Effect::DealDamage {
+        to: target_filtered(SelectionRequirement::Creature),
+        amount: Value::Const(3),
+    };
+    CardDefinition {
+        name: "Inferno Titan",
+        cost: cost(&[generic(4), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: burn.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: burn,
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Thundermaw Hellkite ────────────────────────────────────────────────────
+
+/// Thundermaw Hellkite — {3}{R}{R}, 5/5 Dragon with Flying and Haste.
+/// ETB: deal 1 damage to each creature with flying opponents control and
+/// tap them.
+pub fn thundermaw_hellkite() -> CardDefinition {
+    CardDefinition {
+        name: "Thundermaw Hellkite",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasKeyword(Keyword::Flying))
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::DealDamage {
+                        to: Selector::TriggerSource,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Tap { what: Selector::TriggerSource },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Craterhoof Behemoth ────────────────────────────────────────────────────
+
+/// Craterhoof Behemoth — {5}{G}{G}{G}, 5/5 Beast with Haste and Trample.
+/// ETB: each creature you control gets +X/+X until end of turn where X
+/// is the number of creatures you control.
+pub fn craterhoof_behemoth() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Craterhoof Behemoth",
+        cost: cost(&[generic(5), g(), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Haste, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ))),
+                    toughness: Value::CountOf(Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ))),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Thragtusk ──────────────────────────────────────────────────────────────
+
+/// Thragtusk — {4}{G}, 5/3 Beast. ETB: gain 5 life. Death trigger:
+/// create a 3/3 green Beast creature token.
+pub fn thragtusk() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    CardDefinition {
+        name: "Thragtusk",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Beast".into(),
+                        power: 3,
+                        toughness: 3,
+                        keywords: vec![],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![crate::mana::Color::Green],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Courser of Kruphix ─────────────────────────────────────────────────────
+
+/// Courser of Kruphix — {1}{G}{G}, 2/4 Centaur Enchantment Creature.
+/// Landfall: whenever a land enters the battlefield under your control,
+/// gain 1 life.
+///
+/// Wired via `EntersBattlefield` + `YourControl` scope with a
+/// `Predicate::EntityMatches { what: TriggerSource, filter: Land }` filter,
+/// matching the Tireless Tracker pattern. This catches both played and
+/// fetched lands.
+pub fn courser_of_kruphix() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Courser of Kruphix",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Land,
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Wurmcoil Engine ────────────────────────────────────────────────────────
+
+/// Wurmcoil Engine — {6}, 6/6 Artifact Creature — Phyrexian Wurm with
+/// Deathtouch and Lifelink. Death trigger: create a 3/3 colorless Wurm
+/// artifact creature token with Deathtouch and a 3/3 colorless Wurm
+/// artifact creature token with Lifelink.
+pub fn wurmcoil_engine() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let wurm_deathtouch = TokenDefinition {
+        name: "Phyrexian Wurm".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wurm],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let wurm_lifelink = TokenDefinition {
+        name: "Phyrexian Wurm".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wurm],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Wurmcoil Engine",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Deathtouch, Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: wurm_deathtouch,
+                },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: wurm_lifelink,
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Guardian Scalelord ──────────────────────────────────────────────────────
 
 /// Guardian Scalelord — {3}{W}{W}, 4/4 Dragon with Flying.

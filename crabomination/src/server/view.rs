@@ -175,6 +175,10 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
     GraveyardCardView {
         id: card.id,
         name: card.definition.name.to_string(),
+        card_types: card.definition.card_types.clone(),
+        mana_cost: card.definition.cost.clone(),
+        power: card.definition.base_power(),
+        toughness: card.definition.base_toughness(),
     }
 }
 
