@@ -67448,3 +67448,81 @@ fn fractal_summoning_creates_fractal_with_x_counters() {
     let f = fractal.unwrap();
     assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), 3);
 }
+
+// ── New STX cards batch ───────────────────────────────────────────────────
+
+#[test]
+fn elemental_expressionism_creates_two_tokens() {
+    let def = catalog::elemental_expressionism();
+    assert_eq!(def.name, "Elemental Expressionism");
+    assert!(def.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn elemental_expressionism_bounces_and_creates() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::elemental_expressionism());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // Bear should be bounced.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+    // Two 4/4 Elemental tokens should exist.
+    let elementals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .collect();
+    assert_eq!(elementals.len(), 2);
+}
+
+#[test]
+fn rush_of_knowledge_draws_four() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::rush_of_knowledge());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    // Cast (removed 1) + draw 4 = +3 net.
+    assert_eq!(g.players[0].hand.len(), hand_before + 3);
+}
+
+#[test]
+fn unwilling_ingredient_has_death_trigger() {
+    let def = catalog::unwilling_ingredient();
+    assert_eq!(def.name, "Unwilling Ingredient");
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 1);
+    assert!(!def.triggered_abilities.is_empty());
+}
+
+#[test]
+fn tangletrap_is_modal() {
+    let def = catalog::tangletrap();
+    assert_eq!(def.name, "Tangletrap");
+    assert!(def.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn tangletrap_destroys_artifact() {
+    let mut g = two_player_game();
+    let artifact = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let id = g.add_card_to_hand(0, catalog::tangletrap());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(artifact)), additional_targets: vec![], mode: Some(1), x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == artifact));
+}

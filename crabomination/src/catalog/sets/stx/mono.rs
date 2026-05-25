@@ -953,3 +953,164 @@ pub fn academic_probation() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Elemental Expressionism — {3}{U}{R} Sorcery.
+/// "Return up to two target creatures to their owners' hands. Create
+/// two 4/4 blue and red Elemental creature tokens."
+///
+/// Approximation: bounce one creature + create two 4/4 Elemental tokens.
+pub fn elemental_expressionism() -> CardDefinition {
+    use crate::effect::shortcut::return_target_to_hand;
+    CardDefinition {
+        name: "Elemental Expressionism",
+        cost: cost(&[generic(3), u(), crate::mana::r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            return_target_to_hand(),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Elemental".into(),
+                    power: 4,
+                    toughness: 4,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Blue, Color::Red],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Elemental],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Rush of Knowledge — {4}{U} Sorcery.
+/// "Draw cards equal to the highest mana value among permanents you control."
+///
+/// Approximation: draw 4 (typical high-MV permanent on board).
+pub fn rush_of_knowledge() -> CardDefinition {
+    use crate::effect::shortcut::draw;
+    CardDefinition {
+        name: "Rush of Knowledge",
+        cost: cost(&[generic(4), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: draw(4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Unwilling Ingredient — {B} Creature — Pest. 1/1.
+/// "When this creature dies, you may pay {2}{B}. If you do, draw a card."
+pub fn unwilling_ingredient() -> CardDefinition {
+    CardDefinition {
+        name: "Unwilling Ingredient",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Pay {2}{B} to draw a card".into(),
+                body: Box::new(Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Tangletrap — {1}{G} Instant.
+/// "Choose one — Tangletrap deals 5 damage to target creature with flying.
+/// / Destroy target artifact."
+pub fn tangletrap() -> CardDefinition {
+    use crate::effect::shortcut::deal;
+    CardDefinition {
+        name: "Tangletrap",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            deal(5, target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            )),
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
