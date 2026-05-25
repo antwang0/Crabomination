@@ -5,6 +5,30 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XVIII — 2026-05-25)
+
+- ✅ **Alt-cost effect_override target filter fix** — `cast_spell_alternative`
+  now uses `effect_override`'s target filter (via `target_filter_for_slot_in_mode`)
+  when the alt cost carries an effect override, instead of the base spell's filter.
+  This unblocks kicker-style alt costs that widen the legal target set. Without
+  this fix, a kicked Bloodchief's Thirst would reject CMC > 2 targets because
+  the base effect's `ManaValueAtMost(2)` filter was always checked first.
+
+- ✅ **Bloodchief's Thirst kicker** — kicker {2}{B} mode now wired via
+  `AlternativeCost.effect_override` → destroys any creature/planeswalker
+  (no MV restriction). 1 new test: `bloodchiefs_thirst_kicked_destroys_high_cmc_creature`.
+
+### Stale CUBE_FEATURES.md / STRIXHAVEN2.md entries to update
+- Bloodchief's Thirst kicker: ⏳ → ✅ (kicker now wired)
+- CUBE_FEATURES.md has 186 ⏳ entries but many are already implemented
+  (Elite Spellbinder, Baleful Mastery, Guardian Scalelord, etc.)
+- Need an audit pass to sync status markers with actual code state
+
+### Future kicker-via-effect_override candidates
+- Inscription of Abundance ({X}{G} — modes get stronger when kicked)
+- Burst Lightning ({R} — base deals 2, kicker deals 4)
+- Jace, Mirror Mage ({1}{U}{U} — kicker enables +1/+1 loyalty counters)
+
 ## Recent additions (Push XVII — 2026-05-24)
 
 - ✅ **`AlternativeCost.effect_override`** — new `Option<Effect>` field

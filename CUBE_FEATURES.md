@@ -114,7 +114,7 @@ still ⏳.
 | Deadly Dispute | ✅ | `{1}{B}` Sorcery. Sac-as-additional-cost folded into resolution as `SacrificeAndRemember(Creature ∨ Artifact, ControlledByYou)` followed by `Draw 2 + CreateToken(Treasure)`. Test: `deadly_dispute_sacrifices_and_creates_treasure_and_draws_two`. |
 | Corpse Dance | ⏳ | Buyback + reanimate creature top of grave. |
 | Baleful Mastery | ⏳ | Exile target nonland; opp may draw 2 to halve cost. Modal alt-cost. |
-| Bloodchief's Thirst | 🟡 | `{B}` Sorcery. Base mode: destroy target creature/planeswalker with mana value 2 or less. The kicker `{1}{B}` mode (mana value ≤ 6) is still ⏳ — the alt-cost path can swap target filters but doesn't yet override the destroy filter on cast. Tests: `bloodchiefs_thirst_destroys_low_cmc_creature`, `bloodchiefs_thirst_rejects_high_cmc_target`. |
+| Bloodchief's Thirst | ✅ | `{B}` Sorcery. Base mode: destroy creature/PW with MV ≤ 2. Kicker `{2}{B}` via `AlternativeCost.effect_override` removes the MV cap (destroys any creature/PW). Engine fix: `cast_spell_alternative` now uses effect_override's target filter when present. Tests: `bloodchiefs_thirst_destroys_low_cmc_creature`, `bloodchiefs_thirst_rejects_high_cmc_target`, `bloodchiefs_thirst_kicked_destroys_high_cmc_creature`. |
 | Bone Shards | ✅ | {B} Instant. `ChooseMode([Sacrifice creature, Discard 1])` then destroy target creature. Cost-as-first-step approximation of "additional cost". |
 | Disentomb | ✅ | Return target creature card to hand (Move from graveyard). |
 | Hero's Downfall | ✅ | {1}{B}{B} Instant. Destroy target creature or planeswalker. Test: `heros_downfall_destroys_target_creature`. |
