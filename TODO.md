@@ -8373,3 +8373,29 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
   pump triggers on the stack, the UI should preview the post-pump
   P/T (e.g. "1/2 → 2/3") so the player sees the effect before
   resolution.
+
+## Session notes (2026-05-25, claude/modern_decks continuation)
+
+### Cards added this session
+- **Elemental Expressionism** (STX): {3}{U}{R} bounce + 2x 4/4
+  Elemental tokens. Multi-target bounce collapsed to single target.
+- **Rush of Knowledge** (STX): {4}{U} draw 4 (highest-MV
+  approximation).
+- **Unwilling Ingredient** (STX): {B} 1/1 Pest with MayDo
+  draw-on-death trigger. Mana payment for the MayDo is not enforced.
+- **Tangletrap** (STX): {1}{G} modal — 5 damage to flyer OR destroy
+  artifact.
+
+### Observations for future sessions
+- **Lesson sideboard model** remains the biggest gap — many STX cards
+  approximate Learn as "Draw 1" which undervalues the mechanic.
+- **Copy-spell retargeting** ("you may choose new targets for the
+  copy") is engine-wide ⏳. Affects Prismari the Inspiration's Storm,
+  Wandering Archaic, Twinscroll Shaman, and several SOS cards.
+- **cast-from-exile pipeline** blocks ~10 remaining SOS ⏳ cards
+  (Improvisation Capstone, Flashback the card, The Dawning Archaic
+  attack trigger, Nita's activated ability, etc.).
+- **Phyrexian mana** (pay life instead of colored mana) is used by
+  Tezzeret's Gambit, Gitaxian Probe, and several Modern cards. A
+  proper implementation would let players choose pay-life vs pay-mana
+  at cast time.
