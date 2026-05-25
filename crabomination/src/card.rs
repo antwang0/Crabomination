@@ -73,6 +73,8 @@ pub enum CreatureType {
     // modern_decks batch 103 cube expansion (Lonis Genetics Expert,
     // Loot the Pathfinder).
     Otter, Detective,
+    // Cube expansion (Collector Ouphe).
+    Ouphe,
 }
 
 /// Land subtypes (basic land types + others).

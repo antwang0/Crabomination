@@ -39998,3 +39998,187 @@ pub fn strixhaven_stasis_glyph_b160() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Back to Basics ────────────────────────────────────────────────────────────
+
+/// Back to Basics — {2}{U} Enchantment.
+/// "Nonbasic lands don't untap during their controllers' untap steps."
+///
+/// Uses the `PreventUntap` static effect targeting all nonbasic lands.
+pub fn back_to_basics() -> CardDefinition {
+    CardDefinition {
+        name: "Back to Basics",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Nonbasic lands don't untap during their controllers' untap steps.",
+            effect: StaticEffect::PreventUntap {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::IsBasicLand.negate()),
+                ),
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Collector Ouphe ───────────────────────────────────────────────────────────
+
+/// Collector Ouphe — {1}{G}, 2/2 Ouphe.
+/// "Activated abilities of artifacts can't be activated."
+///
+/// Body-only: the "artifacts can't activate" static needs a new
+/// `StaticEffect::PreventActivation { applies_to }` primitive. The 2/2
+/// body in green is still useful for the cube.
+pub fn collector_ouphe() -> CardDefinition {
+    CardDefinition {
+        name: "Collector Ouphe",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ouphe],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Arclight Phoenix ──────────────────────────────────────────────────────────
+
+/// Arclight Phoenix — {3}{R}, 3/2 Phoenix.
+/// "Flying, haste. / At the beginning of combat on your turn, if you've
+/// cast three or more instant and/or sorcery spells this turn, return
+/// Arclight Phoenix from your graveyard to the battlefield."
+///
+/// Body: 3/2 Flying Haste. The graveyard-recursion trigger is omitted
+/// (needs a begin-combat trigger scoped to graveyard-resident cards +
+/// 3+ IS spell gate). The body is a strong hasty flier for red decks.
+pub fn arclight_phoenix() -> CardDefinition {
+    CardDefinition {
+        name: "Arclight Phoenix",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Opposition ────────────────────────────────────────────────────────────────
+
+/// Opposition — {2}{U}{U} Enchantment.
+/// "Tap an untapped creature you control: Tap target artifact, creature,
+/// or land."
+///
+/// Body-only: the tap-creature-to-tap-permanent activated ability needs
+/// the engine to support "tap a creature as a cost" (non-self tap cost).
+/// The enchantment shell is here for the cube color pool.
+pub fn opposition() -> CardDefinition {
+    CardDefinition {
+        name: "Opposition",
+        cost: cost(&[generic(2), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Omniscience ───────────────────────────────────────────────────────────────
+
+/// Omniscience — {7}{U}{U}{U} Enchantment.
+/// "You may cast spells from your hand without paying their mana costs."
+///
+/// Body-only: the free-cast static needs a `StaticEffect::FreeCast`
+/// primitive. The 10-mana enchantment shell is here for the cube.
+pub fn omniscience() -> CardDefinition {
+    CardDefinition {
+        name: "Omniscience",
+        cost: cost(&[generic(7), u(), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

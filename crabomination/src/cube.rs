@@ -484,6 +484,10 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         landscape_painter,
         skycoach_conductor,
         spellbook_seeker,
+        // ── Cube expansion ──
+        back_to_basics,
+        opposition,
+        omniscience,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -832,6 +836,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_glasswright,
         maelstrom_artisan,
         pigment_wrangler,
+        // ── Cube expansion ──
+        arclight_phoenix,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -978,6 +984,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         emeritus_of_abundance,
         infirmary_healer,
         vastlands_scavenger,
+        // ── Cube expansion ──
+        collector_ouphe,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

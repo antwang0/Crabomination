@@ -10942,3 +10942,58 @@ fn gush_draws_two_cards() {
     // Cast -1 (Gush) from hand + draw 2 = net +1
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
+
+// ── Cube expansion cards ──────────────────────────────────────────────────────
+
+#[test]
+fn back_to_basics_prevents_nonbasic_land_untap() {
+    let mut g = two_player_game();
+    let _btb = g.add_card_to_battlefield(0, catalog::back_to_basics());
+    // Tap a nonbasic land.
+    let nonbasic = g.add_card_to_battlefield(0, catalog::razortide_bridge());
+    g.battlefield.iter_mut().find(|c| c.id == nonbasic).unwrap().tapped = true;
+    // Also tap a basic land for comparison.
+    let basic = g.add_card_to_battlefield(0, catalog::island());
+    g.battlefield.iter_mut().find(|c| c.id == basic).unwrap().tapped = true;
+
+    g.do_untap();
+
+    // Basic land should untap.
+    assert!(!g.battlefield.iter().find(|c| c.id == basic).unwrap().tapped,
+        "Basic land should untap normally");
+    // Nonbasic land should stay tapped.
+    assert!(g.battlefield.iter().find(|c| c.id == nonbasic).unwrap().tapped,
+        "Nonbasic land should stay tapped under Back to Basics");
+}
+
+#[test]
+fn collector_ouphe_is_2_2_ouphe() {
+    let card = catalog::collector_ouphe();
+    assert_eq!(card.name, "Collector Ouphe");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+}
+
+#[test]
+fn arclight_phoenix_is_3_2_flying_haste() {
+    let card = catalog::arclight_phoenix();
+    assert_eq!(card.name, "Arclight Phoenix");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
+}
+
+#[test]
+fn omniscience_is_10_mana_enchantment() {
+    let card = catalog::omniscience();
+    assert_eq!(card.name, "Omniscience");
+    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
+}
+
+#[test]
+fn opposition_is_4_mana_enchantment() {
+    let card = catalog::opposition();
+    assert_eq!(card.name, "Opposition");
+    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
+}
