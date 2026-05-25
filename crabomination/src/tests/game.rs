@@ -4914,3 +4914,88 @@ fn normal_damage_does_not_trigger_deathtouch_sba() {
         "1 normal damage should not kill a 4/4"
     );
 }
+
+// ── CR 704.5a — player at 0 or less life is eliminated ───────────────────
+
+/// CR 704.5a: "If a player has 0 or less life, that player loses the game."
+/// Verified by dealing lethal damage to a player and checking that the SBA
+/// pass marks them eliminated.
+#[test]
+fn cr_704_5a_player_at_zero_life_is_eliminated() {
+    let mut g = two_player_game();
+    g.players[1].life = 0;
+    let _ = g.check_state_based_actions();
+    assert!(g.players[1].eliminated, "Player at 0 life should be eliminated by SBA");
+}
+
+#[test]
+fn cr_704_5a_player_at_negative_life_is_eliminated() {
+    let mut g = two_player_game();
+    g.players[1].life = -5;
+    let _ = g.check_state_based_actions();
+    assert!(g.players[1].eliminated, "Player at negative life should be eliminated by SBA");
+}
+
+#[test]
+fn cr_704_5a_player_at_one_life_survives() {
+    let mut g = two_player_game();
+    g.players[1].life = 1;
+    let _ = g.check_state_based_actions();
+    assert!(!g.players[1].eliminated, "Player at 1 life should not be eliminated");
+}
+
+// ── CR 704.5j — legend rule ──────────────────────────────────────────────
+
+/// CR 704.5j: "If a player controls two or more legendary permanents with
+/// the same name, that player chooses one of them, and the rest are put
+/// into their owners' graveyards."
+#[test]
+fn cr_704_5j_legend_rule_keeps_newest() {
+    let mut g = two_player_game();
+    let first = g.add_card_to_battlefield(0, catalog::griselbrand());
+    let second = g.add_card_to_battlefield(0, catalog::griselbrand());
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Griselbrand").count(),
+        2, "Setup: two Griselbrands"
+    );
+    let _ = g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Griselbrand").count(),
+        1, "Legend rule should leave exactly one"
+    );
+    assert!(g.battlefield.iter().any(|c| c.id == second),
+        "Legend rule should keep the newest (highest id)");
+    assert!(!g.battlefield.iter().any(|c| c.id == first),
+        "Legend rule should sacrifice the oldest");
+}
+
+#[test]
+fn cr_704_5j_legend_rule_different_controllers_coexist() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::griselbrand());
+    g.add_card_to_battlefield(1, catalog::griselbrand());
+    let _ = g.check_state_based_actions();
+    assert_eq!(
+        g.battlefield.iter().filter(|c| c.definition.name == "Griselbrand").count(),
+        2, "Legend rule should not apply across different controllers"
+    );
+}
+
+// ── CR 704.5c — empty library + draw attempt ─────────────────────────────
+
+/// CR 704.5c is already tested at cr_121_4 / empty_library; adding a
+/// complementary test that verifies the SBA path specifically.
+#[test]
+fn cr_704_5c_empty_library_draw_eliminates_player() {
+    let mut g = two_player_game();
+    assert!(g.players[0].library.is_empty());
+    let ponder = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: ponder,
+        target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    drain_stack(&mut g);
+    assert!(g.players[0].eliminated,
+        "Player who drew from an empty library should be eliminated");
+}
