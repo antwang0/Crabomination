@@ -9970,3 +9970,290 @@ pub fn elder_gargaroth() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push (claude/modern_decks session 5): new cube cards ────────────────
+
+/// Omnath, Locus of Creation — {R}{G}{W}{U} Legendary 4/4 Elemental.
+/// ETB draw 1 + gain 4 life.
+pub fn omnath_locus_of_creation() -> CardDefinition {
+    CardDefinition {
+        name: "Omnath, Locus of Creation",
+        cost: cost(&[r(), g(), w(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Omnath, Locus of Rage — {3}{R}{G} Legendary 5/5 Elemental.
+/// Landfall: create a 5/5 Elemental token (dies → 3 dmg to each opp).
+pub fn omnath_locus_of_rage() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let elemental = TokenDefinition {
+        name: "Elemental".to_string(),
+        power: 5,
+        toughness: 5,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        }],
+    };
+    CardDefinition {
+        name: "Omnath, Locus of Rage",
+        cost: cost(&[generic(3), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: elemental,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Torsten, Founder of Benalia — {3}{G}{W}{W} Legendary 7/7 Human Soldier.
+/// ETB: Search 3 basic lands -> BF tapped.
+pub fn torsten_founder_of_benalia() -> CardDefinition {
+    CardDefinition {
+        name: "Torsten, Founder of Benalia",
+        cost: cost(&[generic(3), g(), w(), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Repeat {
+                count: Value::Const(3),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Coveted Jewel — {6} Artifact. ETB draw 3. {T}: Add 3 mana any color.
+pub fn coveted_jewel() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Coveted Jewel",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(3)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Mightstone and Weakstone — {5} Artifact.
+/// ETB: ChooseMode — draw 2 / creature -5/-5 EOT. {T}: Add {C}{C}.
+pub fn the_mightstone_and_weakstone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "The Mightstone and Weakstone",
+        cost: cost(&[generic(5)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(
+            Effect::ChooseMode(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(-5),
+                    toughness: Value::Const(-5),
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        )],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Doomsday Excruciator — {5}{B}{B} 6/6 Flying Demon.
+/// ETB: Each player mills 20.
+pub fn doomsday_excruciator() -> CardDefinition {
+    CardDefinition {
+        name: "Doomsday Excruciator",
+        cost: cost(&[generic(5), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(20),
+            },
+        )],
+        ..Default::default()
+    }
+}
+
+/// Planar Nexus — Land. ETB tapped. {T}: Add any color.
+pub fn planar_nexus() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Planar Nexus",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![
+            etb(Effect::Tap { what: Selector::This }),
+        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kozilek's Command — {X} Instant. 3-mode ChooseMode.
+pub fn kozileks_command() -> CardDefinition {
+    CardDefinition {
+        name: "Kozilek's Command",
+        cost: cost(&[ManaSymbol::X]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::XFromCost,
+                definition: crate::card::TokenDefinition {
+                    name: "Eldrazi Scion".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Eldrazi],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                toughness: Value::Diff(Box::new(Value::Const(0)), Box::new(Value::XFromCost)),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Eldrazi Confluence — {4} Instant. 3-mode ChooseMode.
+pub fn eldrazi_confluence() -> CardDefinition {
+    CardDefinition {
+        name: "Eldrazi Confluence",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-3),
+                toughness: Value::Const(-3),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: crate::card::TokenDefinition {
+                    name: "Eldrazi Scion".to_string(),
+                    power: 1,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Eldrazi],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        ]),
+        ..Default::default()
+    }
+}

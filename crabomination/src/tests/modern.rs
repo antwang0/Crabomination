@@ -12057,3 +12057,128 @@ fn ramos_dragon_engine_is_4_4_flying_dragon_with_counter_trigger() {
     assert_eq!(card.triggered_abilities.len(), 1, "spell-cast counter trigger");
     assert_eq!(card.activated_abilities.len(), 1, "mana burst activation");
 }
+
+// ── Omnath, Locus of Creation ───────────────────────────────────────────────
+
+#[test]
+fn omnath_locus_of_creation_etb_draws_and_gains_life() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let omnath = g.add_card_to_hand(0, catalog::omnath_locus_of_creation());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: omnath, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Omnath castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4, "ETB should gain 4 life");
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB should draw 1 (net 0 after casting Omnath)");
+}
+
+// ── Omnath, Locus of Rage ───────────────────────────────────────────────────
+
+#[test]
+fn omnath_locus_of_rage_is_5_5_legendary_elemental() {
+    let card = catalog::omnath_locus_of_rage();
+    assert_eq!(card.name, "Omnath, Locus of Rage");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert_eq!(card.triggered_abilities.len(), 1, "landfall trigger");
+}
+
+// ── Torsten ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn torsten_founder_is_7_7_legendary_with_land_search_etb() {
+    use crate::card::Supertype;
+    let card = catalog::torsten_founder_of_benalia();
+    assert_eq!(card.name, "Torsten, Founder of Benalia");
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert!(card.supertypes.contains(&Supertype::Legendary));
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
+}
+
+// ── Coveted Jewel ───────────────────────────────────────────────────────────
+
+#[test]
+fn coveted_jewel_etb_draws_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let jewel = g.add_card_to_hand(0, catalog::coveted_jewel());
+    g.players[0].mana_pool.add_colorless(6);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: jewel, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Jewel castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 2, "ETB should draw 3 (net +2 after casting)");
+}
+
+// ── The Mightstone and Weakstone ────────────────────────────────────────────
+
+#[test]
+fn mightstone_weakstone_has_etb_mode_and_mana() {
+    let card = catalog::the_mightstone_and_weakstone();
+    assert_eq!(card.name, "The Mightstone and Weakstone");
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB modal trigger");
+    assert_eq!(card.activated_abilities.len(), 1, "mana activation");
+}
+
+// ── Doomsday Excruciator ────────────────────────────────────────────────────
+
+#[test]
+fn doomsday_excruciator_is_6_6_flying_demon() {
+    use crate::card::Keyword;
+    let card = catalog::doomsday_excruciator();
+    assert_eq!(card.name, "Doomsday Excruciator");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB mill trigger");
+}
+
+// ── Planar Nexus ────────────────────────────────────────────────────────────
+
+#[test]
+fn planar_nexus_is_a_land_with_any_color_mana() {
+    let card = catalog::planar_nexus();
+    assert_eq!(card.name, "Planar Nexus");
+    assert!(card.card_types.contains(&CardType::Land));
+    assert_eq!(card.activated_abilities.len(), 1, "mana ability");
+}
+
+// ── Kozilek's Command ───────────────────────────────────────────────────────
+
+#[test]
+fn kozileks_command_is_x_cost_three_mode_instant() {
+    let card = catalog::kozileks_command();
+    assert_eq!(card.name, "Kozilek's Command");
+    assert!(card.card_types.contains(&CardType::Instant));
+    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
+        assert_eq!(modes.len(), 3, "three modes");
+    } else {
+        panic!("Should be ChooseMode");
+    }
+}
+
+// ── Eldrazi Confluence ──────────────────────────────────────────────────────
+
+#[test]
+fn eldrazi_confluence_is_four_mana_three_mode_instant() {
+    let card = catalog::eldrazi_confluence();
+    assert_eq!(card.name, "Eldrazi Confluence");
+    assert!(card.card_types.contains(&CardType::Instant));
+    assert_eq!(card.cost.cmc(), 4);
+    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
+        assert_eq!(modes.len(), 3, "three modes");
+    } else {
+        panic!("Should be ChooseMode");
+    }
+}

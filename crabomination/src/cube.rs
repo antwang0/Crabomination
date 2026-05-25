@@ -257,6 +257,11 @@ fn colorless_pool() -> Vec<CardFactory> {
         golos_tireless_pilgrim,
         ramos_dragon_engine,
         maelstrom_archangel,
+        coveted_jewel,
+        the_mightstone_and_weakstone,
+        kozileks_command,
+        eldrazi_confluence,
+        planar_nexus,
     ]
 }
 
@@ -665,6 +670,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion: body-only stubs ──
         corpse_dance,
         moonshadow,
+        doomsday_excruciator,
         // ── SOS (Secrets of Strixhaven) ──
         sneering_shadewriter,
         burrog_banemaker,
@@ -1055,6 +1061,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
+        v.push(torsten_founder_of_benalia);
         v.push(horizon_canopy);
         v.push(growing_ranks);
         // ── modern_decks batch 102 (GW cube expansion) ──
@@ -1069,6 +1076,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(elegant_parlor);
         // ── modern_decks batch 102 (RG cube expansion) ──
         v.push(territorial_kavu);
+        v.push(omnath_locus_of_rage);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);
