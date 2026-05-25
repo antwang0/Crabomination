@@ -9894,3 +9894,79 @@ pub fn parallax_nexus() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Push XIX: cube creatures ───────────────────────────────────────────
+
+/// Elder Gargaroth — {3}{G}{G} 6/6 Beast.
+/// Vigilance, reach, trample.
+/// "Whenever Elder Gargaroth attacks or blocks, choose one —
+/// Create a 3/3 green Beast creature token; or you draw a card; or
+/// you gain 3 life."
+pub fn elder_gargaroth() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let beast_token = TokenDefinition {
+        name: "Beast".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    let choose_effect = Effect::ChooseMode(vec![
+        Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: beast_token,
+        },
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
+        Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    ]);
+    CardDefinition {
+        name: "Elder Gargaroth",
+        cost: cost(&[generic(3), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: choose_effect.clone(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: choose_effect,
+            },
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

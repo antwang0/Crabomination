@@ -1011,6 +1011,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         collector_ouphe,
         // ── Cube expansion: body-only stubs ──
         basking_rootwalla,
+        // ── Push XIX: cube expansion ──
+        elder_gargaroth,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

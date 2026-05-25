@@ -11399,3 +11399,17 @@ fn basking_rootwalla_pump_once_per_turn() {
     assert_eq!(pumped.power, 3, "Rootwalla should be 3/3 after pump");
     assert_eq!(pumped.toughness, 3, "Rootwalla should be 3/3 after pump");
 }
+
+// ── Push XIX: cube creature tests ──────────────────────────────────────
+
+#[test]
+fn elder_gargaroth_is_6_6_with_three_keywords() {
+    let card = catalog::elder_gargaroth();
+    assert_eq!(card.name, "Elder Gargaroth");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert_eq!(card.triggered_abilities.len(), 2, "attack and block triggers");
+}
