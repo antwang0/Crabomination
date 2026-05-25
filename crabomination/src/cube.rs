@@ -254,6 +254,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         rishadan_port,
         monument_to_endurance,
         exotic_orchard,
+        golos_tireless_pilgrim,
+        ramos_dragon_engine,
+        maelstrom_archangel,
     ]
 }
 
@@ -661,6 +664,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wishclaw_talisman,
         // ── Cube expansion: body-only stubs ──
         corpse_dance,
+        moonshadow,
         // ── SOS (Secrets of Strixhaven) ──
         sneering_shadewriter,
         burrog_banemaker,
@@ -1043,6 +1047,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         kodamas_reach,
         greater_good,
         qasali_pridemage,
+        basking_broodscale,
+        sowing_mycospawn,
+        ursine_monstrosity,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

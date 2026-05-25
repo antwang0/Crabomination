@@ -11908,3 +11908,152 @@ fn master_of_death_is_3_1_zombie_wizard() {
     assert_eq!(card.toughness, 1);
     assert_eq!(card.triggered_abilities.len(), 1, "graveyard return trigger");
 }
+
+#[test]
+fn growing_ranks_creates_centaur_token_on_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let _ranks = g.add_card_to_battlefield(0, catalog::growing_ranks());
+    let bf_before = g.battlefield.len();
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield.len() > bf_before, "Centaur token should be created");
+    let tok = g.battlefield.iter().find(|c|
+        c.is_token && c.definition.name == "Centaur"
+    ).expect("Centaur token should exist on the battlefield");
+    assert_eq!(tok.power(), 3, "Centaur token should be 3/3");
+    assert_eq!(tok.toughness(), 3, "Centaur token should be 3/3");
+}
+
+#[test]
+fn master_of_death_returns_from_graveyard_on_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    // Put Master of Death directly into the graveyard.
+    let _mod_id = g.add_card_to_graveyard(0, catalog::master_of_death());
+    let hand_before = g.players[0].hand.len();
+    // ScriptedDecider answers MayDo(yes) to pay 1 life.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(true),
+    ]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    g.priority.player_with_priority = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    // Master of Death should be in hand now.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Master of Death should return to hand");
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Master of Death"),
+        "Master of Death should be in hand");
+    // Player should have lost 1 life.
+    assert_eq!(g.players[0].life, 19, "Should have paid 1 life");
+}
+
+#[test]
+fn monument_to_endurance_is_3_cost_artifact_with_pump() {
+    let card = catalog::monument_to_endurance();
+    assert_eq!(card.name, "Monument to Endurance");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert_eq!(card.cost.cmc(), 3, "costs 3 generic");
+    assert_eq!(card.activated_abilities.len(), 1, "one pump activation");
+}
+
+#[test]
+fn exotic_orchard_is_a_land_with_any_color_mana() {
+    let card = catalog::exotic_orchard();
+    assert_eq!(card.name, "Exotic Orchard");
+    assert!(card.card_types.contains(&CardType::Land));
+    assert_eq!(card.activated_abilities.len(), 1, "one tap-for-mana ability");
+}
+
+// ── Basking Broodscale ──────────────────────────────────────────────────────
+
+#[test]
+fn basking_broodscale_enters_with_counters_and_spawns() {
+    let card = catalog::basking_broodscale();
+    assert_eq!(card.name, "Basking Broodscale");
+    assert!(card.enters_with_counters.is_some());
+    let (ct, _) = card.enters_with_counters.unwrap();
+    assert_eq!(ct, CounterType::PlusOnePlusOne);
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB token trigger");
+}
+
+// ── Sowing Mycospawn ────────────────────────────────────────────────────────
+
+#[test]
+fn sowing_mycospawn_is_4_4_with_land_search_etb() {
+    let card = catalog::sowing_mycospawn();
+    assert_eq!(card.name, "Sowing Mycospawn");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
+}
+
+// ── Ursine Monstrosity ──────────────────────────────────────────────────────
+
+#[test]
+fn ursine_monstrosity_enters_with_five_counters_and_draws() {
+    use crate::card::Keyword;
+    let card = catalog::ursine_monstrosity();
+    assert_eq!(card.name, "Ursine Monstrosity");
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(card.enters_with_counters.is_some());
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB draw");
+}
+
+// ── Moonshadow ──────────────────────────────────────────────────────────────
+
+#[test]
+fn moonshadow_is_2_1_flying_faerie_with_discard_trigger() {
+    use crate::card::Keyword;
+    let card = catalog::moonshadow();
+    assert_eq!(card.name, "Moonshadow");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert_eq!(card.triggered_abilities.len(), 1, "combat damage discard");
+}
+
+// ── Golos, Tireless Pilgrim ─────────────────────────────────────────────────
+
+#[test]
+fn golos_tireless_pilgrim_is_legendary_3_5_with_etb() {
+    use crate::card::Supertype;
+    let card = catalog::golos_tireless_pilgrim();
+    assert_eq!(card.name, "Golos, Tireless Pilgrim");
+    assert!(card.supertypes.contains(&Supertype::Legendary));
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 5);
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
+}
+
+// ── Maelstrom Archangel ─────────────────────────────────────────────────────
+
+#[test]
+fn maelstrom_archangel_is_5_5_flying_five_color() {
+    use crate::card::Keyword;
+    let card = catalog::maelstrom_archangel();
+    assert_eq!(card.name, "Maelstrom Archangel");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert_eq!(card.cost.cmc(), 5, "WUBRG = 5 CMC");
+}
+
+// ── Ramos, Dragon Engine ────────────────────────────────────────────────────
+
+#[test]
+fn ramos_dragon_engine_is_4_4_flying_dragon_with_counter_trigger() {
+    use crate::card::Keyword;
+    let card = catalog::ramos_dragon_engine();
+    assert_eq!(card.name, "Ramos, Dragon Engine");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert_eq!(card.triggered_abilities.len(), 1, "spell-cast counter trigger");
+    assert_eq!(card.activated_abilities.len(), 1, "mana burst activation");
+}

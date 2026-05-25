@@ -2716,3 +2716,230 @@ pub fn master_of_death() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Basking Broodscale ─────────────────────────────────────────────────────
+
+/// Basking Broodscale — {1}{G} Creature — Lizard 0/1.
+/// ETB with 2 +1/+1 counters + creates 2 Eldrazi Spawn tokens.
+pub fn basking_broodscale() -> CardDefinition {
+    use crate::card::{CounterType, TokenDefinition};
+    let spawn = TokenDefinition {
+        name: "Eldrazi Spawn".to_string(),
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi],
+            ..Default::default()
+        },
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(1)),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Basking Broodscale",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: spawn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sowing Mycospawn — {4}{G} Creature — Eldrazi Fungus 4/4.
+/// ETB search land -> BF tapped.
+pub fn sowing_mycospawn() -> CardDefinition {
+    CardDefinition {
+        name: "Sowing Mycospawn",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Eldrazi, CreatureType::Fungus],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ursine Monstrosity — {3}{G}{G} Creature — Bear 0/0.
+/// Enters with 5 +1/+1 counters, Trample, ETB draw 1.
+pub fn ursine_monstrosity() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Ursine Monstrosity",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bear],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(5))),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Moonshadow — {1}{B} Creature — Faerie Rogue 2/1 Flying.
+/// Combat damage to player -> that player discards.
+pub fn moonshadow() -> CardDefinition {
+    CardDefinition {
+        name: "Moonshadow",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Golos, Tireless Pilgrim — {5} Legendary Artifact Creature 3/5.
+/// ETB search a land -> BF tapped.
+pub fn golos_tireless_pilgrim() -> CardDefinition {
+    CardDefinition {
+        name: "Golos, Tireless Pilgrim",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Scout],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "Search for a land, put it onto the battlefield tapped.".to_string(),
+                body: Box::new(Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::Land,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Maelstrom Archangel — {W}{U}{B}{R}{G} 5/5 Flying Angel.
+/// Combat damage to player -> draw 2 (approximation of free cast).
+pub fn maelstrom_archangel() -> CardDefinition {
+    CardDefinition {
+        name: "Maelstrom Archangel",
+        cost: cost(&[w(), u(), b(), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Angel],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ramos, Dragon Engine — {6} Legendary Artifact Creature — Dragon 4/4 Flying.
+/// Spell-cast -> +1/+1 counter. Tap, remove 5 counters: add WUBRG×2.
+pub fn ramos_dragon_engine() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Ramos, Dragon Engine",
+        cost: cost(&[generic(6)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(5),
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![
+                        crate::mana::Color::White, crate::mana::Color::White,
+                        crate::mana::Color::Blue, crate::mana::Color::Blue,
+                        crate::mana::Color::Black, crate::mana::Color::Black,
+                        crate::mana::Color::Red, crate::mana::Color::Red,
+                        crate::mana::Color::Green, crate::mana::Color::Green,
+                    ]),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
