@@ -22,10 +22,25 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   3 new tests covering all three Overload cards. 4762 tests passing.
 
 ### Cards that could use Overload next
-- Blustersquall ({U} tap target creature / Overload {3}{U} tap each)
-- Electrickery ({R} 1 damage to target / Overload {1}{R} 1 to each)
-- Teleportal ({U}{R} unblockable / Overload {3}{U}{R} each your creature)
-- Street Spasm ({X}{R} damage to target / Overload {X}{X}{R}{R} each opp)
+- ✅ Blustersquall ({U} tap target creature / Overload {3}{U} tap each)
+- ✅ Electrickery ({R} 1 damage to target / Overload {1}{R} 1 to each)
+- ✅ Teleportal ({U}{R} unblockable / Overload {3}{U}{R} each your creature)
+- ✅ Street Spasm ({X}{R} damage to target / Overload {X}{X}{R}{R} each opp)
+
+### New cube cards (push XVII session 2)
+- ✅ Back to Basics ({2}{U} enchantment, PreventUntap on nonbasic lands)
+- 🟡 Collector Ouphe ({1}{G} 2/2 Ouphe body, no artifact-ability lock)
+- 🟡 Arclight Phoenix ({3}{R} 3/2 Flying Haste body, no gy recursion)
+- 🟡 Omniscience ({7}{U}{U}{U} enchantment body, no free-cast static)
+- 🟡 Opposition ({2}{U}{U} enchantment body, no tap-creature ability)
+
+### Suggested future work
+- Implement Arclight Phoenix graveyard recursion trigger (3+ IS spells
+  → return from gy at combat begin)
+- Implement Collector Ouphe's artifact-ability lock
+  (`StaticEffect::PreventActivation { applies_to }`)
+- Wire Omniscience's free-cast static (`StaticEffect::FreeCast`)
+- Wire Opposition's tap-creature-to-tap-permanent ability
 
 ## MagicCompRules coverage audit
 

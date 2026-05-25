@@ -80,10 +80,10 @@ still ⏳.
 | Aether Spellbomb | ✅ | {U}, sac: return target creature to hand. {1}, sac: draw a card. Both via `ActivatedAbility::sac_cost`. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
-| Back to Basics | ⏳ | Static "nonbasic lands don't untap". Needs land-untap restriction. |
-| Opposition | ⏳ | Tap creatures to tap permanents. |
+| Back to Basics | ✅ | Static "nonbasic lands don't untap" via `PreventUntap`. Fully functional. |
+| Opposition | 🟡 | Enchantment body only. Tap-creature-to-tap-permanent ability omitted. |
 | Parallax Tide | ⏳ | Fading + exile lands. Needs fade counters. |
-| Omniscience | ⏳ | "Cast spells without paying". Needs free-cast static. |
+| Omniscience | 🟡 | Enchantment body only. Free-cast static omitted. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |
@@ -157,7 +157,7 @@ still ⏳.
 | Death-Greeter's Champion | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{R} 2/2 Human Warrior with Haste. Attack trigger drains 1 life from a target opponent. Test: `death_greeters_champion_drains_opp_on_attack`. |
 | Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
 | Simian Spirit Guide | 🟡 | `{2}{R}` 2/2 Ape Spirit. Body wired; the alt-cost "exile from hand to add {R}" half is still ⏳ — the existing `AlternativeCost` path replaces the entire spell's resolution, so an alt-cost mana ability would need a new "alt cast = mana ability" mode. Available in any red pool. |
-| Arclight Phoenix | ⏳ | Three-spell-cast trigger from graveyard. Needs spells-cast-this-turn count + recursion. |
+| Arclight Phoenix | 🟡 | 3/2 Flying Haste body. Graveyard recursion trigger (3+ IS spells) omitted. |
 | Goldspan Dragon | 🟡 | 4/4 Flying Haste; attack-trigger Treasure (using the now-functional Treasure mana ability). "Becomes target of a spell" trigger and the Treasure-2-mana static rider are omitted. |
 | Shivan Dragon | ✅ | Already in catalog. |
 | Balefire Dragon | 🟡 | {5}{R}{R} 6/6 Flying. `DealsCombatDamageToPlayer + SelfSource` trigger sweeps each opp creature for 6. The "that much damage" → fixed 6 collapse holds at unboosted-power play; pump-effect interactions don't retroactively boost the trigger payload. Test: `balefire_dragon_combat_damage_burns_each_opp_creature`. |
@@ -193,7 +193,7 @@ still ⏳.
 | Cankerbloom | ✅ | {1}{G} 2/2 Fungus. {G}, Sac this: destroy target artifact/enchantment, then proliferate. |
 | Reclamation Sage | ✅ | {2}{G} 2/1 Elf Shaman. ETB destroy target artifact/enchantment (same shape as Loran of the Third Path's ETB). Test: `reclamation_sage_etb_destroys_artifact`. |
 | Acidic Slime | ✅ | {3}{G}{G} 2/2 Ooze with Deathtouch. ETB destroy target artifact, enchantment, or land. Test: `acidic_slime_etb_destroys_land`. |
-| Collector Ouphe | ⏳ | Static "artifact abilities can't be activated". |
+| Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Fanatic of Rhonas | ✅ | {G} 1/1 Snake. `{G},{T}: Add {G}{G}` (net +{G} per activation). Test: `fanatic_of_rhonas_taps_for_two_green_after_paying_one`. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
 | Rofellos, Llanowar Emissary | ✅ (was 🟡) | Push (claude/modern_decks): `{G}{G}` Legendary 2/1 Elf Druid. `{T}: Add {G}{G} for each Forest you control` now wired faithfully via `ManaPayload::OfColor(Green, Times(Const(2), CountOf(Forest ∧ ControlledByYou)))`. The dynamic Forest count is read live at resolution time. Tests: `rofellos_taps_for_two_green_mana` (1 Forest → 2 green), `rofellos_taps_for_two_green_per_forest` (3 Forests → 6 green), `rofellos_taps_for_zero_with_no_forests` (degenerate 0-Forest case). |
@@ -453,7 +453,7 @@ are listed in `DECK_FEATURES.md`.
 | Locus mana scaling | 🟡 | Cloudpost / Glimmerpost present as ETB-tapped colorless lands; the per-Locus mana scaling rider is dropped (no per-source-count mana payload). Glimmerpost's lifegain is wired (flat 1 life). |
 | ETB-replacement effects (suppress entirely) | ⏳ | Containment Priest, Static Prison-adjacent, Gather Specimens. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |
-| Land-untap restriction static | ⏳ | Back to Basics. |
+| Land-untap restriction static | ✅ | Back to Basics wired via `PreventUntap`. |
 | "Cast spells without paying mana" static | ⏳ | Omniscience, Maelstrom Archangel (combat-damage variant), Aluren (free-cast under-3 creatures). |
 | Name-a-card / name-a-creature-type primitive | 🟡 | Cavern of Souls has the ETB ChooseMode framing but the chosen type doesn't gate mana provenance yet. Pithing Needle would need the same primitive. |
 | Token-copy of permanent | ⏳ | Phantasmal Image, Helm of the Host, Mockingbird, Growing Ranks (populate). |
