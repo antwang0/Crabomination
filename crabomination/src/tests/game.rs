@@ -4792,3 +4792,42 @@ fn effect_untap_removes_stun_counter_instead_of_untapping() {
     assert_eq!(card.counter_count(crate::card::CounterType::Stun), 0,
         "Stun counter should have been removed");
 }
+
+// ── Prowess enforcement (CR 702.107) ───────────────────────────────────────
+
+#[test]
+fn prowess_pumps_on_noncreature_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::stormchaser_mage());
+    g.clear_sickness(mage);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
+    assert!(m.power() >= 2, "Prowess should pump +1/+1 EOT");
+    assert!(m.toughness() >= 4, "Prowess should pump +1/+1 EOT");
+}
+
+#[test]
+fn prowess_does_not_trigger_on_creature_spell() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::stormchaser_mage());
+    g.clear_sickness(mage);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
+    assert_eq!(m.power(), 1, "Prowess should NOT trigger on creature spell");
+    assert_eq!(m.toughness(), 3);
+}

@@ -1971,6 +1971,48 @@ impl GameState {
         };
         candidates.sort_by_key(|c| apnap_rank(c.controller));
 
+        // Prowess: inject +1/+1 EOT pump for each creature with the
+        // Prowess keyword that does NOT already carry its own prowess()
+        // triggered ability. Cards wired via shortcut::prowess() already
+        // have a SpellCast trigger on their definition; we skip those to
+        // avoid doubling the pump.
+        for ev in events {
+            if let GameEvent::SpellCast { player, card_id, .. } = ev {
+                let is_creature_spell = self.stack.iter().any(|si| matches!(
+                    si,
+                    crate::game::types::StackItem::Spell { card, .. } if card.id == *card_id && card.definition.is_creature()
+                ));
+                if !is_creature_spell {
+                    let prowess_ids: Vec<_> = self.battlefield.iter()
+                        .filter(|c| {
+                            c.controller == *player
+                                && c.has_keyword(&Keyword::Prowess)
+                                && !c.definition.triggered_abilities.iter().any(|ta| {
+                                    matches!(ta.event.kind, crate::effect::EventKind::SpellCast)
+                                })
+                        })
+                        .map(|c| c.id)
+                        .collect();
+                    for pid in prowess_ids {
+                        candidates.push(TriggerCandidate {
+                            source: pid,
+                            effect: Effect::PumpPT {
+                                what: crate::effect::Selector::This,
+                                power: crate::effect::Value::Const(1),
+                                toughness: crate::effect::Value::Const(1),
+                                duration: crate::effect::Duration::EndOfTurn,
+                            },
+                            controller: *player,
+                            filter: None,
+                            subject: None,
+                            event_amount: 0,
+                            triggered_by_etb: false,
+                        });
+                    }
+                }
+            }
+        }
+
         // Phase 2: enforce the optional `EventSpec::filter` predicate now
         // that we're free to call `&self.evaluate_predicate`. The trigger's
         // source permanent is bound as `ctx.source`, and the event's
