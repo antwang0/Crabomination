@@ -390,6 +390,16 @@ pub struct PermanentView {
     /// modified P/T in a distinct color. Always false for non-creatures.
     #[serde(default)]
     pub pt_modified: bool,
+    /// Human-readable mana cost string (e.g. "{2}{W}{B}"). Empty for
+    /// tokens and lands. Lets the client render the CMC badge in
+    /// tooltips and draft-pick overlays.
+    #[serde(default)]
+    pub mana_cost_display: String,
+    /// Creature subtypes (e.g. ["Human", "Wizard"]). Empty for
+    /// non-creatures. Enables client tooltip type-line rendering and
+    /// tribal-filter UIs without decoding the full card definition.
+    #[serde(default)]
+    pub creature_types: Vec<String>,
 }
 
 impl PermanentView {

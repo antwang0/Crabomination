@@ -226,6 +226,14 @@ fn project_permanent(
                 && (cp_power != card.definition.base_power()
                     || cp_toughness != card.definition.base_toughness())
         },
+        mana_cost_display: format_mana_cost(&card.definition.cost),
+        creature_types: card
+            .definition
+            .subtypes
+            .creature_types
+            .iter()
+            .map(|ct| format!("{ct:?}"))
+            .collect(),
     }
 }
 
@@ -664,6 +672,29 @@ fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> St
     }
 }
 
+fn format_mana_cost(cost: &crate::mana::ManaCost) -> String {
+    use crate::mana::{Color, ManaSymbol};
+    if cost.symbols.is_empty() {
+        return String::new();
+    }
+    cost.symbols
+        .iter()
+        .map(|s| match s {
+            ManaSymbol::Colored(Color::White) => "{W}".to_string(),
+            ManaSymbol::Colored(Color::Blue) => "{U}".to_string(),
+            ManaSymbol::Colored(Color::Black) => "{B}".to_string(),
+            ManaSymbol::Colored(Color::Red) => "{R}".to_string(),
+            ManaSymbol::Colored(Color::Green) => "{G}".to_string(),
+            ManaSymbol::Colorless(n) => format!("{{{n}}}"),
+            ManaSymbol::Generic(n) => format!("{{{n}}}"),
+            ManaSymbol::X => "{X}".to_string(),
+            ManaSymbol::Snow => "{S}".to_string(),
+            ManaSymbol::Hybrid(a, b) => format!("{{{a:?}/{b:?}}}"),
+            ManaSymbol::Phyrexian(c) => format!("{{{c:?}/P}}"),
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1081,6 +1112,16 @@ mod tests {
             "expected 'Another attacks' label for Sparring Regimen's Attacks/AnotherOfYours trigger; got {:?}",
             perm.triggered_ability_labels,
         );
+    }
+
+    #[test]
+    fn permanent_view_has_mana_cost_and_creature_types() {
+        let mut state = two_player_game();
+        let id = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let view = project(&state, 0);
+        let perm = view.battlefield.iter().find(|p| p.id == id).unwrap();
+        assert_eq!(perm.mana_cost_display, "{1}{G}");
+        assert!(perm.creature_types.contains(&"Bear".to_string()));
     }
 
     #[test]
