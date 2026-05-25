@@ -12101,3 +12101,136 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
         "original Seminar stays in exile");
 }
 
+// ── Mica, Reader of Ruins ─────────────────────────────────────────────────
+
+#[test]
+fn mica_reader_of_ruins_is_a_4_4_legendary_with_ward() {
+    let card = catalog::mica_reader_of_ruins();
+    assert_eq!(card.name, "Mica, Reader of Ruins");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert_eq!(card.cost.cmc(), 4);
+    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Ward(..))),
+        "Mica should have Ward");
+}
+
+// ── The Dawning Archaic ───────────────────────────────────────────────────
+
+#[test]
+fn the_dawning_archaic_is_a_7_7_legendary_avatar_with_reach() {
+    let card = catalog::the_dawning_archaic();
+    assert_eq!(card.name, "The Dawning Archaic");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert_eq!(card.cost.cmc(), 10);
+    assert!(card.keywords.contains(&Keyword::Reach));
+}
+
+// ── Strixhaven Skycoach ───────────────────────────────────────────────────
+
+#[test]
+fn strixhaven_skycoach_is_a_3_2_flying_artifact_with_etb_search() {
+    let card = catalog::strixhaven_skycoach();
+    assert_eq!(card.name, "Strixhaven Skycoach");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert_eq!(card.cost.cmc(), 3);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    // Should have an ETB triggered ability for land search.
+    assert!(!card.triggered_abilities.is_empty(),
+        "Skycoach should have an ETB land-search trigger");
+}
+
+// ── Biblioplex Tomekeeper ─────────────────────────────────────────────────
+
+#[test]
+fn biblioplex_tomekeeper_is_a_3_4_artifact_construct() {
+    let card = catalog::biblioplex_tomekeeper();
+    assert_eq!(card.name, "Biblioplex Tomekeeper");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert_eq!(card.cost.cmc(), 4);
+}
+
+// ── Skycoach Waypoint ─────────────────────────────────────────────────────
+
+#[test]
+fn skycoach_waypoint_is_a_colorless_land_with_tap_for_colorless() {
+    let card = catalog::skycoach_waypoint();
+    assert_eq!(card.name, "Skycoach Waypoint");
+    assert!(card.card_types.contains(&CardType::Land));
+    // Should have at least a {T}: Add {C} ability.
+    assert!(!card.activated_abilities.is_empty(),
+        "Skycoach Waypoint should have at least one mana ability");
+}
+
+// ── Prismari, the Inspiration ─────────────────────────────────────────────
+
+#[test]
+fn prismari_the_inspiration_is_a_7_7_legendary_elder_dragon_with_flying() {
+    let card = catalog::prismari_the_inspiration();
+    assert_eq!(card.name, "Prismari, the Inspiration");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert_eq!(card.cost.cmc(), 7);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Ward(..))),
+        "Prismari should have Ward");
+}
+
+// ── Social Snub ───────────────────────────────────────────────────────────
+
+#[test]
+fn social_snub_is_a_silverquill_sorcery() {
+    let card = catalog::social_snub();
+    assert_eq!(card.name, "Social Snub");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    assert_eq!(card.cost.cmc(), 3);
+}
+
+#[test]
+fn social_snub_each_player_sacrifices_and_drains() {
+    let mut g = two_player_game();
+    // Give both players a creature.
+    let p0_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p1_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Both creatures should have been sacrificed.
+    assert!(!g.battlefield.iter().any(|c| c.id == p0_creature),
+        "P0's creature should be sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == p1_creature),
+        "P1's creature should be sacrificed");
+    // Opponent loses 1 life, you gain 1 life.
+    assert_eq!(g.players[1].life, p1_life - 1,
+        "Opponent should lose 1 life");
+    assert_eq!(g.players[0].life, p0_life + 1,
+        "Caster should gain 1 life");
+}
+

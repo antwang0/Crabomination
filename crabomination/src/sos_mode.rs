@@ -119,6 +119,8 @@ impl College {
                 spectacular_skywhale,
                 splatter_technique,
                 traumatic_critique,
+                // Batch 2 additions:
+                prismari_the_inspiration,
             ],
             // ↑ Spectacle Summit is the school land.
 
@@ -142,6 +144,8 @@ impl College {
                 silverquill_charm,
                 snooping_page,
                 stirring_honormancer,
+                // Batch 2 additions:
+                social_snub,
             ],
             // ↑ Forum of Amity is the school land.
 
@@ -422,6 +426,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             tome_blast,
             zealous_lorecaster,
             unsubtle_mockery,
+            // Batch 2 additions:
+            mica_reader_of_ruins,
         ],
         // Green — added Burrog Barrage (conditional pump + power damage),
         // Chelonian Tackle (+0/+10 + power damage), Snarl Song (Converge
