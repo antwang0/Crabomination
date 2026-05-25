@@ -5,6 +5,40 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XIX — 2026-05-25, session 2)
+
+- ✅ **Clever Lumimancer** (STX): {W} 0/1 Human Wizard with Magecraft
+  +2/+0 self-pump. Aggressive 1-drop for Prismari/Lorehold spell decks.
+- ✅ **Academic Probation** (STX): {1}{W} Sorcery (Lesson), body-only
+  (name-choosing not implemented).
+
+### Server — view improvements
+- ✅ **`PermanentView.has_stun_counters`** — convenience boolean so
+  the 3D client can badge stunned permanents without scanning the
+  full `counters` vec. Set true when `CounterType::Stun > 0`.
+- ✅ **`PermanentView.pt_modified`** — true when a creature's computed
+  P/T differs from its base (printed) values. The 3D client can use
+  this to render modified P/T in a distinct color (green for buffed,
+  red for debuffed) without computing the diff client-side.
+
+### Observations & future items
+- **Lesson sideboard model** is still the biggest STX gap: Eyetwitch,
+  Hunt for Specimens, Pop Quiz, and the six Lesson sorceries all use
+  Learn (approximated as Draw 1). A sideboard zone + `Effect::Learn`
+  (search sideboard for Lesson card) would promote all Learn cards
+  from 🟡 → ✅ in one shot.
+- **MDFC back-face land-play UI** needs a tooltip or key-binding hint
+  when a player holds an MDFC: "Right-click to flip and play the
+  back face as a land." Currently the only discovery path is
+  accidental right-click.
+- **Stun counter visual badge** — `PermanentView.has_stun_counters`
+  is now surfaced. The 3D client should render a small blue-ring or
+  clock icon on stunned permanents so players see the untap skip
+  coming.
+- **Ward cost label in tooltips** — Ward-bearing creatures should
+  show "Ward {N}" or "Ward — Pay N life" in the ability tray so
+  opponents know the cost before targeting.
+
 ## Recent additions (Push XVIII — 2026-05-25)
 
 - ✅ **Alt-cost effect_override target filter fix** — `cast_spell_alternative`

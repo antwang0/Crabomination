@@ -214,6 +214,14 @@ fn project_permanent(
         loyalty_abilities: project_loyalty_abilities(card),
         triggered_ability_labels: project_triggered_ability_labels(card),
         static_ability_labels: project_static_ability_labels(card),
+        has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
+        pt_modified: {
+            let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
+            let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
+            card.definition.is_creature()
+                && (cp_power != card.definition.base_power()
+                    || cp_toughness != card.definition.base_toughness())
+        },
     }
 }
 

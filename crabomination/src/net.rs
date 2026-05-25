@@ -372,6 +372,16 @@ pub struct PermanentView {
     /// empty for older clients without this field.
     #[serde(default)]
     pub static_ability_labels: Vec<String>,
+    /// True when the permanent has one or more stun counters — a UI
+    /// hint so the client can badge stunned permanents without scanning
+    /// the full `counters` vec. Populated by `project_permanent`.
+    #[serde(default)]
+    pub has_stun_counters: bool,
+    /// True when the permanent's computed power or toughness differs
+    /// from its base (printed) values — a UI hint for rendering
+    /// modified P/T in a distinct color. Always false for non-creatures.
+    #[serde(default)]
+    pub pt_modified: bool,
 }
 
 impl PermanentView {
