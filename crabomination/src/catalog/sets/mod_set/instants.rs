@@ -824,20 +824,14 @@ pub fn bone_shards() -> CardDefinition {
 }
 
 /// Bloodchief's Thirst — {B} Sorcery. Destroy target creature or
-/// planeswalker with mana value 2 or less. Kicker {1}{B}; if kicked,
-/// destroy target creature or planeswalker with mana value 6 or less.
-///
-/// Approximation: ships the **base** mode (mana value ≤ 2). Kicker
-/// support requires the alt-cost path to swap target filter at cast
-/// time, which it does for blue spells (Mystical Dispute) but not for
-/// the destroy-with-different-CMC pattern. That's a follow-up.
+/// planeswalker with mana value 2 or less. Kicker {2}{B}: destroy
+/// target creature or planeswalker (no MV restriction).
 pub fn bloodchiefs_thirst() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Bloodchief's Thirst",
         cost: cost(&[b()]),
         supertypes: vec![],
-        // Real Oracle: Sorcery. Kept here so the ChooseMode-less version
-        // is consistent with sorcery-speed timing.
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -855,7 +849,25 @@ pub fn bloodchiefs_thirst() -> CardDefinition {
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), b()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: Some(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+            }),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

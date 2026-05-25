@@ -1802,15 +1802,21 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(e);
         }
-        if let Some(ref tgt) = target
-            && let Some(filter) = card
-                .definition
-                .effect
-                .target_filter_for_slot_in_mode(0, mode)
-            && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+        // When the alt cost carries an effect_override, use its target
+        // filter instead of the base spell's (kicker-style alt modes
+        // change the legal target set). Otherwise, validate against the
+        // base spell's filter.
         {
-            self.players[p].hand.push(card);
-            return Err(GameError::SelectionRequirementViolated);
+            let effect_for_filter = alt.effect_override.as_ref()
+                .unwrap_or(&card.definition.effect);
+            if let Some(ref tgt) = target
+                && let Some(filter) = effect_for_filter
+                    .target_filter_for_slot_in_mode(0, mode)
+                && !self.evaluate_requirement_static(filter, tgt, p, Some(card.id))
+            {
+                self.players[p].hand.push(card);
+                return Err(GameError::SelectionRequirementViolated);
+            }
         }
         // Alt-cost-specific target filter (e.g. Mystical Dispute's "target
         // must be a blue spell"). Applied on top of the spell's regular

@@ -3479,6 +3479,28 @@ fn bloodchiefs_thirst_rejects_high_cmc_target() {
 }
 
 #[test]
+fn bloodchiefs_thirst_kicked_destroys_high_cmc_creature() {
+    let mut g = two_player_game();
+    let mahamoti = g.add_card_to_battlefield(1, catalog::mahamoti_djinn()); // CMC 6
+    let thirst = g.add_card_to_hand(0, catalog::bloodchiefs_thirst());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: thirst,
+        target: Some(Target::Permanent(mahamoti)),
+        additional_targets: vec![],
+        pitch_card: None,
+        mode: None,
+        x_value: None,
+    })
+    .expect("Kicked Bloodchief's Thirst should destroy any creature/PW");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == mahamoti).is_none(),
+        "Mahamoti Djinn should be destroyed by kicked Bloodchief's Thirst");
+}
+
+#[test]
 fn heliod_sun_crowned_grants_lifelink_until_end_of_turn() {
     let mut g = two_player_game();
     let heliod = g.add_card_to_battlefield(0, catalog::heliod_sun_crowned());
