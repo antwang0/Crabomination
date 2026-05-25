@@ -238,6 +238,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         // trinisphere   — 🟡 minimum-cost static omitted; ships as a
         //                  vanilla 3-mana artifact body.
         trinisphere,
+        pithing_needle,
+        trenchpost,
+        three_tree_city,
         // ── modern_decks batch 103: colorless cube expansion ──
         glaring_fleshraker,
         brightglass_gearhulk,
@@ -575,6 +578,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(ashiok_nightmare_weaver);
         // ── Cube expansion: UB cards ──
         v.push(master_of_death);
+        v.push(fallen_shinobi);
     }
     v
 }
@@ -1056,6 +1060,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         basking_broodscale,
         sowing_mycospawn,
         ursine_monstrosity,
+        conclave_sledge_captain,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
@@ -1069,6 +1074,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(knight_of_the_reliquary);
         // ── modern_decks batch 103 (GW cube expansion) ──
         v.push(loot_the_pathfinder);
+        v.push(messenger_falcons);
     }
     if pair_contains(pair, Color::Red) {
         v.push(ghor_clan_rampager);
@@ -1118,6 +1124,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mind_roots);
         v.push(vicious_rivalry);
         v.push(lluwen_exchange_student);
+        v.push(wight_of_the_reliquary);
     }
     if pair_contains(pair, Color::Blue) {
         // ── SOS Quandrix (G/U) ──

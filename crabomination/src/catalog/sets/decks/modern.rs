@@ -10273,3 +10273,235 @@ pub fn aluren() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Messenger Falcons — {2}{G/U}{W} Creature — Bird 2/2.
+/// "Flying / When Messenger Falcons enters the battlefield, draw a card."
+pub fn messenger_falcons() -> CardDefinition {
+    CardDefinition {
+        name: "Messenger Falcons",
+        cost: cost(&[generic(2), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Trenchpost — Land — Locus.
+/// "{T}: Add {C}{C}."
+/// (Approximation: Locus subtype noted but not mechanically relevant
+/// without the Locus-counting static from Cloudpost.)
+pub fn trenchpost() -> CardDefinition {
+    use crate::card::LandType;
+    use crate::catalog::sets::tap_add_colorless;
+    CardDefinition {
+        name: "Trenchpost",
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![LandType::Locus],
+            ..Default::default()
+        },
+        activated_abilities: vec![{
+            let mut ab = tap_add_colorless();
+            ab.effect = Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colorless(Value::Const(2)),
+            };
+            ab
+        }],
+        ..Default::default()
+    }
+}
+
+/// Three Tree City — Legendary Land.
+/// "Three Tree City enters with three charge counters on it.
+///  {T}, Remove a charge counter: Add one mana of any color.
+///  When the last charge counter is removed, sacrifice Three Tree City."
+///
+/// Approximation: enters with 3 charge counters via ETB trigger.
+/// Tap + remove counter for any-color mana. Sacrifice when empty
+/// is approximated by the natural counter-depletion — the card becomes
+/// a dead land once all counters are removed. The sacrifice-on-empty
+/// trigger is omitted (no last-counter-removed event).
+pub fn three_tree_city() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    CardDefinition {
+        name: "Three Tree City",
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Land],
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Charge,
+            amount: Value::Const(3),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+                Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::Charge,
+                },
+                Value::Const(1),
+            )),
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Conclave Sledge-Captain — {5}{G} Creature — Elephant Soldier 6/6.
+/// "Trample / Creatures you control with +1/+1 counters on them have
+/// trample. / When Conclave Sledge-Captain enters, put a +1/+1 counter
+/// on each creature you control."
+pub fn conclave_sledge_captain() -> CardDefinition {
+    use crate::card::{CounterType, StaticAbility};
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Conclave Sledge-Captain",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control with +1/+1 counters have trample.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
+                ),
+                keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pithing Needle — {1} Artifact.
+/// "As Pithing Needle enters, choose a card name.
+///  Activated abilities of sources with the chosen name can't be
+///  activated unless they're mana abilities."
+///
+/// Approximation: body-only artifact at {1}. The name-a-card + ability-
+/// suppression static needs the Cavern-of-Souls naming primitive
+/// extended to non-creature targets, plus a static-suppression layer.
+pub fn pithing_needle() -> CardDefinition {
+    CardDefinition {
+        name: "Pithing Needle",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        ..Default::default()
+    }
+}
+
+/// Wight of the Reliquary — {1}{B}{G} Creature — Zombie Knight 0/0.
+/// "Wight of the Reliquary gets +1/+1 for each land card in your
+///  graveyard. / {T}, Sacrifice a land: Search your library for a land
+///  card, put it onto the battlefield tapped, then shuffle."
+///
+/// Approximation: body-only 3/3 (static pump from gy lands unavailable
+/// as `StaticEffect::PumpPT` takes constant i32; the printed dynamic
+/// P/T would need a DynamicPt layer like Tarmogoyf). The sac-land
+/// tutor activation approximates sac-a-land as sac-self.
+pub fn wight_of_the_reliquary() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Wight of the Reliquary",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            sac_cost: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fallen Shinobi — {3}{U}{B} Creature — Zombie Ninja 5/4.
+/// "Ninjutsu {2}{U}{B} / Whenever Fallen Shinobi deals combat damage
+/// to a player, exile the top two cards of that player's library. Until
+/// end of turn, you may play those cards without paying their mana costs."
+///
+/// Approximation: body-only 5/4 with combat-damage trigger that exiles
+/// 2 from the defender's library (the play-from-exile half is omitted
+/// pending cast-from-exile pipeline). Ninjutsu is omitted.
+pub fn fallen_shinobi() -> CardDefinition {
+    CardDefinition {
+        name: "Fallen Shinobi",
+        cost: cost(&[generic(3), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Ninja],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Mill {
+                    who: Selector::Player(PlayerRef::DefendingPlayer),
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

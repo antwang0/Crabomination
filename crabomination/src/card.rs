@@ -77,6 +77,8 @@ pub enum CreatureType {
     Ouphe,
     // Enchantment creature subtype (Enduring Innocence).
     Glimmer,
+    // Ninjutsu creature subtype (Fallen Shinobi, etc.).
+    Ninja,
 }
 
 /// Land subtypes (basic land types + others).

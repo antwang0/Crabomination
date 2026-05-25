@@ -12192,3 +12192,92 @@ fn aluren_is_4_cost_enchantment() {
     assert!(card.card_types.contains(&CardType::Enchantment));
     assert_eq!(card.cost.cmc(), 4, "costs 2GG = 4 CMC");
 }
+
+// ── New cube cards ─────────────────────────────────────────────────────────
+
+#[test]
+fn messenger_falcons_etb_draws_a_card() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::messenger_falcons());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Messenger Falcons castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Messenger Falcons"));
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "ETB draws 1");
+}
+
+#[test]
+fn conclave_sledge_captain_etb_puts_counters_on_each_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::conclave_sledge_captain());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Conclave Sledge-Captain castable");
+    drain_stack(&mut g);
+
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.counter_count(crate::card::CounterType::PlusOnePlusOne) >= 1,
+            "Bear should get a +1/+1 counter from ETB");
+}
+
+#[test]
+fn three_tree_city_taps_for_any_color_with_counters() {
+    let card = catalog::three_tree_city();
+    assert_eq!(card.name, "Three Tree City");
+    assert!(card.card_types.contains(&CardType::Land));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert_eq!(card.triggered_abilities.len(), 1, "ETB adds charge counters");
+    assert_eq!(card.activated_abilities.len(), 1, "Tap + remove counter for mana");
+}
+
+#[test]
+fn trenchpost_taps_for_two_colorless() {
+    let mut g = two_player_game();
+    let tp = g.add_card_to_battlefield(0, catalog::trenchpost());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tp, ability_index: 0, target: None, x_value: None,
+    }).expect("Trenchpost tap should work");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "Should add 2 colorless mana");
+}
+
+#[test]
+fn pithing_needle_is_1_cost_artifact() {
+    let card = catalog::pithing_needle();
+    assert_eq!(card.name, "Pithing Needle");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert_eq!(card.cost.cmc(), 1);
+}
+
+#[test]
+fn wight_of_the_reliquary_is_3_3_zombie_knight() {
+    let card = catalog::wight_of_the_reliquary();
+    assert_eq!(card.name, "Wight of the Reliquary");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.has_creature_type(crate::card::CreatureType::Zombie));
+    assert!(card.has_creature_type(crate::card::CreatureType::Knight));
+    assert_eq!(card.activated_abilities.len(), 1, "Land-tutor sac activation");
+}
+
+#[test]
+fn fallen_shinobi_is_5_4_zombie_ninja() {
+    let card = catalog::fallen_shinobi();
+    assert_eq!(card.name, "Fallen Shinobi");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 4);
+    assert!(card.has_creature_type(crate::card::CreatureType::Zombie));
+    assert!(card.has_creature_type(crate::card::CreatureType::Ninja));
+    assert_eq!(card.triggered_abilities.len(), 1, "Combat damage trigger");
+}
