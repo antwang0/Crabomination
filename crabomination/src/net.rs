@@ -59,7 +59,7 @@ pub enum ServerMsg {
     /// first `View`.
     MatchStarted,
     /// Authoritative snapshot of state, projected for this seat.
-    View(ClientView),
+    View(Box<ClientView>),
     /// Events produced by the most recent action, in order. Clients animate
     /// off these; the accompanying `View` is the post-event state.
     Events(Vec<GameEventWire>),

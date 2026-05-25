@@ -241,6 +241,11 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks batch 103: colorless cube expansion ──
         glaring_fleshraker,
         brightglass_gearhulk,
+        // ── SOS colorless lands / artifacts / creatures ──
+        skycoach_waypoint,
+        biblioplex_tomekeeper,
+        strixhaven_skycoach,
+        the_dawning_archaic,
     ]
 }
 
@@ -382,6 +387,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(conciliators_duelist);
         v.push(scolding_administrator);
         v.push(abigale_poet_laureate);
+        v.push(fix_whats_broken);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(teferi_time_raveler);
@@ -697,6 +703,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(conciliators_duelist);
         v.push(scolding_administrator);
         v.push(abigale_poet_laureate);
+        v.push(fix_whats_broken);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(marauding_mako);

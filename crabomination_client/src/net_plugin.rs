@@ -101,7 +101,7 @@ pub fn poll_net(
         match msg {
             ServerMsg::YourSeat(s) => seat.0 = s,
             ServerMsg::MatchStarted => {}
-            ServerMsg::View(v) => view.0 = Some(v),
+            ServerMsg::View(v) => view.0 = Some(*v),
             ServerMsg::Events(evs) => events.0 = evs,
             ServerMsg::ActionError(e) => eprintln!("net: server rejected action: {e}"),
             ServerMsg::MatchOver { winner } => ended.0 = Some(winner),

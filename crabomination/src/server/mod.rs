@@ -151,7 +151,7 @@ pub fn run_match_full(
     for spec in spectators {
         let _ = spec.tx.send(ServerMsg::YourSeat(0));
         let _ = spec.tx.send(ServerMsg::MatchStarted);
-        let _ = spec.tx.send(ServerMsg::View(view::project(&state, 0)));
+        let _ = spec.tx.send(ServerMsg::View(Box::new(view::project(&state, 0))));
         // Drain the spectator's incoming stream into a sentinel forwarder
         // that uses seat = usize::MAX; the actor checks for this and
         // ignores any actions tagged with it. Without the drain, a UI
@@ -174,7 +174,7 @@ pub fn run_match_full(
             SeatOccupant::Human(seat) => {
                 let _ = seat.tx.send(ServerMsg::YourSeat(i));
                 let _ = seat.tx.send(ServerMsg::MatchStarted);
-                let _ = seat.tx.send(ServerMsg::View(view::project(&state, i)));
+                let _ = seat.tx.send(ServerMsg::View(Box::new(view::project(&state, i))));
                 let forward_tx = merged_tx.clone();
                 let rx = seat.rx;
                 thread::spawn(move || {
@@ -448,14 +448,14 @@ fn handle_action(
             for (i, maybe_tx) in seat_tx.iter().enumerate() {
                 if let Some(tx) = maybe_tx {
                     let _ = tx.send(ServerMsg::Events(wire_events.clone()));
-                    let _ = tx.send(ServerMsg::View(view::project(state, i)));
+                    let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
                 }
             }
             // Spectators always see seat-0's projection so they get a
             // stable POV across the match.
             for tx in spectator_tx {
                 let _ = tx.send(ServerMsg::Events(wire_events.clone()));
-                let _ = tx.send(ServerMsg::View(view::project(state, 0)));
+                let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
             }
             true
         }
@@ -545,11 +545,11 @@ fn apply_debug(
     }
     for (i, maybe_tx) in seat_tx.iter().enumerate() {
         if let Some(tx) = maybe_tx {
-            let _ = tx.send(ServerMsg::View(view::project(state, i)));
+            let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
         }
     }
     for tx in spectator_tx {
-        let _ = tx.send(ServerMsg::View(view::project(state, 0)));
+        let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
     }
     true
 }
