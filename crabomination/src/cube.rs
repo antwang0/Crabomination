@@ -344,6 +344,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         joined_researchers,
         quill_blade_laureate,
         spiritcall_enthusiast,
+        // ── Cube expansion: body-only stubs ──
+        enduring_innocence,
+        thundertrap_trainer,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -638,6 +641,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         //                  full {5}{B}. Promote to ✅ when Delve lands.
         murderous_cut,
         wishclaw_talisman,
+        // ── Cube expansion: body-only stubs ──
+        corpse_dance,
         // ── SOS (Secrets of Strixhaven) ──
         sneering_shadewriter,
         burrog_banemaker,
@@ -853,6 +858,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         street_spasm,
         // ── modern cube supplement ──
         dreadhorde_arcanist,
+        // ── Cube expansion: body-only stubs ──
+        amped_raptor,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -1002,6 +1009,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         vastlands_scavenger,
         // ── Cube expansion ──
         collector_ouphe,
+        // ── Cube expansion: body-only stubs ──
+        basking_rootwalla,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

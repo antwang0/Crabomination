@@ -11097,3 +11097,283 @@ fn street_spasm_deals_x_to_non_flying() {
     assert_eq!(card.name, "Street Spasm");
     assert!(card.alternative_cost.is_some(), "Should have Overload alt cost");
 }
+
+// ── Modern cube supplement ──────────────────────────────────────────────────
+
+#[test]
+fn dreadhorde_arcanist_attack_returns_instant_from_graveyard() {
+    let mut g = two_player_game();
+    // Put an instant card in P0's graveyard.
+    let bolt_id = g.add_card_to_library(0, catalog::lightning_bolt());
+    let pos = g.players[0].library.iter().position(|c| c.id == bolt_id).unwrap();
+    let bolt_card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(bolt_card);
+
+    let arcanist = g.add_card_to_battlefield(0, catalog::dreadhorde_arcanist());
+    g.clear_sickness(arcanist);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: arcanist,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Dreadhorde Arcanist attacks");
+    drain_stack(&mut g);
+
+    // The attack trigger should move the Lightning Bolt from graveyard to hand.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "Arcanist attack should return an IS card from graveyard to hand");
+    assert_eq!(g.players[0].graveyard.len(), gy_before - 1,
+        "Graveyard should lose one card");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt_id),
+        "Lightning Bolt should now be in hand");
+}
+
+#[test]
+fn baleful_mastery_full_cost_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let p1_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Baleful Mastery castable for {3}{B}");
+    drain_stack(&mut g);
+
+    // Bear should be exiled.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be exiled from battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile");
+    // At full cost, opponent should NOT draw a card.
+    assert_eq!(g.players[1].hand.len(), p1_hand_before,
+        "At full cost, opponent should not draw a card");
+}
+
+#[test]
+fn baleful_mastery_alt_cost_exiles_and_opp_draws() {
+    let mut g = two_player_game();
+    // Opponent needs library so they can draw.
+    g.add_card_to_library(1, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let p1_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: spell,
+        pitch_card: None,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Baleful Mastery alt-castable for {1}{B}");
+    drain_stack(&mut g);
+
+    // Bear should be exiled.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be exiled from battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile");
+    // At alt cost, opponent SHOULD draw a card.
+    assert_eq!(g.players[1].hand.len(), p1_hand_before + 1,
+        "At alt cost, opponent should draw 1 card");
+}
+
+#[test]
+fn parallax_nexus_enters_with_counters_and_forces_discard() {
+    let mut g = two_player_game();
+    // Give opponent a card to discard.
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+
+    // Cast the enchantment so the ETB-counters pipeline fires
+    // (`add_card_to_battlefield` bypasses `enters_with_counters`).
+    let nexus = g.add_card_to_hand(0, catalog::parallax_nexus());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: nexus, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Parallax Nexus castable for {1}{B}{B}");
+    drain_stack(&mut g);
+
+    // Verify it enters with 5 charge counters.
+    let n = g.battlefield.iter().find(|c| c.id == nexus).unwrap();
+    assert_eq!(n.counter_count(CounterType::Charge), 5,
+        "Parallax Nexus should enter with 5 charge counters");
+
+    let opp_hand_before = g.players[1].hand.len();
+
+    // Activate the {0} ability to force an opponent discard.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nexus,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("Parallax Nexus activation should work");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1,
+        "Opponent should have discarded one card");
+}
+
+// ── Cube expansion: body-only stubs ─────────────────────────────────────────
+
+#[test]
+fn enduring_innocence_draws_on_nontoken_creature_etb() {
+    let mut g = two_player_game();
+    // Seed the library so the draw has something to pull.
+    g.add_card_to_library(0, catalog::island());
+    let _innocence = g.add_card_to_battlefield(0, catalog::enduring_innocence());
+
+    // Cast a creature (goes through the stack → ETB triggers fire).
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bears castable");
+    drain_stack(&mut g);
+
+    // Net hand: cast bear (-1) + draw from Enduring Innocence (+1) = 0.
+    assert_eq!(
+        g.players[0].hand.len(),
+        hand_before,
+        "Enduring Innocence should draw 1 when a nontoken creature ETBs (net 0 from cast + draw)"
+    );
+}
+
+#[test]
+fn amped_raptor_body_is_2_1_dinosaur() {
+    let card = catalog::amped_raptor();
+    assert_eq!(card.name, "Amped Raptor");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(
+        card.subtypes
+            .creature_types
+            .contains(&crate::card::CreatureType::Dinosaur),
+        "Should be a Dinosaur"
+    );
+}
+
+#[test]
+fn thundertrap_trainer_etb_taps_opponent_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Ensure it starts untapped.
+    g.battlefield_find_mut(opp_bear).unwrap().tapped = false;
+
+    let trainer = g.add_card_to_hand(0, catalog::thundertrap_trainer());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: trainer,
+        target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Thundertrap Trainer castable");
+    drain_stack(&mut g);
+
+    let bear = g.battlefield.iter().find(|c| c.id == opp_bear).unwrap();
+    assert!(bear.tapped, "Opponent bear should be tapped by Thundertrap Trainer ETB");
+}
+
+#[test]
+fn corpse_dance_reanimates_creature_from_graveyard() {
+    let mut g = two_player_game();
+    // Put a creature in P0's graveyard.
+    let bear_id = g.add_card_to_library(0, catalog::grizzly_bears());
+    let pos = g.players[0]
+        .library
+        .iter()
+        .position(|c| c.id == bear_id)
+        .unwrap();
+    let bear_card = g.players[0].library.remove(pos);
+    g.players[0].graveyard.push(bear_card);
+
+    let bf_creatures_before = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.card_types.contains(&CardType::Creature))
+        .count();
+
+    let spell = g.add_card_to_hand(0, catalog::corpse_dance());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Corpse Dance castable");
+    drain_stack(&mut g);
+
+    let bf_creatures_after = g
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == 0 && c.definition.card_types.contains(&CardType::Creature))
+        .count();
+    assert!(
+        bf_creatures_after > bf_creatures_before,
+        "Corpse Dance should put a creature onto the battlefield"
+    );
+}
+
+#[test]
+fn basking_rootwalla_pump_once_per_turn() {
+    let mut g = two_player_game();
+    let rootwalla = g.add_card_to_battlefield(0, catalog::basking_rootwalla());
+    g.clear_sickness(rootwalla);
+
+    let base_power = g.computed_permanent(rootwalla).unwrap().power;
+    assert_eq!(base_power, 1, "Basking Rootwalla base power should be 1");
+
+    // Pay {1}{G} to activate the pump.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rootwalla,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("Rootwalla pump activates");
+    drain_stack(&mut g);
+
+    let pumped = g.computed_permanent(rootwalla).unwrap();
+    assert_eq!(pumped.power, 3, "Rootwalla should be 3/3 after pump");
+    assert_eq!(pumped.toughness, 3, "Rootwalla should be 3/3 after pump");
+}

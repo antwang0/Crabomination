@@ -75,6 +75,8 @@ pub enum CreatureType {
     Otter, Detective,
     // Cube expansion (Collector Ouphe).
     Ouphe,
+    // Enchantment creature subtype (Enduring Innocence).
+    Glimmer,
 }
 
 /// Land subtypes (basic land types + others).

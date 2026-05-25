@@ -180,49 +180,55 @@ pub fn reduce_to_memory() -> CardDefinition {
 
 // ── Baleful Mastery ─────────────────────────────────────────────────────────
 
-/// Baleful Mastery — {2}{B} Instant. "Exile target creature or
-/// planeswalker. An opponent draws a card." Has alt cost {1}{B} (on a
-/// turn that isn't yours).
+/// Baleful Mastery — {3}{B} Instant. "You may pay {1}{B} rather than pay
+/// this spell's mana cost. If the {1}{B} cost was paid, an opponent draws a
+/// card. / Exile target creature or planeswalker."
 ///
-/// 🟡 We ship the body — exile target creature/planeswalker, then a
-/// target opponent draws a card. The alt cost (the "or" cost {1}{B} on
-/// a non-your turn) is omitted — the alt-cost-as-printed flow lives
-/// in `AlternativeCost`, but Baleful Mastery's alt restriction is
-/// "an opponent draws a card" applied regardless of cast path, so the
-/// alt-cost saving doesn't add a new clause. Tracked in TODO.md.
+/// ✅ Full wiring: base cost {3}{B} exiles target creature or planeswalker
+/// cleanly. Alt cost {1}{B} via `AlternativeCost` with `effect_override`
+/// that sequences opponent-draws-1 before the exile — only the alt-cast
+/// path triggers the draw penalty.
 pub fn baleful_mastery() -> CardDefinition {
+    use crate::card::AlternativeCost;
     CardDefinition {
         name: "Baleful Mastery",
-        cost: cost(&[generic(2), b()]),
+        cost: cost(&[generic(3), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-            },
-            // "An opponent draws a card" — for 2-player games this is
-            // identical to the printed "target opponent" line. We lift
-            // `PlayerRef::EachOpponent` into a Selector so the Draw
-            // resolves against every opponent — in 1v1 that's a single
-            // opp.
-            Effect::Draw {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-        ]),
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
-        alternative_cost: None,
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), b()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: false,
+            not_your_turn_only: false,
+            target_filter: None,
+            condition: None,
+            exile_from_graveyard_count: 0,
+            effect_override: Some(Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+                Effect::Exile {
+                    what: Selector::Target(0),
+                },
+            ])),
+        }),
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,

@@ -12,8 +12,8 @@ use crate::card::{
     Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
-use crate::effect::shortcut::{etb_gain_life, target_filtered};
-use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
+use crate::effect::{DelayedTriggerKind, Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
@@ -9578,6 +9578,181 @@ pub fn gush() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
+        ..Default::default()
+    }
+}
+
+// ── Cube expansion: body-only stubs ─────────────────────────────────────────
+
+/// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1.
+/// Lifelink. "Whenever a nontoken creature you control enters, draw a card."
+///
+/// 🟡 Body-only: the "return from exile after death" enchantment-recur
+/// clause is omitted. Wired as 2/1 Lifelink + AnotherOfYours ETB draw
+/// filtered to nontoken creatures.
+pub fn enduring_innocence() -> CardDefinition {
+    CardDefinition {
+        name: "Enduring Innocence",
+        cost: cost(&[w(), w(), w()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Glimmer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::EntersBattlefield,
+                EventScope::AnotherOfYours,
+            )
+            .with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::NotToken),
+            }),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1.
+/// "When Amped Raptor enters, you get {E}{E}, then you may cast a spell
+/// from exile with mana value ≤ energy spent."
+///
+/// 🟡 Body-only: energy system is not wired. ETB gains 2 life as a
+/// placeholder effect to exercise the trigger path. The exile-cast
+/// clause is omitted.
+pub fn amped_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Amped Raptor",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dinosaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Thundertrap Trainer — {1}{W} Creature — Human Soldier. 2/2. Flash.
+/// "When Thundertrap Trainer enters, tap target creature an opponent
+/// controls."
+///
+/// 🟡 Body: 2/2 Flash + ETB tap target opponent creature. Fully wired.
+pub fn thundertrap_trainer() -> CardDefinition {
+    CardDefinition {
+        name: "Thundertrap Trainer",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Corpse Dance — {1}{B}{B} Instant. Buyback {2}.
+/// "Put the top creature card of target player's graveyard onto the
+/// battlefield under your control. Sacrifice it at the beginning of
+/// the next end step."
+///
+/// 🟡 Body-only: Buyback omitted. Reanimates the top creature from
+/// your graveyard to the battlefield, then registers a delayed trigger
+/// to sacrifice it at end step.
+pub fn corpse_dance() -> CardDefinition {
+    CardDefinition {
+        name: "Corpse Dance",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Sacrifice {
+                    who: Selector::You,
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Basking Rootwalla — {1}{G} Creature — Lizard. 1/1.
+/// "{1}{G}: Basking Rootwalla gets +2/+2 until end of turn. Activate
+/// only once each turn." Madness {0}.
+///
+/// 🟡 Body-only: Madness omitted. Wired as 1/1 Lizard with a
+/// once-per-turn {1}{G} activated pump (+2/+2 until EOT).
+pub fn basking_rootwalla() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Basking Rootwalla",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Green)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: true,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
         ..Default::default()
     }
 }

@@ -1343,8 +1343,9 @@ fn baleful_mastery_exiles_creature_and_opp_draws() {
     }
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::baleful_mastery());
+    // Full cost is now {3}{B}.
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3);
 
     let opp_hand_before = g.players[1].hand.len();
 
@@ -1354,12 +1355,13 @@ fn baleful_mastery_exiles_creature_and_opp_draws() {
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Baleful Mastery castable for {2}{B}");
+    .expect("Baleful Mastery castable for {3}{B}");
     drain_stack(&mut g);
 
     assert!(g.exile.iter().any(|c| c.id == bear), "Bear exiled");
-    assert_eq!(g.players[1].hand.len(), opp_hand_before + 1,
-        "Opponent should draw a card");
+    // At full cost ({3}{B}), the opponent does NOT draw.
+    assert_eq!(g.players[1].hand.len(), opp_hand_before,
+        "At full cost, opponent should not draw a card");
 }
 
 // ── Igneous Inspiration ─────────────────────────────────────────────────────
