@@ -12272,6 +12272,28 @@ fn wight_of_the_reliquary_is_3_3_zombie_knight() {
 }
 
 #[test]
+fn zopandrel_hunger_dominus_is_4_6_reach_with_combat_pump() {
+    let card = catalog::zopandrel_hunger_dominus();
+    assert_eq!(card.name, "Zopandrel, Hunger Dominus");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert_eq!(card.triggered_abilities.len(), 1, "Should have combat pump trigger");
+}
+
+#[test]
+fn dakkon_shadow_slayer_has_two_loyalty_abilities() {
+    let card = catalog::dakkon_shadow_slayer();
+    assert_eq!(card.name, "Dakkon, Shadow Slayer");
+    assert!(card.card_types.contains(&CardType::Planeswalker));
+    assert_eq!(card.base_loyalty, 3);
+    assert_eq!(card.loyalty_abilities.len(), 2, "+1 Surveil 2 and -3 Exile");
+    assert_eq!(card.loyalty_abilities[0].loyalty_cost, 1);
+    assert_eq!(card.loyalty_abilities[1].loyalty_cost, -3);
+}
+
+#[test]
 fn fallen_shinobi_is_5_4_zombie_ninja() {
     let card = catalog::fallen_shinobi();
     assert_eq!(card.name, "Fallen Shinobi");

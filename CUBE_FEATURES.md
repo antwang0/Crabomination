@@ -216,9 +216,9 @@ still ⏳.
 | Elder Gargaroth | ✅ | Trigger-on-attack/block creature. |
 | Golgari Grave-Troll | ⏳ | Dredge 6. |
 | Railway Brawler | ⏳ | Train (vehicle-like). |
-| Conclave Sledge-Captain | ⏳ | TBD. |
+| Conclave Sledge-Captain | 🟡 | 6/6 Trample Elephant Soldier. ETB puts +1/+1 counter on each creature you control. Static grants trample to creatures with +1/+1 counters. |
 | Lumra, Bellow of the Woods | ✅ | {4}{G}{G} 6/6 Trample Legendary Elemental. ETB returns every land card in your graveyard via `Move(EachMatching(Graveyard(You), Land) → Battlefield(You, tapped))`. Tests: `lumra_returns_all_lands_from_your_graveyard`, `lumra_etb_with_empty_graveyard_is_a_noop`. |
-| Zopandrel, Hunger Dominus | ⏳ | TBD. |
+| Zopandrel, Hunger Dominus | 🟡 | 4/6 Reach Legendary Phyrexian Horror. Begin-combat +4/+4 pump to each creature you control (approximation of double-power). Phyrexian-mana sac activation omitted. |
 | Apex Devastator | ⏳ | Cascade x4 (cascade primitive). |
 | Summoner's Pact | ✅ | Already wired (search green creature + delayed Pact upkeep). |
 | Eternal Witness | ✅ | `{1}{G}{G}` 2/1 Human Shaman with ETB "return target card from your graveyard to your hand". Auto-target now picks the graveyard card via the new `Effect::prefers_graveyard_source` classification (`Move(target → Hand(You))` is reanimate-class). Tests: `eternal_witness_etb_trigger_present`, `eternal_witness_etb_returns_graveyard_card_via_auto_target`. |
@@ -260,7 +260,7 @@ still ⏳.
 | Chromatic Star | ✅ | {1} Artifact. {1}, T, Sac: add one mana of any color. Cantrips on `PermanentLeavesBattlefield` (engine extension — see notes). |
 | Ghost Vacuum | ✅ | {2} Artifact. `{2}, {T}: Move(target → Exile)` over `Any`. Auto-target prefers a graveyard card via the new `Effect::prefers_graveyard_target` (Move-to-Exile) heuristic — without it, the bot would auto-target a battlefield permanent. The "draw on every card going to your graveyard" rider on later printings is omitted (not on the original). Tests: `ghost_vacuum_exiles_target_card_from_graveyard`, `ghost_vacuum_auto_target_picks_graveyard_card_when_present`. |
 | Lavaspur Boots | ⏳ | Equipment grants haste. |
-| Pithing Needle | ⏳ | Name-a-card; activated abilities can't be activated. Needs name-a-card primitive (Cavern shares). |
+| Pithing Needle | 🟡 | {1} Artifact body-only stub. Name-a-card + ability suppression static omitted. |
 | Shuko | ⏳ | Equipment with free-equip. |
 | Soul-Guide Lantern | ✅ | {1} Artifact. {T}: exile a card from each opponent's graveyard (approximation of "target opponent" — equivalent in 2-player). {2}, T, Sac: each player exiles their graveyard, draw 1. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
@@ -295,7 +295,7 @@ still ⏳.
 | Howling Mine | ✅ | Push (claude/modern_decks, NEW): {2} Artifact. At the beginning of each player's draw step, that player draws an additional card (`StepBegins(Draw)/AnyPlayer` → `Draw(ActivePlayer)`). The "if untapped" gate collapses. Test: `howling_mine_draws_an_extra_card_each_turn`. |
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Master of Death | ✅ | UB recursion + discard. |
-| Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |
+| Fallen Shinobi | 🟡 | 5/4 Zombie Ninja. Combat damage mills 2 from defender. Ninjutsu and play-from-exile omitted. |
 | Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
 | Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
@@ -307,7 +307,7 @@ still ⏳.
 | Knight of the Reliquary | ✅ | Sac-land tutor scaling P/T. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Growing Ranks | ✅ | Populate token-copy on upkeep. |
-| Torsten, Founder of Benalia | ⏳ | TBD. |
+| Torsten, Founder of Benalia | 🟡 | 7/7 Legendary Human Soldier. ETB searches 3 basic lands to battlefield tapped. |
 | Tidehollow Sculler | 🟡 | {W}{B} 2/2 Zombie. ETB picks a nonland card from a target opponent's hand and sends it to their graveyard (approximation of "exile until this leaves"). The "return when this leaves" clause is omitted (no exile-until-LTB primitive yet). Reuses `DiscardChosen`. Test: `tidehollow_sculler_etb_takes_an_opponent_card`. |
 | Gift of Orzhova | ⏳ | Aura — flying + lifelink. |
 | Stillmoon Cavalier | ✅ | Push (claude/modern_decks batch 102): {1}{W}{B} 2/2 Zombie Knight with four activated abilities — `{W}: gain flying EOT`, `{B}: gain first strike EOT`, `{1}{W}: gain protection from black EOT`, `{1}{B}: gain protection from white EOT`. All four use `Effect::GrantKeyword(EndOfTurn)`. Tests: `stillmoon_cavalier_grants_flying_eot`, `stillmoon_cavalier_grants_protection_from_black_eot`. |
@@ -321,7 +321,7 @@ still ⏳.
 | Assassin's Trophy | ✅ | BG removal — opp searches for basic. |
 | Broodspinner | ⏳ | TBD. |
 | Tear Asunder | ✅ | BG kicker. |
-| Wight of the Reliquary | ⏳ | Land-tutor sac variant. |
+| Wight of the Reliquary | 🟡 | 3/3 Zombie Knight (approx — dynamic P/T from gy-land count unavailable). {T}, Sac: search land to bf tapped. |
 | The Gitrog Monster | ⏳ | Land-as-discard / dredge engine. |
 | Talisman of Conviction | ✅ | RW mana rock — see Artifacts row. |
 | Wear // Tear | 🟡 | Push (claude/modern_decks batch 102): {1}{R} Sorcery, single-spell approximation that destroys target artifact OR enchantment. The Split-Card primitive (CR 709) is engine-wide ⏳ — both halves collapse to a single faithful effect at the Wear cost. Fuse mode is dropped. Test: `wear_tear_destroys_target_artifact`. |
@@ -332,8 +332,8 @@ still ⏳.
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
 | Koma, Cosmos Serpent | ✅ | Token-on-upkeep + sac counters. |
 | Kestia, the Cultivator | ⏳ | Aura/enchantment matters. |
-| Messenger Falcons | ⏳ | TBD. |
-| Dakkon, Shadow Slayer | ⏳ | TBD. |
+| Messenger Falcons | 🟡 | 2/2 Flying Bird. ETB draw a card. GW cross-pool. |
+| Dakkon, Shadow Slayer | 🟡 | WUB Legendary Planeswalker. +1: Surveil 2. -3: Exile target creature. Emblem ult omitted. |
 | Urza, Chief Artificer | ⏳ | Planeswalker / commander. |
 | Geyadrone Dihada | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 3-loyalty Planeswalker. **+1**: Each opp loses 1 + you draw 1 (the "if you have less life than an opp, reset loyalty" rider drops — no loyalty-set primitive). **-3**: Threaten — `GainControl(EOT) + Untap + GrantKeyword(Haste, EOT)`. **-7**: Each opp loses 10 (half-life approximation). Tests: `geyadrone_dihada_plus_one_drains_each_opponent_for_one`, `geyadrone_dihada_minus_three_steals_creature`. |
 | Lord Xander, the Collector | 🟡 | Push (claude/modern_decks batch 102): {3}{U}{B}{R} 6/6 Flying Legendary Vampire Demon Noble. ETB makes target opp discard 3 (`DiscardChosen`). Attack trigger mills each opp 8 (the "half their library" scaling collapses to a fixed midgame value). Die trigger makes each opp sacrifice 3 nonland permanents (the "half their permanents" scaling collapses). Test: `lord_xander_the_collector_etb_makes_opponent_discard_three`. |
@@ -416,9 +416,9 @@ still ⏳.
 | Rishadan Port | ✅ | Tap-to-tap-opp-land. |
 | Seat of the Synod | ✅ | Artifact-Island. {T}: Add {U}. |
 | Talon Gates of Madara | ⏳ | TBD. |
-| Three Tree City | ⏳ | TBD. |
+| Three Tree City | 🟡 | Legendary Land. Enters with 3 charge counters; {T}, remove counter: add any color. Sacrifice-on-empty omitted. |
 | Tree of Tales | ✅ | Artifact-Forest. {T}: Add {G}. |
-| Trenchpost | ⏳ | TBD. |
+| Trenchpost | 🟡 | Locus Land. {T}: Add {C}{C}. Locus-count scaling omitted. |
 | Vault of Whispers | ✅ | Artifact-Swamp. {T}: Add {B}. |
 
 ## Engine features needed

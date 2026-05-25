@@ -10474,6 +10474,85 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
     }
 }
 
+/// Zopandrel, Hunger Dominus — {5}{G}{G} Creature — Phyrexian Horror 4/6.
+/// "Reach / At the beginning of each combat, double the power and
+/// toughness of each creature you control until end of turn.
+/// {G/P}{G/P}, Sacrifice two other creatures: Put an indestructible
+/// counter on Zopandrel."
+///
+/// Approximation: Reach + combat-step pump doubling is approximated
+/// as a flat +4/+4 to each creature you control (since doubling needs
+/// per-creature power introspection). The Phyrexian-mana sacrifice
+/// activation is omitted.
+pub fn zopandrel_hunger_dominus() -> CardDefinition {
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Zopandrel, Hunger Dominus",
+        cost: cost(&[generic(5), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 6,
+        keywords: vec![Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::BeginCombat),
+                EventScope::ActivePlayer,
+            ),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(4),
+                    toughness: Value::Const(4),
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Dakkon, Shadow Slayer — {W}{U}{B} Legendary Planeswalker — Dakkon.
+/// "+1: Surveil 2. / -3: Exile target creature. / -6: You get an
+///  emblem with 'At the beginning of your upkeep, draw a card.'"
+///
+/// Approximation: +1 Surveil 2, -3 exile target creature wired.
+/// -6 emblem omitted (no emblem zone). Base loyalty = 0 (printed:
+/// loyalty equals lands you control, approximated as 3).
+pub fn dakkon_shadow_slayer() -> CardDefinition {
+    use crate::card::LoyaltyAbility;
+    CardDefinition {
+        name: "Dakkon, Shadow Slayer",
+        cost: cost(&[w(), u(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        base_loyalty: 3,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Exile {
+                    what: target_filtered(SelectionRequirement::Creature),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
 /// Fallen Shinobi — {3}{U}{B} Creature — Zombie Ninja 5/4.
 /// "Ninjutsu {2}{U}{B} / Whenever Fallen Shinobi deals combat damage
 /// to a player, exile the top two cards of that player's library. Until

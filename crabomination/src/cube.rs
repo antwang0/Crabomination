@@ -415,6 +415,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(abigale_poet_laureate);
         v.push(fix_whats_broken);
         v.push(awaken_the_honored_dead);
+        v.push(dakkon_shadow_slayer);
         // ── Cube expansion: WB cards ──
         v.push(elite_spellbinder);
     }
@@ -1061,6 +1062,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sowing_mycospawn,
         ursine_monstrosity,
         conclave_sledge_captain,
+        zopandrel_hunger_dominus,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

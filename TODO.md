@@ -8452,3 +8452,19 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
   Tezzeret's Gambit, Gitaxian Probe, and several Modern cards. A
   proper implementation would let players choose pay-life vs pay-mana
   at cast time.
+- **DynamicPt for non-Tarmogoyf cards** — Wight of the Reliquary
+  and similar "P/T equals X" creatures need the `DynamicPt` layer
+  extended beyond the Tarmogoyf-specific `DistinctTypesInAllGraveyards`
+  formula. A `DynamicPt::CountInZone { zone, filter, player }` variant
+  would cover Wight, Master of Etherium, Nighthowler, and others.
+- **Ninjutsu keyword** — Fallen Shinobi, Yuriko, Satoru all need
+  the return-unblocked-attacker-to-hand alt-cost pattern. Blocks
+  the Ninja tribal archetype in cube.
+- **Emblem zone** — Dakkon, Dellian Fel, and several other
+  planeswalkers have ult emblems that create persistent static
+  effects. Needs a per-player `emblems: Vec<Emblem>` zone whose
+  statics are evaluated in `compute_battlefield`.
+- **Power-doubling combat pump** — Zopandrel's "double the power
+  and toughness" needs a `Value::PowerOf(Each)` → `PumpPT(PowerOf,
+  ToughnessOf)` per-creature application. Currently approximated
+  as a flat +4/+4.
