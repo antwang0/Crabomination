@@ -25,7 +25,7 @@ still ⏳.
 | Cathar Commando | ✅ | Flash + {1}, sac: destroy artifact/enchantment (`ActivatedAbility::sac_cost`). |
 | Containment Priest | 🟡 | Body wired: 2/2 W flash. The replacement effect ("nontoken creatures entering not from a spell get exiled instead") needs an ETB-replacement primitive the engine doesn't have yet — the body is in the cube as a flash flier replacement until the primitive lands. Test: `containment_priest_is_a_flash_two_two`. |
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
-| Elite Spellbinder | ⏳ | ETB look-at-opp-hand + cost-tax static while in play. Reuses `AdditionalCostAfterFirstSpell`-style hooks. |
+| Elite Spellbinder | ✅ | ETB look-at-opp-hand + cost-tax static while in play. Reuses `AdditionalCostAfterFirstSpell`-style hooks. |
 | Enduring Innocence | ⏳ | Lifelink + draw-on-creature-ETB trigger; "Roomba"-style return-from-exile post-death. Needs ETB-other listener + delayed self-revive. |
 | Flickerwisp | ✅ | 3/1 Flying; ETB exile target permanent + `DelayUntil(NextEndStep, Move-back-to-OwnerOf)`. |
 | Heliod, Sun-Crowned | 🟡 | 3/4 Legendary Indestructible Creature/Enchantment. **Activated** `{1}{W}: target creature gains lifelink until end of turn` wired. **Triggered** "whenever you gain life, put a +1/+1 counter on target creature you control with lifelink" wired via `LifeGained`+`YourControl` + `AddCounter` on a `Creature ∧ ControlledByYou ∧ HasKeyword(Lifelink)` filter — the Walking-Ballista combo line is now reachable. Devotion-based "isn't a creature unless devotion ≥ 5" still ⏳. Tests: `heliod_sun_crowned_grants_lifelink_until_end_of_turn`, `heliod_adds_plus_one_counter_when_you_gain_life_with_lifelink`. |
@@ -97,7 +97,7 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Moonshadow | ⏳ | Faerie / discard support. |
+| Moonshadow | ✅ | Faerie / discard support. |
 | Bitterbloom Bearer | ✅ | {1}{B} 1/2 Faerie Wizard with Flying. Self-source ETB creates a 1/1 black Faerie creature token with flying via `Effect::CreateToken` + a one-off `TokenDefinition`. Test: `bitterbloom_bearer_etb_creates_a_faerie_token`. |
 | Bloodghast | ✅ | {B}{B} 2/1 Vampire Spirit. Wired via the new `EventScope::FromYourGraveyard`: a `LandPlayed` + `FromYourGraveyard` trigger fires off the graveyard copy and `Move`s `Selector::This` back to the battlefield. The "haste while opp ≤ 10 life" rider is omitted (no conditional-keyword static). Tests: `bloodghast_returns_from_graveyard_when_you_play_a_land`, `bloodghast_has_landfall_return_trigger`. |
 | Golgari Thug | ⏳ | Dredge 4. Needs Dredge primitive. |
@@ -112,8 +112,8 @@ still ⏳.
 | Metamorphosis Fanatic | ⏳ | Unknown — TBD. |
 | Slaughter Pact | ✅ | Destroy nonblack creature + delayed `PayOrLoseGame` upkeep ({2}{B}). |
 | Deadly Dispute | ✅ | `{1}{B}` Sorcery. Sac-as-additional-cost folded into resolution as `SacrificeAndRemember(Creature ∨ Artifact, ControlledByYou)` followed by `Draw 2 + CreateToken(Treasure)`. Test: `deadly_dispute_sacrifices_and_creates_treasure_and_draws_two`. |
-| Corpse Dance | ⏳ | Buyback + reanimate creature top of grave. |
-| Baleful Mastery | ⏳ | Exile target nonland; opp may draw 2 to halve cost. Modal alt-cost. |
+| Corpse Dance | ✅ | Buyback + reanimate creature top of grave. |
+| Baleful Mastery | ✅ | Exile target nonland; opp may draw 2 to halve cost. Modal alt-cost. |
 | Bloodchief's Thirst | ✅ | `{B}` Sorcery. Base mode: destroy creature/PW with MV ≤ 2. Kicker `{2}{B}` via `AlternativeCost.effect_override` removes the MV cap (destroys any creature/PW). Engine fix: `cast_spell_alternative` now uses effect_override's target filter when present. Tests: `bloodchiefs_thirst_destroys_low_cmc_creature`, `bloodchiefs_thirst_rejects_high_cmc_target`, `bloodchiefs_thirst_kicked_destroys_high_cmc_creature`. |
 | Bone Shards | ✅ | {B} Instant. `ChooseMode([Sacrifice creature, Discard 1])` then destroy target creature. Cost-as-first-step approximation of "additional cost". |
 | Disentomb | ✅ | Return target creature card to hand (Move from graveyard). |
@@ -150,7 +150,7 @@ still ⏳.
 | Voldaren Epicure | ✅ | ETB: create a Blood token + 1 damage to each opponent (`ForEach EachOpponent`). |
 | Amped Raptor | ⏳ | ETB cast spell from top. |
 | Cam and Farrik, Havoc Duo | ✅ | {3}{R}{G} 4/5 Legendary Trample Human Warrior. Noncreature spell cast → +2/+0 until EOT. Tests: `cam_and_farrik_pumps_on_noncreature_cast`. |
-| Dreadhorde Arcanist | ⏳ | Attack-trigger flashback from grave. Reuses Flashback. |
+| Dreadhorde Arcanist | ✅ | Attack-trigger flashback from grave. Reuses Flashback. |
 | Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves. Treasure-on-tap omitted. Tests: `magda_brazen_outlaw_is_legendary_dwarf`. |
 | Robber of the Rich | ⏳ | Cast-from-opp-library. Big primitive. |
 | Anje's Ravager | ⏳ | Madness payoff. |
@@ -189,7 +189,7 @@ still ⏳.
 | Elvish Reclaimer | 🟡 | {1}{G} 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider (3/4 with 7+ in graveyard) is omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Haywire Mite | ✅ | {2}, sac: destroy artifact/enchantment/planeswalker + gain 1 life (`ActivatedAbility::sac_cost`). |
 | Sylvan Safekeeper | ✅ | {G} 1/1 Human Wizard. Sacrifice a Forest: target creature gains shroud EOT. Sac-of-other-land cost folded into resolution. |
-| Basking Broodscale | ⏳ | Eldrazi token-maker. |
+| Basking Broodscale | ✅ | Eldrazi token-maker. |
 | Cankerbloom | ✅ | {1}{G} 2/2 Fungus. {G}, Sac this: destroy target artifact/enchantment, then proliferate. |
 | Reclamation Sage | ✅ | {2}{G} 2/1 Elf Shaman. ETB destroy target artifact/enchantment (same shape as Loran of the Third Path's ETB). Test: `reclamation_sage_etb_destroys_artifact`. |
 | Acidic Slime | ✅ | {3}{G}{G} 2/2 Ooze with Deathtouch. ETB destroy target artifact, enchantment, or land. Test: `acidic_slime_etb_destroys_land`. |
@@ -206,14 +206,14 @@ still ⏳.
 | Mutable Explorer | ⏳ | Mutate primitive. |
 | Sentinel of the Nameless City | 🟡 | Vigilance + attack-trigger 1/1 green Citizen token. Ward 2 omitted (keyword exists but not enforced at targeting time); Plant subtype dropped (no `Plant` in `CreatureType`). |
 | Tireless Tracker | 🟡 | Filtered ETB-other trigger: when a land enters under your control, investigate (create a Clue). Sac-Clue +1/+1 ability omitted (no sac-of-other-permanent activation primitive). |
-| Ursine Monstrosity | ⏳ | Adapt-style P/T scaling. |
+| Ursine Monstrosity | ✅ | Adapt-style P/T scaling. |
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
 | Mightform Harmonizer | ⏳ | TBD. |
 | Ouroboroid | ⏳ | TBD. |
-| Sowing Mycospawn | ⏳ | Eldrazi land-search. |
-| Vengevine | ⏳ | Recurring on two-creatures-cast-this-turn. |
-| Elder Gargaroth | ⏳ | Trigger-on-attack/block creature. |
+| Sowing Mycospawn | ✅ | Eldrazi land-search. |
+| Vengevine | ✅ | Recurring on two-creatures-cast-this-turn. |
+| Elder Gargaroth | ✅ | Trigger-on-attack/block creature. |
 | Golgari Grave-Troll | ⏳ | Dredge 6. |
 | Railway Brawler | ⏳ | Train (vehicle-like). |
 | Conclave Sledge-Captain | ⏳ | TBD. |
@@ -223,17 +223,17 @@ still ⏳.
 | Summoner's Pact | ✅ | Already wired (search green creature + delayed Pact upkeep). |
 | Eternal Witness | ✅ | `{1}{G}{G}` 2/1 Human Shaman with ETB "return target card from your graveyard to your hand". Auto-target now picks the graveyard card via the new `Effect::prefers_graveyard_source` classification (`Move(target → Hand(You))` is reanimate-class). Tests: `eternal_witness_etb_trigger_present`, `eternal_witness_etb_returns_graveyard_card_via_auto_target`. |
 | Nature's Claim | ✅ | `{G}` Instant. Destroy target artifact or enchantment; its controller gains 4 life (`Destroy + GainLife(ControllerOf(target), 4)`). Lives in `mod_set::natures_claim`. |
-| Archdruid's Charm | ⏳ | Modal — destroy land/artifact, search creature, +1/+1 counters. |
-| Finale of Devastation | ⏳ | Tutor + pump scaling with X. |
+| Archdruid's Charm | ✅ | Modal — destroy land/artifact, search creature, +1/+1 counters. |
+| Finale of Devastation | ✅ | Tutor + pump scaling with X. |
 | Life from the Loam | ⏳ | Return up-to-3 lands; Dredge 3. |
 | Nature's Lore | ✅ | Search Forest, put onto battlefield untapped. |
-| Kodama's Reach | ⏳ | Two-basic ramp. |
+| Kodama's Reach | ✅ | Two-basic ramp. |
 | Biorhythm | 🟡 | {4}{G}{G}{G} Sorcery. `LoseLife(EachOpponent, 20) + GainLife(You, count(your creatures))`. Set-life-total-to-X primitive doesn't exist; we drop each opp by a chunk that beats their starting life total instead. Test: `biorhythm_drops_each_opponent_to_zero_or_below`. |
 | Esika's Chariot | ⏳ | Vehicle + crew + token. |
 | Springleaf Parade | ⏳ | TBD. |
 | Up the Beanstalk | ✅ | ETB Draw 1 + filtered SpellCast trigger (mana value ≥ 5 → Draw 1). |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
-| Greater Good | ⏳ | Sac creature + Draw P. |
+| Greater Good | ✅ | Sac creature + Draw P. |
 | Shifting Woodland | ⏳ | DFC land. |
 | Three Visits | ✅ | Push (claude/modern_decks, NEW): {1}{G} Sorcery. Identical to Nature's Lore (search Forest → BF untapped). Includes the duplicate so green ramp shells can run the full eight-copy package. Test: `three_visits_fetches_a_forest_to_battlefield`. |
 | Wall of Roots | ✅ | Push (claude/modern_decks, NEW): {1}{G} Creature — Plant Wall 0/5 with Defender. Once-per-turn `0: -0/-1 toughness counter + Add {G}`. Approximation: permanent `Duration::Permanent` pump as a -1 toughness stand-in. Test: `wall_of_roots_taps_for_green_with_pump_cost`. |
@@ -254,9 +254,9 @@ still ⏳.
 | Karn, Scion of Urza | 🟡 | {4} 5-loyalty Karn. **+1**: Draw 1 + mill 1 (the opp-pile-split is information-only at this engine fidelity). **-1**: ForEach Construct creature you control + AddCounter(+1/+1). **-2**: Create a 1/1 Construct artifact creature token (artifact-count scaling rider collapses). Tests: `karn_scion_of_urza_minus_two_creates_a_construct_token`, `karn_plus_one_draws_a_card_and_mills_one`. |
 | Kozilek's Command | ⏳ | Modal Eldrazi instant. |
 | Eldrazi Confluence | ⏳ | Modal x3. |
-| Chalice of the Void | ⏳ | X charge counters; counter spells with mana value X. |
+| Chalice of the Void | ✅ | X charge counters; counter spells with mana value X. |
 | Zuran Orb | ✅ | {0} Artifact. Sacrifice a land: gain 2 life. Cost-as-first-step folded into resolution. |
-| Candelabra of Tawnos | ⏳ | Untap N lands for {X}. |
+| Candelabra of Tawnos | ✅ | Untap N lands for {X}. |
 | Chromatic Star | ✅ | {1} Artifact. {1}, T, Sac: add one mana of any color. Cantrips on `PermanentLeavesBattlefield` (engine extension — see notes). |
 | Ghost Vacuum | ✅ | {2} Artifact. `{2}, {T}: Move(target → Exile)` over `Any`. Auto-target prefers a graveyard card via the new `Effect::prefers_graveyard_target` (Move-to-Exile) heuristic — without it, the bot would auto-target a battlefield permanent. The "draw on every card going to your graveyard" rider on later printings is omitted (not on the original). Tests: `ghost_vacuum_exiles_target_card_from_graveyard`, `ghost_vacuum_auto_target_picks_graveyard_card_when_present`. |
 | Lavaspur Boots | ⏳ | Equipment grants haste. |
@@ -265,13 +265,13 @@ still ⏳.
 | Soul-Guide Lantern | ✅ | {1} Artifact. {T}: exile a card from each opponent's graveyard (approximation of "target opponent" — equivalent in 2-player). {2}, T, Sac: each player exiles their graveyard, draw 1. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
-| Mesmeric Orb | ⏳ | Mill-on-untap symmetric. |
+| Mesmeric Orb | ✅ | Mill-on-untap symmetric. |
 | Millstone | ✅ | {2}, {T}: target player mills 2. |
 | Mind Stone | ✅ | {T}: Add {C}. {1}, {T}, Sacrifice this: Draw a card. Both abilities wired (uses `ActivatedAbility::sac_cost`). |
 | Pentad Prism | 🟡 | {2} Artifact. ETB with 2 charge counters; remove a charge counter to add one mana of any color. Sunburst's "one counter per color of mana spent" collapses to a flat 2. Tests: `pentad_prism_etb_with_two_charge_counters`, `pentad_prism_removes_counter_to_add_one_mana_of_any_color`. |
 | Smuggler's Copter | ⏳ | Vehicle + crew + loot trigger. Needs Vehicle primitive. |
 | Coalition Relic | 🟡 | {3} Artifact. `{T}: Add one mana of any color`. The charge-counter rider ("{T}: put a charge counter; remove three to add WUBRG") is omitted — no charge-to-mana-burst primitive yet. Tap-for-any-color half is fully functional. Test: `coalition_relic_taps_for_one_mana_of_any_color`. |
-| Monument to Endurance | ⏳ | Graveyard-recursion artifact. |
+| Monument to Endurance | ✅ | Graveyard-recursion artifact. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
 | Sword of Body and Mind | ⏳ | Equipment + protection + token + mill. |
 | Trinisphere | 🟡 | Push (claude/modern_decks batch 102): {3} Artifact body wired as a vanilla 3-mana artifact. The "spells cost at least {3}" minimum-cost static is engine-wide ⏳ (the engine has `AdditionalCostAfterFirstSpell` for cost-tax, but no minimum-cost-floor primitive yet). Ships in the colorless pool. Test: `trinisphere_is_a_three_mana_artifact`. |
@@ -279,7 +279,7 @@ still ⏳.
 | The Mightstone and Weakstone | ⏳ | Modal artifact (assemble). |
 | Coveted Jewel | ⏳ | Mana + force-attack control mechanic. |
 | The Endstone | ⏳ | TBD. |
-| Portal to Phyrexia | ⏳ | Big sac-3 + reanimate. |
+| Portal to Phyrexia | ✅ | Big sac-3 + reanimate. |
 | Talisman of Progress | ✅ | {2} Artifact. Three activated abilities: `{T}: Add {C}` (index 0); `{T}: Add {W}` and `{T}: Add {U}` (indices 1 + 2), each costing 1 life. Color choice exposed as separate ability indices for explicit picker. Test: `talisman_of_progress_taps_for_colorless_or_one_of_w_or_u`. |
 | Talisman of Conviction | ✅ | RW mirror of Talisman of Progress (`{T}: Add {C}` + `{T}: Add {R}` + `{T}: Add {W}`, each colored ability costs 1 life). Built on the shared `talisman_cycle` helper. Test: `talisman_of_conviction_taps_for_red_costing_one_life`. |
 | Talisman of Creativity | ✅ | UR mirror of Talisman of Progress. Test: `talisman_of_creativity_taps_for_blue_or_red_costing_one_life`. |
@@ -294,7 +294,7 @@ still ⏳.
 | Talisman of Dominance | ✅ | {2} Artifact. UB mirror of Talisman of Progress: `{T}: Add {C}` + `{T}: Add {U}` + `{T}: Add {B}` (each colored ability costs 1 life). Test: `talisman_of_dominance_taps_for_blue_costing_one_life`. |
 | Howling Mine | ✅ | Push (claude/modern_decks, NEW): {2} Artifact. At the beginning of each player's draw step, that player draws an additional card (`StepBegins(Draw)/AnyPlayer` → `Draw(ActivePlayer)`). The "if untapped" gate collapses. Test: `howling_mine_draws_an_extra_card_each_turn`. |
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
-| Master of Death | ⏳ | UB recursion + discard. |
+| Master of Death | ✅ | UB recursion + discard. |
 | Fallen Shinobi | ⏳ | Ninjitsu + reveal-and-take. |
 | Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
@@ -303,24 +303,24 @@ still ⏳.
 | Master of Cruelties | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 1/4 First Strike Deathtouch Demon. Attack trigger sets the defending player's life to 1 (via `Effect::SetLifeTotal`). The "can attack only alone" combat restriction and "deals no combat damage this turn" rider are dropped (no engine primitives) — combined with the deathtouch ping, the net play pattern matches the printed kill condition. Test: `master_of_cruelties_attack_sets_opp_life_to_one`. |
 | Territorial Kavu | ✅ | Push (claude/modern_decks batch 102): {2}{R}{G} 3/2 Kavu. `LandPlayed` + `OpponentControl` trigger → `AddCounter(+1/+1, Self)`. Test: `territorial_kavu_grows_when_opponent_plays_a_land`. |
 | Bloodbraid Challenger | ⏳ | Cascade. |
-| Qasali Pridemage | ⏳ | Exalted + sac to destroy artifact/enchantment. |
-| Knight of the Reliquary | ⏳ | Sac-land tutor scaling P/T. |
+| Qasali Pridemage | ✅ | Exalted + sac to destroy artifact/enchantment. |
+| Knight of the Reliquary | ✅ | Sac-land tutor scaling P/T. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
-| Growing Ranks | ⏳ | Populate token-copy on upkeep. |
+| Growing Ranks | ✅ | Populate token-copy on upkeep. |
 | Torsten, Founder of Benalia | ⏳ | TBD. |
 | Tidehollow Sculler | 🟡 | {W}{B} 2/2 Zombie. ETB picks a nonland card from a target opponent's hand and sends it to their graveyard (approximation of "exile until this leaves"). The "return when this leaves" clause is omitted (no exile-until-LTB primitive yet). Reuses `DiscardChosen`. Test: `tidehollow_sculler_etb_takes_an_opponent_card`. |
 | Gift of Orzhova | ⏳ | Aura — flying + lifelink. |
 | Stillmoon Cavalier | ✅ | Push (claude/modern_decks batch 102): {1}{W}{B} 2/2 Zombie Knight with four activated abilities — `{W}: gain flying EOT`, `{B}: gain first strike EOT`, `{1}{W}: gain protection from black EOT`, `{1}{B}: gain protection from white EOT`. All four use `Effect::GrantKeyword(EndOfTurn)`. Tests: `stillmoon_cavalier_grants_flying_eot`, `stillmoon_cavalier_grants_protection_from_black_eot`. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
-| Expressive Iteration | ⏳ | UR look-at-top-3 multi-pick. |
+| Expressive Iteration | ✅ | UR look-at-top-3 multi-pick. |
 | Talisman of Creativity | ✅ | UR mana rock — see Artifacts row. |
 | Pinnacle Emissary | ⏳ | TBD. |
 | Saheeli Rai | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{R} 3-loyalty Planeswalker. **+1**: Scry 1 + ping each opponent for 1 (the "and each PW they control" half drops — no `EachOpponentsPlaneswalker` selector). **-2**: Create a token copy of target friendly creature/artifact, grant haste, delay-trigger Exile at next end step. **-7**: Same body fired twice (the emblem-recurring "each end step" auto-recur is approximated). Tests: `saheeli_rai_plus_one_pings_each_opponent`, `saheeli_rai_minus_two_creates_haste_copy`. |
 | Tempest Angler | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {2}{U} 2/2 Merfolk Wizard with Flying. ETB scries 2. Test: `tempest_angler_etb_scries_two`. |
-| Abrupt Decay | ⏳ | BG removal: destroy nonland with mana value ≤ 3, can't be countered. |
-| Assassin's Trophy | ⏳ | BG removal — opp searches for basic. |
+| Abrupt Decay | ✅ | BG removal: destroy nonland with mana value ≤ 3, can't be countered. |
+| Assassin's Trophy | ✅ | BG removal — opp searches for basic. |
 | Broodspinner | ⏳ | TBD. |
-| Tear Asunder | ⏳ | BG kicker. |
+| Tear Asunder | ✅ | BG kicker. |
 | Wight of the Reliquary | ⏳ | Land-tutor sac variant. |
 | The Gitrog Monster | ⏳ | Land-as-discard / dredge engine. |
 | Talisman of Conviction | ✅ | RW mana rock — see Artifacts row. |
@@ -330,7 +330,7 @@ still ⏳.
 | Lonis, Genetics Expert | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {1}{G}{U} Legendary 2/2 Otter Detective. ETB trigger on other creatures you control creates a Clue token (the printed "investigate" rider via `clue_token()`). The "Sacrifice X Clues: target opp reveals top X cards" activated ability is engine-wide ⏳ (no per-activation X-cost prompt yet). Test: `lonis_genetics_expert_creates_clue_when_other_creature_enters`. |
 | Tamiyo, Collector of Tales | 🟡 | Push (claude/modern_decks batch 102): {2}{G}{U} 4-loyalty Planeswalker. **-2**: Return target card from gy → hand. **-3**: Search library → hand (the "same name as a card in target opponent's graveyard" filter is engine-wide ⏳ — falls back to `Any`). **-7**: Draw 4 (the "distinct nonland types in gy" scaling drops). The static "spells your opps control can't make you discard or sac" is engine-wide ⏳. Test: `tamiyo_collector_minus_two_returns_card_from_graveyard`. |
 | Sab-Sunen, Luxa Embodied | ⏳ | TBD. |
-| Koma, Cosmos Serpent | ⏳ | Token-on-upkeep + sac counters. |
+| Koma, Cosmos Serpent | ✅ | Token-on-upkeep + sac counters. |
 | Kestia, the Cultivator | ⏳ | Aura/enchantment matters. |
 | Messenger Falcons | ⏳ | TBD. |
 | Dakkon, Shadow Slayer | ⏳ | TBD. |
@@ -343,7 +343,7 @@ still ⏳.
 | Dragonback Assault | ⏳ | TBD. |
 | Rediscover the Way | ⏳ | TBD. |
 | Shiko and Narset, Unified | ⏳ | TBD. |
-| Awaken the Honored Dead | ⏳ | Reanimate-multiple. |
+| Awaken the Honored Dead | ✅ | Reanimate-multiple. |
 | Fangkeeper's Familiar | ⏳ | TBD. |
 | Teval, Arbiter of Virtue | ⏳ | TBD. |
 | Muldrotha, the Gravetide | ⏳ | Cast from graveyard each turn (one of each card type). |
@@ -351,10 +351,10 @@ still ⏳.
 | Omnath, Locus of Creation | ⏳ | Landfall-quad-color. |
 | Atraxa, Grand Unifier | 🟡 | Already wired with ETB Draw 4 approximation. Real reveal-and-sort still ⏳. |
 | Leyline of the Guildpact | ⏳ | "Your permanents are all colors." Needs is-all-colors primitive. |
-| Golos, Tireless Pilgrim | ⏳ | ETB land-search; activated cast-from-top. |
-| Maelstrom Archangel | ⏳ | Combat-damage cast-free trigger. |
+| Golos, Tireless Pilgrim | ✅ | ETB land-search; activated cast-from-top. |
+| Maelstrom Archangel | ✅ | Combat-damage cast-free trigger. |
 | Maelstrom Nexus | ⏳ | Cascade-on-first-spell static. |
-| Ramos, Dragon Engine | ⏳ | Charge counters per-color spells; convert to mana. |
+| Ramos, Dragon Engine | ✅ | Charge counters per-color spells; convert to mana. |
 
 ### Lands
 
@@ -376,7 +376,7 @@ still ⏳.
 | Copperline Gorge | ✅ | RG fastland (catalog). |
 | Slagwoods Bridge | 🟡 | RG Bridge — see Razortide Bridge row. |
 | Thornspire Verge | ⏳ | RG verge. |
-| Horizon Canopy | ⏳ | GW horizon canopy: pay 1 + life to draw. |
+| Horizon Canopy | ✅ | GW horizon canopy: pay 1 + life to draw. |
 | Lush Portico | ✅ | GW surveil land. ETB tapped + surveil 1 (modern_decks-11). |
 | Razorverge Thicket | ✅ | GW fastland. |
 | Thornglint Bridge | 🟡 | GW Bridge — see Razortide Bridge row. |
@@ -395,11 +395,11 @@ still ⏳.
 | Elegant Parlor | ✅ | RG surveil land (Murders at Karlov Manor — fixing the spec's RW typo). ETB tapped + surveil 1 (modern_decks-11). |
 | Inspiring Vantage | ✅ | RW fastland. |
 | Rustvale Bridge | 🟡 | RW Bridge — see Razortide Bridge row. |
-| Sunbaked Canyon | ⏳ | RW horizon canopy. |
+| Sunbaked Canyon | ✅ | RW horizon canopy. |
 | Botanical Sanctum | ✅ | UG fastland. |
 | Hedge Maze | ✅ | UG surveil land. ETB tapped + surveil 1 (modern_decks-11). |
 | Tanglepool Bridge | 🟡 | UG Bridge — see Razortide Bridge row. |
-| Waterlogged Grove | ⏳ | UG horizon canopy. |
+| Waterlogged Grove | ✅ | UG horizon canopy. |
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
@@ -407,13 +407,13 @@ still ⏳.
 | Cloudpost | 🟡 | Locus land. ETB tapped, `{T}: Add {C}`. The per-Locus mana scaling collapses to a flat colorless source (no per-source mana scaling primitive yet). Test: `cloudpost_etbs_tapped_and_taps_for_colorless`. |
 | Darksteel Citadel | ✅ | Indestructible artifact land. {T}: Add {C}. |
 | Evolving Wilds | ✅ | ETB tapped, `{T}, sac: Search basic land → BF tapped`. Same `sac_cost: true` shape as Wasteland's destruction half. Test: `evolving_wilds_sacrifices_to_search_basic`. |
-| Exotic Orchard | ⏳ | Mana matching opponents' lands. |
+| Exotic Orchard | ✅ | Mana matching opponents' lands. |
 | Glimmerpost | 🟡 | Locus land. ETB tapped + gain 1 life, `{T}: Add {C}`. The "1 life for each Locus you control" scaling collapses to a flat 1 (gameplay-relevant on a normal board, where Locus density is at most 2). Tests: `glimmerpost_etbs_tapped_and_grants_one_life`, `glimmerpost_taps_for_colorless_after_untap`. |
 | Great Furnace | ✅ | Artifact-Mountain. {T}: Add {R}. |
 | Lotus Field | 🟡 | ETB tapped + Sacrifice 2 lands. `{T}: Add 3 mana of one color`. The "untapped" qualifier on the ETB sac is collapsed (Sacrifice filter doesn't expose tapped state). Tests: `lotus_field_etb_sacrifices_two_lands`, `lotus_field_taps_for_three_of_one_color`. |
 | Planar Nexus | ⏳ | Tri-color rainbow. |
 | Power Depot | ⏳ | Charge-counter mana storage. |
-| Rishadan Port | ⏳ | Tap-to-tap-opp-land. |
+| Rishadan Port | ✅ | Tap-to-tap-opp-land. |
 | Seat of the Synod | ✅ | Artifact-Island. {T}: Add {U}. |
 | Talon Gates of Madara | ⏳ | TBD. |
 | Three Tree City | ⏳ | TBD. |
