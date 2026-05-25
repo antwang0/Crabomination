@@ -4756,3 +4756,39 @@ fn cant_block_creature_can_still_attack() {
     }]));
     assert!(result.is_ok(), "CantBlock creature should still be able to attack");
 }
+
+#[test]
+fn effect_untap_removes_stun_counter_instead_of_untapping() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    g.battlefield_find_mut(bear).unwrap().add_counters(
+        crate::card::CounterType::Stun, 1,
+    );
+
+    let ctx = EffectContext {
+        controller: 0,
+        source: Some(bear),
+        targets: vec![],
+        trigger_source: None,
+        mode: 0,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 0,
+        source_name: None,
+        cast_from_hand: false,
+        event_amount: 0,
+    };
+    g.resolve_effect(
+        &Effect::Untap {
+            what: Selector::EachPermanent(crate::card::SelectionRequirement::Creature),
+            up_to: None,
+        },
+        &ctx,
+    ).unwrap();
+
+    let card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(card.tapped, "Stunned creature should remain tapped after Effect::Untap");
+    assert_eq!(card.counter_count(crate::card::CounterType::Stun), 0,
+        "Stun counter should have been removed");
+}

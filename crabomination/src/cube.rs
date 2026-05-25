@@ -669,6 +669,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         leech_collector,
         scathing_shadelock,
         scheming_silvertongue,
+        // ── modern cube supplement ──
+        baleful_mastery,
+        parallax_nexus,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
@@ -848,6 +851,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arclight_phoenix,
         electrickery,
         street_spasm,
+        // ── modern cube supplement ──
+        dreadhorde_arcanist,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);

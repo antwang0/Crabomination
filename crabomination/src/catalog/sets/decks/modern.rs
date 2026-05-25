@@ -9581,3 +9581,141 @@ pub fn gush() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern cube supplement: additional cube-playable cards ──────────────────
+
+/// Dreadhorde Arcanist — {1}{R} Creature — Zombie Wizard 1/3. Trample.
+/// "Whenever Dreadhorde Arcanist attacks, you may cast target instant or
+/// sorcery card with mana value less than or equal to Dreadhorde Arcanist's
+/// power from your graveyard without paying its mana cost. If that spell
+/// would be put into a graveyard, exile it instead."
+///
+/// Approximation: attack trigger moves the top instant-or-sorcery card from
+/// your graveyard to your hand (simplified from free-cast). The MV ≤ power
+/// restriction is omitted. The exile-instead-of-graveyard rider is also
+/// omitted in this simplified version.
+pub fn dreadhorde_arcanist() -> CardDefinition {
+    use crate::card::CardType as CT;
+    CardDefinition {
+        name: "Dreadhorde Arcanist",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::HasCardType(CT::Instant)
+                            .or(SelectionRequirement::HasCardType(CT::Sorcery)),
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Parallax Nexus — {1}{B}{B} Enchantment. Fading 5 (enters with five fade
+/// counters; at the beginning of your upkeep, remove a fade counter; when the
+/// last is removed, sacrifice this).
+/// "{0}: Exile target card from an opponent's hand."
+///
+/// Approximation: enters with 5 charge counters. Upkeep trigger removes one
+/// counter, and when the counter total hits 0 the permanent is sacrificed.
+/// Activated ability ({0}, no tap) forces the opponent to discard one card
+/// (the closest engine proxy for "exile target card from opponent's hand").
+pub fn parallax_nexus() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    use crate::effect::Predicate;
+    use crate::game::types::TurnStep;
+    CardDefinition {
+        name: "Parallax Nexus",
+        cost: cost(&[generic(1), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::Charge,
+                    amount: Value::Const(1),
+                },
+                Effect::If {
+                    cond: Predicate::Not(Box::new(Predicate::SelectorExists(
+                        Selector::EachPermanent(
+                            SelectionRequirement::WithCounter(CounterType::Charge)
+                                .and(SelectionRequirement::ControlledByYou)
+                                .and(SelectionRequirement::Enchantment),
+                        ),
+                    ))),
+                    then: Box::new(Effect::Sacrifice {
+                        who: Selector::You,
+                        count: Value::Const(1),
+                        filter: SelectionRequirement::Enchantment,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: Some((CounterType::Charge, Value::Const(5))),
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
