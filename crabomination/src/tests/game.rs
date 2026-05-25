@@ -4831,3 +4831,55 @@ fn prowess_does_not_trigger_on_creature_spell() {
     assert_eq!(m.power(), 1, "Prowess should NOT trigger on creature spell");
     assert_eq!(m.toughness(), 3);
 }
+
+// ── Combat module tests ─────────────────────────────────────────────────────
+
+#[test]
+fn first_strike_creature_has_keyword() {
+    let wk = catalog::white_knight();
+    assert!(wk.keywords.contains(&crate::card::Keyword::FirstStrike),
+        "White Knight should have First Strike keyword");
+}
+
+#[test]
+fn flying_creature_cannot_be_blocked_by_non_flyer() {
+    let mut g = two_player_game();
+    let flyer = g.add_card_to_battlefield(0, catalog::serra_angel());
+    g.clear_sickness(flyer);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: flyer,
+        target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    let result = g.perform_action(GameAction::DeclareBlockers(vec![(bear, flyer)]));
+    assert!(result.is_err(), "Non-flyer should not be able to block a flyer");
+}
+
+#[test]
+fn craw_wurm_has_no_trample_by_default() {
+    let cw = catalog::craw_wurm();
+    assert_eq!(cw.power, 6);
+    assert_eq!(cw.toughness, 4);
+}
+
+#[test]
+fn cant_block_keyword_prevents_blocking() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    let cant_block_creature = g.add_card_to_battlefield(1, catalog::postmortem_professor());
+    g.clear_sickness(cant_block_creature);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    let result = g.perform_action(GameAction::DeclareBlockers(vec![(cant_block_creature, attacker)]));
+    assert!(result.is_err(), "Creature with CantBlock should not be allowed to block");
+}

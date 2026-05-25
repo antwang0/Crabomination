@@ -8278,3 +8278,32 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
   carry a body-only 🟡 wire. Once `Player.mana_spent_on_last_cast`
   or a `Value::ManaSpentOnCast` primitive lands, these can be
   bulk-promoted.
+
+## New suggestions (added 2026-05-25 push: modern_decks session)
+
+### Cards
+- ✅ **Professor of Symbology** (STX): {1}{W} 2/1 Human Cleric, ETB
+  draw 1 (Learn approximated). Good 2-drop for Silverquill decks.
+- ✅ **Silverquill Silencer** (STX): {W}{B} 3/2 Human Cleric, body-
+  only (name-choosing penalty omitted).
+- ✅ **Fractal Summoning** (STX): {X}{G}{U} Sorcery — Lesson. Create
+  a 0/0 Fractal with X +1/+1 counters. X-cost scaling via
+  `Value::XFromCost` + `Selector::LastCreatedToken`.
+
+### Engine
+- **Equipment subtype + attach mechanic** — several cube cards need
+  Equipment attach/detach + equip costs. Lion Sash, Cranial Plating,
+  Umezawa's Jitte all blocked on this. Would also unlock Auras as
+  a first-class enchantment subtype.
+- **Cascade keyword** — Quandrix the Proof's ⏳ status depends on
+  this. Cascade needs cast-from-exile-without-paying + a
+  "reveal until nonland < CMC" loop.
+- **Storm keyword** — Prismari the Inspiration needs Storm on IS
+  spells. The engine has `StormCount` value but no auto-copy-on-cast.
+- **Foretell / Adventure / Companion** — future set support.
+
+### UI
+- **Prowess indicator** — when a Prowess creature has pending
+  pump triggers on the stack, the UI should preview the post-pump
+  P/T (e.g. "1/2 → 2/3") so the player sees the effect before
+  resolution.
