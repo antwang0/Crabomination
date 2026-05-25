@@ -284,3 +284,38 @@ pub fn darksteel_citadel() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Exotic Orchard ─────────────────────────────────────────────────────────
+
+/// Exotic Orchard — Land. {T}: Add one mana of any color.
+///
+/// Approximation: the printed text is "Add one mana of any color that a
+/// land an opponent controls could produce." Simplified to unrestricted
+/// any-one-color since opponents always have basics in cube games and the
+/// restriction rarely matters in practice.
+pub fn exotic_orchard() -> CardDefinition {
+    use super::super::tap_add_any_color;
+    CardDefinition {
+        name: "Exotic Orchard",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add_any_color()],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

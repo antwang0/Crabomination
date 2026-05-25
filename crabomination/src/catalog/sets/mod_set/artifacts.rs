@@ -566,3 +566,51 @@ pub fn fellwar_stone() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Monument to Endurance ──────────────────────────────────────────────────
+
+/// Monument to Endurance — {3} Artifact. {2}, {T}: Target creature gets
+/// +2/+2 until end of turn. Simple pump artifact.
+pub fn monument_to_endurance() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Monument to Endurance",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(2)]),
+            effect: Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false, exile_other_filter: None,
+            self_counter_cost_reduction: None, sac_other_filter: None,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

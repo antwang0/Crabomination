@@ -2629,3 +2629,90 @@ pub fn guardian_scalelord() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Growing Ranks ──────────────────────────────────────────────────────────
+
+/// Growing Ranks — {2}{G}{W} Enchantment. At the beginning of your
+/// upkeep, create a 3/3 green Centaur creature token.
+///
+/// Approximation of "populate" — simplified to producing a fixed 3/3
+/// Centaur token each upkeep instead of copying an existing token.
+pub fn growing_ranks() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    CardDefinition {
+        name: "Growing Ranks",
+        cost: cost(&[generic(2), g(), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::YourControl,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Centaur".into(),
+                    power: 3,
+                    toughness: 3,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Centaur],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Master of Death ────────────────────────────────────────────────────────
+
+/// Master of Death — {1}{U}{B} Creature — Zombie Wizard 3/1. At the
+/// beginning of your upkeep, you may pay 1 life. If you do, return
+/// Master of Death from your graveyard to your hand.
+///
+/// Recurring card-advantage creature. The upkeep trigger fires only
+/// while Master of Death is in your graveyard (EventScope::
+/// FromYourGraveyard). The "pay 1 life" gate is modeled as a MayDo
+/// wrapping LoseLife + Move(This → Hand).
+pub fn master_of_death() -> CardDefinition {
+    CardDefinition {
+        name: "Master of Death",
+        cost: cost(&[generic(1), u(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::MayDo {
+                description: "Pay 1 life to return Master of Death to your hand.".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::LoseLife {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                    Effect::Move {
+                        what: Selector::This,
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    },
+                ])),
+            },
+        }],
+        ..Default::default()
+    }
+}

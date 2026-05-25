@@ -805,3 +805,67 @@ pub fn dread_return() -> CardDefinition {
     }
 }
 
+/// Archdruid's Charm — {G}{G}{G} Instant.
+///
+/// Oracle: Choose one — Search your library for a creature card, reveal it,
+/// put it into your hand / Put two +1/+1 counters on target creature you
+/// control / Destroy target artifact or non-Forest land an opponent controls.
+///
+/// All three modes wired via ChooseMode.
+pub fn archdruids_charm() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Archdruid's Charm",
+        cost: cost(&[g(), g(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Land)
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Awaken the Honored Dead — {5}{W}{B} Sorcery.
+///
+/// Oracle: "Return all creature cards from your graveyard to the battlefield."
+///
+/// Mass reanimation; approximation of the printed text's "all creature cards."
+pub fn awaken_the_honored_dead() -> CardDefinition {
+    CardDefinition {
+        name: "Awaken the Honored Dead",
+        cost: cost(&[generic(5), w(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Move {
+            what: Selector::EachMatching {
+                zone: crate::effect::ZoneRef::Graveyard(PlayerRef::You),
+                filter: SelectionRequirement::Creature,
+            },
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+

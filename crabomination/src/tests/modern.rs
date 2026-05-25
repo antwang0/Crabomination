@@ -11829,3 +11829,82 @@ fn candelabra_of_tawnos_has_tap_x_untap_activation() {
     assert!(card.card_types.contains(&CardType::Artifact));
     assert_eq!(card.activated_abilities.len(), 1, "one X activation");
 }
+
+// ── Archdruid's Charm ───────────────────────────────────────────────────────
+
+#[test]
+fn archdruids_charm_is_a_three_mode_green_instant() {
+    let card = catalog::archdruids_charm();
+    assert_eq!(card.name, "Archdruid's Charm");
+    assert!(card.card_types.contains(&CardType::Instant));
+    assert_eq!(card.cost.cmc(), 3, "GGG = 3 CMC");
+    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
+        assert_eq!(modes.len(), 3, "three modes");
+    } else {
+        panic!("Archdruid's Charm should be ChooseMode");
+    }
+}
+
+// ── Awaken the Honored Dead ─────────────────────────────────────────────────
+
+#[test]
+fn awaken_the_honored_dead_is_mass_reanimation() {
+    let card = catalog::awaken_the_honored_dead();
+    assert_eq!(card.name, "Awaken the Honored Dead");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    assert_eq!(card.cost.cmc(), 7, "5WB = 7 CMC");
+}
+
+// ── Growing Ranks ───────────────────────────────────────────────────────────
+
+#[test]
+fn growing_ranks_has_upkeep_token_trigger() {
+    let card = catalog::growing_ranks();
+    assert_eq!(card.name, "Growing Ranks");
+    assert!(card.card_types.contains(&CardType::Enchantment));
+    assert_eq!(card.triggered_abilities.len(), 1, "upkeep token trigger");
+}
+
+// ── Monument to Endurance ───────────────────────────────────────────────────
+
+#[test]
+fn monument_to_endurance_pumps_target_creature() {
+    let mut g = two_player_game();
+    let mon = g.add_card_to_battlefield(0, catalog::monument_to_endurance());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(2);
+    let power_before = g.battlefield.iter().find(|c| c.id == bear).unwrap().definition.power;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mon, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("activate pump");
+    drain_stack(&mut g);
+    let computed = g.compute_battlefield();
+    let cp = computed.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(cp.power, power_before + 2, "Should pump +2/+2");
+}
+
+// ── Exotic Orchard ──────────────────────────────────────────────────────────
+
+#[test]
+fn exotic_orchard_taps_for_any_color() {
+    let mut g = two_player_game();
+    let eo = g.add_card_to_battlefield(0, catalog::exotic_orchard());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: eo, ability_index: 0,
+        target: None, x_value: None,
+    }).expect("tap for mana");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.total() > 0, "Should produce mana");
+}
+
+// ── Master of Death ─────────────────────────────────────────────────────────
+
+#[test]
+fn master_of_death_is_3_1_zombie_wizard() {
+    let card = catalog::master_of_death();
+    assert_eq!(card.name, "Master of Death");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 1);
+    assert_eq!(card.triggered_abilities.len(), 1, "graveyard return trigger");
+}

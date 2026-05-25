@@ -252,6 +252,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         chalice_of_the_void,
         candelabra_of_tawnos,
         rishadan_port,
+        monument_to_endurance,
+        exotic_orchard,
     ]
 }
 
@@ -358,6 +360,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
+        // ── Cube expansion: GW cards ──
+        v.push(growing_ranks);
     }
     if pair_contains(pair, Color::Red) {
         v.push(lightning_helix);
@@ -399,6 +403,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(scolding_administrator);
         v.push(abigale_poet_laureate);
         v.push(fix_whats_broken);
+        v.push(awaken_the_honored_dead);
+        // ── Cube expansion: WB cards ──
+        v.push(elite_spellbinder);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(teferi_time_raveler);
@@ -541,6 +548,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(sanar_unfinished_genius);
         // ── modern_decks batch 102 (UR cube expansion) ──
         v.push(saheeli_rai);
+        v.push(expressive_iteration);
     }
     if pair_contains(pair, Color::White) {
         v.push(teferi_time_raveler);
@@ -557,6 +565,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(drown_in_the_loch);
         // ── modern_decks batch 102 (UB cube expansion) ──
         v.push(ashiok_nightmare_weaver);
+        // ── Cube expansion: UB cards ──
+        v.push(master_of_death);
     }
     v
 }
@@ -729,6 +739,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(cruel_somnophage);
         // ── modern_decks-14 (UB cross-pool) ──
         v.push(drown_in_the_loch);
+        v.push(master_of_death);
     }
     if pair_contains(pair, Color::Green) {
         v.push(darkmoss_bridge);
@@ -762,6 +773,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 102 (WB cube expansion) ──
         v.push(sorin_grim_nemesis);
         v.push(stillmoon_cavalier);
+        // ── Cube expansion: WB cards ──
+        v.push(elite_spellbinder);
     }
     v
 }
@@ -914,6 +927,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(abstract_paintmage);
         v.push(sanar_unfinished_genius);
         v.push(teleportal);
+        // ── Cube expansion: UR cards ──
+        v.push(expressive_iteration);
     }
     if pair_contains(pair, Color::White) {
         v.push(rustvale_bridge);
@@ -1024,12 +1039,17 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── claude/modern_decks push: new green cards ──
         vengevine,
         finale_of_devastation,
+        archdruids_charm,
+        kodamas_reach,
+        greater_good,
+        qasali_pridemage,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
         v.push(horizon_canopy);
+        v.push(growing_ranks);
         // ── modern_decks batch 102 (GW cube expansion) ──
         v.push(heroic_intervention);
         v.push(knight_of_the_reliquary);
