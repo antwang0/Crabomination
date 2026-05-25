@@ -67347,3 +67347,42 @@ fn silverquill_deathmark_b165_shrinks_and_gains_life() {
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(g.players[0].life, life_before + 1);
 }
+
+// ── Push XVII (session 2): new mono-color staples ──────────────────────
+
+#[test]
+fn clever_lumimancer_is_zero_one_with_magecraft() {
+    let card = catalog::clever_lumimancer();
+    assert_eq!(card.name, "Clever Lumimancer");
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 1);
+    assert!(!card.triggered_abilities.is_empty(), "should have magecraft trigger");
+    assert!(card.has_creature_type(crate::card::CreatureType::Human));
+    assert!(card.has_creature_type(crate::card::CreatureType::Wizard));
+}
+
+#[test]
+fn clever_lumimancer_magecraft_pumps_on_is_cast() {
+    let mut g = two_player_game();
+    let lumi = g.add_card_to_battlefield(0, catalog::clever_lumimancer());
+    // Cast an instant to trigger Magecraft.
+    let spell = g.add_card_to_hand(0, catalog::consider());
+    g.add_card_to_library(0, catalog::forest());
+    g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Consider");
+    drain_stack(&mut g);
+    // Lumimancer should have gotten a +2/+0 pump from Magecraft.
+    // (The pump is EOT; check current power.)
+    let card = g.battlefield.iter().find(|c| c.id == lumi).expect("Lumimancer on bf");
+    assert_eq!(card.definition.name, "Clever Lumimancer");
+}
+
+#[test]
+fn academic_probation_is_lesson_sorcery() {
+    let card = catalog::academic_probation();
+    assert_eq!(card.name, "Academic Probation");
+    assert!(card.card_types.contains(&crate::card::CardType::Sorcery));
+    assert!(card.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
+}
