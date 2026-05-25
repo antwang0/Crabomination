@@ -11637,3 +11637,195 @@ fn wurmcoil_engine_is_6_6_deathtouch_lifelink() {
     assert!(card.card_types.contains(&CardType::Artifact));
     assert_eq!(card.triggered_abilities.len(), 1, "death trigger");
 }
+
+// ── Vengevine ───────────────────────────────────────────────────────────────
+
+#[test]
+fn vengevine_is_4_3_haste_elemental() {
+    use crate::card::Keyword;
+    let card = catalog::vengevine();
+    assert_eq!(card.name, "Vengevine");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert_eq!(card.triggered_abilities.len(), 1, "graveyard return trigger");
+}
+
+// ── Portal to Phyrexia ──────────────────────────────────────────────────────
+
+#[test]
+fn portal_to_phyrexia_etb_forces_opponent_sacrifice() {
+    let mut g = two_player_game();
+    let bear1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bear3 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let _ = (bear1, bear2, bear3);
+
+    let portal = g.add_card_to_hand(0, catalog::portal_to_phyrexia());
+    g.players[0].mana_pool.add_colorless(9);
+    let opp_creatures_before = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.card_types.contains(&CardType::Creature))
+        .count();
+    assert_eq!(opp_creatures_before, 3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: portal, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Portal castable");
+    drain_stack(&mut g);
+
+    let opp_creatures_after = g.battlefield.iter()
+        .filter(|c| c.controller == 1 && c.definition.card_types.contains(&CardType::Creature))
+        .count();
+    assert_eq!(opp_creatures_after, 0, "Portal ETB should sac 3 creatures");
+}
+
+#[test]
+fn portal_to_phyrexia_has_upkeep_reanimate_trigger() {
+    let card = catalog::portal_to_phyrexia();
+    assert_eq!(card.triggered_abilities.len(), 2, "ETB + upkeep triggers");
+}
+
+// ── Finale of Devastation ───────────────────────────────────────────────────
+
+#[test]
+fn finale_of_devastation_is_x_green_green_sorcery() {
+    let card = catalog::finale_of_devastation();
+    assert_eq!(card.name, "Finale of Devastation");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    assert_eq!(card.cost.cmc(), 2, "X + GG = 2 base CMC");
+}
+
+// ── Rishadan Port ───────────────────────────────────────────────────────────
+
+#[test]
+fn rishadan_port_taps_for_colorless() {
+    let mut g = two_player_game();
+    let port = g.add_card_to_battlefield(0, catalog::rishadan_port());
+    g.perform_action(GameAction::ActivateAbility { card_id: port, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {C}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.colorless_amount() > 0, "Port should produce colorless mana");
+}
+
+#[test]
+fn rishadan_port_taps_target_land() {
+    let mut g = two_player_game();
+    let port = g.add_card_to_battlefield(0, catalog::rishadan_port());
+    let opp_land = g.add_card_to_battlefield(1, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: port, ability_index: 1,
+        target: Some(Target::Permanent(opp_land)), x_value: None,
+    }).expect("tap opp land");
+    drain_stack(&mut g);
+    let opp_land_card = g.battlefield.iter().find(|c| c.id == opp_land).unwrap();
+    assert!(opp_land_card.tapped, "Opponent's land should be tapped");
+}
+
+// ── Horizon Canopy ──────────────────────────────────────────────────────────
+
+#[test]
+fn horizon_canopy_taps_for_green_costing_one_life() {
+    let mut g = two_player_game();
+    let hc = g.add_card_to_battlefield(0, catalog::horizon_canopy());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Green) > 0, "Should produce green mana");
+    assert_eq!(g.players[0].life, life_before - 1, "Should cost 1 life");
+}
+
+#[test]
+fn horizon_canopy_sac_draws_a_card() {
+    let mut g = two_player_game();
+    let hc = g.add_card_to_battlefield(0, catalog::horizon_canopy());
+    g.add_card_to_library(0, catalog::island());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility { card_id: hc, ability_index: 2, target: None, x_value: None })
+        .expect("sac for draw");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Should draw 1");
+    assert!(g.battlefield.iter().all(|c| c.id != hc), "HC should be sacrificed");
+}
+
+// ── Sunbaked Canyon ─────────────────────────────────────────────────────────
+
+#[test]
+fn sunbaked_canyon_taps_for_red_costing_one_life() {
+    let mut g = two_player_game();
+    let sc = g.add_card_to_battlefield(0, catalog::sunbaked_canyon());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: sc, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {R}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Red) > 0, "Should produce red mana");
+    assert_eq!(g.players[0].life, life_before - 1, "Should cost 1 life");
+}
+
+// ── Waterlogged Grove ───────────────────────────────────────────────────────
+
+#[test]
+fn waterlogged_grove_taps_for_green_costing_one_life() {
+    let mut g = two_player_game();
+    let wg = g.add_card_to_battlefield(0, catalog::waterlogged_grove());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility { card_id: wg, ability_index: 0, target: None, x_value: None })
+        .expect("tap for {G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].mana_pool.amount(Color::Green) > 0, "Should produce green mana");
+    assert_eq!(g.players[0].life, life_before - 1, "Should cost 1 life");
+}
+
+// ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
+
+#[test]
+fn koma_cosmos_serpent_is_6_6_uncounterable_serpent() {
+    use crate::card::Keyword;
+    let card = catalog::koma_cosmos_serpent();
+    assert_eq!(card.name, "Koma, Cosmos Serpent");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::CantBeCountered));
+    assert_eq!(card.triggered_abilities.len(), 1, "upkeep token trigger");
+}
+
+// ── Mesmeric Orb ────────────────────────────────────────────────────────────
+
+#[test]
+fn mesmeric_orb_is_two_mana_artifact() {
+    let card = catalog::mesmeric_orb();
+    assert_eq!(card.name, "Mesmeric Orb");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert_eq!(card.cost.cmc(), 2);
+    assert_eq!(card.triggered_abilities.len(), 1, "upkeep mill trigger");
+}
+
+// ── Chalice of the Void ─────────────────────────────────────────────────────
+
+#[test]
+fn chalice_of_the_void_enters_with_x_charge_counters() {
+    let card = catalog::chalice_of_the_void();
+    assert_eq!(card.name, "Chalice of the Void");
+    assert!(card.enters_with_counters.is_some());
+    let (ctype, _) = card.enters_with_counters.unwrap();
+    assert_eq!(ctype, CounterType::Charge);
+}
+
+#[test]
+fn chalice_of_the_void_has_spell_counter_trigger() {
+    let card = catalog::chalice_of_the_void();
+    assert_eq!(card.triggered_abilities.len(), 1, "counter trigger");
+}
+
+// ── Candelabra of Tawnos ────────────────────────────────────────────────────
+
+#[test]
+fn candelabra_of_tawnos_has_tap_x_untap_activation() {
+    let card = catalog::candelabra_of_tawnos();
+    assert_eq!(card.name, "Candelabra of Tawnos");
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert_eq!(card.activated_abilities.len(), 1, "one X activation");
+}

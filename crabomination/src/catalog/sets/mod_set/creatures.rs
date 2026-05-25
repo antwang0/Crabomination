@@ -2105,6 +2105,477 @@ pub fn wurmcoil_engine() -> CardDefinition {
     }
 }
 
+// ── Vengevine ──────────────────────────────────────────────────────────────
+
+/// Vengevine — {2}{G}{G}, 4/3 Elemental with Haste.
+///
+/// Oracle: "Haste. Whenever you cast a creature spell, if Vengevine is in
+/// your graveyard and you've cast another creature spell this turn, you may
+/// return Vengevine from your graveyard to the battlefield."
+///
+/// Wired via `SpellCast/FromYourGraveyard` trigger with a
+/// `CreaturesCastThisTurnAtLeast(You, 2)` intervening-if gate.
+pub fn vengevine() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Vengevine",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::FromYourGraveyard)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Predicate::CreaturesCastThisTurnAtLeast {
+                        who: PlayerRef::You,
+                        at_least: Value::Const(2),
+                    },
+                ])),
+            effect: Effect::MayDo {
+                description: "Return Vengevine from your graveyard to the battlefield."
+                    .to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                }),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Portal to Phyrexia ────────────────────────────────────────────────────
+
+/// Portal to Phyrexia — {9}, Artifact.
+///
+/// Oracle: "When Portal to Phyrexia enters, each opponent sacrifices three
+/// creatures. At the beginning of your upkeep, put target creature card
+/// from a graveyard onto the battlefield under your control."
+pub fn portal_to_phyrexia() -> CardDefinition {
+    CardDefinition {
+        name: "Portal to Phyrexia",
+        cost: cost(&[generic(9)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(3),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::StepBegins(TurnStep::Upkeep),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Finale of Devastation ──────────────────────────────────────────────────
+
+/// Finale of Devastation — {X}{G}{G}, Sorcery.
+///
+/// Oracle: "Search your library and/or graveyard for a creature card with
+/// mana value X or less and put it onto the battlefield. If X is 10 or
+/// more, creatures you control get +X/+X and gain haste until end of turn.
+/// Shuffle."
+///
+/// Approximation: always searches library (no gy search). The "+X/+X and
+/// haste" rider uses `ForEach(your creature) → PumpPT(X, X, EOT) +
+/// GrantKeyword(Haste, EOT)`.
+pub fn finale_of_devastation() -> CardDefinition {
+    use crate::effect::{Duration, Predicate};
+    CardDefinition {
+        name: "Finale of Devastation",
+        cost: cost(&[crate::mana::x(), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(
+                    Value::XFromCost,
+                    Value::Const(10),
+                ),
+                then: Box::new(Effect::ForEach {
+                    selector: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::PumpPT {
+                            what: Selector::TriggerSource,
+                            power: Value::XFromCost,
+                            toughness: Value::XFromCost,
+                            duration: Duration::EndOfTurn,
+                        },
+                        Effect::GrantKeyword {
+                            what: Selector::TriggerSource,
+                            keyword: Keyword::Haste,
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Rishadan Port ──────────────────────────────────────────────────────────
+
+/// Rishadan Port — Land.
+///
+/// Oracle: "{T}: Add {C}. {1}, {T}: Tap target land."
+pub fn rishadan_port() -> CardDefinition {
+    CardDefinition {
+        name: "Rishadan Port",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Land),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Horizon Canopy ─────────────────────────────────────────────────────────
+
+/// Horizon Canopy — Land.
+///
+/// Oracle: "{T}, Pay 1 life: Add {G} or {W}. {1}, {T}, Sacrifice this:
+/// Draw a card."
+pub fn horizon_canopy() -> CardDefinition {
+    CardDefinition {
+        name: "Horizon Canopy",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::Green, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::White, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Sunbaked Canyon — Land.
+///
+/// Oracle: "{T}, Pay 1 life: Add {R} or {W}. {1}, {T}, Sacrifice this:
+/// Draw a card."
+pub fn sunbaked_canyon() -> CardDefinition {
+    CardDefinition {
+        name: "Sunbaked Canyon",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::Red, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::White, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Waterlogged Grove — Land.
+///
+/// Oracle: "{T}, Pay 1 life: Add {G} or {U}. {1}, {T}, Sacrifice this:
+/// Draw a card."
+pub fn waterlogged_grove() -> CardDefinition {
+    CardDefinition {
+        name: "Waterlogged Grove",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Land],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::Green, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                life_cost: 1,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::OfColor(crate::mana::Color::Blue, Value::Const(1)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: cost(&[generic(1)]),
+                sac_cost: true,
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+// ── Koma, Cosmos Serpent ────────────────────────────────────────────────────
+
+/// Koma, Cosmos Serpent — {3}{G}{G}{U}{U}, 6/6 Legendary Serpent.
+///
+/// Oracle: "This spell can't be countered. At the beginning of each upkeep,
+/// create a 3/3 blue Serpent creature token named Koma's Coil.
+/// Sacrifice another Serpent: Choose one — Tap target permanent. Its
+/// activated abilities can't be activated this turn. / Koma, Cosmos Serpent
+/// gains indestructible until end of turn."
+///
+/// Approximation: CantBeCountered + upkeep token mint. The sac-serpent
+/// abilities are collapsed to a single sac-any-creature activation that
+/// taps a target permanent (the most common mode).
+pub fn koma_cosmos_serpent() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let coil = TokenDefinition {
+        name: "Koma's Coil".to_string(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Koma, Cosmos Serpent",
+        cost: cost(&[generic(3), g(), g(), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Serpent],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::CantBeCountered],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: coil,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            effect: Effect::Seq(vec![
+                Effect::Tap {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Mesmeric Orb ───────────────────────────────────────────────────────────
+
+/// Mesmeric Orb — {2}, Artifact.
+///
+/// Oracle: "Whenever a permanent becomes untapped, that permanent's
+/// controller mills a card."
+///
+/// Approximation: At the beginning of each player's upkeep, each player
+/// mills 3 (approximates the mass-untap mill without needing an untap
+/// event per permanent).
+pub fn mesmeric_orb() -> CardDefinition {
+    CardDefinition {
+        name: "Mesmeric Orb",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::Mill {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Chalice of the Void ────────────────────────────────────────────────────
+
+/// Chalice of the Void — {X}{X}, Artifact.
+///
+/// Oracle: "Chalice of the Void enters with X charge counters on it.
+/// Whenever a player casts a spell with mana value equal to the number of
+/// charge counters on Chalice of the Void, counter that spell."
+///
+/// Approximation: enters with X charge counters. The counter-spells-with-
+/// matching-MV trigger needs a SpellCast + MV-check predicate that reads
+/// counters off this permanent — wired as a SpellCast/AnyPlayer trigger
+/// gated on `ValueEquals(ManaValueOf(TriggerSource), CountersOn(This, Charge))`.
+pub fn chalice_of_the_void() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Chalice of the Void",
+        cost: cost(&[crate::mana::x(), crate::mana::x()]),
+        card_types: vec![CardType::Artifact],
+        enters_with_counters: Some((CounterType::Charge, Value::XFromCost)),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer)
+                .with_filter(Predicate::ValueEquals(
+                    Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::Charge,
+                    },
+                )),
+            effect: Effect::CounterSpell {
+                what: Selector::TriggerSource,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── Candelabra of Tawnos ───────────────────────────────────────────────────
+
+/// Candelabra of Tawnos — {1}, Artifact.
+///
+/// Oracle: "{X}, {T}: Untap X target lands."
+///
+/// Approximation: `{X}, {T}: Untap up to X lands you control` via the
+/// existing `Untap { up_to }` with `Value::XFromCost`.
+pub fn candelabra_of_tawnos() -> CardDefinition {
+    CardDefinition {
+        name: "Candelabra of Tawnos",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[crate::mana::x()]),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: Some(Value::XFromCost),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Guardian Scalelord ──────────────────────────────────────────────────────
 
 /// Guardian Scalelord — {3}{W}{W}, 4/4 Dragon with Flying.

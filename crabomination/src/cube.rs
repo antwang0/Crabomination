@@ -246,6 +246,12 @@ fn colorless_pool() -> Vec<CardFactory> {
         biblioplex_tomekeeper,
         strixhaven_skycoach,
         the_dawning_archaic,
+        // ── claude/modern_decks push: new colorless cards ──
+        portal_to_phyrexia,
+        mesmeric_orb,
+        chalice_of_the_void,
+        candelabra_of_tawnos,
+        rishadan_port,
     ]
 }
 
@@ -366,6 +372,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(borrowed_knowledge);
         v.push(lorehold_charm);
         v.push(kirol_history_buff);
+        // ── claude/modern_decks push: RW horizon land ──
+        v.push(sunbaked_canyon);
     }
     if pair_contains(pair, Color::Black) {
         v.push(mourning_thrull);
@@ -1013,11 +1021,15 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         basking_rootwalla,
         // ── Push XIX: cube expansion ──
         elder_gargaroth,
+        // ── claude/modern_decks push: new green cards ──
+        vengevine,
+        finale_of_devastation,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
         v.push(thornglint_bridge);
         v.push(lush_portico);
+        v.push(horizon_canopy);
         // ── modern_decks batch 102 (GW cube expansion) ──
         v.push(heroic_intervention);
         v.push(knight_of_the_reliquary);
@@ -1049,6 +1061,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(tamiyo_collector_of_tales);
         // ── modern_decks batch 103 (GU cube expansion) ──
         v.push(lonis_genetics_expert);
+        // ── claude/modern_decks push: new GU cards ──
+        v.push(koma_cosmos_serpent);
+        v.push(waterlogged_grove);
     }
     if pair_contains(pair, Color::Black) {
         v.push(darkmoss_bridge);
