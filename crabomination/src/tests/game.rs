@@ -4718,3 +4718,41 @@ fn library_position_from_top_zero_is_top() {
     assert_eq!(g.players[0].library[1].id, a);
     assert_eq!(g.players[0].library[2].id, b);
 }
+
+// ── Combat edge cases ────────────────────────────────────────────────────
+
+#[test]
+fn lifelink_combat_damage_gains_life() {
+    let mut g = two_player_game();
+    let lifelinker = setup_attacker(&mut g, 0, catalog::serra_angel);
+    g.battlefield_find_mut(lifelinker).unwrap().definition.keywords.push(
+        crate::card::Keyword::Lifelink,
+    );
+    let life_before = g.players[0].life;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: lifelinker,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Declare attackers");
+    g.step = TurnStep::CombatDamage;
+    let _events = g.resolve_combat().unwrap();
+    assert!(g.players[0].life > life_before,
+        "Lifelink should gain life from combat damage");
+}
+
+#[test]
+fn cant_block_creature_can_still_attack() {
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        let mut def = catalog::grizzly_bears();
+        def.keywords = vec![crate::card::Keyword::CantBlock];
+        def
+    });
+    g.step = TurnStep::DeclareAttackers;
+    let result = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(result.is_ok(), "CantBlock creature should still be able to attack");
+}
