@@ -178,6 +178,11 @@ pub struct PlayerView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub commanders: Vec<CardId>,
+    /// True when this player has lost the game (life ≤ 0, drew from empty
+    /// library, Pact fail, etc.). Surfaced so UIs can grey out eliminated
+    /// players' portraits and skip them in turn order display.
+    #[serde(default)]
+    pub eliminated: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

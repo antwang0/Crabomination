@@ -106,6 +106,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
             .map(|c| HandCardView::Known(known_card(c)))
             .collect(),
         commanders: player.commanders.clone(),
+        eliminated: player.eliminated,
     }
 }
 
@@ -615,12 +616,27 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::Attach { .. } => "Attach",
         Effect::GrantSorceriesAsFlash { .. } => "Sorceries as flash",
         Effect::NameCreatureType { .. } => "Name creature type",
-        // `Effect::Noop` is the only Effect variant reachable here today
-        // (every other variant has a dedicated arm above). The match is
-        // intentionally wildcarded rather than exhaustive so adding a
-        // new `Effect` variant doesn't break the build — but if a new
-        // card surfaces with the generic "Activate" label, add a
-        // dedicated arm above.
+        Effect::GrantTriggeredAbility { .. } => "Grant ability",
+        Effect::LoseAllAbilities { .. } => "Remove abilities",
+        Effect::DiscardAnyNumber { .. } => "Discard any number",
+        Effect::SacrificeGreatestMV { .. } => "Sacrifice (highest MV)",
+        Effect::CopySpellUnlessPaid { .. } => "Copy unless paid",
+        Effect::GrantMayPlay { .. } => "Grant may play",
+        Effect::CastWithoutPayingImmediate { .. } => "Cast free",
+        Effect::RegisterParadigm => "Paradigm",
+        Effect::CastFreeParadigmCopy => "Cast paradigm copy",
+        Effect::WinGame { .. } => "Win the game",
+        Effect::PreventAllCombatDamageThisTurn => "Prevent combat damage",
+        Effect::SkipTurns { .. } => "Skip turns",
+        Effect::SetLifeTotal { .. } => "Set life total",
+        Effect::LifeGainLockThisTurn { .. } => "Lock lifegain",
+        Effect::MoveCounter { .. } => "Move counters",
+        Effect::RevealTopCard { .. } => "Reveal top card",
+        Effect::RollDie { .. } => "Roll die",
+        Effect::IfRevealFromHand { .. } => "Reveal from hand",
+        Effect::DiminishCreaturesExceptChosenType { .. } => "Diminish creatures",
+        Effect::CreateTokenCopyOf { .. } => "Copy permanent",
+        Effect::ActivateDellianEmblem { .. } => "Activate emblem",
         _ => "Activate",
     }
 }
