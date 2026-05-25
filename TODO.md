@@ -42,6 +42,42 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 - Wire Omniscience's free-cast static (`StaticEffect::FreeCast`)
 - Wire Opposition's tap-creature-to-tap-permanent ability
 
+### Session 2026-05-25 observations
+- **ServerMsg::View clippy fix**: The `ServerMsg::View(ClientView)` variant
+  was significantly larger (232+ bytes) than other variants, triggering a
+  clippy `large_enum_variant` warning. Fixed by boxing:
+  `View(Box<ClientView>)`. All 6 construction sites in server/mod.rs and
+  the 1 pattern match in net_plugin.rs updated.
+- **Cube pool completeness**: Several colorless and cross-pool cards
+  (fix_whats_broken, skycoach_waypoint, biblioplex_tomekeeper,
+  strixhaven_skycoach, the_dawning_archaic) were implemented but not
+  wired into the cube pools. Now wired.
+- **Deathtouch SBA gap**: The engine handles deathtouch at combat-damage
+  time (setting damage to max toughness), but non-combat deathtouch damage
+  (e.g., a deathtouch creature with "{T}: deal 1 damage") wouldn't be
+  treated as lethal through the SBA path. Adding a `dealt_by_deathtouch:
+  bool` flag to `CardInstance.damage` (or a parallel `deathtouch_damaged:
+  bool` field cleared alongside `damage`) would close this gap. Low
+  priority since the catalog has no non-combat deathtouch damage sources.
+- **Ward enforcement**: `Keyword::Ward(WardCost)` is tagged on many
+  creatures but the engine-wide enforcement (counter-unless-paid on
+  becoming a target) is still unimplemented. This is the single largest
+  remaining keyword gap — dozens of SOS/STX cards carry Ward tags that
+  are purely decorative. Implementing Ward needs: (a) a `BecameTarget`
+  event emitted by the cast/activation paths, (b) a
+  "counter-unless-pay-N" decision, (c) integration with the priority
+  system. Would also unblock the Ward—Discard and Ward—Pay-N-Life
+  variants.
+- **Kicker alt cost**: Several cube cards (Bloodchief's Thirst,
+  Baleful Mastery, Inscription of Abundance) have a kicker mode that
+  changes or enhances the spell's effect. The engine's
+  `AlternativeCost.effect_override` unlocks this for Overload-style
+  cards, but kicker needs the override to be an *enhancement* (add
+  to the base effect) rather than a *replacement*. A
+  `AlternativeCost.effect_addon: Option<Effect>` field that sequences
+  after the base effect would cleanly model kicker without duplicating
+  the base-mode wiring.
+
 ## MagicCompRules coverage audit
 
 Periodic spot-check of the rules document
