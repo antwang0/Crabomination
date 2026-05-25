@@ -552,12 +552,26 @@ impl GameState {
                     return Ok(());
                 };
                 let atk_power = self.battlefield_find(atk_id).map(|c| c.power()).unwrap_or(0);
+                let atk_deathtouch = self.battlefield_find(atk_id)
+                    .map(|c| c.has_keyword(&Keyword::Deathtouch)).unwrap_or(false);
                 let def_power = self.battlefield_find(def_id).map(|c| c.power()).unwrap_or(0);
+                let def_deathtouch = self.battlefield_find(def_id)
+                    .map(|c| c.has_keyword(&Keyword::Deathtouch)).unwrap_or(false);
                 if atk_power > 0 {
                     self.deal_damage_to(EntityRef::Permanent(def_id), atk_power as u32, events);
+                    if atk_deathtouch {
+                        if let Some(c) = self.battlefield_find_mut(def_id) {
+                            c.dealt_deathtouch_damage = true;
+                        }
+                    }
                 }
                 if def_power > 0 {
                     self.deal_damage_to(EntityRef::Permanent(atk_id), def_power as u32, events);
+                    if def_deathtouch {
+                        if let Some(c) = self.battlefield_find_mut(atk_id) {
+                            c.dealt_deathtouch_damage = true;
+                        }
+                    }
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);

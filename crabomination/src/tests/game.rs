@@ -4883,3 +4883,34 @@ fn cant_block_keyword_prevents_blocking() {
     let result = g.perform_action(GameAction::DeclareBlockers(vec![(cant_block_creature, attacker)]));
     assert!(result.is_err(), "Creature with CantBlock should not be allowed to block");
 }
+
+// ── Deathtouch SBA (CR 704.5h) ────────────────────────────────────────────
+
+#[test]
+fn deathtouch_damage_kills_large_creature_via_sba() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel());
+    if let Some(c) = g.battlefield_find_mut(big) {
+        c.damage = 1;
+        c.dealt_deathtouch_damage = true;
+    }
+    let _ = g.check_state_based_actions();
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == big),
+        "Creature with deathtouch damage should die regardless of toughness"
+    );
+}
+
+#[test]
+fn normal_damage_does_not_trigger_deathtouch_sba() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel());
+    if let Some(c) = g.battlefield_find_mut(big) {
+        c.damage = 1;
+    }
+    let _ = g.check_state_based_actions();
+    assert!(
+        g.battlefield.iter().any(|c| c.id == big),
+        "1 normal damage should not kill a 4/4"
+    );
+}

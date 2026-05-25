@@ -969,8 +969,15 @@ impl GameState {
                 if computed_toughness <= 0 {
                     return true;
                 }
+                if c.has_keyword(&Keyword::Indestructible) {
+                    return false;
+                }
                 // Lethal damage kills non-indestructible creatures.
-                !c.has_keyword(&Keyword::Indestructible) && (c.damage as i32) >= computed_toughness
+                if (c.damage as i32) >= computed_toughness {
+                    return true;
+                }
+                // CR 704.5h: any damage from a deathtouch source is lethal.
+                c.dealt_deathtouch_damage && c.damage > 0
             })
             .map(|c| c.id)
             .collect();

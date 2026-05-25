@@ -822,6 +822,10 @@ pub struct CardInstance {
     /// whenever the card changes zones (the grantor's "that card" stops
     /// referring to it once it moves).
     pub may_play_until: Option<MayPlayPermission>,
+    /// CR 704.5h: true if this creature has been dealt damage by a source
+    /// with deathtouch since the last time SBAs were checked. Causes
+    /// destruction regardless of damage amount vs toughness.
+    pub dealt_deathtouch_damage: bool,
 }
 
 impl CardInstance {
@@ -856,6 +860,7 @@ impl CardInstance {
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
             may_play_until: None,
+            dealt_deathtouch_damage: false,
         }
     }
 
@@ -923,6 +928,7 @@ impl CardInstance {
         self.used_loyalty_ability_this_turn = false;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
+        self.dealt_deathtouch_damage = false;
     }
 }
 

@@ -455,6 +455,9 @@ impl GameState {
                         }
                     } else if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
                         blocker.damage += assign as u32;
+                        if atk.has_deathtouch && assign > 0 {
+                            blocker.dealt_deathtouch_damage = true;
+                        }
                         events.push(GameEvent::DamageDealt {
                             amount: assign as u32,
                             to_player: None,
@@ -510,7 +513,7 @@ impl GameState {
                             c.keywords.contains(&Keyword::Infect)
                                 || c.keywords.contains(&Keyword::Wither)
                         });
-                    let attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
+                    let _attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
                     if let Some(attacker) = self.battlefield_find_mut(atk.id) {
                         if any_infect_blocker {
                             let dmg = blocker_damage_to_attacker.max(0) as u32;
@@ -521,7 +524,8 @@ impl GameState {
                                 count: dmg,
                             });
                         } else if any_deathtouch_blocker {
-                            attacker.damage = attacker.damage.max(attacker_toughness as u32);
+                            attacker.damage += blocker_damage_to_attacker.max(0) as u32;
+                            attacker.dealt_deathtouch_damage = true;
                             events.push(GameEvent::DamageDealt {
                                 amount: blocker_damage_to_attacker.max(0) as u32,
                                 to_player: None,
