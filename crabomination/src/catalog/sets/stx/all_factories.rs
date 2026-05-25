@@ -3328,5 +3328,9 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_vindict_b165,
         super::silverquill::inkling_skywarden_b165,
         super::silverquill::silverquill_deathmark_b165,
+        // ── mono additions ──
+        super::mono::professor_of_symbology,
+        super::mono::silverquill_silencer,
+        super::mono::fractal_summoning,
     ]
 }

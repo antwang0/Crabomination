@@ -67386,3 +67386,65 @@ fn academic_probation_is_lesson_sorcery() {
     assert!(card.card_types.contains(&crate::card::CardType::Sorcery));
     assert!(card.subtypes.spell_subtypes.contains(&crate::card::SpellSubtype::Lesson));
 }
+
+// ── Push: Prowess engine + new cards ────────────────────────────────────────
+
+#[test]
+fn prowess_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let mage_id = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    g.clear_sickness(mage_id);
+    let bolt_id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let opp_creature = g.add_card_to_battlefield(1, catalog::serra_angel());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt_id,
+        target: Some(Target::Permanent(opp_creature)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    let mage = g.battlefield.iter().find(|c| c.id == mage_id).unwrap();
+    assert_eq!(mage.power(), 2, "Prowess should pump +1/+1, making 1→2 power");
+    assert_eq!(mage.toughness(), 3, "Prowess should pump +1/+1, making 2→3 toughness");
+}
+
+#[test]
+fn professor_of_symbology_etb_draws_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::professor_of_symbology());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn silverquill_silencer_is_three_two() {
+    let d = catalog::silverquill_silencer();
+    assert_eq!(d.power, 3);
+    assert_eq!(d.toughness, 2);
+}
+
+#[test]
+fn fractal_summoning_creates_fractal_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fractal_summoning());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).unwrap();
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|p| p.definition.name == "Fractal");
+    assert!(fractal.is_some());
+    let f = fractal.unwrap();
+    assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), 3);
+}
