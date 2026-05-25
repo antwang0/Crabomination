@@ -362,6 +362,12 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::StepBegins(crate::game::types::TurnStep::PostCombatMain), _) => "Main 2",
         (EventKind::StepBegins(crate::game::types::TurnStep::End), _) => "End step",
         (EventKind::StepBegins(_), _) => "Step",
+        (EventKind::SpellCast, EventScope::SelfSource) => "On cast",
+        (EventKind::LandPlayed, EventScope::FromYourGraveyard) => "Landfall (gy)",
+        (EventKind::LandPlayed, EventScope::OpponentControl) => "Opp landfall",
+        (EventKind::CreatureDied, EventScope::OpponentControl) => "Opp creature dies",
+        (EventKind::EntersBattlefield, EventScope::YourControl) => "Your ETB",
+        (EventKind::EntersBattlefield, EventScope::OpponentControl) => "Opp ETB",
         _ => "",
     }
 }

@@ -5,6 +5,59 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXII — 2026-05-25, session 5)
+
+### New cube cards (25+ new implementations)
+- Vengevine, Portal to Phyrexia, Finale of Devastation, Rishadan Port
+- Horizon Canopy cycle (3 lands: Horizon Canopy, Sunbaked Canyon,
+  Waterlogged Grove)
+- Koma Cosmos Serpent, Mesmeric Orb, Chalice of the Void, Candelabra
+  of Tawnos
+- Archdruid's Charm, Awaken the Honored Dead, Growing Ranks, Monument
+  to Endurance, Exotic Orchard, Master of Death
+- Basking Broodscale, Sowing Mycospawn, Ursine Monstrosity, Moonshadow,
+  Golos Tireless Pilgrim, Maelstrom Archangel, Ramos Dragon Engine
+- Omnath Locus of Creation, Kozilek's Command, Eldrazi Confluence,
+  Coveted Jewel, Mightstone and Weakstone, Doomsday Excruciator,
+  Planar Nexus, Omnath Locus of Rage, Torsten Founder of Benalia
+
+### Existing cards wired into cube pools
+- Elite Spellbinder, Kodama's Reach, Greater Good, Qasali Pridemage,
+  Expressive Iteration, Corpse Dance, Thundertrap Trainer, Enduring
+  Innocence, Baleful Mastery
+
+### Engine improvements
+- `PlayerView.eliminated` field exposes player death state to clients
+- `ability_effect_label` expanded from ~35 to ~55 explicit arms
+- `trigger_event_label` expanded with 6 more event/scope combos
+
+### Rules implementations
+- CR 704.5a — player at 0/negative life eliminated by SBA (3 tests)
+- CR 704.5j — legend rule keeps newest, different controllers coexist
+  (2 tests)
+- CR 704.5c — empty-library draw eliminates player (1 test)
+
+### Observations & future items from this session
+- **CUBE_FEATURES.md tracking drift** — many cards are marked ⏳ in the
+  doc but already implemented in the catalog (Elite Spellbinder,
+  Baleful Mastery, Kodama's Reach, Greater Good, etc.). An audit pass
+  to sync doc status with code state would reduce confusion.
+- **Cascade primitive** — Quandrix the Proof has cascade wired as a
+  simplified `RevealUntilFind + GrantMayPlay`, but a general-purpose
+  Cascade keyword that grants cascade to other spells (Maelstrom Nexus)
+  still needs a grant-cascade-on-cast primitive.
+- **Populate primitive** — Growing Ranks approximates populate as a
+  fixed 3/3 Centaur token. A real Populate would need a
+  `CloneToken(target existing token)` primitive.
+- **Free-cast static** — Omniscience and Aluren both need a
+  `StaticEffect::FreeCast` that bypasses cost payment for qualifying
+  spells. Currently wired as body-only enchantments.
+- **5-color mana cost in cube** — Cards costing {W}{U}{B}{R}{G}
+  (Maelstrom Archangel) are in the colorless pool since they span all
+  colors. A more correct approach would be to only include them when
+  the player's color pair can generate all five colors (via mana rocks
+  or rainbow lands).
+
 ## Recent additions (Push XXI — 2026-05-25, session 4)
 
 ### Server — view improvements
