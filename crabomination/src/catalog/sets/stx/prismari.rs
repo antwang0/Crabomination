@@ -235,43 +235,6 @@ pub fn elemental_summoning() -> CardDefinition {
     }
 }
 
-// ── Expressive Iteration ───────────────────────────────────────────────────
-
-/// Expressive Iteration — {U}{R} Sorcery. Look at top 3, put one to hand,
-/// one on bottom, exile one and may play it this turn.
-///
-/// 🟡 Approximated as Scry 2 + Draw 1.
-pub fn expressive_iteration() -> CardDefinition {
-    CardDefinition {
-        name: "Expressive Iteration",
-        cost: cost(&[u(), r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
 // ── Teach by Example ───────────────────────────────────────────────────────
 
 /// Teach by Example — {1}{U}{R} Instant. Copy your next IS spell this turn.

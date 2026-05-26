@@ -235,7 +235,9 @@ impl GameState {
             |kws: &[Keyword]| {
                 kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
             },
-            |_kws: &[Keyword]| false,
+            |kws: &[Keyword]| {
+                kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            },
         )?;
         let mut sba = self.check_state_based_actions();
         events.append(&mut sba);
@@ -250,7 +252,9 @@ impl GameState {
             |kws: &[Keyword]| {
                 !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
             },
-            |_kws: &[Keyword]| true,
+            |kws: &[Keyword]| {
+                !kws.contains(&Keyword::FirstStrike) || kws.contains(&Keyword::DoubleStrike)
+            },
         )?;
 
         let mut sba = self.check_state_based_actions();
@@ -271,7 +275,7 @@ impl GameState {
         &mut self,
         computed: &[ComputedPermanent],
         attacker_filter: impl Fn(&[Keyword]) -> bool,
-        _blocker_filter: impl Fn(&[Keyword]) -> bool,
+        blocker_filter: impl Fn(&[Keyword]) -> bool,
     ) -> Result<Vec<GameEvent>, GameError> {
         let mut events = vec![];
 
@@ -361,6 +365,9 @@ impl GameState {
                         }
                     } else if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
                         blocker.damage += assign as u32;
+                        if atk.has_deathtouch && assign > 0 {
+                            blocker.deathtouch_damaged = true;
+                        }
                         events.push(GameEvent::DamageDealt {
                             amount: assign as u32,
                             to_player: None,
@@ -387,12 +394,7 @@ impl GameState {
                 let blocker_damage_to_attacker: i32 = blocker_ids
                     .iter()
                     .filter_map(|&bid| computed_of(bid))
-                    .filter(|bc| {
-                        !bc.keywords.contains(&Keyword::FirstStrike)
-                            || bc.keywords.contains(&Keyword::DoubleStrike)
-                            || atk.has_first_strike
-                            || atk.has_double_strike
-                    })
+                    .filter(|bc| blocker_filter(&bc.keywords))
                     .map(|c| c.power)
                     .sum();
 
@@ -408,7 +410,7 @@ impl GameState {
                             c.keywords.contains(&Keyword::Infect)
                                 || c.keywords.contains(&Keyword::Wither)
                         });
-                    let attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
+                    let _attacker_toughness = computed_of(atk.id).map(|c| c.toughness).unwrap_or(0);
                     if let Some(attacker) = self.battlefield_find_mut(atk.id) {
                         if any_infect_blocker {
                             let dmg = blocker_damage_to_attacker.max(0) as u32;
@@ -419,7 +421,8 @@ impl GameState {
                                 count: dmg,
                             });
                         } else if any_deathtouch_blocker {
-                            attacker.damage = attacker.damage.max(attacker_toughness as u32);
+                            attacker.damage += blocker_damage_to_attacker.max(0) as u32;
+                            attacker.deathtouch_damaged = true;
                             events.push(GameEvent::DamageDealt {
                                 amount: blocker_damage_to_attacker.max(0) as u32,
                                 to_player: None,

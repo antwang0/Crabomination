@@ -579,6 +579,10 @@ impl GameState {
                 if computed_toughness <= 0 {
                     return true;
                 }
+                // CR 704.5h: deathtouch damage is always lethal.
+                if !c.has_keyword(&Keyword::Indestructible) && c.deathtouch_damaged && c.damage > 0 {
+                    return true;
+                }
                 // Lethal damage kills non-indestructible creatures.
                 !c.has_keyword(&Keyword::Indestructible) && (c.damage as i32) >= computed_toughness
             })

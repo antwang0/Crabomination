@@ -4288,3 +4288,175 @@ fn cr_704_5j_legend_rule_keeps_newest() {
     assert_eq!(griselbrands.len(), 1, "legend rule removed the duplicate");
     assert_eq!(griselbrands[0].id, legend2, "newest legend survives");
 }
+
+// ── CR 702.2: Deathtouch ───────────────────────────────────────────────────
+
+#[test]
+fn cr_702_2_deathtouch_any_damage_is_lethal() {
+    let mut g = two_player_game();
+
+    let mut dt_def = catalog::grizzly_bears();
+    dt_def.name = "Deathtouch Attacker";
+    dt_def.power = 1;
+    dt_def.toughness = 1;
+    dt_def.keywords = vec![crate::card::Keyword::Deathtouch];
+    let attacker = g.add_card_to_battlefield(0, dt_def);
+    g.clear_sickness(attacker);
+
+    let mut big_def = catalog::grizzly_bears();
+    big_def.name = "Big Blocker";
+    big_def.power = 5;
+    big_def.toughness = 5;
+    let blocker = g.add_card_to_battlefield(1, big_def);
+    g.clear_sickness(blocker);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attackers");
+
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![
+        (blocker, attacker),
+    ])).expect("declare blockers");
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == blocker),
+        "5/5 should die to 1 deathtouch damage (CR 702.2)");
+}
+
+// ── CR 702.15: Lifelink ────────────────────────────────────────────────────
+
+#[test]
+fn cr_702_15_lifelink_grants_life_on_combat_damage() {
+    let mut g = two_player_game();
+
+    let mut ll_def = catalog::grizzly_bears();
+    ll_def.name = "Lifelink Bear";
+    ll_def.keywords = vec![crate::card::Keyword::Lifelink];
+    let attacker = g.add_card_to_battlefield(0, ll_def);
+    g.clear_sickness(attacker);
+
+    let life_before = g.players[0].life;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attackers");
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert_eq!(g.players[0].life, life_before + 2,
+        "Lifelink should grant 2 life from 2 combat damage (CR 702.15)");
+    assert_eq!(g.players[1].life, 18, "Opponent should take 2 combat damage");
+}
+
+// ── CR 702.7: First Strike ─────────────────────────────────────────────────
+
+#[test]
+fn cr_702_7_first_strike_kills_before_regular_damage() {
+    let mut g = two_player_game();
+
+    let mut fs_def = catalog::grizzly_bears();
+    fs_def.name = "First Striker";
+    fs_def.keywords = vec![crate::card::Keyword::FirstStrike];
+    let attacker = g.add_card_to_battlefield(0, fs_def);
+    g.clear_sickness(attacker);
+
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker, target: AttackTarget::Player(1) },
+    ])).expect("declare attackers");
+
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![
+        (blocker, attacker),
+    ])).expect("declare blockers");
+
+    // First-strike damage step kills the blocker before regular damage.
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == blocker),
+        "Vanilla 2/2 should die to first-strike damage");
+    assert!(g.battlefield.iter().any(|c| c.id == attacker),
+        "First-striker should survive (CR 702.7)");
+}
+
+// ── CR 704.5b: Player at 0 or less life loses ─────────────────────────────
+
+#[test]
+fn cr_704_5b_player_at_zero_life_loses() {
+    let mut g = two_player_game();
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(g.players[1].eliminated,
+        "Player at 0 life should be eliminated (CR 704.5b)");
+}
+
+#[test]
+fn cr_704_5b_player_at_negative_life_loses() {
+    let mut g = two_player_game();
+    g.players[1].life = -5;
+    g.check_state_based_actions();
+    assert!(g.players[1].eliminated,
+        "Player at negative life should be eliminated (CR 704.5b)");
+}
+
+// ── CR 704.5c: Player at 10+ poison counters loses ────────────────────────
+
+#[test]
+fn cr_704_5c_player_with_10_poison_loses() {
+    let mut g = two_player_game();
+    g.players[1].poison_counters = 10;
+    g.check_state_based_actions();
+    assert!(g.players[1].eliminated,
+        "Player with 10 poison counters should be eliminated (CR 704.5c)");
+}
+
+// ── CR 704.5i: Planeswalker at 0 loyalty dies ─────────────────────────────
+
+#[test]
+fn cr_704_5i_planeswalker_at_zero_loyalty_dies() {
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
+    // Set loyalty to 0.
+    if let Some(c) = g.battlefield_find_mut(pw) {
+        c.counters.insert(crate::card::CounterType::Loyalty, 0);
+    }
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == pw),
+        "Planeswalker at 0 loyalty should be removed (CR 704.5i)");
+}
+
+// ── CR 704.5n: Orphaned aura ───────────────────────────────────────────────
+
+#[test]
+fn cr_704_5n_orphaned_aura_goes_to_graveyard() {
+    use crate::card::{CardDefinition, CardType, EnchantmentSubtype, Subtypes};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura_def = CardDefinition {
+        name: "Test Aura",
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    let aura = g.add_card_to_battlefield(0, aura_def);
+    if let Some(a) = g.battlefield_find_mut(aura) {
+        a.attached_to = Some(bear);
+    }
+    g.remove_from_battlefield_to_graveyard(bear);
+    g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == aura),
+        "Orphaned aura should be removed from battlefield (CR 704.5n)");
+}

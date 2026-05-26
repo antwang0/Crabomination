@@ -770,39 +770,6 @@ pub fn divide_by_zero() -> CardDefinition {
     }
 }
 
-// ── Baleful Mastery ────────────────────────────────────────────────────────
-
-/// Baleful Mastery — {3}{B} Instant. "You may pay {1}{B} rather than pay
-/// this spell's mana cost. If you do, an opponent draws a card. Exile
-/// target creature or planeswalker."
-///
-/// 🟡 Alt cost rider omitted. Full-cost Exile target creature/PW.
-pub fn baleful_mastery() -> CardDefinition {
-    CardDefinition {
-        name: "Baleful Mastery",
-        cost: cost(&[generic(3), b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
 // ── Flunk ──────────────────────────────────────────────────────────────────
 
 /// Flunk — {1}{B} Instant. "Target creature gets -X/-X until end of turn,

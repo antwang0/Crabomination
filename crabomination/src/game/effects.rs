@@ -2151,6 +2151,7 @@ impl GameState {
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
             card.damage = 0;
+            card.deathtouch_damaged = false;
             card.tapped = false;
             card.attached_to = None;
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
