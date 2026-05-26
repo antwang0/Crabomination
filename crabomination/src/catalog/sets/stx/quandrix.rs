@@ -112,11 +112,12 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// 🟡 We ship just mode 0 (counter-noncreature-unless-{2}) faithfully.
-/// Mode 1 is a fight-with-tax — the engine has `Effect::Fight` but it
-/// uses one target slot, while Decisive Denial wants two. The fight
-/// half is omitted until the multi-target prompt lands; mode 0 alone is
-/// still a respectable Quandrix counterspell.
+/// Both modes wired. Mode 1 uses `Effect::Fight` with the target creature
+/// (slot 0) as attacker and an auto-picked opponent creature as defender.
+/// The printed card uses two separate targets for the fight; we collapse
+/// the attacker to the auto-targeted creature (slot 0, filtered to your
+/// creature for mode 1) and the defender to the first opponent creature
+/// found by auto-targeting.
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -130,14 +131,31 @@ pub fn decisive_denial() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::ChooseMode(vec![
-            // Mode 0: counter target noncreature spell unless its controller
-            // pays {2}.
+            // Mode 0: counter target noncreature spell unless controller pays {2}.
             Effect::CounterUnlessPaid {
                 what: target_filtered(
                     SelectionRequirement::IsSpellOnStack
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
                 mana_cost: two,
+            },
+            // Mode 1: fight — target creature you don't control takes
+            // damage from your biggest creature (auto-picked from the
+            // battlefield). Approximation: the printed card has two
+            // separate targets; we collapse the "your creature" half to
+            // auto-selected since the engine only supports one target.
+            Effect::Fight {
+                attacker: Selector::Take {
+                    inner: Box::new(Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                    count: Box::new(Value::Const(1)),
+                },
+                defender: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
             },
         ]),
         activated_abilities: no_abilities(),

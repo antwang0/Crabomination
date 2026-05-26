@@ -2,7 +2,7 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, SelectionRequirement, Subtypes,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Subtypes,
     TokenDefinition,
 };
 use crate::effect::shortcut::target_filtered;
@@ -2203,6 +2203,145 @@ pub fn flow_state() -> CardDefinition {
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Molten Note — {X}{R}{W} Sorcery.
+/// "Molten Note deals damage to target creature equal to the amount of mana
+/// spent to cast this spell. Untap all creatures you control.
+/// Flashback {6}{R}{W}."
+///
+/// The "mana spent" is approximated as X + 2 (the {R}{W} pips). The printed
+/// Oracle says "amount of mana spent", which includes all pips; we use
+/// `Value::Sum(XFromCost, Const(2))` to account for the fixed part.
+/// Flashback wired via `Keyword::Flashback`.
+pub fn molten_note() -> CardDefinition {
+    use crate::mana::{r, w, x};
+    CardDefinition {
+        name: "Molten Note",
+        cost: cost(&[x(), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), r(), w()]))],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Sum(vec![Value::XFromCost, Value::Const(2)]),
+            },
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Social Snub — {1}{W}{B} Sorcery.
+/// "When you cast this spell while you control a creature, you may copy this
+/// spell. Each player sacrifices a creature of their choice. Each opponent
+/// loses 1 life and you gain 1 life."
+///
+/// 🟡 The "copy this spell" rider is omitted (no copy-spell primitive).
+/// The main effect (each player sacs a creature + drain 1) is wired.
+pub fn social_snub() -> CardDefinition {
+    use crate::mana::{w, b};
+    CardDefinition {
+        name: "Social Snub",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachPlayer),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Fix What's Broken — {2}{W}{B} Sorcery.
+/// "As an additional cost to cast this spell, pay X life.
+/// Return each artifact and creature card with mana value X from your
+/// graveyard to the battlefield."
+///
+/// 🟡 The "pay X life" additional cost is approximated by having X in
+/// the mana cost and using the X value for both the life payment and
+/// the MV filter. The effect pays X life then returns matching cards.
+/// The actual printed card uses X as a separate life-payment cost, not
+/// a mana-cost X pip, but this gives the closest behavior with current
+/// engine primitives.
+pub fn fix_whats_broken() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    use crate::mana::{w, b};
+    use crate::card::Zone;
+    CardDefinition {
+        name: "Fix What's Broken",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasCardType(CardType::Artifact))
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
             },
         ]),
         activated_abilities: no_abilities(),

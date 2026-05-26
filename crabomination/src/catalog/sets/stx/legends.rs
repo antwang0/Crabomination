@@ -11,8 +11,7 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, Keyword,
-    SelectionRequirement, Selector, Subtypes, Supertype,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes, Supertype,
 };
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -68,12 +67,15 @@ pub fn galazeth_prismari() -> CardDefinition {
 // ── Beledros Witherbloom (B/G) ─────────────────────────────────────────────
 
 /// Beledros Witherbloom — {3}{B}{B}{G}{G}, 6/6 Legendary Demon. Flying,
-/// trample, lifelink. Activated: "Pay 10 life: Untap each land you
-/// control. Activate only as a sorcery."
+/// trample, lifelink. "Pay 10 life: Untap each land you control. Activate
+/// only as a sorcery."
 ///
-/// Now wired with the pay-10-life mass-untap activation via
-/// `ActivatedAbility.life_cost`. Sorcery-speed gated.
+/// Now wired: the activated ability uses `life_cost: 10` +
+/// `sorcery_speed: true` + `Effect::Untap` over each land you control.
 pub fn beledros_witherbloom() -> CardDefinition {
+    use crate::card::{SelectionRequirement, Value};
+    use crate::effect::ActivatedAbility;
+    use crate::mana::ManaCost;
     CardDefinition {
         name: "Beledros Witherbloom",
         cost: cost(&[generic(3), b(), b(), g(), g()]),
@@ -89,10 +91,11 @@ pub fn beledros_witherbloom() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
-            mana_cost: cost(&[]),
+            mana_cost: ManaCost::default(),
             effect: Effect::Untap {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                what: crate::effect::Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
                 ),
                 up_to: None,
             },

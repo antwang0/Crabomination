@@ -3523,6 +3523,87 @@ pub fn spectacular_skywhale() -> CardDefinition {
     }
 }
 
+/// Colorstorm Stallion — {1}{U}{R}, 3/3 Elemental Horse.
+/// Ward {1}, haste. "Opus — Whenever you cast an instant or sorcery spell,
+/// this creature gets +1/+1 until end of turn. If five or more mana was
+/// spent to cast that spell, create a token that's a copy of this creature."
+///
+/// 🟡 Body wired with Ward {1}, haste, and the magecraft +1/+1 self-pump.
+/// The "if five or more mana was spent" copy-token rider is omitted (no
+/// copy-permanent primitive). The base body and pump are still strong.
+pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Colorstorm Stallion",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Elemental Mascot — {1}{U}{R}, 1/4 Elemental Bird.
+/// Flying, vigilance. "Opus — Whenever you cast an instant or sorcery spell,
+/// this creature gets +1/+0 until end of turn. If five or more mana was spent
+/// to cast that spell, exile the top card of your library. You may play that
+/// card until the end of your next turn."
+///
+/// 🟡 Body wired with Flying, Vigilance, and the magecraft +1/+0 self-pump.
+/// The "five or more mana" exile-top-card-and-play rider is omitted (no
+/// cast-from-exile pipeline).
+pub fn elemental_mascot() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Elemental Mascot",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Zaffai and the Tempests — {5}{U}{R}, 5/7 Legendary Human Bard Sorcerer.
 /// "Once during each of your turns, you may cast an instant or sorcery
 /// spell from your hand without paying its mana cost."

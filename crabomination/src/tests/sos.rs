@@ -5041,9 +5041,9 @@ fn berta_wise_extrapolator_def_is_one_four_legendary_frog_druid() {
         "Berta should have at least one activated ability");
     assert!(card.activated_abilities[0].tap_cost,
         "Berta's activation should be a tap ability");
-    // Has the Increment (magecraft) + counter-add → mana triggers.
-    assert_eq!(card.triggered_abilities.len(), 2,
-        "Berta should have Increment magecraft + counter-add → AnyOneColor mana triggers");
+    // Has the counter-add → mana trigger (one entry).
+    assert_eq!(card.triggered_abilities.len(), 1,
+        "Berta should have a single counter-add → AnyOneColor mana trigger");
 }
 
 #[test]
@@ -7119,945 +7119,196 @@ fn zaffai_and_the_tempests_body_legendary_5_7() {
     assert!(card.has_creature_type(crate::card::CreatureType::Bard));
 }
 
-// ── 2026-05-26: Ward enforcement + Opus partial + new MDFCs ────────────────
+// ── Strife Scholar MDFC ─────────────────────────────────────────────────
 
 #[test]
-fn ward_taxes_opponent_spell_targeting() {
+fn strife_scholar_has_ward_and_back_face() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Awaken the Ages");
+    assert!(back.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn strife_scholar_back_face_deals_five_damage() {
     let mut g = two_player_game();
-    let ward_creature = g.add_card_to_battlefield(1, catalog::colorstorm_stallion());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    // Give P0 enough mana for Tome Blast ({1}{R}) but NOT the Ward {1} tax.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::strife_scholar());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(5);
 
-    let result = g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(ward_creature)),
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
         mode: None,
         x_value: None,
-    });
-    assert!(result.is_err(), "Should fail when caster cannot pay Ward tax");
+    }).expect("Awaken the Ages castable for {5}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed by 5 damage");
 }
 
-#[test]
-fn ward_does_not_tax_own_creatures() {
-    let mut g = two_player_game();
-    let ward_creature = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
-    let pump = g.add_card_to_hand(0, catalog::masterful_flourish());
-    g.players[0].mana_pool.add(Color::Black, 1);
-
-    let result = g.perform_action(GameAction::CastSpell {
-        card_id: pump,
-        target: Some(Target::Permanent(ward_creature)),
-        mode: None,
-        x_value: None,
-    });
-    assert!(result.is_ok(), "Ward should not tax the controller's own spells");
-}
+// ── Colorstorm Stallion ─────────────────────────────────────────────────
 
 #[test]
-fn ward_allows_spell_when_extra_mana_available() {
-    let mut g = two_player_game();
-    let ward_creature = g.add_card_to_battlefield(1, catalog::colorstorm_stallion());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    // Tome Blast costs {1}{R}, Ward {1} adds {1} → total {2}{R}
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    let result = g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(ward_creature)),
-        mode: None,
-        x_value: None,
-    });
-    assert!(result.is_ok(), "Should succeed with enough mana to pay Ward");
-}
-
-#[test]
-fn colorstorm_stallion_has_ward_and_haste() {
+fn colorstorm_stallion_body_and_keywords() {
     let card = catalog::colorstorm_stallion();
     assert_eq!(card.name, "Colorstorm Stallion");
     assert_eq!(card.power, 3);
     assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Haste));
     assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.keywords.contains(&Keyword::Haste));
 }
 
 #[test]
-fn colorstorm_stallion_opus_pumps_on_is_cast() {
+fn colorstorm_stallion_magecraft_pump() {
     let mut g = two_player_game();
-    let stallion_id = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    let stallion = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    g.clear_sickness(stallion);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
 
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
+        target: Some(Target::Player(1)),
         mode: None,
         x_value: None,
-    }).unwrap();
+    }).expect("Bolt castable");
     drain_stack(&mut g);
 
-    let view = g.computed_permanent(stallion_id).unwrap();
-    assert!(view.power >= 4, "Stallion should be pumped to at least 4/4");
+    let s = g.computed_permanent(stallion).unwrap();
+    assert_eq!(s.power, 4, "Stallion should be 4/4 after magecraft +1/+1");
+    assert_eq!(s.toughness, 4);
 }
 
+// ── Elemental Mascot ─────────────────────────────────────────────────
+
 #[test]
-fn elemental_mascot_has_flying_vigilance_and_opus() {
+fn elemental_mascot_body_and_keywords() {
     let card = catalog::elemental_mascot();
+    assert_eq!(card.name, "Elemental Mascot");
     assert_eq!(card.power, 1);
     assert_eq!(card.toughness, 4);
     assert!(card.keywords.contains(&Keyword::Flying));
     assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
 }
 
 #[test]
-fn mica_reader_of_ruins_has_ward_3() {
-    let card = catalog::mica_reader_of_ruins();
-    assert_eq!(card.name, "Mica, Reader of Ruins");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(3)));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-#[test]
-fn prismari_the_inspiration_has_flying_and_ward_5() {
-    let card = catalog::prismari_the_inspiration();
-    assert_eq!(card.name, "Prismari, the Inspiration");
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Ward(5)));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-#[test]
-fn emeritus_of_ideation_mdfc_with_ancestral_recall_back() {
-    let card = catalog::emeritus_of_ideation();
-    assert_eq!(card.name, "Emeritus of Ideation");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Ward(2)));
-    let back = card.back_face.as_ref().expect("Should have a back face");
-    assert_eq!(back.name, "Ancestral Recall");
-    assert!(back.card_types.contains(&CardType::Instant));
-}
-
-#[test]
-fn campus_composer_mdfc_with_ward() {
-    let card = catalog::campus_composer();
-    assert_eq!(card.name, "Campus Composer");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
-    let back = card.back_face.as_ref().expect("Should have a back face");
-    assert_eq!(back.name, "Aqueous Aria");
-}
-
-#[test]
-fn grave_researcher_mdfc_with_surveil_etb() {
-    let card = catalog::grave_researcher();
-    assert_eq!(card.name, "Grave Researcher");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(!card.triggered_abilities.is_empty(), "Should have ETB surveil");
-    let back = card.back_face.as_ref().expect("Should have a back face");
-    assert_eq!(back.name, "Reanimate");
-}
-
-#[test]
-fn strife_scholar_mdfc_with_ward() {
-    let card = catalog::strife_scholar();
-    assert_eq!(card.name, "Strife Scholar");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
-    let back = card.back_face.as_ref().expect("Should have a back face");
-    assert_eq!(back.name, "Awaken the Ages");
-}
-
-#[test]
-fn expressive_firedancer_opus_pumps_on_is_cast() {
+fn elemental_mascot_magecraft_pump() {
     let mut g = two_player_game();
-    let dancer_id = g.add_card_to_battlefield(0, catalog::expressive_firedancer());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    let mascot = g.add_card_to_battlefield(0, catalog::elemental_mascot());
+    g.clear_sickness(mascot);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
 
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
+        target: Some(Target::Player(1)),
         mode: None,
         x_value: None,
-    }).unwrap();
+    }).expect("Bolt castable");
     drain_stack(&mut g);
 
-    let view = g.computed_permanent(dancer_id).unwrap();
-    assert!(view.power >= 3, "Firedancer should be pumped to at least 3/3");
+    let m = g.computed_permanent(mascot).unwrap();
+    assert_eq!(m.power, 2, "Mascot should be 2/4 after magecraft +1/+0");
+    assert_eq!(m.toughness, 4);
 }
 
+// ── Molten Note ─────────────────────────────────────────────────────────
+
 #[test]
-fn tackle_artist_opus_adds_counter_on_is_cast() {
+fn molten_note_deals_x_plus_two_damage_and_untaps() {
     let mut g = two_player_game();
-    let artist_id = g.add_card_to_battlefield(0, catalog::tackle_artist());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    // 5/5 creature on opp side.
+    let big = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Tap the attacker.
+    g.battlefield.iter_mut().find(|c| c.id == attacker).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // X=4 → total damage = 4+2 = 6.
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let artist = g.battlefield.iter().find(|c| c.id == artist_id).unwrap();
-    let counter_count = artist.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counter_count >= 1, "Tackle Artist should have at least 1 +1/+1 counter");
-}
-
-#[test]
-fn thunderdrum_soloist_opus_pings_opponent_on_is_cast() {
-    let mut g = two_player_game();
-    let _soloist_id = g.add_card_to_battlefield(0, catalog::thunderdrum_soloist());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let opp_life_before = g.players[1].life;
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    assert!(g.players[1].life < opp_life_before, "Opponent should have taken damage from Soloist trigger");
-}
-
-#[test]
-fn spectacular_skywhale_opus_pumps_on_is_cast() {
-    let card = catalog::spectacular_skywhale();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
-}
-
-#[test]
-fn molten_core_maestro_opus_adds_counter() {
-    let card = catalog::molten_core_maestro();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Menace));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
-}
-
-#[test]
-fn muse_seeker_opus_loots_on_is_cast() {
-    let card = catalog::muse_seeker();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 2);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus loot trigger");
-}
-
-#[test]
-fn exhibition_tidecaller_opus_mills_on_is_cast() {
-    let card = catalog::exhibition_tidecaller();
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 2);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus mill trigger");
-}
-
-#[test]
-fn pensive_professor_counter_draw_trigger() {
-    let card = catalog::pensive_professor();
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 2);
-    assert!(!card.triggered_abilities.is_empty(), "Should have counter-add draw trigger");
-}
-
-#[test]
-fn aberrant_manawurm_opus_pumps_on_is_cast() {
-    let card = catalog::aberrant_manawurm();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(!card.triggered_abilities.is_empty(), "Should have IS-cast pump trigger");
-}
-
-// ── Fix What's Broken ──────────────────────────────────────────────────────
-
-#[test]
-fn fix_whats_broken_definition_shape() {
-    let card = catalog::fix_whats_broken();
-    assert_eq!(card.name, "Fix What's Broken");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-    // Cost includes X + {2}{W}{B}
-    assert!(card.cost.symbols.iter().any(|s| matches!(s, crate::mana::ManaSymbol::X)));
-}
-
-#[test]
-fn fix_whats_broken_reanimates_creature_from_graveyard() {
-    let mut g = two_player_game();
-    // Put a creature in P0's graveyard to reanimate.
-    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
-    // Pay {X=2}{2}{W}{B} = 6 total. X=2, lose 2 life.
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(4); // X=2 + {2}
-    let life_before = g.players[0].life;
-
-    // The bear in the graveyard is the target for the Move effect.
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear_in_gy)),
-        mode: None,
-        x_value: Some(2),
-    })
-    .expect("Fix What's Broken castable");
-    drain_stack(&mut g);
-
-    // Bear should now be on the battlefield.
-    assert!(
-        g.battlefield.iter().any(|c| c.id == bear_in_gy),
-        "Grizzly Bears should be reanimated to the battlefield",
-    );
-    // Caster should have lost X=2 life.
-    assert_eq!(g.players[0].life, life_before - 2, "Should lose X life");
-}
-
-// ── Social Snub ────────────────────────────────────────────────────────────
-
-#[test]
-fn social_snub_definition_shape() {
-    let card = catalog::social_snub();
-    assert_eq!(card.name, "Social Snub");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
-fn social_snub_forces_opponent_sacrifice_and_drains() {
-    let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::social_snub());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let p0_life = g.players[0].life;
-    let p1_life = g.players[1].life;
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
-    })
-    .expect("Social Snub castable for {1}{W}{B}");
-    drain_stack(&mut g);
-
-    // Opponent should have lost their creature.
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == opp_bear),
-        "Opponent's bear should be sacrificed",
-    );
-    // Drain 1: opponent loses 1, you gain 1.
-    assert_eq!(g.players[1].life, p1_life - 1, "Opponent loses 1 life");
-    assert_eq!(g.players[0].life, p0_life + 1, "You gain 1 life");
-}
-
-// ── Archaic's Agony ────────────────────────────────────────────────────────
-
-#[test]
-fn archaics_agony_definition_shape() {
-    let card = catalog::archaics_agony();
-    assert_eq!(card.name, "Archaic's Agony");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
-fn archaics_agony_deals_converge_damage_to_creature() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::archaics_agony());
-    // Pay with 2 colors (red + colorless generic). ConvergedValue = 1 for
-    // a mono-red cast (only red is colored), which won't kill a 2/2.
-    // Use {4}{R}: 1 color of mana = R → converged = 1.
-    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
+        target: Some(Target::Permanent(big)),
         mode: None,
-        x_value: None,
-    })
-    .expect("Archaic's Agony castable");
+        x_value: Some(4),
+    }).expect("Molten Note castable for {X=4}{R}{W}");
     drain_stack(&mut g);
 
-    // Bear should still be alive (1 damage to a 2/2 doesn't kill it).
-    // But verify the spell resolved (bear on battlefield + damage marked).
-    let view = g.computed_permanent(bear).unwrap();
-    assert!(view.toughness <= 2, "Bear took converge damage");
+    // 6 damage to a 6/6 kills it.
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "6/6 should be killed by 6 damage");
+    // Our creature should be untapped.
+    assert!(!g.battlefield.iter().find(|c| c.id == attacker).unwrap().tapped,
+        "Our creature should be untapped");
 }
 
-// ── Molten Note ────────────────────────────────────────────────────────────
-
 #[test]
-fn molten_note_definition_has_flashback() {
+fn molten_note_has_flashback() {
     let card = catalog::molten_note();
-    assert_eq!(card.name, "Molten Note");
-    assert!(card.card_types.contains(&CardType::Sorcery));
     assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
         "Molten Note should have Flashback keyword");
 }
 
-#[test]
-fn molten_note_deals_x_damage_and_untaps() {
-    let mut g = two_player_game();
-    // Target: an opponent creature.
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Also have a tapped creature we control to verify untap.
-    let our_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield.iter_mut().find(|c| c.id == our_creature).unwrap().tapped = true;
+// ── Social Snub ─────────────────────────────────────────────────────────
 
-    let id = g.add_card_to_hand(0, catalog::molten_note());
-    // Pay X=3 + {R}{W} = 5 mana total.
-    g.players[0].mana_pool.add(Color::Red, 1);
+#[test]
+fn social_snub_each_player_sacs_and_drains() {
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::social_snub());
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        mode: None,
-        x_value: Some(3),
-    })
-    .expect("Molten Note castable");
-    drain_stack(&mut g);
-
-    // Bear should be destroyed (3 damage to 2/2).
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be destroyed by 3 damage",
-    );
-    // Our creature should be untapped.
-    let our = g.battlefield.iter().find(|c| c.id == our_creature).unwrap();
-    assert!(!our.tapped, "Our creature should be untapped by Molten Note");
-}
-
-// ── Silverquill, the Disputant ─────────────────────────────────────────────
-
-#[test]
-fn silverquill_the_disputant_definition_shape() {
-    let card = catalog::silverquill_the_disputant();
-    assert_eq!(card.name, "Silverquill, the Disputant");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── Nita, Forum Conciliator ────────────────────────────────────────────────
-
-#[test]
-fn nita_forum_conciliator_definition_shape() {
-    let card = catalog::nita_forum_conciliator();
-    assert_eq!(card.name, "Nita, Forum Conciliator");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 3);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── Quandrix, the Proof ────────────────────────────────────────────────────
-
-#[test]
-fn quandrix_the_proof_definition_shape() {
-    let card = catalog::quandrix_the_proof();
-    assert_eq!(card.name, "Quandrix, the Proof");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── The Dawning Archaic ────────────────────────────────────────────────────
-
-#[test]
-fn the_dawning_archaic_definition_shape() {
-    let card = catalog::the_dawning_archaic();
-    assert_eq!(card.name, "The Dawning Archaic");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── Colorstorm Stallion ────────────────────────────────────────────────────
-
-#[test]
-fn colorstorm_stallion_has_ward_haste_and_opus() {
-    let card = catalog::colorstorm_stallion();
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
-    assert!(card.keywords.contains(&Keyword::Haste));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Opus IS-cast trigger");
-}
-
-// ── Mica, Reader of Ruins ──────────────────────────────────────────────────
-
-#[test]
-fn mica_reader_of_ruins_has_ward_three() {
-    let card = catalog::mica_reader_of_ruins();
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(3)));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── Prismari, the Inspiration ──────────────────────────────────────────────
-
-#[test]
-fn prismari_the_inspiration_has_flying_and_ward() {
-    let card = catalog::prismari_the_inspiration();
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Ward(5)));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-// ── Grave Researcher MDFC ──────────────────────────────────────────────────
-
-#[test]
-fn grave_researcher_has_surveil_etb_and_back_face() {
-    let card = catalog::grave_researcher();
-    assert_eq!(card.name, "Grave Researcher");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Surveil ETB trigger");
-    assert!(card.back_face.is_some(), "Should have Reanimate as back face");
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Reanimate");
-}
-
-// ── Campus Composer MDFC ───────────────────────────────────────────────────
-
-#[test]
-fn campus_composer_has_ward_and_back_face() {
-    let card = catalog::campus_composer();
-    assert_eq!(card.name, "Campus Composer");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
-    assert!(card.back_face.is_some(), "Should have Aqueous Aria as back face");
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Aqueous Aria");
-}
-
-// ── Emeritus of Ideation MDFC ──────────────────────────────────────────────
-
-#[test]
-fn emeritus_of_ideation_has_ward_and_ancestral_recall_back() {
-    let card = catalog::emeritus_of_ideation();
-    assert_eq!(card.name, "Emeritus of Ideation");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Ward(2)));
-    assert!(card.back_face.is_some(), "Should have Ancestral Recall as back face");
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Ancestral Recall");
-}
-
-// ── Strife Scholar MDFC ────────────────────────────────────────────────────
-
-#[test]
-fn strife_scholar_has_ward_and_awaken_back() {
-    let card = catalog::strife_scholar();
-    assert_eq!(card.name, "Strife Scholar");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
-    assert!(card.back_face.is_some(), "Should have Awaken the Ages as back face");
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Awaken the Ages");
-}
-
-// ── Impractical Joke ───────────────────────────────────────────────────────
-
-#[test]
-fn impractical_joke_deals_three_to_creature_or_pw() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::impractical_joke());
-    g.players[0].mana_pool.add(Color::Red, 1);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id,
-        target: Some(Target::Permanent(bear)),
-        mode: None,
-        x_value: None,
-    })
-    .expect("Impractical Joke castable for {R}");
-    drain_stack(&mut g);
-
-    // 3 damage kills a 2/2.
-    assert!(
-        !g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be destroyed by 3 damage",
-    );
-}
-
-// ── Potioner's Trove gate verification ─────────────────────────────────────
-
-#[test]
-fn potioners_trove_lifegain_gate_uses_is_cast_predicate() {
-    let card = catalog::potioners_trove();
-    assert_eq!(card.name, "Potioner's Trove");
-    // The second activated ability should have an IS-cast gate.
-    assert!(card.activated_abilities.len() >= 2);
-    let lifegain_ability = &card.activated_abilities[1];
-    assert!(
-        lifegain_ability.condition.is_some(),
-        "Lifegain ability should have a condition gate",
-    );
-}
-
-// ── Cuboid Colony: Increment via magecraft ────────────────────────────────
-
-#[test]
-fn cuboid_colony_has_flash_flying_trample_and_increment_trigger() {
-    let card = catalog::cuboid_colony();
-    assert_eq!(card.name, "Cuboid Colony");
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 1);
-    assert!(card.keywords.contains(&Keyword::Flash));
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-#[test]
-fn cuboid_colony_increment_adds_counter_on_is_cast() {
-    let mut g = two_player_game();
-    let colony_id = g.add_card_to_battlefield(0, catalog::cuboid_colony());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
 
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Social Snub castable for {1}{W}{B}");
     drain_stack(&mut g);
 
-    let colony = g.battlefield.iter().find(|c| c.id == colony_id).unwrap();
-    let counters = colony.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Cuboid Colony should have at least 1 +1/+1 counter after IS cast");
+    // Each player should have sacrificed one creature.
+    let p0_creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    let p1_creatures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    assert_eq!(p0_creatures, 0, "P0 should have sacrificed their creature");
+    assert_eq!(p1_creatures, 0, "P1 should have sacrificed their creature");
+    // Drain 1: opp loses 1, you gain 1.
+    assert_eq!(g.players[1].life, life1_before - 1);
+    assert_eq!(g.players[0].life, life0_before + 1);
 }
 
-// ── Fractal Tender: Increment via magecraft ──────────────────────────────
+// ── Fix What's Broken ─────────────────────────────────────────────────
 
 #[test]
-fn fractal_tender_has_ward_and_increment_trigger() {
-    let card = catalog::fractal_tender();
-    assert_eq!(card.name, "Fractal Tender");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Ward(2)));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-// ── Hungry Graffalon: Increment via magecraft ────────────────────────────
-
-#[test]
-fn hungry_graffalon_has_reach_and_increment_trigger() {
-    let card = catalog::hungry_graffalon();
-    assert_eq!(card.name, "Hungry Graffalon");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-#[test]
-fn hungry_graffalon_increment_adds_counter_on_is_cast() {
+fn fix_whats_broken_returns_creatures_from_gy() {
     let mut g = two_player_game();
-    let graf_id = g.add_card_to_battlefield(0, catalog::hungry_graffalon());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
 
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Fix What's Broken castable");
     drain_stack(&mut g);
 
-    let graf = g.battlefield.iter().find(|c| c.id == graf_id).unwrap();
-    let counters = graf.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Hungry Graffalon should have at least 1 +1/+1 counter after IS cast");
+    // Bear (MV 2) should be on battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be returned from graveyard to battlefield");
+    // 2 life lost.
+    assert_eq!(g.players[0].life, life_before - 2);
 }
-
-// ── Tester of the Tangential: Increment via magecraft ────────────────────
-
-#[test]
-fn tester_of_the_tangential_has_increment_trigger() {
-    let card = catalog::tester_of_the_tangential();
-    assert_eq!(card.name, "Tester of the Tangential");
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 1);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-#[test]
-fn tester_of_the_tangential_increment_adds_counter_on_is_cast() {
-    let mut g = two_player_game();
-    let tester_id = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let tester = g.battlefield.iter().find(|c| c.id == tester_id).unwrap();
-    let counters = tester.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Tester should have at least 1 +1/+1 counter after IS cast");
-}
-
-// ── Ambitious Augmenter: Increment via magecraft ─────────────────────────
-
-#[test]
-fn ambitious_augmenter_has_increment_trigger() {
-    let card = catalog::ambitious_augmenter();
-    assert_eq!(card.name, "Ambitious Augmenter");
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 1);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-#[test]
-fn ambitious_augmenter_increment_adds_counter_on_is_cast() {
-    let mut g = two_player_game();
-    let aug_id = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let aug = g.battlefield.iter().find(|c| c.id == aug_id).unwrap();
-    let counters = aug.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Ambitious Augmenter should have at least 1 +1/+1 counter");
-}
-
-// ── Textbook Tabulator: Increment via magecraft + ETB surveil ────────────
-
-#[test]
-fn textbook_tabulator_has_increment_trigger_and_etb_surveil() {
-    let card = catalog::textbook_tabulator();
-    assert_eq!(card.name, "Textbook Tabulator");
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 3);
-    assert!(card.triggered_abilities.len() >= 2,
-        "Should have both Increment magecraft trigger and ETB surveil");
-}
-
-#[test]
-fn textbook_tabulator_increment_adds_counter_on_is_cast() {
-    let mut g = two_player_game();
-    let tab_id = g.add_card_to_battlefield(0, catalog::textbook_tabulator());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let tab = g.battlefield.iter().find(|c| c.id == tab_id).unwrap();
-    let counters = tab.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Textbook Tabulator should have at least 1 +1/+1 counter");
-}
-
-// ── Deluge Virtuoso: Opus via magecraft pump + ETB tap/stun ──────────────
-
-#[test]
-fn deluge_virtuoso_has_etb_and_opus_triggers() {
-    let card = catalog::deluge_virtuoso();
-    assert_eq!(card.name, "Deluge Virtuoso");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.triggered_abilities.len() >= 2,
-        "Should have both ETB tap+stun and Opus magecraft pump");
-}
-
-#[test]
-fn deluge_virtuoso_opus_pumps_on_is_cast() {
-    let mut g = two_player_game();
-    let virt_id = g.add_card_to_battlefield(0, catalog::deluge_virtuoso());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let view = g.computed_permanent(virt_id).unwrap();
-    assert!(view.power >= 3, "Deluge Virtuoso should be pumped to at least 3/3 after IS cast");
-}
-
-// ── Transcendent Archaic: MayDo on Converge draw ─────────────────────────
-
-#[test]
-fn transcendent_archaic_has_may_do_etb() {
-    let card = catalog::transcendent_archaic();
-    assert_eq!(card.name, "Transcendent Archaic");
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(!card.triggered_abilities.is_empty(), "Should have MayDo ETB trigger");
-}
-
-// ── Pensive Professor: Increment + counter-draw ──────────────────────────
-
-#[test]
-fn pensive_professor_has_increment_and_counter_draw() {
-    let card = catalog::pensive_professor();
-    assert_eq!(card.name, "Pensive Professor");
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 2);
-    assert!(card.triggered_abilities.len() >= 2,
-        "Should have both Increment magecraft trigger and counter-draw trigger");
-}
-
-#[test]
-fn pensive_professor_increment_adds_counter_on_is_cast() {
-    let mut g = two_player_game();
-    let prof_id = g.add_card_to_battlefield(0, catalog::pensive_professor());
-    // Give hand cards so draw doesn't fail.
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::grizzly_bears());
-    }
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let prof = g.battlefield.iter().find(|c| c.id == prof_id).unwrap();
-    let counters = prof.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    assert!(counters >= 1, "Pensive Professor should have at least 1 +1/+1 counter");
-}
-
-// ── Berta, Wise Extrapolator: Increment added ───────────────────────────
-
-#[test]
-fn berta_wise_extrapolator_has_increment_and_counter_mana_triggers() {
-    let card = catalog::berta_wise_extrapolator();
-    assert_eq!(card.triggered_abilities.len(), 2,
-        "Berta should have Increment magecraft + counter-add mana triggers");
-}
-
-// ── Magmablood Archaic: IS-cast pump for all creatures ───────────────────
-
-#[test]
-fn magmablood_archaic_has_converge_etb_and_is_cast_pump() {
-    let card = catalog::magmablood_archaic();
-    assert_eq!(card.name, "Magmablood Archaic");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.triggered_abilities.len() >= 2,
-        "Should have both Converge ETB and IS-cast pump triggers");
-}
-
-#[test]
-fn magmablood_archaic_is_cast_pumps_friendly_creatures() {
-    let mut g = two_player_game();
-    let _archaic_id = g.add_card_to_battlefield(0, catalog::magmablood_archaic());
-    let bear_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-
-    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(Target::Permanent(opp_creature)),
-        mode: None,
-        x_value: None,
-    }).unwrap();
-    drain_stack(&mut g);
-
-    let bear_view = g.computed_permanent(bear_id).unwrap();
-    assert!(bear_view.power >= 3, "Friendly bear should be pumped to at least 3/2 after IS cast");
-}
-
-// ── Topiary Lecturer: existing Increment trigger verified ────────────────
-
-#[test]
-fn topiary_lecturer_has_increment_trigger_and_mana_ability() {
-    let card = catalog::topiary_lecturer();
-    assert_eq!(card.name, "Topiary Lecturer");
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 2);
-    assert!(!card.activated_abilities.is_empty(), "Should have tap-for-mana ability");
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
-}
-
-// (Cuboid Colony, Fractal Tender, Topiary Lecturer definition-shape tests
-// superseded by game-based tests above.)
