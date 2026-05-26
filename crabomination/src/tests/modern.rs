@@ -8888,8 +8888,6 @@ fn tireless_provisioner_creates_treasure_on_landfall() {
     let mut g = two_player_game();
     let _prov = g.add_card_to_battlefield(0, catalog::tireless_provisioner());
     let land_id = g.add_card_to_hand(0, catalog::forest());
-    let bf_before = g.battlefield.len();
-
     g.perform_action(GameAction::PlayLand(land_id)).expect("play land");
     drain_stack(&mut g);
 

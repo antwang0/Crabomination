@@ -4276,7 +4276,7 @@ fn cr_704_5q_counters_cancel_each_other() {
 #[test]
 fn cr_704_5j_legend_rule_keeps_newest() {
     let mut g = two_player_game();
-    let legend1 = g.add_card_to_battlefield(0, catalog::griselbrand());
+    let _legend1 = g.add_card_to_battlefield(0, catalog::griselbrand());
     let legend2 = g.add_card_to_battlefield(0, catalog::griselbrand());
 
     g.check_state_based_actions();
