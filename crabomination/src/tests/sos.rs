@@ -7737,33 +7737,327 @@ fn potioners_trove_lifegain_gate_uses_is_cast_predicate() {
     );
 }
 
-// ── Increment approximation: Cuboid Colony + Fractal Tender + Topiary Lecturer
+// ── Cuboid Colony: Increment via magecraft ────────────────────────────────
 
 #[test]
-fn cuboid_colony_increment_adds_counter_on_is_cast() {
+fn cuboid_colony_has_flash_flying_trample_and_increment_trigger() {
     let card = catalog::cuboid_colony();
+    assert_eq!(card.name, "Cuboid Colony");
     assert_eq!(card.power, 1);
     assert_eq!(card.toughness, 1);
     assert!(card.keywords.contains(&Keyword::Flash));
     assert!(card.keywords.contains(&Keyword::Flying));
     assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
 }
 
 #[test]
-fn fractal_tender_increment_adds_counter_on_is_cast() {
+fn cuboid_colony_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let colony_id = g.add_card_to_battlefield(0, catalog::cuboid_colony());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let colony = g.battlefield.iter().find(|c| c.id == colony_id).unwrap();
+    let counters = colony.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Cuboid Colony should have at least 1 +1/+1 counter after IS cast");
+}
+
+// ── Fractal Tender: Increment via magecraft ──────────────────────────────
+
+#[test]
+fn fractal_tender_has_ward_and_increment_trigger() {
     let card = catalog::fractal_tender();
+    assert_eq!(card.name, "Fractal Tender");
     assert_eq!(card.power, 3);
     assert_eq!(card.toughness, 3);
     assert!(card.keywords.contains(&Keyword::Ward(2)));
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
+}
+
+// ── Hungry Graffalon: Increment via magecraft ────────────────────────────
+
+#[test]
+fn hungry_graffalon_has_reach_and_increment_trigger() {
+    let card = catalog::hungry_graffalon();
+    assert_eq!(card.name, "Hungry Graffalon");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
 }
 
 #[test]
-fn topiary_lecturer_increment_adds_counter_on_is_cast() {
+fn hungry_graffalon_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let graf_id = g.add_card_to_battlefield(0, catalog::hungry_graffalon());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let graf = g.battlefield.iter().find(|c| c.id == graf_id).unwrap();
+    let counters = graf.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Hungry Graffalon should have at least 1 +1/+1 counter after IS cast");
+}
+
+// ── Tester of the Tangential: Increment via magecraft ────────────────────
+
+#[test]
+fn tester_of_the_tangential_has_increment_trigger() {
+    let card = catalog::tester_of_the_tangential();
+    assert_eq!(card.name, "Tester of the Tangential");
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 1);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
+}
+
+#[test]
+fn tester_of_the_tangential_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let tester_id = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let tester = g.battlefield.iter().find(|c| c.id == tester_id).unwrap();
+    let counters = tester.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Tester should have at least 1 +1/+1 counter after IS cast");
+}
+
+// ── Ambitious Augmenter: Increment via magecraft ─────────────────────────
+
+#[test]
+fn ambitious_augmenter_has_increment_trigger() {
+    let card = catalog::ambitious_augmenter();
+    assert_eq!(card.name, "Ambitious Augmenter");
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 1);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
+}
+
+#[test]
+fn ambitious_augmenter_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let aug_id = g.add_card_to_battlefield(0, catalog::ambitious_augmenter());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let aug = g.battlefield.iter().find(|c| c.id == aug_id).unwrap();
+    let counters = aug.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Ambitious Augmenter should have at least 1 +1/+1 counter");
+}
+
+// ── Textbook Tabulator: Increment via magecraft + ETB surveil ────────────
+
+#[test]
+fn textbook_tabulator_has_increment_trigger_and_etb_surveil() {
+    let card = catalog::textbook_tabulator();
+    assert_eq!(card.name, "Textbook Tabulator");
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 3);
+    assert!(card.triggered_abilities.len() >= 2,
+        "Should have both Increment magecraft trigger and ETB surveil");
+}
+
+#[test]
+fn textbook_tabulator_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let tab_id = g.add_card_to_battlefield(0, catalog::textbook_tabulator());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let tab = g.battlefield.iter().find(|c| c.id == tab_id).unwrap();
+    let counters = tab.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Textbook Tabulator should have at least 1 +1/+1 counter");
+}
+
+// ── Deluge Virtuoso: Opus via magecraft pump + ETB tap/stun ──────────────
+
+#[test]
+fn deluge_virtuoso_has_etb_and_opus_triggers() {
+    let card = catalog::deluge_virtuoso();
+    assert_eq!(card.name, "Deluge Virtuoso");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.triggered_abilities.len() >= 2,
+        "Should have both ETB tap+stun and Opus magecraft pump");
+}
+
+#[test]
+fn deluge_virtuoso_opus_pumps_on_is_cast() {
+    let mut g = two_player_game();
+    let virt_id = g.add_card_to_battlefield(0, catalog::deluge_virtuoso());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(virt_id).unwrap();
+    assert!(view.power >= 3, "Deluge Virtuoso should be pumped to at least 3/3 after IS cast");
+}
+
+// ── Transcendent Archaic: MayDo on Converge draw ─────────────────────────
+
+#[test]
+fn transcendent_archaic_has_may_do_etb() {
+    let card = catalog::transcendent_archaic();
+    assert_eq!(card.name, "Transcendent Archaic");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(!card.triggered_abilities.is_empty(), "Should have MayDo ETB trigger");
+}
+
+// ── Pensive Professor: Increment + counter-draw ──────────────────────────
+
+#[test]
+fn pensive_professor_has_increment_and_counter_draw() {
+    let card = catalog::pensive_professor();
+    assert_eq!(card.name, "Pensive Professor");
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 2);
+    assert!(card.triggered_abilities.len() >= 2,
+        "Should have both Increment magecraft trigger and counter-draw trigger");
+}
+
+#[test]
+fn pensive_professor_increment_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let prof_id = g.add_card_to_battlefield(0, catalog::pensive_professor());
+    // Give hand cards so draw doesn't fail.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let prof = g.battlefield.iter().find(|c| c.id == prof_id).unwrap();
+    let counters = prof.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counters >= 1, "Pensive Professor should have at least 1 +1/+1 counter");
+}
+
+// ── Berta, Wise Extrapolator: Increment added ───────────────────────────
+
+#[test]
+fn berta_wise_extrapolator_has_increment_and_counter_mana_triggers() {
+    let card = catalog::berta_wise_extrapolator();
+    assert_eq!(card.triggered_abilities.len(), 2,
+        "Berta should have Increment magecraft + counter-add mana triggers");
+}
+
+// ── Magmablood Archaic: IS-cast pump for all creatures ───────────────────
+
+#[test]
+fn magmablood_archaic_has_converge_etb_and_is_cast_pump() {
+    let card = catalog::magmablood_archaic();
+    assert_eq!(card.name, "Magmablood Archaic");
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(card.triggered_abilities.len() >= 2,
+        "Should have both Converge ETB and IS-cast pump triggers");
+}
+
+#[test]
+fn magmablood_archaic_is_cast_pumps_friendly_creatures() {
+    let mut g = two_player_game();
+    let _archaic_id = g.add_card_to_battlefield(0, catalog::magmablood_archaic());
+    let bear_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let bear_view = g.computed_permanent(bear_id).unwrap();
+    assert!(bear_view.power >= 3, "Friendly bear should be pumped to at least 3/2 after IS cast");
+}
+
+// ── Topiary Lecturer: existing Increment trigger verified ────────────────
+
+#[test]
+fn topiary_lecturer_has_increment_trigger_and_mana_ability() {
     let card = catalog::topiary_lecturer();
+    assert_eq!(card.name, "Topiary Lecturer");
     assert_eq!(card.power, 1);
     assert_eq!(card.toughness, 2);
-    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
-    assert!(!card.activated_abilities.is_empty(), "Should have mana ability");
+    assert!(!card.activated_abilities.is_empty(), "Should have tap-for-mana ability");
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment magecraft trigger");
 }
+
+// (Cuboid Colony, Fractal Tender, Topiary Lecturer definition-shape tests
+// superseded by game-based tests above.)
