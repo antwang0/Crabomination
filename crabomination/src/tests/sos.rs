@@ -7417,3 +7417,117 @@ fn the_dawning_archaic_enters_as_7_7_reach() {
     assert!(view.keywords.contains(&Keyword::Reach),
         "The Dawning Archaic should have reach");
 }
+
+// ── Prismari, the Inspiration ────────────────────────────────────────
+
+#[test]
+fn prismari_the_inspiration_enters_as_7_7_flying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_the_inspiration());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Prismari castable for {5}{U}{R}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Prismari should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 7);
+    assert_eq!(view.toughness, 7);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Prismari should have flying");
+}
+
+// ── Nita, Forum Conciliator ──────────────────────────────────────────
+
+#[test]
+fn nita_forum_conciliator_enters_as_2_3() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::nita_forum_conciliator());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Nita castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Nita should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Human));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Advisor));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 2);
+    assert_eq!(view.toughness, 3);
+}
+
+// ── Silverquill, the Disputant ───────────────────────────────────────
+
+#[test]
+fn silverquill_the_disputant_enters_as_4_4_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_the_disputant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Silverquill castable for {2}{W}{B}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Silverquill should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 4);
+    assert_eq!(view.toughness, 4);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Silverquill should have flying");
+    assert!(view.keywords.contains(&Keyword::Vigilance),
+        "Silverquill should have vigilance");
+}
+
+// ── Quandrix, the Proof ──────────────────────────────────────────────
+
+#[test]
+fn quandrix_the_proof_enters_as_6_6_flying_trample() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_the_proof());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quandrix castable for {4}{G}{U}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Quandrix should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 6);
+    assert_eq!(view.toughness, 6);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Quandrix should have flying");
+    assert!(view.keywords.contains(&Keyword::Trample),
+        "Quandrix should have trample");
+}

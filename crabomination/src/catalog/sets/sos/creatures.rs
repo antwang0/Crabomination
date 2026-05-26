@@ -4663,3 +4663,141 @@ pub fn the_dawning_archaic() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Multicolor Legendary Elder Dragons / Legendary Creatures ──────────────
+
+/// Prismari, the Inspiration — {5}{U}{R} Legendary Creature — Elder Dragon
+/// 7/7. Flying.
+///
+/// Approximation: body-only wire. The Storm / copy rider is omitted (the
+/// engine has no "copy each instant and sorcery you cast" primitive yet).
+/// The creature enters as a 7/7 flying Elder Dragon with the correct mana
+/// cost and legendary supertype.
+pub fn prismari_the_inspiration() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Prismari, the Inspiration",
+        cost: cost(&[generic(5), u(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Nita, Forum Conciliator — {1}{W}{B} Legendary Creature — Human Advisor
+/// 2/3.
+///
+/// Approximation: body-only wire. The cast-from-exile pipeline is omitted
+/// (the engine has no "cast from exile" primitive yet). The creature enters
+/// as a 2/3 Human Advisor with the correct mana cost and legendary
+/// supertype.
+pub fn nita_forum_conciliator() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{b, w};
+    CardDefinition {
+        name: "Nita, Forum Conciliator",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Silverquill, the Disputant — {2}{W}{B} Legendary Creature — Elder Dragon
+/// 4/4. Flying, vigilance.
+///
+/// Approximation: body-only wire. The casualty / copy rider is omitted
+/// (the engine has no casualty keyword yet). The creature enters as a 4/4
+/// flying vigilance Elder Dragon with the correct mana cost and legendary
+/// supertype.
+pub fn silverquill_the_disputant() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{b, w};
+    CardDefinition {
+        name: "Silverquill, the Disputant",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Quandrix, the Proof — {4}{G}{U} Legendary Creature — Elder Dragon 6/6.
+/// Flying, trample.
+///
+/// Approximation: body-only wire. The Cascade ability is omitted (the
+/// engine has no cascade primitive yet). The creature enters as a 6/6
+/// flying trample Elder Dragon with the correct mana cost and legendary
+/// supertype.
+pub fn quandrix_the_proof() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{g, u};
+    CardDefinition {
+        name: "Quandrix, the Proof",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

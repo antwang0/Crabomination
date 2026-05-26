@@ -177,8 +177,8 @@ pub fn dig_site_inventory() -> CardDefinition {
 /// + Move(target → Battlefield) + AddCounter(target, +1/+1)`. The
 /// `Selector::Target(0)` slot persists across the exile so the engine's
 /// `Move`/`AddCounter` resolves against the same card after it lands
-///   back on the battlefield (zone-stable lookup falls back through exile,
-///   which is where the target lives between Exile and Move).
+/// back on the battlefield (zone-stable lookup falls back through exile,
+/// which is where the target lives between Exile and Move).
 ///
 /// The Flashback {2}{W} clause is wired via `Keyword::Flashback`; the
 /// engine's existing `cast_flashback` path replays the body identically.
@@ -2422,27 +2422,21 @@ pub fn follow_the_lumarets() -> CardDefinition {
     }
 }
 
-// ── Silverquill (W/B) — additional ───────────────────────────────────────────
-
-/// Fix What's Broken — {2}{W}{B} Sorcery.
-/// "As an additional cost to cast this spell, pay X life. Return each
-/// artifact and creature card with mana value X from your graveyard to
-/// the battlefield."
+/// Applied Geometry — {2}{G}{U} Sorcery.
+/// "Create a token that's a copy of target non-Aura permanent you control,
+/// except it's a 0/0 Fractal creature in addition to its other types.
+/// Put six +1/+1 counters on it."
 ///
-/// Approximation: the mass-reanimation at exact MV X from graveyard is
-/// too complex (no "pay X life additional cost" primitive, no "each card
-/// with MV == X" filter). We approximate as: lose X life (via the {X}
-/// slot), then return **one** creature card from your graveyard to the
-/// battlefield. This captures the reanimation flavour at lower fidelity —
-/// the printed card can reanimate multiples at MV X but we do one.
-pub fn fix_whats_broken() -> CardDefinition {
-    use crate::effect::ZoneDest;
-    use crate::mana::{ManaSymbol, b as bm};
-    let mut spell_cost = cost(&[generic(2), w(), bm()]);
-    spell_cost.symbols.insert(0, ManaSymbol::X);
+/// 🟡 Approximation: the copy-of-permanent part is collapsed to creating
+/// a vanilla 0/0 Fractal token (the engine has no permanent-cloning
+/// primitive). The six +1/+1 counters are placed faithfully via
+/// `Selector::LastCreatedToken`, yielding a 6/6 Fractal.
+pub fn applied_geometry() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::mana::{g, u};
     CardDefinition {
-        name: "Fix What's Broken",
-        cost: spell_cost,
+        name: "Applied Geometry",
+        cost: cost(&[generic(2), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2450,155 +2444,15 @@ pub fn fix_whats_broken() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
-            // Approximate "pay X life" additional cost.
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::XFromCost,
-            },
-            // Return one creature card from your graveyard to the battlefield.
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-/// Social Snub — {1}{W}{B} Sorcery.
-/// "When you cast this spell while you control a creature, you may copy
-/// this spell. / Each player sacrifices a creature of their choice.
-/// Each opponent loses 1 life and you gain 1 life."
-///
-/// Approximation: the copy-on-cast clause is omitted (no copy-spell
-/// primitive). The base effect is wired: each opponent sacrifices a
-/// creature + drain 1. The "each player sacrifices" is approximated as
-/// each opponent sacrifices one creature (the caster does not sacrifice
-/// their own).
-pub fn social_snub() -> CardDefinition {
-    CardDefinition {
-        name: "Social Snub",
-        cost: cost(&[generic(1), w(), b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
+            Effect::CreateToken {
+                who: PlayerRef::You,
                 count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
+                definition: fractal_token(),
             },
-            Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(1),
-            },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-/// Archaic's Agony — {4}{R} Sorcery.
-/// "Converge — Archaic's Agony deals X damage to target creature, where
-/// X is the number of colors of mana spent to cast this spell. Exile
-/// cards from the top of your library equal to the excess damage dealt to
-/// that creature this way. You may play those cards until the end of your
-/// next turn."
-///
-/// Approximation: the converge damage is wired faithfully via
-/// `Value::ConvergedValue`. The exile-from-library and may-play riders
-/// are omitted (no cast-from-exile pipeline).
-pub fn archaics_agony() -> CardDefinition {
-    use crate::mana::r;
-    CardDefinition {
-        name: "Archaic's Agony",
-        cost: cost(&[generic(4), r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::ConvergedValue,
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-/// Molten Note — {X}{R}{W} Sorcery.
-/// "Molten Note deals damage to target creature equal to the amount of
-/// mana spent to cast this spell. Untap all creatures you control.
-/// Flashback {6}{R}{W}."
-///
-/// Approximation: "damage equal to the amount of mana spent" is
-/// approximated as X (the base R+W mana is not counted). The untap and
-/// flashback are wired faithfully.
-pub fn molten_note() -> CardDefinition {
-    use crate::card::Keyword;
-    use crate::mana::{ManaCost, ManaSymbol, r, w as wm};
-    let flashback_cost = ManaCost {
-        symbols: vec![
-            ManaSymbol::Generic(6),
-            ManaSymbol::Colored(Color::Red),
-            ManaSymbol::Colored(Color::White),
-        ],
-    };
-    let mut spell_cost = cost(&[r(), wm()]);
-    spell_cost.symbols.insert(0, ManaSymbol::X);
-    CardDefinition {
-        name: "Molten Note",
-        cost: spell_cost,
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![Keyword::Flashback(flashback_cost)],
-        effect: Effect::Seq(vec![
-            // Damage to target creature = X (approximation of "mana spent").
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::XFromCost,
-            },
-            // Untap all creatures you control.
-            Effect::Untap {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                up_to: None,
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(6),
             },
         ]),
         activated_abilities: no_abilities(),

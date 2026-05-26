@@ -433,11 +433,13 @@ impl GameState {
         // un-tap a stolen permanent on the wrong player's turn).
         for card in &mut self.battlefield {
             if card.controller == p {
-                // CR 122.1c: If a permanent with a stun counter would become
-                // untapped, remove a stun counter from it instead.
+                // Stun counter enforcement (CR 701.48): a permanent with a
+                // stun counter on it doesn't untap during its controller's
+                // untap step. Instead, remove one stun counter.
                 let stun = card.counter_count(crate::card::CounterType::Stun);
-                if stun > 0 && card.tapped {
-                    card.remove_counters(crate::card::CounterType::Stun, 1);
+                if stun > 0 {
+                    *card.counters.entry(crate::card::CounterType::Stun).or_insert(0) -= 1;
+                    // Don't untap this permanent.
                 } else {
                     card.tapped = false;
                 }
@@ -577,10 +579,6 @@ impl GameState {
                     .unwrap_or(c.toughness());
                 // Toughness ≤ 0 kills even indestructible creatures.
                 if computed_toughness <= 0 {
-                    return true;
-                }
-                // CR 704.5h: deathtouch damage is always lethal.
-                if !c.has_keyword(&Keyword::Indestructible) && c.deathtouch_damaged && c.damage > 0 {
                     return true;
                 }
                 // Lethal damage kills non-indestructible creatures.

@@ -4121,3 +4121,36 @@ fn ward_does_not_trigger_on_own_spells() {
     let w = g.computed_permanent(witch).unwrap();
     assert!(w.power > 3, "Witch should be pumped by own spell");
 }
+
+// ── Stun counter enforcement (CR 701.48) ─────────────────────────────────
+
+#[test]
+fn stun_counter_prevents_untap_and_decrements() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Tap the bear and give it 2 stun counters.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .counters.insert(CounterType::Stun, 2);
+
+    // First untap step: bear should stay tapped, lose one stun counter.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.tapped, "Bear should stay tapped with stun counters");
+    assert_eq!(b.counter_count(CounterType::Stun), 1,
+        "Should have removed one stun counter");
+
+    // Second untap step: still tapped, lose last stun counter.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.tapped, "Bear should still be tapped (last stun counter removed this step)");
+    assert_eq!(b.counter_count(CounterType::Stun), 0,
+        "Should have no stun counters left");
+
+    // Third untap step: no stun counters — bear untaps normally.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(!b.tapped, "Bear should now untap normally with no stun counters");
+}
