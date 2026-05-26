@@ -786,6 +786,12 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-17 ──
         young_pyromancer,
         monastery_swiftspear,
+        // ── modern_decks-18 ──
+        chain_lightning,
+        rift_bolt,
+        exquisite_firecraft,
+        sulfuric_vortex,
+        kari_zev_skyship_raider,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -921,6 +927,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         explore,
         elder_gargaroth,
         vengevine,
+        // ── modern_decks-18 ──
+        scavenging_ooze,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
