@@ -1409,3 +1409,85 @@ fn eureka_moment_draws_two() {
         "-1 cast +2 draw = +1 net (MayDo defaults to no)");
 }
 
+// ── New iconic card tests ───────────────────────────────────────────────────
+
+#[test]
+fn professor_onyx_is_a_liliana_planeswalker() {
+    let p = catalog::professor_onyx();
+    assert_eq!(p.name, "Professor Onyx");
+    assert!(p.card_types.contains(&crate::card::CardType::Planeswalker));
+    assert_eq!(p.base_loyalty, 5);
+    assert_eq!(p.loyalty_abilities.len(), 3);
+}
+
+#[test]
+fn professor_onyx_magecraft_drains() {
+    let mut g = two_player_game();
+    let _onyx = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 2,
+        "Magecraft: gain 2 life");
+    assert_eq!(g.players[1].life, p1_life - 3 - 2,
+        "Bolt 3 + Magecraft 2 = 5 damage");
+}
+
+#[test]
+fn conspiracy_theorist_is_two_two() {
+    let c = catalog::conspiracy_theorist();
+    assert_eq!(c.power, 2);
+    assert_eq!(c.toughness, 2);
+}
+
+#[test]
+fn dina_soul_steeper_drains_on_lifegain() {
+    let mut g = two_player_game();
+    let _dina = g.add_card_to_battlefield(0, catalog::dina_soul_steeper());
+    let p1_life = g.players[1].life;
+    // Cast Healing Salve to gain 3 life.
+    let salve = g.add_card_to_hand(0, catalog::healing_salve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: salve, target: Some(Target::Player(0)), mode: None, x_value: None,
+    }).expect("Healing Salve castable");
+    drain_stack(&mut g);
+    // Dina triggers once per life-gain event (the engine fires one
+    // LifeGained event for the 3 life).
+    assert!(g.players[1].life < p1_life,
+        "Dina should drain opponent on lifegain");
+}
+
+#[test]
+fn zimone_draws_a_card_when_activated() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let zim = g.add_card_to_battlefield(0, catalog::zimone_quandrix_prodigy());
+    g.clear_sickness(zim);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zim, ability_index: 0, target: None,
+    }).expect("Zimone activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn adventurous_impulse_scrys_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::adventurous_impulse());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Adventurous Impulse castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "-1 +1 net");
+}

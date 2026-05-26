@@ -6,8 +6,9 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, SelectionRequirement,
-    Subtypes, Value,
+    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Selector, SelectionRequirement,
+    Subtypes, Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
 use crate::effect::PlayerRef;
@@ -146,6 +147,223 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::Destroy {
                 what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Professor Onyx ─────────────────────────────────────────────────────────
+
+/// Professor Onyx — {4}{B}{B} Liliana planeswalker. 5 loyalty.
+/// +1: Each opponent loses 2 life and you gain 2 life.
+/// -3: Each opponent sacrifices a creature.
+/// -8: Each opponent loses 3 life (collapsed from "may discard or lose 3").
+/// Magecraft: Whenever you cast an IS spell, each opponent loses 2 / you gain 2.
+pub fn professor_onyx() -> CardDefinition {
+    CardDefinition {
+        name: "Professor Onyx",
+        cost: cost(&[generic(4), b(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Liliana],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 5,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Drain {
+                    from: Selector::Player(PlayerRef::EachOpponent),
+                    to: Selector::You,
+                    amount: Value::Const(2),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -3,
+                effect: Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::Const(1),
+                    filter: SelectionRequirement::Creature,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -8,
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            },
+        ],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Conspiracy Theorist ────────────────────────────────────────────────────
+
+/// Conspiracy Theorist — {1}{R}, 2/2 Human Shaman. On attack, may
+/// discard and draw.
+pub fn conspiracy_theorist() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Conspiracy Theorist",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack(
+            Effect::MayDo {
+                description: "Discard a card, then draw a card?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                    Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    },
+                ])),
+            },
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Dina, Soul Steeper ─────────────────────────────────────────────────────
+
+/// Dina, Soul Steeper — {B}{G}, 1/3 Legendary Dryad Druid.
+/// "Whenever you gain life, each opponent loses 1 life."
+pub fn dina_soul_steeper() -> CardDefinition {
+    CardDefinition {
+        name: "Dina, Soul Steeper",
+        cost: cost(&[b(), crate::mana::g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Zimone, Quandrix Prodigy ───────────────────────────────────────────────
+
+/// Zimone, Quandrix Prodigy — {G}{U}, 1/2 Legendary Human Wizard.
+/// {1}, {T}: Draw a card (approximation of land-from-hand + conditional draw).
+pub fn zimone_quandrix_prodigy() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Zimone, Quandrix Prodigy",
+        cost: cost(&[crate::mana::g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Adventurous Impulse ────────────────────────────────────────────────────
+
+/// Adventurous Impulse — {G} Sorcery. Look at top 3, put a creature/land
+/// to hand, rest on bottom. Approximated as Scry 2 + Draw 1.
+pub fn adventurous_impulse() -> CardDefinition {
+    CardDefinition {
+        name: "Adventurous Impulse",
+        cost: cost(&[crate::mana::g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
             },
             Effect::Draw {
                 who: Selector::You,
