@@ -1570,6 +1570,29 @@ pub mod shortcut {
         })
     }
 
+    /// Predicate matching "the just-cast spell is a noncreature spell".
+    pub fn cast_is_noncreature() -> Predicate {
+        Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::HasCardType(crate::card::CardType::Creature).negate(),
+        }
+    }
+
+    /// Prowess trigger: "Whenever you cast a noncreature spell, this creature
+    /// gets +1/+1 until end of turn."
+    pub fn prowess_trigger() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }
+    }
+
     /// Strixhaven Quandrix "spell with `{X}` in its mana cost" trigger:
     /// fires on any spell cast by the controller whose printed cost
     /// contains an `{X}` symbol. Powered by `Predicate::CastSpellHasX`.

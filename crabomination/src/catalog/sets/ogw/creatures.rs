@@ -1,5 +1,6 @@
 use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
+use crate::effect::shortcut::prowess_trigger;
 use crate::mana::{cost, generic, r, u};
 
 /// Stormchaser Mage — {1}{U}{R} 1/3 Flying Haste Prowess
@@ -18,7 +19,7 @@ pub fn stormchaser_mage() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Prowess],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![prowess_trigger()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

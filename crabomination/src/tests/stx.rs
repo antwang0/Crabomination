@@ -1141,6 +1141,53 @@ fn elemental_expressionist_is_four_three_human_wizard() {
     assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
 }
 
+// ── Prowess wiring ─────────────────────────────────────────────────────────
+
+#[test]
+fn spectacle_mage_prowess_pumps_on_noncreature_cast() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 1);
+
+    let bolt = g.add_card_to_hand(0, catalog::interjection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(mage)), mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+
+    let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
+    // Interjection gives +2/+2 EOT, prowess gives +1/+1 EOT
+    assert!(m.power() >= 4, "got P={}", m.power());
+}
+
+#[test]
+fn spectacle_mage_prowess_does_not_fire_on_creature_cast() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+
+    let m = g.battlefield.iter().find(|c| c.id == mage).unwrap();
+    assert_eq!(m.power(), 1, "Prowess should NOT fire on creature spell");
+}
+
+#[test]
+fn monastery_swiftspear_has_prowess_trigger() {
+    let card = catalog::monastery_swiftspear();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert!(card.keywords.contains(&Keyword::Prowess));
+    assert!(!card.triggered_abilities.is_empty(), "should have prowess trigger");
+}
+
 // Suppress unused-import lint when CounterType isn't used in this batch.
 #[allow(dead_code)]
 fn _keepalive(_: CounterType) {}

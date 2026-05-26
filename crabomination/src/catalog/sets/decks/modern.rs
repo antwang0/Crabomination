@@ -7700,8 +7700,9 @@ pub fn young_pyromancer() -> CardDefinition {
 }
 
 /// Monastery Swiftspear — {R} Creature 1/2 Human Monk.
-/// Haste. Prowess.
+/// Haste. Prowess (noncreature spell → +1/+1 EOT).
 pub fn monastery_swiftspear() -> CardDefinition {
+    use crate::effect::shortcut::prowess_trigger;
     CardDefinition {
         name: "Monastery Swiftspear",
         cost: cost(&[r()]),
@@ -7713,6 +7714,7 @@ pub fn monastery_swiftspear() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Haste, Keyword::Prowess],
+        triggered_abilities: vec![prowess_trigger()],
         ..Default::default()
     }
 }

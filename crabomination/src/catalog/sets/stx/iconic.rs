@@ -10,7 +10,7 @@ use crate::card::{
     EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Selector, SelectionRequirement,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{magecraft, target_filtered};
+use crate::effect::shortcut::{magecraft, prowess_trigger, target_filtered};
 use crate::effect::PlayerRef;
 use crate::mana::{b, cost, generic, r, u, w};
 
@@ -113,7 +113,7 @@ pub fn spectacle_mage() -> CardDefinition {
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![prowess_trigger()],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
