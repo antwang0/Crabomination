@@ -7325,6 +7325,290 @@ pub fn sinkhole() -> CardDefinition {
 ///
 /// Approximation: {3}, Sacrifice: destroy each nonland permanent with
 /// mana value 3 or less (X collapsed to 3).
+/// Guardian Scalelord — {4}{W} Creature 3/4 Dragon. Flying.
+/// Whenever this creature attacks, another target creature you control
+/// gains flying until end of turn.
+pub fn guardian_scalelord() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian Scalelord",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Intervention Pact — {0} Instant. Prevent the next 3 damage that would
+/// be dealt to any target this turn. At the beginning of your next upkeep,
+/// pay {1}{W}{W}. If you don't, you lose the game.
+///
+/// Approximation: gain 3 life (damage prevention collapsed) + pact upkeep.
+pub fn intervention_pact() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Intervention Pact",
+        cost: ManaCost::default(),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::PayOrLoseGame {
+                    mana_cost: cost(&[generic(1), w(), w()]),
+                    life_cost: 0,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Baleful Mastery — {3}{B} Instant. Exile target creature or planeswalker.
+///
+/// The alt-cost {1}{B} "an opponent draws a card" mode is omitted.
+pub fn baleful_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Baleful Mastery",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
+/// Elite Spellbinder — {2}{W} Creature 3/1 Human Cleric. Flying.
+/// When this enters, look at target opponent's hand. Choose a nonland card.
+/// Exile it. That card costs {2} more to cast.
+///
+/// Approximation: ETB exiles a nonland card from opponent's hand (the cost
+/// increase isn't modeled — same as Brain Maggot/Tidehollow Sculler).
+pub fn elite_spellbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Elite Spellbinder",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Corpse Dance — {2}{B} Instant. Return the top creature card of your
+/// graveyard to the battlefield. That creature gains haste. At the
+/// beginning of the next end step, exile that creature.
+///
+/// Approximation: Reanimate target creature from your graveyard + grant
+/// haste + exile at end step (reuses Goryo's Vengeance pattern).
+pub fn corpse_dance() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
+    CardDefinition {
+        name: "Corpse Dance",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Exile {
+                    what: Selector::Target(0),
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Arclight Phoenix — {3}{R} Creature 3/2 Phoenix. Flying, haste.
+/// At the beginning of combat on your turn, if you've cast three or
+/// more instant and/or sorcery spells this turn, return this from
+/// your graveyard to the battlefield.
+///
+/// Approximation: body-only (3/2 flying haste). The graveyard-recursion
+/// trigger needs a "from your graveyard" + "3+ IS spells" gate.
+pub fn arclight_phoenix() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Arclight Phoenix",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::If {
+                cond: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
+                },
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elder Gargaroth — {3}{G}{G} Creature 6/6 Beast.
+/// Vigilance, reach, trample.
+/// Whenever this creature attacks or blocks, choose one:
+/// - Create a 3/3 green Beast creature token.
+/// - You gain 3 life.
+/// - Draw a card.
+pub fn elder_gargaroth() -> CardDefinition {
+    CardDefinition {
+        name: "Elder Gargaroth",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Beast".into(),
+                        power: 3,
+                        toughness: 3,
+                        keywords: vec![],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
+                    },
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Vengevine — {2}{G}{G} Creature 4/3 Elemental. Haste.
+/// Whenever you cast a creature spell, if Vengevine is in your graveyard
+/// and you've cast another creature spell this turn, you may return
+/// Vengevine from your graveyard to the battlefield.
+///
+/// Approximation: CreaturesCastThisTurnAtLeast(2) gate + FromYourGraveyard
+/// scope. The "cast another creature" wording means 2+ total creature
+/// spells this turn.
+pub fn vengevine() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Vengevine",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::SpellCast,
+                scope: EventScope::FromYourGraveyard,
+                filter: Some(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            },
+            effect: Effect::If {
+                cond: Predicate::CreaturesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 pub fn pernicious_deed() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

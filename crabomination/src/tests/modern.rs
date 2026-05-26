@@ -9049,6 +9049,96 @@ fn fiery_confluence_mode_one_burns_opponents() {
 }
 
 #[test]
+fn guardian_scalelord_has_flying() {
+    let card = catalog::guardian_scalelord();
+    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(!card.triggered_abilities.is_empty(), "has attack trigger");
+}
+
+#[test]
+fn intervention_pact_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::intervention_pact());
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Intervention Pact castable at {0}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before + 3, "gained 3 life");
+}
+
+#[test]
+fn baleful_mastery_exiles_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::baleful_mastery());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Baleful Mastery castable");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature exiled");
+}
+
+#[test]
+fn elite_spellbinder_etb_strips_card() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let hand_before = g.players[1].hand.len();
+    let id = g.add_card_to_hand(0, catalog::elite_spellbinder());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Elite Spellbinder castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].hand.len() < hand_before, "opponent lost a card");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Elite Spellbinder"));
+}
+
+#[test]
+fn arclight_phoenix_has_haste_and_flying() {
+    let card = catalog::arclight_phoenix();
+    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+}
+
+#[test]
+fn elder_gargaroth_has_vigilance_reach_trample() {
+    let card = catalog::elder_gargaroth();
+    assert!(card.keywords.contains(&crate::card::Keyword::Vigilance));
+    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+}
+
+#[test]
+fn vengevine_has_haste() {
+    let card = catalog::vengevine();
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 3);
+}
+
+#[test]
+fn corpse_dance_is_an_instant() {
+    let card = catalog::corpse_dance();
+    assert!(card.card_types.contains(&CardType::Instant));
+}
+
+#[test]
 fn explore_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

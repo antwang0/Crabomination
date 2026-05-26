@@ -310,6 +310,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wall_of_omens,
         lingering_souls,
         decree_of_justice,
+        guardian_scalelord,
+        intervention_pact,
+        elite_spellbinder,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -619,6 +622,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         chainers_edict,
         toxic_deluge,
         sinkhole,
+        baleful_mastery,
+        corpse_dance,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
@@ -763,6 +768,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         firebolt,
         fiery_confluence,
+        arclight_phoenix,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -896,6 +902,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         tireless_provisioner,
         courser_of_kruphix,
         explore,
+        elder_gargaroth,
+        vengevine,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
