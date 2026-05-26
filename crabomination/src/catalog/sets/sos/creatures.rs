@@ -2045,8 +2045,12 @@ pub fn charging_strifeknight() -> CardDefinition {
 // "Standard primitives — should be straightforward to wire".
 
 /// Cuboid Colony — {G}{U}, 1/1 Insect with Flash, Flying, and Trample.
-/// Increment rider omitted (mana-spent introspection).
+/// Increment approximated as magecraft — whenever you cast an instant or
+/// sorcery spell, put a +1/+1 counter on this creature. The real
+/// Increment checks mana spent vs. P/T, but the magecraft trigger is
+/// a reasonable proxy in an IS-heavy cube environment.
 pub fn cuboid_colony() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Cuboid Colony",
@@ -2062,7 +2066,11 @@ pub fn cuboid_colony() -> CardDefinition {
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2080,14 +2088,12 @@ pub fn cuboid_colony() -> CardDefinition {
 /// a 0/0 green and blue Fractal creature token and put three +1/+1
 /// counters on it."
 ///
-/// Approximation: body + `Keyword::Ward(2)` wired. Increment trigger
-/// + end-step Fractal-with-counters payoff are both omitted (Increment
-/// requires mana-spent introspection on cast; the end-step trigger
-/// would key off a "did this creature gain a counter this turn"
-/// per-permanent flag the engine doesn't track yet). The card still
-/// slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-/// keyword is wired so future Ward enforcement picks it up.
+/// Increment approximated as magecraft +1/+1 counter on IS-cast. The
+/// end-step Fractal-with-counters payoff is still omitted (engine has
+/// no "did this creature gain a counter this turn" per-permanent flag).
+/// Ward {2} wired faithfully.
 pub fn fractal_tender() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Fractal Tender",
@@ -2103,7 +2109,11 @@ pub fn fractal_tender() -> CardDefinition {
         keywords: vec![Keyword::Ward(2)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2149,9 +2159,10 @@ pub fn thornfist_striker() -> CardDefinition {
     }
 }
 
-/// Hungry Graffalon — {3}{G}, 3/4 Giraffe with Reach. Increment rider
-/// omitted.
+/// Hungry Graffalon — {3}{G}, 3/4 Giraffe with Reach.
+/// Increment approximated as magecraft +1/+1 counter on IS-cast.
 pub fn hungry_graffalon() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::g;
     CardDefinition {
         name: "Hungry Graffalon",
@@ -2167,7 +2178,11 @@ pub fn hungry_graffalon() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2177,10 +2192,14 @@ pub fn hungry_graffalon() -> CardDefinition {
     }
 }
 
-/// Pensive Professor — {1}{U}{U}, 0/2 Human Wizard. Increment + counter
-/// trigger omitted.
+/// Pensive Professor — {1}{U}{U}, 0/2 Human Wizard.
+/// Increment approximated as magecraft +1/+1 counter on IS-cast.
+/// Also has: "Whenever one or more +1/+1 counters are put on this
+/// creature, draw a card." — synergizes with the Increment/magecraft
+/// trigger to draw on each IS cast.
 pub fn pensive_professor() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::u;
     CardDefinition {
         name: "Pensive Professor",
@@ -2196,16 +2215,25 @@ pub fn pensive_professor() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                EventScope::SelfSource,
-            ),
-            effect: Effect::Draw {
-                who: Selector::You,
+        triggered_abilities: vec![
+            // Increment approximation: magecraft +1/+1 counter.
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
+            }),
+            // Whenever one or more +1/+1 counters are put on this, draw 1.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
             },
-        }],
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2215,9 +2243,12 @@ pub fn pensive_professor() -> CardDefinition {
     }
 }
 
-/// Tester of the Tangential — {1}{U}, 1/1 Djinn Wizard. Increment + combat
-/// pay-to-pump omitted.
+/// Tester of the Tangential — {1}{U}, 1/1 Djinn Wizard.
+/// Increment approximated as magecraft +1/+1 counter on IS-cast.
+/// The combat pay-to-pump ability is still omitted (no mana-payment-
+/// on-attack primitive).
 pub fn tester_of_the_tangential() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::u;
     CardDefinition {
         name: "Tester of the Tangential",
@@ -2233,7 +2264,11 @@ pub fn tester_of_the_tangential() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2643,13 +2678,14 @@ pub fn garrison_excavator() -> CardDefinition {
 /// counter on this creature.) / {T}: Add an amount of {G} equal to this
 /// creature's power."
 ///
-/// The Increment rider is omitted (engine has no mana-spent introspection
-/// on cast — see TODO.md). The mana ability now uses the new
+/// Increment approximated as magecraft +1/+1 counter on IS-cast. The
+/// mana ability now uses the new
 /// `ManaPayload::OfColor(Green, PowerOf(This))` primitive — fixed color,
 /// value-scaled count — so a single AddMana effect produces power-many
 /// {G} pips in one shot (cleaner than the prior `Repeat` approximation).
 pub fn topiary_lecturer() -> CardDefinition {
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::g;
     CardDefinition {
         name: "Topiary Lecturer",
@@ -2680,7 +2716,11 @@ pub fn topiary_lecturer() -> CardDefinition {
             condition: None,
             life_cost: 0,
         }],
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2695,12 +2735,11 @@ pub fn topiary_lecturer() -> CardDefinition {
 /// cards, where X is the number of colors of mana spent to cast this
 /// spell. If you draw one or more cards this way, discard two cards."
 ///
-/// `Effect::Draw` with `Value::ConvergedValue` + a follow-up
-/// conditional `Discard 2` gated on `ConvergedValue ≥ 1`. The "you
-/// may" optionality is collapsed to always-draw-when-X-≥-1 (no may-do
-/// primitive yet); at X=0 the draw and discard both no-op. ConvergedValue
-/// rides on the `StackItem::Trigger.converged_value` plumbing already in
-/// place for Rancorous Archaic.
+/// Now wired with `Effect::MayDo` — the controller picks yes/no via
+/// `OptionalTrigger`. If accepted, draws X (ConvergedValue) cards and
+/// then discards 2 when X >= 1. ConvergedValue rides on the
+/// `StackItem::Trigger.converged_value` plumbing already in place for
+/// Rancorous Archaic.
 pub fn transcendent_archaic() -> CardDefinition {
     use crate::effect::Predicate;
     CardDefinition {
@@ -2719,21 +2758,24 @@ pub fn transcendent_archaic() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::ConvergedValue,
-                },
-                Effect::If {
-                    cond: Predicate::ValueAtLeast(Value::ConvergedValue, Value::Const(1)),
-                    then: Box::new(Effect::Discard {
+            effect: Effect::MayDo {
+                description: "Transcendent Archaic: draw X cards (Converge) then discard 2?".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw {
                         who: Selector::You,
-                        amount: Value::Const(2),
-                        random: false,
-                    }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+                        amount: Value::ConvergedValue,
+                    },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(Value::ConvergedValue, Value::Const(1)),
+                        then: Box::new(Effect::Discard {
+                            who: Selector::You,
+                            amount: Value::Const(2),
+                            random: false,
+                        }),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
+            },
         }],
         static_abilities: vec![],
         base_loyalty: 0,
@@ -4029,13 +4071,11 @@ pub fn wildgrowth_archaic() -> CardDefinition {
 /// had one or more counters on it, create a 0/0 green and blue Fractal
 /// creature token, then put this creature's counters on that token."
 ///
-/// Body wired (1/1 Turtle Wizard at {G} — Increment-grown shell).
-/// Increment is omitted (mana-spent-on-cast introspection missing —
-/// tracked in TODO.md). The death-with-counters → Fractal-with-
-/// counters trigger is also omitted (engine has no
-/// `Selector::Self.counters_at_death` snapshot — we'd need a counter-
-/// transfer-on-death primitive, which is tracked separately).
+/// Increment approximated as magecraft +1/+1 counter on IS-cast. The
+/// death-with-counters → Fractal-with-counters trigger is still omitted
+/// (engine has no counter-transfer-on-death primitive).
 pub fn ambitious_augmenter() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::g;
     CardDefinition {
         name: "Ambitious Augmenter",
@@ -4051,7 +4091,11 @@ pub fn ambitious_augmenter() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4273,11 +4317,10 @@ pub fn ral_zarek_guest_lecturer() -> CardDefinition {
 /// is greater than this creature's power or toughness, put a +1/+1
 /// counter on this creature.) / When this creature enters, surveil 2."
 ///
-/// Body wired with the printed 0/3 Frog Wizard stats; the ETB Surveil 2
-/// is wired faithfully via `Effect::Surveil`. The Increment rider is
-/// omitted (no per-cast mana-spent introspection — same gap as
-/// Pensive Professor / Hungry Graffalon / Tester of the Tangential).
+/// ETB Surveil 2 wired faithfully. Increment approximated as magecraft
+/// +1/+1 counter on IS-cast.
 pub fn textbook_tabulator() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::u;
     CardDefinition {
         name: "Textbook Tabulator",
@@ -4293,13 +4336,22 @@ pub fn textbook_tabulator() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
+        triggered_abilities: vec![
+            // Increment approximation: magecraft +1/+1 counter.
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            // ETB: Surveil 2.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Surveil {
+                    who: PlayerRef::You,
+                    amount: Value::Const(2),
+                },
             },
-        }],
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4316,13 +4368,12 @@ pub fn textbook_tabulator() -> CardDefinition {
 /// five or more mana was spent to cast that spell, this creature gets
 /// +2/+2 until end of turn instead."
 ///
-/// ETB tap+stun wired (same shape as Fractal Mascot's Quandrix variant).
-/// The Opus rider is omitted (mana-spent-on-cast introspection is the
-/// same engine gap blocking the rest of the Opus cycle — Tackle Artist,
-/// Expressive Firedancer, Spectacular Skywhale, etc.).
+/// ETB tap+stun wired faithfully. Opus approximated as magecraft +1/+1
+/// EOT pump on IS-cast (the 5-mana-spent branch is collapsed to the
+/// base +1/+1 since the engine has no mana-spent introspection).
 pub fn deluge_virtuoso() -> CardDefinition {
     use crate::card::CounterType;
-    use crate::effect::shortcut::target_filtered;
+    use crate::effect::shortcut::{magecraft_self_pump, target_filtered};
     use crate::mana::u;
     CardDefinition {
         name: "Deluge Virtuoso",
@@ -4338,22 +4389,27 @@ pub fn deluge_virtuoso() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Seq(vec![
-                Effect::Tap {
-                    what: target_filtered(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByOpponent),
-                    ),
-                },
-                Effect::AddCounter {
-                    what: Selector::Target(0),
-                    kind: CounterType::Stun,
-                    amount: Value::Const(1),
-                },
-            ]),
-        }],
+        triggered_abilities: vec![
+            // ETB: tap + stun an opponent's creature.
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::Seq(vec![
+                    Effect::Tap {
+                        what: target_filtered(
+                            SelectionRequirement::Creature
+                                .and(SelectionRequirement::ControlledByOpponent),
+                        ),
+                    },
+                    Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::Stun,
+                        amount: Value::Const(1),
+                    },
+                ]),
+            },
+            // Opus approximation: magecraft +1/+1 EOT.
+            magecraft_self_pump(1, 1),
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -7736,3 +7736,34 @@ fn potioners_trove_lifegain_gate_uses_is_cast_predicate() {
         "Lifegain ability should have a condition gate",
     );
 }
+
+// ── Increment approximation: Cuboid Colony + Fractal Tender + Topiary Lecturer
+
+#[test]
+fn cuboid_colony_increment_adds_counter_on_is_cast() {
+    let card = catalog::cuboid_colony();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flash));
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
+}
+
+#[test]
+fn fractal_tender_increment_adds_counter_on_is_cast() {
+    let card = catalog::fractal_tender();
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
+}
+
+#[test]
+fn topiary_lecturer_increment_adds_counter_on_is_cast() {
+    let card = catalog::topiary_lecturer();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 2);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Increment (magecraft) trigger");
+    assert!(!card.activated_abilities.is_empty(), "Should have mana ability");
+}
