@@ -5559,7 +5559,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
 /// "ramp into a 6-drop on turn 3" line, but doesn't snowball with extra
 /// Forests.
 pub fn rofellos_llanowar_emissary() -> CardDefinition {
-    use crate::card::{ActivatedAbility, Supertype as Sup};
+    use crate::card::{ActivatedAbility, LandType, SelectionRequirement, Supertype as Sup};
     CardDefinition {
         name: "Rofellos, Llanowar Emissary",
         cost: cost(&[g(), g()]),
@@ -5576,7 +5576,13 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Green, Color::Green]),
+                pool: ManaPayload::OfColor(
+                    Color::Green,
+                    Value::count(Selector::EachPermanent(
+                        SelectionRequirement::HasLandType(LandType::Forest)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
+                ),
             },
             once_per_turn: false,
             sorcery_speed: false,
