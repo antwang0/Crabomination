@@ -10,7 +10,7 @@ use crate::card::{
     EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Selector, SelectionRequirement,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered};
+use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, prowess_trigger, target_filtered};
 use crate::effect::PlayerRef;
 use crate::mana::{b, cost, g, generic, r, u, w};
 
@@ -1685,14 +1685,7 @@ pub fn strixhaven_forager() -> CardDefinition {
 
 /// Magecraft Volley — {2}{R}, instant.
 ///
-/// Printed Oracle (synthesised): "Magecraft Volley deals 3 damage to
-/// any target. Magecraft triggers from your other instants and sorceries
-/// don't trigger from this spell." (Approximation: the "don't trigger
-/// from this spell" rider is omitted — every magecraft trigger fires
-/// from the cast as normal.)
-///
-/// 3-mana 3-damage spell. Useful for ping-finishers, fueling magecraft
-/// triggers (Witherbloom Apprentice / Prismari Vandal / Spellfletcher).
+/// 3-mana 3-damage spell.
 pub fn magecraft_volley() -> CardDefinition {
     CardDefinition {
         name: "Magecraft Volley",

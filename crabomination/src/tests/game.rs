@@ -5091,3 +5091,33 @@ fn stun_counter_prevents_untap_and_decrements() {
     let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
     assert!(!b.tapped, "Bear should now untap normally with no stun counters");
 }
+
+// ── Deathtouch SBA (CR 704.5g) ─────────────────────────────────────────────
+
+#[test]
+fn deathtouch_damage_kills_with_any_amount() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == big) {
+        c.damage = 1;
+        c.deathtouch_damaged = true;
+    }
+    let sba = g.check_state_based_actions();
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "Creature with deathtouch damage should die even from 1 damage");
+    assert!(sba.iter().any(|e| matches!(e, GameEvent::CreatureDied { card_id } if *card_id == big)));
+}
+
+#[test]
+fn indestructible_survives_deathtouch_damage() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == big) {
+        c.damage = 1;
+        c.deathtouch_damaged = true;
+        c.definition.keywords.push(Keyword::Indestructible);
+    }
+    g.check_state_based_actions();
+    assert!(g.battlefield.iter().any(|c| c.id == big),
+        "Indestructible creature should survive deathtouch");
+}

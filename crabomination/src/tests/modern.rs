@@ -8032,20 +8032,21 @@ fn elvish_reclaimer_sacrifices_land_to_search_for_one() {
 }
 
 #[test]
-fn rofellos_taps_for_two_green_mana() {
-    // Push (claude/modern_decks): Rofellos's mana ability now scales
-    // with Forest count (`{T}: Add {G} for each Forest you control`,
-    // rendered Add {G}{G} on the printed card). One Forest in play +
-    // tap Rofellos → 2 green.
+fn rofellos_taps_for_green_per_forest() {
     let mut g = two_player_game();
+    // Put 3 Forests on the battlefield
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
     let id = g.add_card_to_battlefield(0, catalog::rofellos_llanowar_emissary());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
     g.add_card_to_battlefield(0, catalog::forest());
 
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, x_value: None }).expect("Rofellos's mana ability");
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 2,
-        "Rofellos adds two green mana per Forest (1 forest → 2 green)");
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("Rofellos's mana ability");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 4,
+        "Rofellos adds green mana for each Forest you control (4 Forests)");
 }
 
 #[test]

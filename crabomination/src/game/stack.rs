@@ -972,11 +972,15 @@ impl GameState {
                 if c.has_keyword(&Keyword::Indestructible) {
                     return false;
                 }
-                // Lethal damage kills non-indestructible creatures.
+                // CR 704.5g: lethal damage = damage >= toughness.
+                // CR 704.5h: any damage from a deathtouch source is lethal.
+                // Indestructible creatures don't die to either rule.
+                if c.has_keyword(&Keyword::Indestructible) {
+                    return false;
+                }
                 if (c.damage as i32) >= computed_toughness {
                     return true;
                 }
-                // CR 704.5h: any damage from a deathtouch source is lethal.
                 c.dealt_deathtouch_damage && c.damage > 0
             })
             .map(|c| c.id)

@@ -2858,10 +2858,6 @@ pub mod shortcut {
     }
 
     /// Convenience: a Magecraft trigger that untaps the source itself.
-    /// Wraps [`magecraft`] with an `Effect::Untap` body whose `what:` is
-    /// the triggering permanent (`Selector::This`). Used by STX Hall
-    /// Monitor; future "magecraft → untap this" cards (Pop Quiz-style
-    /// Wizard chains, Galazeth-style mana ramps) will reuse it.
     pub fn magecraft_self_untap() -> TriggeredAbility {
         magecraft(Effect::Untap {
             what: Selector::This,
@@ -2870,11 +2866,7 @@ pub mod shortcut {
     }
 
     /// Convenience: a Magecraft trigger that drains `amount` life from
-    /// each opponent into the controller. Wraps [`magecraft`] with an
-    /// `Effect::Drain { from: EachOpponent, to: You, amount }` body.
-    /// The drain template is the canonical Witherbloom magecraft payoff
-    /// (Witherbloom Apprentice, Sedgemoor Witch's death-trigger
-    /// payoff, etc.); this shortcut keeps the call site one line.
+    /// each opponent into the controller.
     pub fn magecraft_drain_each_opp(amount: i32) -> TriggeredAbility {
         magecraft(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
@@ -2883,13 +2875,8 @@ pub mod shortcut {
         })
     }
 
-    /// Magecraft-Drain-Target shortcut: "Magecraft — Whenever you cast or
-    /// copy an instant or sorcery spell, target player loses N life and
-    /// you gain N life." Mirrors `magecraft_drain_each_opp` but with a
-    /// per-target slot rather than fan-out across each opponent — used by
-    /// cards like Promising Duskmage, Inkling Coursebinder, Inkling
-    /// Confessor, Inkling Pamphleteer where the picker selects a specific
-    /// opponent (matters in multiplayer; equivalent in 2-player).
+    /// Magecraft-Drain-Target shortcut for per-target drain cards
+    /// (Promising Duskmage, Inkling Coursebinder, etc.).
     pub fn magecraft_drain_target(amount: i32) -> TriggeredAbility {
         magecraft(Effect::Drain {
             from: Selector::TargetFiltered {
@@ -2902,10 +2889,7 @@ pub mod shortcut {
     }
 
     /// ETB-Pump-Each-with-Type shortcut: "When this creature enters,
-    /// put a +1/+1 counter on each creature you control of the given
-    /// type." Used by Inkling Sigilbearer, Pest Bannerer, Fractal
-    /// Mascot-class tribal anthems. Replaces the recurring 10-line
-    /// ForEach body in tribal payoff factories.
+    /// put a +1/+1 counter on each creature you control of the given type."
     pub fn etb_pump_each_with_type(creature_type: crate::card::CreatureType) -> TriggeredAbility {
         use crate::card::CounterType;
         etb(Effect::ForEach {
@@ -2920,6 +2904,29 @@ pub mod shortcut {
                 amount: Value::Const(1),
             }),
         })
+    }
+
+    /// Predicate matching "the just-cast spell is a noncreature spell".
+    pub fn cast_is_noncreature() -> Predicate {
+        Predicate::EntityMatches {
+            what: Selector::TriggerSource,
+            filter: SelectionRequirement::HasCardType(crate::card::CardType::Creature).negate(),
+        }
+    }
+
+    /// Prowess trigger: "Whenever you cast a noncreature spell, this creature
+    /// gets +1/+1 until end of turn."
+    pub fn prowess_trigger() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_noncreature()),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+        }
     }
 
     /// Strixhaven Quandrix "spell with `{X}` in its mana cost" trigger:

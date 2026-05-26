@@ -6174,10 +6174,6 @@ pub fn elvish_reclaimer() -> CardDefinition {
 /// Maestro's power-scaled mana payouts (`PowerOf(This)`).
 pub fn rofellos_llanowar_emissary() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType, Supertype as Sup};
-    let forest_count = Value::CountOf(Box::new(Selector::EachPermanent(
-        SelectionRequirement::HasLandType(LandType::Forest)
-            .and(SelectionRequirement::ControlledByYou),
-    )));
     CardDefinition {
         name: "Rofellos, Llanowar Emissary",
         cost: cost(&[g(), g()]),
@@ -6196,7 +6192,10 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
                 who: PlayerRef::You,
                 pool: ManaPayload::OfColor(
                     Color::Green,
-                    Value::Times(Box::new(Value::Const(2)), Box::new(forest_count)),
+                    Value::count(Selector::EachPermanent(
+                        SelectionRequirement::HasLandType(LandType::Forest)
+                            .and(SelectionRequirement::ControlledByYou),
+                    )),
                 ),
             },
             once_per_turn: false,
@@ -10488,8 +10487,9 @@ pub fn young_pyromancer() -> CardDefinition {
 }
 
 /// Monastery Swiftspear — {R} Creature 1/2 Human Monk.
-/// Haste. Prowess.
+/// Haste. Prowess (noncreature spell → +1/+1 EOT).
 pub fn monastery_swiftspear() -> CardDefinition {
+    use crate::effect::shortcut::prowess_trigger;
     CardDefinition {
         name: "Monastery Swiftspear",
         cost: cost(&[r()]),
@@ -10501,6 +10501,7 @@ pub fn monastery_swiftspear() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Haste, Keyword::Prowess],
+        triggered_abilities: vec![prowess_trigger()],
         ..Default::default()
     }
 }
