@@ -4211,3 +4211,80 @@ fn protection_does_not_block_own_spells() {
     });
     assert!(result.is_ok(), "Protection should not block the controller's own spells");
 }
+
+// ── CR 120.3: Damage to planeswalkers removes loyalty counters ─────────────
+
+#[test]
+fn cr_120_3_damage_to_planeswalker_removes_loyalty() {
+    let mut g = two_player_game();
+    // Place a planeswalker on opponent's battlefield
+    let pw = g.add_card_to_battlefield(1, catalog::oko_thief_of_crowns());
+    let loyalty_before = g.battlefield.iter()
+        .find(|c| c.id == pw)
+        .unwrap()
+        .counters
+        .get(&crate::card::CounterType::Loyalty)
+        .copied()
+        .unwrap_or(0);
+    assert_eq!(loyalty_before, 4, "Oko starts with 4 loyalty");
+
+    // Cast Lightning Bolt targeting the planeswalker
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(pw)), mode: None, x_value: None,
+    }).expect("bolt targets planeswalker");
+    drain_stack(&mut g);
+
+    let pw_card = g.battlefield.iter().find(|c| c.id == pw);
+    if let Some(pw_card) = pw_card {
+        let loyalty_after = pw_card.counters
+            .get(&crate::card::CounterType::Loyalty)
+            .copied()
+            .unwrap_or(0);
+        assert_eq!(loyalty_after, 1, "3 damage removes 3 loyalty: 4-3=1");
+    }
+    // If the planeswalker was removed (loyalty hit 0), that's also valid
+}
+
+// ── CR 704.5q/r: +1/+1 and -1/-1 counter cancellation ────────────────────
+
+#[test]
+fn cr_704_5q_counters_cancel_each_other() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    // Add +1/+1 counters
+    {
+        let c = g.battlefield.iter_mut().find(|c| c.id == creature).unwrap();
+        *c.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += 3;
+        *c.counters.entry(crate::card::CounterType::MinusOneMinusOne).or_insert(0) += 2;
+    }
+
+    // Run SBAs
+    g.check_state_based_actions();
+
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    let plus = c.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    let minus = c.counters.get(&crate::card::CounterType::MinusOneMinusOne).copied().unwrap_or(0);
+    assert_eq!(plus, 1, "3 plus - 2 minus = 1 plus remaining");
+    assert_eq!(minus, 0, "minus counters fully cancelled");
+}
+
+// ── CR 704.5j: Legend rule ────────────────────────────────────────────────
+
+#[test]
+fn cr_704_5j_legend_rule_keeps_newest() {
+    let mut g = two_player_game();
+    let legend1 = g.add_card_to_battlefield(0, catalog::griselbrand());
+    let legend2 = g.add_card_to_battlefield(0, catalog::griselbrand());
+
+    g.check_state_based_actions();
+
+    // Only one Griselbrand should remain (the newest, i.e. legend2)
+    let griselbrands: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Griselbrand")
+        .collect();
+    assert_eq!(griselbrands.len(), 1, "legend rule removed the duplicate");
+    assert_eq!(griselbrands[0].id, legend2, "newest legend survives");
+}

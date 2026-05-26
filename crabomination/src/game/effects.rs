@@ -2110,7 +2110,22 @@ impl GameState {
             }
             EntityRef::Permanent(cid) => {
                 if let Some(c) = self.battlefield_find_mut(cid) {
-                    c.damage += amount;
+                    if c.definition.is_planeswalker() {
+                        // CR 120.3: Damage dealt to a planeswalker removes
+                        // that many loyalty counters from it.
+                        let loyalty = c.counters
+                            .get(&crate::card::CounterType::Loyalty)
+                            .copied()
+                            .unwrap_or(0);
+                        let remove = amount.min(loyalty);
+                        if remove > 0 {
+                            *c.counters
+                                .entry(crate::card::CounterType::Loyalty)
+                                .or_insert(0) -= remove;
+                        }
+                    } else {
+                        c.damage += amount;
+                    }
                     events.push(GameEvent::DamageDealt { amount, to_player: None, to_card: Some(cid) });
                 }
             }
