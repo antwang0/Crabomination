@@ -14,7 +14,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
+use crate::mana::{Color, b, cost, g, generic, u, w, x};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
@@ -504,40 +504,6 @@ pub fn multiple_choice() -> CardDefinition {
                 },
             ]),
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Teach by Example ───────────────────────────────────────────────────────
-
-/// Teach by Example — {1}{R} Instant. "When you cast this spell, copy
-/// target instant or sorcery spell you control. You may choose new
-/// targets for the copy."
-///
-/// Approximated as: draw 1 card (simulating card advantage from copying).
-/// A full implementation would need a copy-spell-on-cast trigger that
-/// fires during resolution, which the engine doesn't support yet.
-pub fn teach_by_example() -> CardDefinition {
-    CardDefinition {
-        name: "Teach by Example",
-        cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
-        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

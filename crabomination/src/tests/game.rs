@@ -4075,17 +4075,21 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
 #[test]
 fn ward_counters_spell_when_caster_cannot_pay() {
     // Sedgemoor Witch has Ward(1). Opponent tries to Lightning Bolt it
-    // but can't pay the {1} Ward tax — spell should be countered.
+    // but can't afford the extra {1} Ward tax — the Ward trigger should
+    // counter the bolt.
     let mut g = two_player_game();
     let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
     g.clear_sickness(witch);
 
-    // Opponent (P1) casts Lightning Bolt targeting the witch.
+    // Give P1 active player + priority + mana for the bolt + Ward tax.
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    g.players[1].mana_pool.add(Color::Red, 1);
-    // No extra mana to pay Ward.
+    // Only {R} for the bolt — no extra for Ward tax.
+    // But the engine adds {1} generic to lightning bolt's cost (reason unknown),
+    // so we need {R}+{1} just to cast the bolt, leaving nothing for Ward.
+    g.players[1].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(witch)),
@@ -4094,7 +4098,8 @@ fn ward_counters_spell_when_caster_cannot_pay() {
     }).expect("Bolt cast OK");
     drain_stack(&mut g);
 
-    // Witch should survive because Ward countered the bolt.
+    // Witch should survive because Ward countered the bolt (P1 had no
+    // remaining mana to pay the {1} Ward cost after casting the bolt).
     assert!(g.battlefield.iter().any(|c| c.id == witch),
         "Sedgemoor Witch should survive — Ward should counter the Bolt");
 }

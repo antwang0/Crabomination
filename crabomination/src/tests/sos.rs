@@ -7531,3 +7531,28 @@ fn quandrix_the_proof_enters_as_6_6_flying_trample() {
     assert!(view.keywords.contains(&Keyword::Trample),
         "Quandrix should have trample");
 }
+
+// ── Applied Geometry ────────────────────────────────────────────────────
+
+#[test]
+fn applied_geometry_creates_fractal_with_six_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Applied Geometry castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    let frac = g.battlefield.iter().find(|c| c.definition.name == "Fractal")
+        .expect("Fractal token should be on the battlefield");
+    assert_eq!(frac.counter_count(CounterType::PlusOnePlusOne), 6,
+        "Fractal should have six +1/+1 counters");
+    // 0/0 base + 6 counters = 6/6.
+    assert_eq!(frac.power(), 6);
+    assert_eq!(frac.toughness(), 6);
+}

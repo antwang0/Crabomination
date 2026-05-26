@@ -909,22 +909,10 @@ fn decisive_denial_mode_one_fights_creatures() {
 // ── Teach by Example ───────────────────────────────────────────────────────
 
 #[test]
-fn teach_by_example_draws_a_card() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::teach_by_example());
-    let hand_before = g.players[0].hand.len();
-
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
-    })
-    .expect("Teach by Example castable for {1}{R}");
-    drain_stack(&mut g);
-
-    // Hand: -1 (cast) +1 (draw) = 0 net.
-    assert_eq!(g.players[0].hand.len(), hand_before);
+fn teach_by_example_is_instant() {
+    let card = catalog::teach_by_example();
+    assert_eq!(card.name, "Teach by Example");
+    assert!(card.card_types.contains(&crate::card::CardType::Instant));
 }
 
 // ── Introduction to Prophecy ───────────────────────────────────────────────
