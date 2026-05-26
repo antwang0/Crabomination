@@ -7,6 +7,20 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **modern_decks session (2026-05-26 cont.)**: 2 engine primitives +
+  5 tests:
+  - **Prowess trigger (`shortcut::prowess_trigger()`)**: "Whenever you
+    cast a noncreature spell, this creature gets +1/+1 until end of
+    turn." Built on new `cast_is_noncreature()` predicate. Wired into
+    Spectacle Mage (STX), Stormchaser Mage (OGW), and Monastery
+    Swiftspear (Modern).
+  - **Deathtouch SBA enforcement (CR 704.5g)**: `check_state_based_
+    actions` now kills creatures with any deathtouch damage (even 1
+    point below toughness). Previously only `damage >= toughness` was
+    checked, ignoring the `deathtouch_damaged` flag set during combat.
+    Indestructible correctly prevents destruction from deathtouch.
+  - 5 new tests. All 1151 tests pass.
+
 - ✅ **modern_decks batch 2 (2026-05-26)**: 21+ new cards + 3 engine
   improvements + tests:
   - **Ward enforcement (CR 702.21)**: When a spell targets a permanent
@@ -1925,3 +1939,40 @@ listed here so the next pass can pick them up.
 - **Ward tax in legal-action generation**: The bot's legal-action generator
   should factor in Ward cost when computing whether a spell can target a
   given permanent, so it doesn't attempt unaffordable casts.
+
+## New suggestions (added 2026-05-26 prowess+deathtouch session)
+
+### Engine
+
+- **Prowess on all keyword-tagged cards**: The new `prowess_trigger()`
+  shortcut should be audited against every card with `Keyword::Prowess`
+  to ensure the trigger is wired. Currently wired: Spectacle Mage,
+  Stormchaser Mage, Monastery Swiftspear. Future additions (e.g.
+  Bedlam Reveler, Soul-Scar Mage, Young Pyromancer's relatives) should
+  use the shortcut when added.
+
+- **Deathtouch on non-combat damage**: The `deathtouch_damaged` flag is
+  only set during combat damage. Per CR 702.2c, deathtouch applies to
+  ALL damage dealt by the source — including `DealDamage` effects from
+  creatures with deathtouch (e.g. Prodigal Sorcerer variants, Goblin
+  Sharpshooter). Implementing this requires threading the damage source
+  through `deal_damage_to` and checking for deathtouch.
+
+- **PlayerRef::ControllerOf for stack items**: `ControllerOf(Target(0))`
+  doesn't resolve for spells on the stack (only battlefield/graveyard).
+  Swan Song's "its controller creates a token" is approximated as
+  EachOpponent. Threading controller lookup through `StackItem::Spell`
+  would faithfully resolve this.
+
+### Cards
+
+- **Prowess creature cycle**: Now that prowess is wired, any future
+  prowess cards (Soul-Scar Mage, Bedlam Reveler, Monastery Mentor,
+  Adeliz the Cinder Wind) should be easy to implement — just add
+  `prowess_trigger()` to their triggered abilities.
+
+- **Rofellos, Llanowar Emissary**: `{T}: Add {G} for each Forest you
+  control` needs `Value::CountOf(EachPermanent(HasLandType(Forest)))`.
+  The `EachPermanent` selector + `HasLandType` filter both exist; the
+  composition into a `ManaPayload::OfColor(Green, Count)` shape should
+  work with existing primitives.
