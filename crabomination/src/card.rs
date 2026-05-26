@@ -99,7 +99,7 @@ pub enum SpellSubtype {
 pub enum PlaneswalkerSubtype {
     Chandra, Jace, Liliana, Ajani, Garruk, Elspeth, Gideon, Nissa, Sorin,
     Teferi, Karn, Ugin, Bolas, Ashiok, Nahiri, Vraska, Domri, Ral, Vivien,
-    Tezzeret,
+    Tezzeret, Oko,
     // SOS Witherbloom Dellian planeswalker subtype (Professor Dellian Fel).
     Dellian,
 }
