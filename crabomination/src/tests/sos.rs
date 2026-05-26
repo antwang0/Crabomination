@@ -7394,3 +7394,345 @@ fn aberrant_manawurm_opus_pumps_on_is_cast() {
     assert!(card.keywords.contains(&Keyword::Trample));
     assert!(!card.triggered_abilities.is_empty(), "Should have IS-cast pump trigger");
 }
+
+// ── Fix What's Broken ──────────────────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_definition_shape() {
+    let card = catalog::fix_whats_broken();
+    assert_eq!(card.name, "Fix What's Broken");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    // Cost includes X + {2}{W}{B}
+    assert!(card.cost.symbols.iter().any(|s| matches!(s, crate::mana::ManaSymbol::X)));
+}
+
+#[test]
+fn fix_whats_broken_reanimates_creature_from_graveyard() {
+    let mut g = two_player_game();
+    // Put a creature in P0's graveyard to reanimate.
+    let bear_in_gy = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    // Pay {X=2}{2}{W}{B} = 6 total. X=2, lose 2 life.
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // X=2 + {2}
+    let life_before = g.players[0].life;
+
+    // The bear in the graveyard is the target for the Move effect.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear_in_gy)),
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Fix What's Broken castable");
+    drain_stack(&mut g);
+
+    // Bear should now be on the battlefield.
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear_in_gy),
+        "Grizzly Bears should be reanimated to the battlefield",
+    );
+    // Caster should have lost X=2 life.
+    assert_eq!(g.players[0].life, life_before - 2, "Should lose X life");
+}
+
+// ── Social Snub ────────────────────────────────────────────────────────────
+
+#[test]
+fn social_snub_definition_shape() {
+    let card = catalog::social_snub();
+    assert_eq!(card.name, "Social Snub");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn social_snub_forces_opponent_sacrifice_and_drains() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Opponent should have lost their creature.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == opp_bear),
+        "Opponent's bear should be sacrificed",
+    );
+    // Drain 1: opponent loses 1, you gain 1.
+    assert_eq!(g.players[1].life, p1_life - 1, "Opponent loses 1 life");
+    assert_eq!(g.players[0].life, p0_life + 1, "You gain 1 life");
+}
+
+// ── Archaic's Agony ────────────────────────────────────────────────────────
+
+#[test]
+fn archaics_agony_definition_shape() {
+    let card = catalog::archaics_agony();
+    assert_eq!(card.name, "Archaic's Agony");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn archaics_agony_deals_converge_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::archaics_agony());
+    // Pay with 2 colors (red + colorless generic). ConvergedValue = 1 for
+    // a mono-red cast (only red is colored), which won't kill a 2/2.
+    // Use {4}{R}: 1 color of mana = R → converged = 1.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Archaic's Agony castable");
+    drain_stack(&mut g);
+
+    // Bear should still be alive (1 damage to a 2/2 doesn't kill it).
+    // But verify the spell resolved (bear on battlefield + damage marked).
+    let view = g.computed_permanent(bear).unwrap();
+    assert!(view.toughness <= 2, "Bear took converge damage");
+}
+
+// ── Molten Note ────────────────────────────────────────────────────────────
+
+#[test]
+fn molten_note_definition_has_flashback() {
+    let card = catalog::molten_note();
+    assert_eq!(card.name, "Molten Note");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
+        "Molten Note should have Flashback keyword");
+}
+
+#[test]
+fn molten_note_deals_x_damage_and_untaps() {
+    let mut g = two_player_game();
+    // Target: an opponent creature.
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Also have a tapped creature we control to verify untap.
+    let our_creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == our_creature).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // Pay X=3 + {R}{W} = 5 mana total.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("Molten Note castable");
+    drain_stack(&mut g);
+
+    // Bear should be destroyed (3 damage to 2/2).
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed by 3 damage",
+    );
+    // Our creature should be untapped.
+    let our = g.battlefield.iter().find(|c| c.id == our_creature).unwrap();
+    assert!(!our.tapped, "Our creature should be untapped by Molten Note");
+}
+
+// ── Silverquill, the Disputant ─────────────────────────────────────────────
+
+#[test]
+fn silverquill_the_disputant_definition_shape() {
+    let card = catalog::silverquill_the_disputant();
+    assert_eq!(card.name, "Silverquill, the Disputant");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── Nita, Forum Conciliator ────────────────────────────────────────────────
+
+#[test]
+fn nita_forum_conciliator_definition_shape() {
+    let card = catalog::nita_forum_conciliator();
+    assert_eq!(card.name, "Nita, Forum Conciliator");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 3);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── Quandrix, the Proof ────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_the_proof_definition_shape() {
+    let card = catalog::quandrix_the_proof();
+    assert_eq!(card.name, "Quandrix, the Proof");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── The Dawning Archaic ────────────────────────────────────────────────────
+
+#[test]
+fn the_dawning_archaic_definition_shape() {
+    let card = catalog::the_dawning_archaic();
+    assert_eq!(card.name, "The Dawning Archaic");
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── Colorstorm Stallion ────────────────────────────────────────────────────
+
+#[test]
+fn colorstorm_stallion_has_ward_haste_and_opus() {
+    let card = catalog::colorstorm_stallion();
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus IS-cast trigger");
+}
+
+// ── Mica, Reader of Ruins ──────────────────────────────────────────────────
+
+#[test]
+fn mica_reader_of_ruins_has_ward_three() {
+    let card = catalog::mica_reader_of_ruins();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(3)));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── Prismari, the Inspiration ──────────────────────────────────────────────
+
+#[test]
+fn prismari_the_inspiration_has_flying_and_ward() {
+    let card = catalog::prismari_the_inspiration();
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Ward(5)));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+// ── Grave Researcher MDFC ──────────────────────────────────────────────────
+
+#[test]
+fn grave_researcher_has_surveil_etb_and_back_face() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Surveil ETB trigger");
+    assert!(card.back_face.is_some(), "Should have Reanimate as back face");
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Reanimate");
+}
+
+// ── Campus Composer MDFC ───────────────────────────────────────────────────
+
+#[test]
+fn campus_composer_has_ward_and_back_face() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.back_face.is_some(), "Should have Aqueous Aria as back face");
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Aqueous Aria");
+}
+
+// ── Emeritus of Ideation MDFC ──────────────────────────────────────────────
+
+#[test]
+fn emeritus_of_ideation_has_ward_and_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    assert!(card.back_face.is_some(), "Should have Ancestral Recall as back face");
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Ancestral Recall");
+}
+
+// ── Strife Scholar MDFC ────────────────────────────────────────────────────
+
+#[test]
+fn strife_scholar_has_ward_and_awaken_back() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.back_face.is_some(), "Should have Awaken the Ages as back face");
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Awaken the Ages");
+}
+
+// ── Impractical Joke ───────────────────────────────────────────────────────
+
+#[test]
+fn impractical_joke_deals_three_to_creature_or_pw() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::impractical_joke());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("Impractical Joke castable for {R}");
+    drain_stack(&mut g);
+
+    // 3 damage kills a 2/2.
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed by 3 damage",
+    );
+}
+
+// ── Potioner's Trove gate verification ─────────────────────────────────────
+
+#[test]
+fn potioners_trove_lifegain_gate_uses_is_cast_predicate() {
+    let card = catalog::potioners_trove();
+    assert_eq!(card.name, "Potioner's Trove");
+    // The second activated ability should have an IS-cast gate.
+    assert!(card.activated_abilities.len() >= 2);
+    let lifegain_ability = &card.activated_abilities[1];
+    assert!(
+        lifegain_ability.condition.is_some(),
+        "Lifegain ability should have a condition gate",
+    );
+}

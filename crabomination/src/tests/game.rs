@@ -4123,3 +4123,91 @@ fn multiple_stun_counters_remove_one_per_untap() {
     assert!(c.tapped);
     assert_eq!(c.counter_count(crate::card::CounterType::Stun), 2);
 }
+
+// ── Protection from color targeting (CR 702.16) ────────────────────────────
+
+#[test]
+fn protection_from_black_prevents_targeting_by_black_spell() {
+    use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+    use crate::mana::cost;
+
+    let mut g = two_player_game();
+    // Create a creature with protection from black for player 1.
+    let pro_creature = g.add_card_to_battlefield(1, CardDefinition {
+        name: "White Knight",
+        cost: cost(&[crate::mana::w(), crate::mana::w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Human, crate::card::CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Protection(crate::mana::Color::Black)],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    });
+
+    // Try targeting it with a black spell (Wander Off = {3}{B} exile).
+    let spell = g.add_card_to_hand(0, catalog::wander_off());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(pro_creature)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "Black spell should not be able to target creature with protection from black");
+}
+
+#[test]
+fn protection_does_not_block_own_spells() {
+    use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
+
+    let mut g = two_player_game();
+    // Player 0's creature with protection from black.
+    let pro_creature = g.add_card_to_battlefield(0, CardDefinition {
+        name: "White Knight",
+        cost: crate::mana::cost(&[crate::mana::w(), crate::mana::w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![crate::card::CreatureType::Human, crate::card::CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Protection(crate::mana::Color::Black)],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    });
+
+    // Player 0 targeting their own creature with a black pump spell.
+    let pump = g.add_card_to_hand(0, catalog::masterful_flourish());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(pro_creature)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_ok(), "Protection should not block the controller's own spells");
+}

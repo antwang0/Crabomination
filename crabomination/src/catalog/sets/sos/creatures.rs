@@ -4674,3 +4674,141 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+/// Silverquill, the Disputant — {2}{W}{B}, 4/4 Legendary Elder Dragon.
+/// Flying, vigilance. "Each instant and sorcery spell you cast has
+/// casualty 1."
+///
+/// 🟡 Body-only wire. The casualty 1 clause (sacrifice a creature with
+/// power >= 1 on cast to copy the spell) is omitted — no copy-spell
+/// primitive. The 4/4 Flying+Vigilance body is a solid Silverquill
+/// finisher.
+pub fn silverquill_the_disputant() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Silverquill, the Disputant",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Nita, Forum Conciliator — {1}{W}{B}, 2/3 Legendary Human Advisor.
+/// "Whenever you cast a spell you don't own, put a +1/+1 counter on each
+/// creature you control. / {2}, Sacrifice another creature: Exile target
+/// instant or sorcery card from an opponent's graveyard. You may cast it
+/// this turn."
+///
+/// 🟡 Body-only wire. The cast-spell-you-don't-own trigger is omitted
+/// (no "spell ownership" predicate). The sac-to-exile-and-cast activation
+/// is omitted (no cast-from-exile pipeline). The 2/3 body hits the
+/// Silverquill curve.
+pub fn nita_forum_conciliator() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "Nita, Forum Conciliator",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Quandrix, the Proof — {4}{G}{U}, 6/6 Legendary Elder Dragon.
+/// Flying, trample. "Cascade. Instant and sorcery spells you cast from
+/// your hand have cascade."
+///
+/// 🟡 Body-only wire. Cascade is omitted (no cascade keyword primitive).
+/// The 6/6 flying trample body is a Quandrix finisher.
+pub fn quandrix_the_proof() -> CardDefinition {
+    use crate::card::Supertype;
+    use crate::mana::{g, u};
+    CardDefinition {
+        name: "Quandrix, the Proof",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Flying, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// The Dawning Archaic — {10}, 7/7 Legendary Avatar with Reach.
+/// "This spell costs {1} less to cast for each instant and sorcery card
+/// in your graveyard. / Reach / Whenever The Dawning Archaic attacks,
+/// you may cast target instant or sorcery card from your graveyard
+/// without paying its mana cost."
+///
+/// 🟡 Body-only wire. The cost reduction and cast-from-graveyard-on-attack
+/// riders are both omitted. The 7/7 Reach body is a colorless finisher
+/// for spell-heavy decks.
+pub fn the_dawning_archaic() -> CardDefinition {
+    use crate::card::Supertype;
+    CardDefinition {
+        name: "The Dawning Archaic",
+        cost: cost(&[generic(10)]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Avatar],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

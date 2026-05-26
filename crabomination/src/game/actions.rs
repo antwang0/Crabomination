@@ -473,6 +473,25 @@ impl GameState {
             return Err(e);
         }
 
+        // CR 702.16: Protection from [color] prevents targeting by spells
+        // of that color. Check the spell's colors against the target's
+        // protection keywords.
+        if let Some(Target::Permanent(cid)) = target {
+            if let Some(target_card) = self.battlefield_find(cid) {
+                if target_card.controller != p {
+                    let spell_colors = card.definition.cost.colors();
+                    for kw in &target_card.definition.keywords {
+                        if let Keyword::Protection(prot_color) = kw {
+                            if spell_colors.contains(prot_color) {
+                                self.players[p].hand.push(card);
+                                return Err(GameError::TargetHasProtection(cid));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
         // slot 0 and the chosen target doesn't match, reject the cast.

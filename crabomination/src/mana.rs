@@ -112,6 +112,30 @@ impl ManaCost {
         seen.iter().filter(|b| **b).count() as u32
     }
 
+    /// Returns the set of colors present in this mana cost.
+    pub fn colors(&self) -> Vec<Color> {
+        let mut result = Vec::new();
+        for s in &self.symbols {
+            match s {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => {
+                    if !result.contains(c) {
+                        result.push(*c);
+                    }
+                }
+                ManaSymbol::Hybrid(a, b) => {
+                    if !result.contains(a) {
+                        result.push(*a);
+                    }
+                    if !result.contains(b) {
+                        result.push(*b);
+                    }
+                }
+                _ => {}
+            }
+        }
+        result
+    }
+
     /// Return a copy of this cost with X symbols replaced by Generic(x_value).
     pub fn with_x_value(&self, x_value: u32) -> ManaCost {
         ManaCost {
