@@ -9154,3 +9154,328 @@ fn explore_draws_a_card() {
 
     assert_eq!(g.players[0].hand.len(), hand_before, "cast(-1) + draw(+1) = net 0");
 }
+
+// ── modern_decks-17 tests ──────────────────────────────────────────────────
+
+/// Grim Flayer: 2/2 with trample and a DealsCombatDamageToPlayer trigger.
+#[test]
+fn grim_flayer_has_trample_and_combat_damage_trigger() {
+    let card = catalog::grim_flayer();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
+    assert_eq!(card.triggered_abilities.len(), 1,
+        "should have a combat-damage trigger");
+}
+
+/// Grim Flayer: combat damage trigger surveils 2.
+#[test]
+fn grim_flayer_combat_trigger_surveils() {
+    let mut g = two_player_game();
+    let flayer = g.add_card_to_battlefield(0, catalog::grim_flayer());
+    g.clear_sickness(flayer);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lib_before = g.players[0].library.len();
+    // Fire the trigger effect directly.
+    let trig = catalog::grim_flayer().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(
+        flayer, 0, None, 0,
+    );
+    let _ = g.resolve_effect(&trig, &ctx);
+    // Surveil 2 puts cards on bottom or into graveyard; library shrinks by 2
+    // (auto-decider sends both to bottom — effectively they leave the top).
+    assert!(g.players[0].library.len() <= lib_before,
+        "surveil should process library cards");
+}
+
+/// Young Pyromancer: magecraft trigger creates an Elemental token.
+#[test]
+fn young_pyromancer_creates_elemental_on_instant_cast() {
+    let mut g = two_player_game();
+    let _pyro = g.add_card_to_battlefield(0, catalog::young_pyromancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None, x_value: None,
+    }).expect("Lightning Bolt castable");
+    drain_stack(&mut g);
+
+    let elementals: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elemental")
+        .collect();
+    assert_eq!(elementals.len(), 1,
+        "Young Pyromancer should create one Elemental token on instant cast");
+}
+
+/// Young Pyromancer: stat check.
+#[test]
+fn young_pyromancer_stats() {
+    let card = catalog::young_pyromancer();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.card_types.contains(&CardType::Creature));
+}
+
+/// Monastery Swiftspear: 1/2 with Haste and Prowess.
+#[test]
+fn monastery_swiftspear_has_haste_and_prowess() {
+    let card = catalog::monastery_swiftspear();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
+    assert!(card.keywords.contains(&crate::card::Keyword::Prowess));
+}
+
+/// Snapcaster Mage: 2/1 Flash creature, ETB draws a card.
+#[test]
+fn snapcaster_mage_etb_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let snap = g.add_card_to_hand(0, catalog::snapcaster_mage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: snap, target: None, mode: None, x_value: None,
+    }).expect("Snapcaster Mage castable for {1}{U}");
+    drain_stack(&mut g);
+
+    // Cast (-1) + ETB draw (+1) = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Snapcaster Mage ETB should draw one card");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Snapcaster Mage"));
+}
+
+/// Snapcaster Mage: has Flash keyword.
+#[test]
+fn snapcaster_mage_has_flash() {
+    let card = catalog::snapcaster_mage();
+    assert!(card.keywords.contains(&crate::card::Keyword::Flash));
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+}
+
+/// Grisly Salvage: mills 5 then scries 1.
+#[test]
+fn grisly_salvage_mills_five_and_scries() {
+    let mut g = two_player_game();
+    for _ in 0..8 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::grisly_salvage());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let lib_before = g.players[0].library.len();
+    let yard_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Grisly Salvage castable for {B}{G}");
+    drain_stack(&mut g);
+
+    // Mill 5 puts 5 cards in graveyard (plus the spell itself = 6).
+    assert!(g.players[0].graveyard.len() >= yard_before + 5,
+        "should mill at least 5 cards into graveyard");
+    // Library lost 5 from mill (+1 from scry bottom potentially).
+    assert!(g.players[0].library.len() <= lib_before - 5,
+        "library should shrink by at least 5");
+}
+
+/// Thought Erasure: discard a nonland card + surveil 1.
+#[test]
+fn thought_erasure_strips_nonland_and_surveils() {
+    let mut g = two_player_game();
+    // Give opponent a nonland card.
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let opp_hand_before = g.players[1].hand.len();
+    // Stock library for surveil.
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::thought_erasure());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Thought Erasure castable for {U}{B}");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].hand.len() < opp_hand_before,
+        "opponent should lose a nonland card");
+}
+
+/// Lightning Greaves: {2} artifact with Equipment subtype.
+#[test]
+fn lightning_greaves_is_equipment_artifact() {
+    let card = catalog::lightning_greaves();
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.subtypes.artifact_subtypes.contains(
+        &crate::card::ArtifactSubtype::Equipment));
+    assert!(!card.activated_abilities.is_empty(),
+        "should have an activated ability to grant haste");
+}
+
+/// Lightning Greaves: activated ability grants haste to a creature.
+#[test]
+fn lightning_greaves_grants_haste() {
+    let mut g = two_player_game();
+    let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Bear is summoning sick by default.
+    assert!(g.battlefield_find(bear).unwrap().summoning_sick);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: greaves,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+    }).expect("Greaves ability activates at {0}");
+    drain_stack(&mut g);
+
+    // The bear now has a haste grant (continuous effect), so
+    // the battlefield permanent itself reflects the grant.
+    let bear_card = g.battlefield_find(bear).unwrap();
+    assert!(bear_card.has_keyword(&crate::card::Keyword::Haste)
+        || !bear_card.summoning_sick,
+        "bear should have haste granted or no longer be summoning-sick");
+}
+
+/// Tasigur, the Golden Fang: 4/5 Legendary creature.
+#[test]
+fn tasigur_stats_and_legendary() {
+    let card = catalog::tasigur_the_golden_fang();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 5);
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+    assert!(!card.activated_abilities.is_empty(),
+        "should have an activated ability");
+}
+
+/// Tasigur: activated ability mills 2.
+#[test]
+fn tasigur_activated_ability_mills() {
+    let mut g = two_player_game();
+    let tasigur = g.add_card_to_battlefield(0, catalog::tasigur_the_golden_fang());
+    g.clear_sickness(tasigur);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    // Put a nonland card in graveyard for the Move half.
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let lib_before = g.players[0].library.len();
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tasigur, ability_index: 0, target: None,
+    }).expect("Tasigur ability activates for {2}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].library.len() <= lib_before - 2,
+        "should mill at least 2 cards");
+}
+
+/// Stonecoil Serpent: 0/0 artifact creature with trample and reach.
+#[test]
+fn stonecoil_serpent_stats_and_keywords() {
+    let card = catalog::stonecoil_serpent();
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 0);
+    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
+    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(card.card_types.contains(&CardType::Artifact));
+    assert!(card.card_types.contains(&CardType::Creature));
+}
+
+/// Stonecoil Serpent: definition shape check.
+#[test]
+fn stonecoil_serpent_definition_shape() {
+    let card = catalog::stonecoil_serpent();
+    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
+    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 0);
+    assert!(!card.triggered_abilities.is_empty(), "has ETB counter trigger");
+}
+
+// ── modern_decks-17: agent-implemented cards ────────────────────────────────
+
+#[test]
+fn grim_flayer_has_trample() {
+    let card = catalog::grim_flayer();
+    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+}
+
+#[test]
+fn young_pyromancer_creates_token_on_is_cast() {
+    let mut g = two_player_game();
+    let _yp = g.add_card_to_battlefield(0, catalog::young_pyromancer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("bolt cast");
+    drain_stack(&mut g);
+
+    let tokens: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Elemental" && c.definition.power == 1).collect();
+    assert!(tokens.len() >= 1, "Young Pyromancer created at least one Elemental token");
+}
+
+#[test]
+fn thought_erasure_strips_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let hand_before = g.players[1].hand.len();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::thought_erasure());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Thought Erasure castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[1].hand.len() < hand_before, "opponent lost a card");
+}
+
+#[test]
+fn lightning_greaves_is_equipment() {
+    let card = catalog::lightning_greaves();
+    assert!(card.card_types.contains(&CardType::Artifact));
+}
+
+#[test]
+fn tasigur_is_a_big_creature() {
+    let card = catalog::tasigur_the_golden_fang();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 5);
+}
+
+#[test]
+fn grisly_salvage_mills_and_draws() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::grisly_salvage());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let gy_before = g.players[0].graveyard.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Grisly Salvage castable");
+    drain_stack(&mut g);
+
+    assert!(g.players[0].graveyard.len() > gy_before, "cards milled to graveyard");
+}

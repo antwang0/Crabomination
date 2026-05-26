@@ -226,6 +226,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         potioners_trove,
         // ── SOS push XV ──
         great_hall_of_the_biblioplex,
+        // ── modern_decks-17 ──
+        lightning_greaves,
+        stonecoil_serpent,
     ]
 }
 
@@ -450,6 +453,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mulldrifter,
         deep_analysis,
         vapor_snag,
+        // ── modern_decks-17 ──
+        snapcaster_mage,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -506,6 +511,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(drown_in_the_loch);
         // ── modern_decks-16 ──
         v.push(baleful_strix);
+        // ── modern_decks-17 ──
+        v.push(thought_erasure);
     }
     v
 }
@@ -624,6 +631,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         sinkhole,
         baleful_mastery,
         corpse_dance,
+        // ── modern_decks-17 ──
+        tasigur_the_golden_fang,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
@@ -661,6 +670,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(cruel_somnophage);
         // ── modern_decks-14 (UB cross-pool) ──
         v.push(drown_in_the_loch);
+        // ── modern_decks-17 ──
+        v.push(thought_erasure);
     }
     if pair_contains(pair, Color::Green) {
         v.push(darkmoss_bridge);
@@ -687,6 +698,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(vicious_rivalry);
         // Push XV: Lluwen MDFC closes out the Witherbloom school.
         v.push(lluwen_exchange_student);
+        // ── modern_decks-17 ──
+        v.push(grim_flayer);
+        v.push(grisly_salvage);
     }
     if pair_contains(pair, Color::White) {
         // ── modern_decks-14 (WB cross-pool removal) ──
@@ -769,6 +783,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         firebolt,
         fiery_confluence,
         arclight_phoenix,
+        // ── modern_decks-17 ──
+        young_pyromancer,
+        monastery_swiftspear,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -952,6 +969,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mind_roots);
         v.push(vicious_rivalry);
         v.push(lluwen_exchange_student);
+        // ── modern_decks-17 ──
+        v.push(grim_flayer);
+        v.push(grisly_salvage);
     }
     if pair_contains(pair, Color::Blue) {
         // ── SOS Quandrix (G/U) ──

@@ -8,8 +8,8 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Selector,
-    Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword,
+    SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::target_filtered;
@@ -7632,6 +7632,265 @@ pub fn pernicious_deed() -> CardDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks-17: new supplement cards ────────────────────────────────────
+
+/// Grim Flayer — {B}{G} Creature 2/2 Human Warrior. Trample.
+/// Whenever this deals combat damage to a player, surveil 2.
+pub fn grim_flayer() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Flayer",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Young Pyromancer — {1}{R} Creature 2/1 Human Shaman.
+/// Whenever you cast an instant or sorcery spell, create a 1/1 red
+/// Elemental creature token.
+pub fn young_pyromancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Young Pyromancer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Elemental".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elemental],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Monastery Swiftspear — {R} Creature 1/2 Human Monk.
+/// Haste. Prowess.
+pub fn monastery_swiftspear() -> CardDefinition {
+    CardDefinition {
+        name: "Monastery Swiftspear",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Snapcaster Mage — {1}{U} Creature 2/1 Human Wizard. Flash.
+/// ETB: target instant or sorcery in your graveyard gains flashback
+/// until end of turn.
+///
+/// Approximation: ETB draw 1 (granting flashback to another card is
+/// not wired). Net effect is card-advantage-on-a-body, which captures
+/// Snapcaster's gameplay role.
+pub fn snapcaster_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Snapcaster Mage",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Grisly Salvage — {B}{G} Instant. Mill 5, then return a creature or
+/// land card from among them to your hand.
+///
+/// Approximation: Mill 5 + Scry 1. The "pick a creature or land from
+/// among the milled" is approximated by the Scry — you get to choose
+/// whether the next draw is what you want, preserving the
+/// selection-after-mill gameplay pattern.
+pub fn grisly_salvage() -> CardDefinition {
+    CardDefinition {
+        name: "Grisly Salvage",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(5) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Thought Erasure — {U}{B} Sorcery. Target opponent reveals their hand.
+/// You choose a nonland card from it. That player discards that card.
+/// Surveil 1.
+pub fn thought_erasure() -> CardDefinition {
+    CardDefinition {
+        name: "Thought Erasure",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Lightning Greaves — {2} Artifact — Equipment.
+/// Equipped creature has haste and shroud. Equip {0}.
+///
+/// Approximation: a {2} artifact with Equip {0} that grants Haste
+/// to a target creature on activation. Shroud is listed in the
+/// keyword hint but the attach/equip static is not wired.
+pub fn lightning_greaves() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Lightning Greaves",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(ManaCost::default())],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::Permanent,
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tasigur, the Golden Fang — {5}{B} Creature 4/5 Legendary Human Shaman.
+/// Delve omitted; shipped at full cost.
+/// Activated: {2}{G/U}: Mill 2, then return a nonland card from your
+/// graveyard to your hand.
+///
+/// The hybrid {G/U} in the activated cost is collapsed to {G} (the
+/// engine has no hybrid mana resolver; {G} is the more
+/// common Sultai activation in practice).
+pub fn tasigur_the_golden_fang() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Tasigur, the Golden Fang",
+        cost: cost(&[generic(5), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stonecoil Serpent — {X} Artifact Creature 0/0 Snake.
+/// Trample, reach, protection from multicolored.
+/// Enters the battlefield with X +1/+1 counters on it.
+///
+/// Protection from multicolored is omitted (no
+/// `Keyword::ProtectionFromMulticolored` primitive). The ETB counter
+/// placement uses `Value::XFromCost`.
+pub fn stonecoil_serpent() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Stonecoil Serpent",
+        cost: cost(&[x()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
         }],
         ..Default::default()
     }
