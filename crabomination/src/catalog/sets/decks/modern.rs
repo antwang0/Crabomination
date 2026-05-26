@@ -8133,3 +8133,75 @@ pub fn scavenging_ooze() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XVII continued: ETB creatures ─────────────────────────────────────
+
+/// Fiend Hunter — {1}{W}{W} Creature — Human Cleric 1/3.
+/// ETB: exile target creature an opponent controls. When Fiend Hunter
+/// leaves the battlefield, return the exiled card.
+/// (Approximation: ETB exile only; return-on-leave omitted.)
+pub fn fiend_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Fiend Hunter",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Flametongue Kavu — {3}{R} Creature — Kavu 4/2.
+/// ETB: deal 4 damage to target creature.
+pub fn flametongue_kavu() -> CardDefinition {
+    CardDefinition {
+        name: "Flametongue Kavu",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bonecrusher Giant — {2}{R} Creature — Giant 4/3.
+/// (Stomp adventure omitted — implemented as just the creature body.)
+/// Whenever Bonecrusher Giant becomes the target of a spell, deal 2
+/// damage to that spell's controller. (Triggered ability omitted.)
+pub fn bonecrusher_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Bonecrusher Giant",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        ..Default::default()
+    }
+}

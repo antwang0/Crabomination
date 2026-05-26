@@ -9659,3 +9659,44 @@ fn scavenging_ooze_gains_counter_and_life() {
     assert_eq!(counters, 1, "Ooze should have one +1/+1 counter");
     assert_eq!(g.players[0].life, life_before + 1, "Should gain 1 life");
 }
+
+// ── Push XVII continued: ETB creatures ─────────────────────────────────────
+
+#[test]
+fn fiend_hunter_exiles_opponent_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::fiend_hunter());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(), "bear should be exiled");
+}
+
+#[test]
+fn flametongue_kavu_etb_deals_four() {
+    let mut g = two_player_game();
+    // Use a 5-toughness creature so 4 damage doesn't kill it.
+    let big = g.add_card_to_battlefield(1, catalog::devourer_of_destiny());
+    let id = g.add_card_to_hand(0, catalog::flametongue_kavu());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)), mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let target = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert_eq!(target.damage, 4, "should deal 4 damage to target");
+}
+
+#[test]
+fn bonecrusher_giant_is_four_three() {
+    let card = catalog::bonecrusher_giant();
+    assert_eq!(card.name, "Bonecrusher Giant");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 3);
+}
