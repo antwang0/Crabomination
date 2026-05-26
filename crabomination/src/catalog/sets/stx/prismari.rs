@@ -9,11 +9,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, Selector, Subtypes, Value,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Selector,
+    Subtypes, TokenDefinition, Value,
 };
-use crate::effect::shortcut::{magecraft, magecraft_self_pump};
+use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
-use crate::mana::{cost, generic, r, u};
+use crate::mana::{cost, generic, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
 
@@ -79,6 +80,217 @@ pub fn prismari_apprentice() -> CardDefinition {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Prismari Command ───────────────────────────────────────────────────────
+
+/// Prismari Command — {1}{U}{R} Instant. "Choose two —
+/// • Prismari Command deals 2 damage to any target.
+/// • Target player draws two cards, then discards two cards.
+/// • Target player creates a Treasure token.
+/// • Destroy target artifact."
+///
+/// 🟡 Collapsed to single-mode ChooseMode of 4 (printed: choose two).
+pub fn prismari_command() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Command",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            Effect::Seq(vec![
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                },
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::Const(2),
+                    random: false,
+                },
+            ]),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Creative Outburst ──────────────────────────────────────────────────────
+
+/// Creative Outburst — {3}{U}{U}{R}{R} Instant. "Creative Outburst deals
+/// 5 damage to any target. Look at the top five cards of your library.
+/// Put one into your hand and the rest on the bottom."
+///
+/// 🟡 Look-and-choose approximated as Scry 4 + Draw 1.
+pub fn creative_outburst() -> CardDefinition {
+    CardDefinition {
+        name: "Creative Outburst",
+        cost: cost(&[generic(3), u(), u(), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(5),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(4),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Elemental Summoning ────────────────────────────────────────────────────
+
+/// Elemental Summoning — {3}{U}{R} Sorcery — Lesson. "Create a 4/4 blue
+/// and red Elemental creature token."
+pub fn elemental_summoning() -> CardDefinition {
+    let elemental = TokenDefinition {
+        name: "Elemental".into(),
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Red],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Elemental Summoning",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: elemental,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Expressive Iteration ───────────────────────────────────────────────────
+
+/// Expressive Iteration — {U}{R} Sorcery. Look at top 3, put one to hand,
+/// one on bottom, exile one and may play it this turn.
+///
+/// 🟡 Approximated as Scry 2 + Draw 1.
+pub fn expressive_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Expressive Iteration",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Teach by Example ───────────────────────────────────────────────────────
+
+/// Teach by Example — {1}{U}{R} Instant. Copy your next IS spell this turn.
+///
+/// 🟡 Copy-spell primitive not wired. Castable at the right cost for
+/// storm/magecraft payoffs.
+pub fn teach_by_example() -> CardDefinition {
+    CardDefinition {
+        name: "Teach by Example",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -10,12 +10,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, Selector,
-    SelectionRequirement, Subtypes, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect,
+    Selector, SelectionRequirement, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
-use crate::effect::Duration;
-use crate::mana::{cost, generic, g, u};
+use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::mana::{cost, generic, g, u, Color};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
@@ -151,3 +151,186 @@ pub fn decisive_denial() -> CardDefinition {
     }
 }
 
+// ── Quandrix Command ───────────────────────────────────────────────────────
+
+/// Quandrix Command — {2}{G}{U} Instant. Choose two among 4 modes.
+/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+pub fn quandrix_command() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Command",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::CounterSpell {
+                what: target_filtered(
+                    SelectionRequirement::IsSpellOnStack.and(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Enchantment),
+                    ),
+                ),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fractal Summoning ──────────────────────────────────────────────────────
+
+/// Fractal Summoning — {X}{G}{U} Sorcery — Lesson. Create a 0/0 Fractal
+/// with X +1/+1 counters.
+pub fn fractal_summoning() -> CardDefinition {
+    use crate::mana::x;
+    let fractal = TokenDefinition {
+        name: "Fractal".into(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Fractal Summoning",
+        cost: cost(&[x(), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Dragonsguard Elite ─────────────────────────────────────────────────────
+
+/// Dragonsguard Elite — {1}{G}, 2/2 Human Druid. Magecraft: put a +1/+1
+/// counter on this creature.
+pub fn dragonsguard_elite() -> CardDefinition {
+    CardDefinition {
+        name: "Dragonsguard Elite",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Eureka Moment ──────────────────────────────────────────────────────────
+
+/// Eureka Moment — {2}{G}{U} Instant. Draw two cards. You may put a land
+/// from your hand onto the battlefield tapped.
+pub fn eureka_moment() -> CardDefinition {
+    CardDefinition {
+        name: "Eureka Moment",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::MayDo {
+                description: "Put a land card from your hand onto the battlefield?".into(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Hand,
+                        filter: SelectionRequirement::Land,
+                    }),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                }),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
