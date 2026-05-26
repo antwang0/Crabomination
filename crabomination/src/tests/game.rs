@@ -5023,6 +5023,7 @@ fn ward_counters_spell_when_caster_cannot_pay() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(witch)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Bolt cast OK");
@@ -5047,6 +5048,7 @@ fn ward_does_not_trigger_on_own_spells() {
     g.perform_action(GameAction::CastSpell {
         card_id: pump,
         target: Some(Target::Permanent(witch)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Interjection cast OK");

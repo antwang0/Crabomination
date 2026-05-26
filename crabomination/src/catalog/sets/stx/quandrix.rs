@@ -185,6 +185,7 @@ pub fn decisive_denial() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -235,6 +236,7 @@ pub fn quandrix_command() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -910,6 +912,7 @@ pub fn quandrix_multibinding() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
+        ..Default::default()
     }
 }
 

@@ -428,6 +428,7 @@ pub fn witherbloom_command() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -466,6 +467,7 @@ pub fn culling_ritual() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -505,6 +507,7 @@ pub fn rushed_rebirth() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -548,6 +551,7 @@ pub fn callous_bloodmage() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 

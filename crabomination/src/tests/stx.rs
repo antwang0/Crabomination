@@ -1313,6 +1313,7 @@ fn beledros_witherbloom_pay_ten_life_untaps_lands() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: bele, ability_index: 0, target: None,
+        x_value: None,
     }).expect("Beledros activated for 10 life");
     drain_stack(&mut g);
 
@@ -1343,6 +1344,7 @@ fn decisive_denial_mode_one_fights_creatures() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(opp)),
+        additional_targets: vec![],
         mode: Some(1),
         x_value: None,
     }).expect("Decisive Denial mode 1 castable");
@@ -1379,7 +1381,7 @@ fn introduction_to_prophecy_scrys_then_draws() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Introduction to Prophecy castable for {2}{U}");
     drain_stack(&mut g);
@@ -1399,7 +1401,7 @@ fn introduction_to_annihilation_exiles_nonland_permanent() {
 
     g.players[0].mana_pool.add_colorless(5);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Introduction to Annihilation castable for {5}");
     drain_stack(&mut g);
@@ -1425,7 +1427,7 @@ fn environmental_sciences_fetches_basic_land_and_gains_life() {
 
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Environmental Sciences castable for {2}");
     drain_stack(&mut g);
@@ -1448,7 +1450,7 @@ fn fractal_summoning_creates_token_with_x_counters() {
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: Some(3),
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
     })
     .expect("Fractal Summoning castable for {X=3}{G}{U}");
     drain_stack(&mut g);
@@ -1473,7 +1475,7 @@ fn spirit_summoning_creates_three_two_spirit_token() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Spirit Summoning castable for {1}{R}{W}");
     drain_stack(&mut g);
@@ -1498,7 +1500,7 @@ fn silverquill_apprentice_drains_on_instant_cast() {
     let p0_life = g.players[0].life;
     let p1_life = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);
@@ -1541,7 +1543,7 @@ fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add_colorless(4);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bolt)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Returned Pastcaller castable for {4}{R}{W}");
     drain_stack(&mut g);
@@ -1572,7 +1574,7 @@ fn elemental_expressionist_taps_and_stuns_on_magecraft() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);

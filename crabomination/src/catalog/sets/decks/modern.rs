@@ -8389,27 +8389,6 @@ pub fn saheeli_rai() -> CardDefinition {
 
 // ── modern_decks-16: new cube cards ──────────────────────────────────────────
 
-/// Electrolyze — {1}{U}{R} Instant. Deal 2 damage divided as you choose
-/// among one or two targets. Draw a card.
-///
-/// Approximation: single-target 2 damage + draw (divided-damage primitive
-/// not yet wired).
-pub fn electrolyze() -> CardDefinition {
-    CardDefinition {
-        name: "Electrolyze",
-        cost: cost(&[generic(1), u(), r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
-                amount: Value::Const(2),
-            },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
-        ..Default::default()
-    }
-}
-
 /// Ashiok, Nightmare Weaver — {1}{U}{B} Legendary Planeswalker — Ashiok.
 /// 3 loyalty.
 /// **+2**: Exile the top three cards of target opponent's library.
@@ -8678,24 +8657,6 @@ pub fn geyadrone_dihada() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
-    }
-}
-
-/// Expressive Iteration — {U}{R} Sorcery. Look at the top three cards of
-/// your library. Put one into your hand, one on the bottom, and one on
-/// top.
-///
-/// Approximation: Scry 2 + Draw 1 (same as Anticipate pattern).
-pub fn expressive_iteration() -> CardDefinition {
-    CardDefinition {
-        name: "Expressive Iteration",
-        cost: cost(&[u(), r()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
         ..Default::default()
     }
 }
@@ -9089,6 +9050,7 @@ pub fn mulldrifter() -> CardDefinition {
             evoke_sacrifice: true,
             not_your_turn_only: false,
             target_filter: None,
+            ..Default::default()
         }),
         ..Default::default()
     }
@@ -9138,45 +9100,6 @@ pub fn stillmoon_cavalier() -> CardDefinition {
     }
 }
 
-/// Shriekmaw — {4}{B} Creature 3/2 Elemental. Fear (approx: Menace).
-/// When this enters, destroy target nonblack creature.
-/// Evoke {1}{B}.
-pub fn shriekmaw() -> CardDefinition {
-    use crate::card::AlternativeCost;
-    CardDefinition {
-        name: "Shriekmaw",
-        cost: cost(&[generic(4), b()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 2,
-        keywords: vec![Keyword::Menace],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::Not(Box::new(
-                            SelectionRequirement::HasColor(Color::Black),
-                        ))),
-                ),
-            },
-        }],
-        alternative_cost: Some(AlternativeCost {
-            mana_cost: cost(&[generic(1), b()]),
-            life_cost: 0,
-            exile_filter: None,
-            evoke_sacrifice: true,
-            not_your_turn_only: false,
-            target_filter: None,
-        }),
-        ..Default::default()
-    }
-}
-
 /// Wishclaw Talisman — {1}{B} Artifact. Enters with three wish counters.
 /// {T}, Remove a wish counter from this: Search your library for a card
 /// and put that card into your hand, then shuffle. An opponent gains
@@ -9215,56 +9138,6 @@ pub fn wishclaw_talisman() -> CardDefinition {
             sorcery_speed: true,
             ..Default::default()
         }],
-        ..Default::default()
-    }
-}
-
-/// Thragtusk — {4}{G} Creature 5/3 Beast. When this enters, you gain 5
-/// life. When this leaves the battlefield, create a 3/3 green Beast
-/// creature token.
-pub fn thragtusk() -> CardDefinition {
-    CardDefinition {
-        name: "Thragtusk",
-        cost: cost(&[generic(4), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
-            ..Default::default()
-        },
-        power: 5,
-        toughness: 3,
-        keywords: vec![],
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-                effect: Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(5),
-                },
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-                effect: Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: TokenDefinition {
-                        name: "Beast".into(),
-                        power: 3,
-                        toughness: 3,
-                        keywords: vec![],
-                        card_types: vec![CardType::Creature],
-                        colors: vec![Color::Green],
-                        supertypes: vec![],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Beast],
-                            ..Default::default()
-                        },
-                        activated_abilities: vec![],
-                        triggered_abilities: vec![],
-                    },
-                },
-            },
-        ],
         ..Default::default()
     }
 }
@@ -9379,6 +9252,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 sac_cost: false,
                 condition: None,
                 life_cost: 0,
+                ..Default::default()
             },
             ActivatedAbility {
                 tap_cost: false,
@@ -9397,6 +9271,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
                 sac_cost: true,
                 condition: None,
                 life_cost: 0,
+                ..Default::default()
             },
         ],
         ..Default::default()
@@ -9708,22 +9583,6 @@ pub fn mai_scornful_striker() -> CardDefinition {
     }
 }
 
-/// Deep Analysis — {3}{U} Sorcery. Target player draws 2 cards.
-/// Flashback — {1}{U}, Pay 3 life.
-///
-/// Approximation: Flashback at {1}{U} (life cost folded away since
-/// flashback doesn't support life-cost riders yet).
-pub fn deep_analysis() -> CardDefinition {
-    CardDefinition {
-        name: "Deep Analysis",
-        cost: cost(&[generic(3), u()]),
-        card_types: vec![CardType::Sorcery],
-        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-        ..Default::default()
-    }
-}
-
 /// Tempest Angler — {2}{U} Creature — Merfolk Wizard. 2/2 Flying.
 /// "When this creature enters, scry 2."
 ///
@@ -9881,6 +9740,7 @@ pub fn helix_pinnacle() -> CardDefinition {
                 kind: CounterType::Charge,
                 amount: Value::XFromCost,
             },
+            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {
@@ -9923,34 +9783,9 @@ fn treasure_token() -> TokenDefinition {
             sac_cost: true,
             condition: None,
             life_cost: 0,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
-    }
-}
-
-/// Courser of Kruphix — {1}{G}{G} Creature 2/4 Centaur.
-/// Whenever a land enters the battlefield under your control, you gain 1 life.
-///
-/// Approximation: landfall lifegain only (reveal-top omitted).
-pub fn courser_of_kruphix() -> CardDefinition {
-    CardDefinition {
-        name: "Courser of Kruphix",
-        cost: cost(&[generic(1), g(), g()]),
-        card_types: vec![CardType::Creature, CardType::Enchantment],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Centaur],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
-        ..Default::default()
     }
 }
 
@@ -10135,40 +9970,6 @@ pub fn keen_eyed_curator() -> CardDefinition {
     }
 }
 
-/// Pernicious Deed — {1}{B}{G} Enchantment. {X}, Sacrifice this:
-/// Destroy each nonland permanent with mana value X or less.
-///
-/// Approximation: {3}, Sacrifice: destroy each nonland permanent with
-/// mana value 3 or less (X collapsed to 3).
-/// Guardian Scalelord — {4}{W} Creature 3/4 Dragon. Flying.
-/// Whenever this creature attacks, another target creature you control
-/// gains flying until end of turn.
-pub fn guardian_scalelord() -> CardDefinition {
-    CardDefinition {
-        name: "Guardian Scalelord",
-        cost: cost(&[generic(4), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Dragon],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 4,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::GrantKeyword {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                keyword: Keyword::Flying,
-                duration: Duration::EndOfTurn,
-            },
-        }],
-        ..Default::default()
-    }
-}
-
 /// Intervention Pact — {0} Instant.
 /// "Gain 3 life and prevent the next 3 damage that would be dealt to
 /// target player this turn. At the beginning of your next upkeep, pay
@@ -10223,23 +10024,6 @@ pub fn gush() -> CardDefinition {
     }
 }
 
-/// Baleful Mastery — {3}{B} Instant. Exile target creature or planeswalker.
-///
-/// The alt-cost {1}{B} "an opponent draws a card" mode is omitted.
-pub fn baleful_mastery() -> CardDefinition {
-    CardDefinition {
-        name: "Baleful Mastery",
-        cost: cost(&[generic(3), b()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Exile {
-            what: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-        },
-        ..Default::default()
-    }
-}
-
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
 /// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1.
@@ -10273,36 +10057,6 @@ pub fn enduring_innocence() -> CardDefinition {
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
-            },
-        }],
-        ..Default::default()
-    }
-}
-
-/// Elite Spellbinder — {2}{W} Creature 3/1 Human Cleric. Flying.
-/// When this enters, look at target opponent's hand. Choose a nonland card.
-/// Exile it. That card costs {2} more to cast.
-///
-/// Approximation: ETB exiles a nonland card from opponent's hand (the cost
-/// increase isn't modeled — same as Brain Maggot/Tidehollow Sculler).
-pub fn elite_spellbinder() -> CardDefinition {
-    CardDefinition {
-        name: "Elite Spellbinder",
-        cost: cost(&[generic(2), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
             },
         }],
         ..Default::default()
@@ -10445,50 +10199,6 @@ pub fn basking_rootwalla() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-        }],
-        ..Default::default()
-    }
-}
-
-/// Arclight Phoenix — {3}{R} Creature 3/2 Phoenix. Flying, haste.
-/// At the beginning of combat on your turn, if you've cast three or
-/// more instant and/or sorcery spells this turn, return this from
-/// your graveyard to the battlefield.
-///
-/// Approximation: body-only (3/2 flying haste). The graveyard-recursion
-/// trigger needs a "from your graveyard" + "3+ IS spells" gate.
-pub fn arclight_phoenix() -> CardDefinition {
-    use crate::effect::Predicate;
-    CardDefinition {
-        name: "Arclight Phoenix",
-        cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Phoenix],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 2,
-        keywords: vec![Keyword::Flying, Keyword::Haste],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
-                EventScope::FromYourGraveyard,
-            ),
-            effect: Effect::If {
-                cond: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::Const(3),
-                },
-                then: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
-                }),
-                else_: Box::new(Effect::Noop),
-            },
         }],
         ..Default::default()
     }
@@ -10707,55 +10417,6 @@ pub fn omnath_locus_of_creation() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                 Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
             ]),
-        }],
-        ..Default::default()
-    }
-}
-
-/// Vengevine — {2}{G}{G} Creature 4/3 Elemental. Haste.
-/// Whenever you cast a creature spell, if Vengevine is in your graveyard
-/// and you've cast another creature spell this turn, you may return
-/// Vengevine from your graveyard to the battlefield.
-///
-/// Approximation: CreaturesCastThisTurnAtLeast(2) gate + FromYourGraveyard
-/// scope. The "cast another creature" wording means 2+ total creature
-/// spells this turn.
-pub fn vengevine() -> CardDefinition {
-    use crate::effect::Predicate;
-    CardDefinition {
-        name: "Vengevine",
-        cost: cost(&[generic(2), g(), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental],
-            ..Default::default()
-        },
-        power: 4,
-        toughness: 3,
-        keywords: vec![Keyword::Haste],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec {
-                kind: EventKind::SpellCast,
-                scope: EventScope::FromYourGraveyard,
-                filter: Some(crate::effect::Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Creature,
-                }),
-            },
-            effect: Effect::If {
-                cond: Predicate::CreaturesCastThisTurnAtLeast {
-                    who: PlayerRef::You,
-                    at_least: Value::Const(2),
-                },
-                then: Box::new(Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
-                }),
-                else_: Box::new(Effect::Noop),
-            },
         }],
         ..Default::default()
     }
@@ -11014,6 +10675,7 @@ pub fn lightning_greaves() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -11087,6 +10749,7 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            ..Default::default()
         }],
         ..Default::default()
     }
@@ -11705,6 +11368,7 @@ pub fn scavenging_ooze() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            ..Default::default()
         }],
         ..Default::default()
     }

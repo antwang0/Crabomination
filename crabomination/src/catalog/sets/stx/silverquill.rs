@@ -20718,6 +20718,7 @@ pub fn silverquill_command() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20757,6 +20758,7 @@ pub fn umbral_juke() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20785,6 +20787,7 @@ pub fn silverquill_silencer() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20816,6 +20819,7 @@ pub fn fracture() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20855,6 +20859,7 @@ pub fn humiliate() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20884,6 +20889,7 @@ pub fn clever_lumimancer() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20918,6 +20924,7 @@ pub fn silverquill_apprentice() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -20959,5 +20966,6 @@ pub fn shadewing_laureate() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }

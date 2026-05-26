@@ -9,8 +9,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
     magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_self_pump, magecraft_treasure,
@@ -309,6 +309,7 @@ pub fn prismari_command() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -351,6 +352,7 @@ pub fn creative_outburst() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -399,6 +401,7 @@ pub fn elemental_summoning() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -427,6 +430,7 @@ pub fn teach_by_example() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -1018,7 +1022,6 @@ pub fn elemental_expressionist() -> CardDefinition {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
             ..Default::default()
         },
-        power: 2,
         power: 4,
         toughness: 3,
         keywords: vec![],
@@ -1358,20 +1361,6 @@ pub fn prismari_embershaper() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::MayDo {
-            description: "Discard a card and draw a card".to_string(),
-            body: Box::new(Effect::Seq(vec![
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                    random: false,
-                },
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ])),
-        })],
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(

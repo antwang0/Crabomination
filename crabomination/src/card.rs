@@ -647,7 +647,7 @@ pub enum DynamicPt {
 /// player chooses to cast via this path. Models pitch (Force of Will,
 /// Force of Negation) and evoke (Solitude) — the latter additionally
 /// sacrifices the resulting permanent on ETB via `evoke_sacrifice`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct AlternativeCost {
     /// Mana paid for the alternative cast (often empty / `{0}` for pitch
     /// spells, but non-empty for evoke or kicker-style alternatives).

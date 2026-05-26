@@ -4392,7 +4392,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
@@ -4407,6 +4407,7 @@ pub fn colorstorm_stallion() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -4448,6 +4449,7 @@ pub fn elemental_mascot() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -6306,7 +6308,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
 /// Tower Captain's tap-three-to-copy trigger, but with a sacrifice cost
 /// in place of the tap-three. Auto-decider defaults to "no" (skip), so
 /// the trigger only fires the copy when the controller scripts a yes.
-/// Ward—Pay 3 life is tagged on the card via `Keyword::Ward(3)` (engine
+/// Ward—Pay 3 life is tagged on the card via `Keyword::Ward(crate::card::WardCost::generic(3))` (engine
 /// keyword tag; ward enforcement still pending). Tracked in TODO.md
 /// under "Ward enforcement layer".
 pub fn mica_reader_of_ruins() -> CardDefinition {

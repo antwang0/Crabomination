@@ -1958,6 +1958,7 @@ pub fn professor_onyx() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -2003,6 +2004,7 @@ pub fn conspiracy_theorist() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -2038,6 +2040,7 @@ pub fn dina_soul_steeper() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -2072,6 +2075,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
             sac_cost: false,
             condition: None,
             life_cost: 0,
+            ..Default::default()
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -2080,6 +2084,7 @@ pub fn zimone_quandrix_prodigy() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -2115,5 +2120,6 @@ pub fn adventurous_impulse() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }

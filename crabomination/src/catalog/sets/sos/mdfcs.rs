@@ -1108,7 +1108,7 @@ pub fn strife_scholar() -> CardDefinition {
         vec![CreatureType::Orc, CreatureType::Sorcerer],
         3,
         2,
-        vec![Keyword::Ward(1)],
+        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         back,
     )
 }
@@ -1125,7 +1125,6 @@ pub fn campus_composer() -> CardDefinition {
         CardType::Sorcery,
         Effect::Draw {
             who: target_filtered(SelectionRequirement::Player),
-            who: Selector::You,
             amount: Value::Const(3),
         },
     );
@@ -1136,7 +1135,6 @@ pub fn campus_composer() -> CardDefinition {
         3,
         4,
         vec![Keyword::Ward(crate::card::WardCost::generic(1))],
-        vec![Keyword::Ward(2)],
         back,
     )
 }
@@ -1232,15 +1230,10 @@ pub fn grave_researcher() -> CardDefinition {
         alternative_cost: None,
         back_face: Some(Box::new(back)),
         opening_hand: None,
+        ..Default::default()
     }
 }
 
-// ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
-#[allow(dead_code)]
-fn _suppress_unused() {
-    let _ = exile_target();
-    let _ = counter_target_spell();
-}
 
 // ── Grave Researcher // Reanimate ───────────────────────────────────────────
 

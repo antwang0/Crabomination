@@ -763,39 +763,6 @@ pub fn big_play() -> CardDefinition {
 
 // ── Push XVII (session 2): additional mono-color staples ────────────────
 
-/// Clever Lumimancer — {W} 0/1 Human Wizard.
-/// Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// Clever Lumimancer gets +2/+0 until end of turn.
-pub fn clever_lumimancer() -> CardDefinition {
-    use crate::effect::shortcut::magecraft_self_pump;
-    CardDefinition {
-        name: "Clever Lumimancer",
-        cost: cost(&[w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft_self_pump(2, 0)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
 /// Professor of Symbology — {1}{W}, 2/1 Human Cleric.
 /// ETB: learn (approximated as draw 1).
 pub fn professor_of_symbology() -> CardDefinition {
@@ -820,94 +787,6 @@ pub fn professor_of_symbology() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
-/// Silverquill Silencer — {W}{B}, 3/2 Human Cleric.
-/// Name-choosing penalty omitted; body-only wire.
-pub fn silverquill_silencer() -> CardDefinition {
-    CardDefinition {
-        name: "Silverquill Silencer",
-        cost: cost(&[w(), b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
-/// Fractal Summoning — {X}{G}{U} Sorcery — Lesson.
-/// Create a 0/0 Fractal token with X +1/+1 counters.
-pub fn fractal_summoning() -> CardDefinition {
-    let fractal = TokenDefinition {
-        name: "Fractal".to_string(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green, Color::Blue],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    };
-    CardDefinition {
-        name: "Fractal Summoning",
-        cost: cost(&[x(), g(), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: fractal,
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -1148,6 +1027,7 @@ pub fn introduction_to_prophecy() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -1182,6 +1062,7 @@ pub fn introduction_to_annihilation() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
 
@@ -1224,5 +1105,6 @@ pub fn environmental_sciences() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }

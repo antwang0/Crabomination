@@ -12318,7 +12318,7 @@ fn electrolyze_deals_two_and_draws() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Electrolyze castable");
     drain_stack(&mut g);
 
@@ -12335,7 +12335,7 @@ fn collective_brutality_mode_zero_shrinks_creature() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
     }).expect("Collective Brutality castable");
     drain_stack(&mut g);
 
@@ -12354,7 +12354,7 @@ fn expressive_iteration_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Expressive Iteration castable");
     drain_stack(&mut g);
 
@@ -12371,7 +12371,7 @@ fn kitchen_finks_etb_gains_two_life() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Kitchen Finks castable");
     drain_stack(&mut g);
 
@@ -12388,7 +12388,7 @@ fn wall_of_omens_etb_draws() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Wall of Omens castable");
     drain_stack(&mut g);
 
@@ -12410,7 +12410,7 @@ fn mulldrifter_etb_draws_two() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Mulldrifter castable");
     drain_stack(&mut g);
 
@@ -12418,7 +12418,7 @@ fn mulldrifter_etb_draws_two() {
 }
 
 #[test]
-fn shriekmaw_etb_destroys_nonblack_creature() {
+fn shriekmaw_etb_destroys_nonblack_creature_v2() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::shriekmaw());
@@ -12426,7 +12426,7 @@ fn shriekmaw_etb_destroys_nonblack_creature() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Shriekmaw castable");
     drain_stack(&mut g);
 
@@ -12442,7 +12442,7 @@ fn thragtusk_etb_gains_five_life() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thragtusk castable");
     drain_stack(&mut g);
 
@@ -12459,7 +12459,7 @@ fn lingering_souls_creates_two_spirit_tokens() {
     let bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Lingering Souls castable");
     drain_stack(&mut g);
 
@@ -12476,7 +12476,7 @@ fn firebolt_deals_two_damage() {
     g.players[0].mana_pool.add(Color::Red, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Firebolt castable");
     drain_stack(&mut g);
 
@@ -12492,7 +12492,7 @@ fn chainers_edict_forces_sacrifice() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Chainer's Edict castable");
     drain_stack(&mut g);
 
@@ -12511,7 +12511,7 @@ fn deep_analysis_draws_two() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Deep Analysis castable");
     drain_stack(&mut g);
 
@@ -12554,7 +12554,7 @@ fn bloodbraid_elf_has_haste_and_etb_draws() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bloodbraid Elf castable");
     drain_stack(&mut g);
 
@@ -12582,7 +12582,7 @@ fn oko_plus_two_gains_three_life() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Oko castable");
     drain_stack(&mut g);
 
@@ -12608,7 +12608,7 @@ fn toxic_deluge_sweeps_small_creatures() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Toxic Deluge castable");
     drain_stack(&mut g);
 
@@ -12626,7 +12626,7 @@ fn sinkhole_destroys_target_land() {
     g.players[0].mana_pool.add(Color::Black, 2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(land)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(land)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Sinkhole castable");
     drain_stack(&mut g);
 
@@ -12642,7 +12642,7 @@ fn wear_tear_destroys_artifact_or_enchantment() {
     g.players[0].mana_pool.add(Color::White, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(artifact)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(artifact)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Wear // Tear castable");
     drain_stack(&mut g);
 
@@ -12658,7 +12658,7 @@ fn murderous_cut_destroys_creature() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Murderous Cut castable");
     drain_stack(&mut g);
 
@@ -12674,7 +12674,7 @@ fn fiery_confluence_mode_one_burns_opponents() {
     let opp_life = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: Some(1), x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
     }).expect("Fiery Confluence castable");
     drain_stack(&mut g);
 
@@ -12697,7 +12697,7 @@ fn intervention_pact_gains_life() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Intervention Pact castable at {0}");
     drain_stack(&mut g);
 
@@ -12713,7 +12713,7 @@ fn baleful_mastery_exiles_creature() {
     g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Baleful Mastery castable");
     drain_stack(&mut g);
 
@@ -12730,7 +12730,7 @@ fn elite_spellbinder_etb_strips_card() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Elite Spellbinder castable");
     drain_stack(&mut g);
 
@@ -12781,7 +12781,7 @@ fn explore_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Explore castable");
     drain_stack(&mut g);
 
@@ -12834,6 +12834,7 @@ fn young_pyromancer_creates_elemental_on_instant_cast() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("Lightning Bolt castable");
     drain_stack(&mut g);
@@ -12875,7 +12876,7 @@ fn snapcaster_mage_etb_draws_a_card() {
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: snap, target: None, mode: None, x_value: None,
+        card_id: snap, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Snapcaster Mage castable for {1}{U}");
     drain_stack(&mut g);
 
@@ -12908,7 +12909,7 @@ fn grisly_salvage_mills_five_and_scries() {
     let yard_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Grisly Salvage castable for {B}{G}");
     drain_stack(&mut g);
 
@@ -12934,7 +12935,7 @@ fn thought_erasure_strips_nonland_and_surveils() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thought Erasure castable for {U}{B}");
     drain_stack(&mut g);
 
@@ -12966,6 +12967,7 @@ fn lightning_greaves_grants_haste() {
         card_id: greaves,
         ability_index: 0,
         target: Some(Target::Permanent(bear)),
+        x_value: None,
     }).expect("Greaves ability activates at {0}");
     drain_stack(&mut g);
 
@@ -13005,6 +13007,7 @@ fn tasigur_activated_ability_mills() {
 
     g.perform_action(GameAction::ActivateAbility {
         card_id: tasigur, ability_index: 0, target: None,
+        x_value: None,
     }).expect("Tasigur ability activates for {2}{G}");
     drain_stack(&mut g);
 
@@ -13053,7 +13056,7 @@ fn young_pyromancer_creates_token_on_is_cast() {
     g.players[0].mana_pool.add(Color::Red, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("bolt cast");
     drain_stack(&mut g);
 
@@ -13074,7 +13077,7 @@ fn thought_erasure_strips_and_surveils() {
     g.players[0].mana_pool.add(Color::Black, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Thought Erasure castable");
     drain_stack(&mut g);
 
@@ -13106,7 +13109,7 @@ fn grisly_salvage_mills_and_draws() {
     let gy_before = g.players[0].graveyard.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Grisly Salvage castable");
     drain_stack(&mut g);
 
@@ -13123,7 +13126,7 @@ fn chain_lightning_deals_three_to_player() {
     let life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Chain Lightning castable");
     drain_stack(&mut g);
 
@@ -13139,7 +13142,7 @@ fn chain_lightning_kills_a_three_toughness_creature() {
     g.players[0].mana_pool.add(Color::Red, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Chain Lightning targets creature");
     drain_stack(&mut g);
 
@@ -13157,7 +13160,7 @@ fn rift_bolt_deals_three_to_player() {
     let life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Rift Bolt castable");
     drain_stack(&mut g);
 
@@ -13175,7 +13178,7 @@ fn exquisite_firecraft_deals_four_to_player() {
     let life_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Exquisite Firecraft castable");
     drain_stack(&mut g);
 
@@ -13284,6 +13287,7 @@ fn scavenging_ooze_gains_counter_and_life() {
         card_id: ooze,
         ability_index: 0,
         target: None,
+        x_value: None,
     })
     .expect("Scavenging Ooze ability activates");
     drain_stack(&mut g);
@@ -13306,7 +13310,7 @@ fn fiend_hunter_exiles_opponent_creature() {
     g.players[0].mana_pool.add(Color::White, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(), "bear should be exiled");
@@ -13321,7 +13325,7 @@ fn flametongue_kavu_etb_deals_four() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(big)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(big)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
     let target = g.battlefield.iter().find(|c| c.id == big).unwrap();

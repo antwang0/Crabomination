@@ -12298,7 +12298,7 @@ fn strife_scholar_has_ward_and_back_face() {
     assert_eq!(card.name, "Strife Scholar");
     assert_eq!(card.power, 3);
     assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
     let back = card.back_face.as_ref().expect("should have back face");
     assert_eq!(back.name, "Awaken the Ages");
     assert!(back.card_types.contains(&CardType::Sorcery));
@@ -12315,6 +12315,7 @@ fn strife_scholar_back_face_deals_five_damage() {
     g.perform_action(GameAction::CastSpellBack {
         card_id: id,
         target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Awaken the Ages castable for {5}{R}");
@@ -12332,7 +12333,7 @@ fn colorstorm_stallion_body_and_keywords() {
     assert_eq!(card.name, "Colorstorm Stallion");
     assert_eq!(card.power, 3);
     assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
     assert!(card.keywords.contains(&Keyword::Haste));
 }
 
@@ -12347,6 +12348,7 @@ fn colorstorm_stallion_magecraft_pump() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Bolt castable");
@@ -12380,6 +12382,7 @@ fn elemental_mascot_magecraft_pump() {
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Player(1)),
+        additional_targets: vec![],
         mode: None,
         x_value: None,
     }).expect("Bolt castable");
@@ -12411,6 +12414,7 @@ fn molten_note_deals_x_plus_two_damage_and_untaps() {
     g.perform_action(GameAction::CastSpell {
         card_id: id,
         target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
         mode: None,
         x_value: Some(4),
     }).expect("Molten Note castable for {X=4}{R}{W}");
@@ -12446,7 +12450,7 @@ fn social_snub_each_player_sacs_and_drains() {
     let life1_before = g.players[1].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Social Snub castable for {1}{W}{B}");
     drain_stack(&mut g);
 
@@ -12473,7 +12477,7 @@ fn fix_whats_broken_returns_creatures_from_gy() {
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Fix What's Broken castable");
     drain_stack(&mut g);
 
@@ -12487,7 +12491,7 @@ fn fix_whats_broken_returns_creatures_from_gy() {
 // ── Skycoach Waypoint ─────────────────────────────────────────────────
 
 #[test]
-fn skycoach_waypoint_taps_for_colorless() {
+fn skycoach_waypoint_taps_for_colorless_v2() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
     assert!(g.battlefield.iter().any(|c| c.id == id));
@@ -12499,6 +12503,7 @@ fn skycoach_waypoint_taps_for_colorless() {
         card_id: id,
         ability_index: 0,
         target: None,
+        x_value: None,
     })
     .expect("Tap for colorless should succeed");
 
@@ -12517,7 +12522,7 @@ fn biblioplex_tomekeeper_enters_as_3_4_construct() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Biblioplex Tomekeeper castable for {4}");
     drain_stack(&mut g);
@@ -12548,7 +12553,7 @@ fn strixhaven_skycoach_etb_searches_for_basic_land() {
     ]));
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Strixhaven Skycoach castable for {3}");
     drain_stack(&mut g);
@@ -12574,7 +12579,7 @@ fn the_dawning_archaic_enters_as_7_7_reach() {
     g.players[0].mana_pool.add_colorless(10);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("The Dawning Archaic castable for {10}");
     drain_stack(&mut g);
@@ -12600,7 +12605,7 @@ fn prismari_the_inspiration_enters_as_7_7_flying() {
     g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Prismari castable for {5}{U}{R}");
     drain_stack(&mut g);
@@ -12628,7 +12633,7 @@ fn nita_forum_conciliator_enters_as_2_3() {
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Nita castable for {1}{W}{B}");
     drain_stack(&mut g);
@@ -12654,7 +12659,7 @@ fn silverquill_the_disputant_enters_as_4_4_flying_vigilance() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Silverquill castable for {2}{W}{B}");
     drain_stack(&mut g);
@@ -12684,7 +12689,7 @@ fn quandrix_the_proof_enters_as_6_6_flying_trample() {
     g.players[0].mana_pool.add_colorless(4);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Quandrix castable for {4}{G}{U}");
     drain_stack(&mut g);
@@ -12714,7 +12719,7 @@ fn applied_geometry_creates_fractal_with_six_counters() {
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Applied Geometry castable for {2}{G}{U}");
     drain_stack(&mut g);
@@ -12736,7 +12741,7 @@ fn campus_composer_has_ward_two_and_back_face() {
     assert_eq!(card.name, "Campus Composer");
     assert_eq!(card.power, 3);
     assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
     let back = card.back_face.as_ref().expect("should have back face");
     assert_eq!(back.name, "Aqueous Aria");
 }
@@ -12747,7 +12752,7 @@ fn emeritus_of_ideation_has_ward_two_and_ancestral_recall_back() {
     assert_eq!(card.name, "Emeritus of Ideation");
     assert_eq!(card.power, 5);
     assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
     let back = card.back_face.as_ref().expect("should have back face");
     assert_eq!(back.name, "Ancestral Recall");
 }
@@ -12781,7 +12786,7 @@ fn char_deals_four_to_target_and_two_to_self() {
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Char castable");
     drain_stack(&mut g);
 
@@ -12801,7 +12806,7 @@ fn searing_blaze_hits_creature_and_opponent() {
     let opp_life_before = g.players[1].life;
     g.players[0].mana_pool.add(Color::Red, 2);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("Searing Blaze castable");
     drain_stack(&mut g);
 
@@ -12821,7 +12826,7 @@ fn collective_defiance_mode_zero_deals_four_to_creature() {
     g.players[0].mana_pool.add(Color::Red, 2);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(0), x_value: None,
     }).expect("Collective Defiance castable");
     drain_stack(&mut g);
 

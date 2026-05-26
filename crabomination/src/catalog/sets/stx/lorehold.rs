@@ -17,7 +17,8 @@ use crate::card::{
 use crate::effect::shortcut::{
     dies_mint_token, dies_ping_any, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
-    on_attack_drain, on_attack_gain_life, on_attack_ping_any, target_filtered,
+    mint_lorehold_spirits, on_attack_drain, on_attack_gain_life, on_attack_ping_any,
+    target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -19131,49 +19132,6 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
-        effect: Effect::ChooseMode(vec![
-            Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: spirit_32,
-            },
-            Effect::ForEach {
-                selector: Selector::EachPermanent(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::PumpPT {
-                        what: Selector::TriggerSource,
-                        power: Value::Const(1),
-                        toughness: Value::Const(0),
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::GrantKeyword {
-                        what: Selector::TriggerSource,
-                        keyword: Keyword::Indestructible,
-                        duration: Duration::EndOfTurn,
-                    },
-                    Effect::GrantKeyword {
-                        what: Selector::TriggerSource,
-                        keyword: Keyword::Haste,
-                        duration: Duration::EndOfTurn,
-                    },
-                ])),
-            },
-            Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Nonland
-                        .and(SelectionRequirement::ManaValueAtMost(3)),
-                ),
-            },
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19226,6 +19184,7 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralward (b164)",
         cost: cost(&[r(), w()]),
+        ..Default::default()
     }
 }
 
@@ -19247,9 +19206,6 @@ pub fn academic_dispute() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
-                what: Selector::Target(0),
-                power: Value::Const(1),
-                toughness: Value::Const(1),
                 what: target_filtered(SelectionRequirement::Creature),
                 power: Value::Const(2),
                 toughness: Value::Const(0),
@@ -19257,7 +19213,6 @@ pub fn academic_dispute() -> CardDefinition {
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
-                keyword: Keyword::Lifelink,
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
@@ -19368,6 +19323,7 @@ pub fn lorehold_sunweave_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sunweave (b165)",
         cost: cost(&[generic(3), w()]),
+        ..Default::default()
     }
 }
 
@@ -19422,12 +19378,6 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
-        effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
-            ),
-            to: ZoneDest::Hand(PlayerRef::You),
-        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19451,6 +19401,7 @@ pub fn lorehold_fireshield_b165() -> CardDefinition {
         cost: cost(&[r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
+        ..Default::default()
     }
 }
 
@@ -19525,11 +19476,6 @@ pub fn returned_pastcaller() -> CardDefinition {
             ..Default::default()
         },
         power: 4,
-        toughness: 3,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![etb_gain_life(3)],
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,

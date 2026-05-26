@@ -2046,8 +2046,8 @@ impl GameState {
             return 0;
         }
         for kw in &card.definition.keywords {
-            if let Keyword::Ward(n) = kw {
-                return *n;
+            if let Keyword::Ward(crate::card::WardCost::Mana(cost)) = kw {
+                return cost.cmc();
             }
         }
         0
@@ -2066,58 +2066,10 @@ impl GameState {
         })
     }
 
-    /// Ward enforcement (CR 702.21): when a spell or ability targets a
-    /// permanent with Ward controlled by an opponent, push a "counter
-    /// unless controller pays {N}" trigger onto the stack. The Ward
-    /// trigger resolves before the spell, giving the caster a chance to
-    /// pay. If they can't (or won't), the spell is countered.
-    pub(crate) fn fire_ward_triggers(
-        &mut self,
-        caster: usize,
-        spell_id: CardId,
-        target: Option<Target>,
-    ) {
-        let Some(Target::Permanent(target_id)) = target else { return };
-        let ward_cost = {
-            let Some(card) = self.battlefield_find(target_id) else { return };
-            if card.controller == caster { return; }
-            let computed = self.compute_battlefield();
-            let kws = computed.iter()
-                .find(|c| c.id == target_id)
-                .map(|c| c.keywords.as_slice())
-                .unwrap_or(&card.definition.keywords);
-            let mut ward = None;
-            for kw in kws {
-                if let Keyword::Ward(n) = kw {
-                    ward = Some(*n);
-                    break;
-                }
-            }
-            match ward {
-                Some(n) if n > 0 => n,
-                _ => return,
-            }
-        };
-        let ward_mana = crate::mana::ManaCost {
-            symbols: vec![crate::mana::ManaSymbol::Generic(ward_cost)],
-        };
-        let ward_source = target_id;
-        let ward_controller = self.battlefield_find(target_id)
-            .map(|c| c.controller)
-            .unwrap_or(0);
-        self.stack.push(StackItem::Trigger {
-            source: ward_source,
-            controller: ward_controller,
-            effect: Box::new(Effect::CounterUnlessPaid {
-                what: crate::effect::Selector::Target(0),
-                mana_cost: ward_mana,
-            }),
-            target: Some(Target::Permanent(spell_id)),
-            mode: None,
-            x_value: 0,
-            converged_value: 0,
-        });
-    }
+    // Note: `fire_ward_triggers` (the old Ward(u32) version) was removed
+    // during the merge — Ward is now enforced via
+    // `push_ward_triggers_for_cast` (CR 702.21) which handles the full
+    // `WardCost` enum (Mana / Life / Discard / SacrificeCreature).
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
     /// onto the stack. They will resolve when priority is passed through.

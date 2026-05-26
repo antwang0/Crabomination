@@ -209,5 +209,6 @@ pub fn spirit_summoning() -> CardDefinition {
         alternative_cost: None,
         back_face: None,
         opening_hand: None,
+        ..Default::default()
     }
 }
