@@ -7,6 +7,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **modern_decks-16/17 (2026-05-26)**: 46 new cube cards + CR 120.3
+  planeswalker damage + PermanentView improvements. Tests at 1158 (+55
+  net from 1103):
+  - **46 new card factories** across modern.rs: Wall of Omens, Lingering
+    Souls, Decree of Justice, Mulldrifter, Shriekmaw (Evoke), Deep
+    Analysis (Flashback), Spell Queller, Thragtusk, Kitchen Finks
+    (Persist), Electrolyze, Expressive Iteration, Oko Thief of Crowns,
+    Baleful Mastery, Bloodbraid Elf, Kolaghan's Command, Collective
+    Brutality, Firebolt (Flashback), Chainer's Edict (Flashback),
+    Tireless Provisioner, Courser of Kruphix, Elder Gargaroth, Arclight
+    Phoenix (graveyard recursion), Vengevine (graveyard recursion), Grim
+    Flayer, Young Pyromancer, Monastery Swiftspear, Snapcaster Mage,
+    Stonecoil Serpent, Tasigur, Pernicious Deed, Toxic Deluge, Sinkhole,
+    and more.
+  - **Engine: CR 120.3** — damage dealt to a planeswalker now correctly
+    removes loyalty counters instead of marking regular damage. Lightning
+    Bolt can now kill a low-loyalty planeswalker.
+  - **Engine: PlaneswalkerSubtype::Oko** added.
+  - **Server: PermanentView.mana_value + creature_types** — clients can
+    now display CMC and creature type line.
+  - **Rules tests**: CR 120.3 planeswalker damage, CR 704.5q counter
+    cancellation, CR 704.5j legend rule.
+  - All 1158 lib tests pass.
+
 - ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
   card promotions. Tests at 1025 (+13 net):
   - **`Predicate::CastSpellHasX`** — cast-time introspection on the
@@ -1703,3 +1727,41 @@ listed here so the next pass can pick them up.
   Tomekeeper, Skycoach Waypoint).
 
 - **Vehicle/Crew** blocks Strixhaven Skycoach.
+
+## New suggestions (added 2026-05-26 modern_decks session)
+
+### Engine
+
+- **0/0 creature ETB-with-counters**: Stonecoil Serpent ({X} 0/0 with ETB
+  AddCounter(+1/+1, X)) dies to SBAs before the ETB trigger resolves. Real
+  MTG handles this as a replacement effect ("enters with X counters") not a
+  triggered ability. Need either `CardDefinition.enters_with_counters:
+  Option<(CounterType, Value)>` applied during `place_on_battlefield`, or a
+  special "as-enters" replacement effect layer. Affects: Walking Ballista,
+  Hangarback Walker, Hydroid Krasis, all Hydra-style X-cost creatures.
+
+- **Evoke sacrifice timing**: Mulldrifter/Shriekmaw evoke triggers sacrifice
+  on ETB after ETB triggers fire. Verify the `evoke_sacrifice` path in
+  stack.rs fires the ETB first, then sacrifices. Currently works by ordering
+  but edge cases (Flickerwisp on an evoked creature) aren't tested.
+
+- **Cascade approximation**: Bloodbraid Elf approximated as ETB draw 1.
+  Real cascade needs "exile cards until you find a nonland with CMC less than
+  this spell's CMC, cast it free, put the rest on bottom." A first-class
+  `Keyword::Cascade` + `Effect::Cascade` would unblock Bloodbraid Elf,
+  Shardless Agent, Violent Outburst, and Quandrix the Proof.
+
+- **Planeswalker damage in combat**: `deal_damage_to` now handles spell
+  damage to planeswalkers (CR 120.3), but combat damage to planeswalkers
+  (when a creature attacks a planeswalker directly) needs the same loyalty-
+  removal path in `resolve_combat_damage`.
+
+### Cards
+
+- **STRIXHAVEN2.md table staleness**: Fix What's Broken, Archaic's Agony,
+  and Molten Note are all implemented but their table entries still show ⏳.
+  Run the audit script to reconcile.
+
+- **Cube pool diversity**: The cube now has 46+ new cards but several color
+  pairs (GW, UR) have much deeper pools than others (WU, BG). A card-count
+  audit per pair would identify thin pools that need supplementing.

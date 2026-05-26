@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, LoyaltyAbility, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
@@ -6559,8 +6559,7 @@ pub fn electrolyze() -> CardDefinition {
     }
 }
 
-/// Lightning Helix — already in catalog as `lightning_helix` (lea set).
-/// Including reference here for documentation.
+// Lightning Helix — already in catalog as `lightning_helix` (lea set).
 
 /// Kolaghan's Command — {1}{B}{R} Instant. Choose two:
 /// - Return target creature card from your graveyard to your hand.
@@ -6960,9 +6959,8 @@ pub fn murderous_cut() -> CardDefinition {
     }
 }
 
-/// Terminate — already in catalog as `terminate`.
-
-/// Spell Pierce — already in catalog.
+// Terminate — already in catalog as `terminate`.
+// Spell Pierce — already in catalog.
 
 /// Relic of Progenitus — {1} Artifact. {T}: Target player exiles a card
 /// from their graveyard. {1}, Exile Relic: Exile all graveyards, draw 1.
@@ -7015,7 +7013,7 @@ pub fn relic_of_progenitus() -> CardDefinition {
     }
 }
 
-/// Tidehollow Sculler — already in catalog. Reference only.
+// Tidehollow Sculler — already in catalog.
 
 /// Spell Queller — {1}{W}{U} Creature 2/3 Spirit. Flash, flying.
 /// When this enters, exile target spell with mana value 4 or less.
@@ -7168,7 +7166,6 @@ pub fn decree_of_justice() -> CardDefinition {
 ///
 /// Landfall → Treasure.
 pub fn tireless_provisioner() -> CardDefinition {
-    use crate::card::ActivatedAbility;
     CardDefinition {
         name: "Tireless Provisioner",
         cost: cost(&[generic(2), g()]),
@@ -7305,7 +7302,7 @@ pub fn toxic_deluge() -> CardDefinition {
     }
 }
 
-/// Hymn to Tourach already in catalog.
+// Hymn to Tourach already in catalog.
 
 /// Sinkhole — {B}{B} Sorcery. Destroy target land.
 pub fn sinkhole() -> CardDefinition {
