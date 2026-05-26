@@ -9,8 +9,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Selector,
-    Subtypes, TokenDefinition, Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
+    Selector, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::{magecraft, magecraft_self_pump, target_filtered};
 use crate::effect::{Duration, PlayerRef};
@@ -299,6 +299,54 @@ pub fn symmetry_sage() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Elemental Expressionist ───────────────────────────────────────────────
+
+/// Elemental Expressionist — {2}{U}{R}, 4/3 Human Wizard.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// exile target creature an opponent controls, then return it to the
+/// battlefield under its owner's control at the beginning of the next
+/// end step."
+///
+/// 🟡 Approximated as Magecraft → tap target opponent creature + stun
+/// counter (same Frost Trickster pattern). Full flicker needs delayed
+/// zone-return which is not yet wired.
+pub fn elemental_expressionist() -> CardDefinition {
+    CardDefinition {
+        name: "Elemental Expressionist",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

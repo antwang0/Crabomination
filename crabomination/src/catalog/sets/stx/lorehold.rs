@@ -524,3 +524,42 @@ pub fn rip_apart() -> CardDefinition {
     }
 }
 
+// ── Returned Pastcaller ───────────────────────────────────────────────────
+
+/// Returned Pastcaller — {4}{R}{W}, 4/4 Spirit Cleric. Flying.
+/// ETB: "Return target instant or sorcery card from your graveyard to
+/// your hand." Same shape as Pillardrop Rescuer.
+pub fn returned_pastcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Returned Pastcaller",
+        cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+

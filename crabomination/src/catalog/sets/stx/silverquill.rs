@@ -20,7 +20,7 @@
 use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, Selector, SelectionRequirement, Subtypes, Supertype,
+    Keyword, Predicate, Selector, SelectionRequirement, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{magecraft, target_filtered};
@@ -642,6 +642,81 @@ pub fn clever_lumimancer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(2, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Apprentice ────────────────────────────────────────────────
+
+/// Silverquill Apprentice — {W}{B}, 2/1 Human Wizard.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// each opponent loses 1 life and you gain 1 life."
+pub fn silverquill_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Apprentice",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Shadewing Laureate ────────────────────────────────────────────────────
+
+/// Shadewing Laureate — {1}{W}{B}, 2/2 Bird Warlock. Flying.
+/// "Whenever another creature you control with flying dies, put a +1/+1
+/// counter on Shadewing Laureate."
+pub fn shadewing_laureate() -> CardDefinition {
+    CardDefinition {
+        name: "Shadewing Laureate",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

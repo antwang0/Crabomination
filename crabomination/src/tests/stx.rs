@@ -1037,6 +1037,110 @@ fn spirit_summoning_creates_three_two_spirit_token() {
     assert_eq!(s.toughness(), 2);
 }
 
+// ── Silverquill Apprentice ─────────────────────────────────────────────────
+
+#[test]
+fn silverquill_apprentice_drains_on_instant_cast() {
+    let mut g = two_player_game();
+    let _app = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Magecraft drain: P0 +1 life, P1 -1 life (on top of Bolt's 3 damage).
+    assert_eq!(g.players[0].life, p0_life + 1,
+        "Silverquill Apprentice should drain +1 life to controller");
+    assert_eq!(g.players[1].life, p1_life - 3 - 1,
+        "Opponent loses 3 (Bolt) + 1 (Magecraft drain)");
+}
+
+#[test]
+fn silverquill_apprentice_is_two_one_human_wizard() {
+    let card = catalog::silverquill_apprentice();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}
+
+// ── Shadewing Laureate ────────────────────────────────────────────────────
+
+#[test]
+fn shadewing_laureate_has_flying_and_is_two_two() {
+    let card = catalog::shadewing_laureate();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Bird));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Warlock));
+}
+
+// ── Returned Pastcaller ───────────────────────────────────────────────────
+
+#[test]
+fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), mode: None, x_value: None,
+    })
+    .expect("Returned Pastcaller castable for {4}{R}{W}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt should be returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt should no longer be in graveyard");
+}
+
+#[test]
+fn returned_pastcaller_is_four_four_flying_spirit_cleric() {
+    let card = catalog::returned_pastcaller();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
+}
+
+// ── Elemental Expressionist ───────────────────────────────────────────────
+
+#[test]
+fn elemental_expressionist_taps_and_stuns_on_magecraft() {
+    let mut g = two_player_game();
+    let _expr = g.add_card_to_battlefield(0, catalog::elemental_expressionist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.tapped, "Opponent creature should be tapped by Magecraft");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
+        "Opponent creature should have a stun counter");
+}
+
+#[test]
+fn elemental_expressionist_is_four_three_human_wizard() {
+    let card = catalog::elemental_expressionist();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 3);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}
+
 // Suppress unused-import lint when CounterType isn't used in this batch.
 #[allow(dead_code)]
 fn _keepalive(_: CounterType) {}

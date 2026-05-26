@@ -1374,6 +1374,7 @@ impl GameState {
     }
 
     /// Resolve a triggered ability's effect tree.
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn continue_trigger_resolution(
         &mut self,
         source: CardId,

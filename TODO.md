@@ -7,6 +7,31 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **modern_decks batch 2 (2026-05-26)**: 21+ new cards + 3 engine
+  improvements + tests:
+  - **Ward enforcement (CR 702.21)**: When a spell targets a permanent
+    with Ward controlled by an opponent, a `CounterUnlessPaid` trigger
+    is placed on the stack. The spell's controller must auto-pay the
+    Ward cost or lose the spell. Promotes all Ward-tagged cards from
+    keyword-only to functional enforcement.
+  - **Stun counter enforcement (CR 701.48)**: Permanents with stun
+    counters no longer untap during the untap step. Instead, one stun
+    counter is removed per step. Promotes Frost Trickster, Deluge
+    Virtuoso, Static Prison, and all stun-counter-adding cards.
+  - **Beledros Witherbloom activation**: Pay-10-life mass-untap-lands
+    activated ability now wired (was body-only 🟡).
+  - **Decisive Denial mode 1**: Fight mode added (attacker auto-picked
+    from your creatures, defender is the target).
+  - New SOS cards: Strife Scholar MDFC, Colorstorm Stallion, Elemental
+    Mascot, Molten Note (Flashback), Social Snub, Fix What's Broken,
+    Skycoach Waypoint, Biblioplex Tomekeeper, Strixhaven Skycoach,
+    The Dawning Archaic, Applied Geometry, Prismari the Inspiration,
+    Nita Forum Conciliator, Silverquill the Disputant, Quandrix the
+    Proof.
+  - New STX cards: Introduction to Prophecy, Introduction to
+    Annihilation, Environmental Sciences, Spirit Summoning.
+  - All 1118+ tests pass.
+
 - ✅ **modern_decks-18 (2026-05-26)**: 35 new STX card factories + engine
   improvements + 41 new tests. Tests at 1202 (+44 net from 1158):
   - **35 new STX card factories** across all five Strixhaven schools:
@@ -1849,3 +1874,29 @@ listed here so the next pass can pick them up.
 - **Tanazir Quandrix ETB**: The counter-doubling ETB is still omitted.
   A `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1,
   CountersOn(TriggerSource, +1/+1))` pattern would approximate it.
+
+- **Ward cost adds {1} generic to bolt cost**: When a spell targets a
+  Ward creature, an extra {1} generic appears in the spell's cost.
+  Investigation needed — may be an interaction with extra_cost_for_spell
+  or a Ward-triggered tax that fires too early. Tests pass with extra
+  mana but the root cause of the phantom {1} tax is unclear.
+
+- **Deathtouch on non-combat damage**: The Fight effect deals damage but
+  doesn't mark it as from a deathtouch source. To properly implement
+  this (CR 702.2b), the engine would need to track damage sources and
+  apply deathtouch lethality in SBA. Currently only combat damage checks
+  for deathtouch.
+
+- **Lifelink on non-combat damage**: The `deal_damage_to` function in
+  effects.rs doesn't track the damage source, so lifelink from fight
+  effects or DealDamage effects from creatures doesn't gain life.
+  Combat damage correctly tracks lifelink.
+
+- **Witherbloom Command / multi-mode selection**: STX Command cycle cards
+  want "choose two" from N modes, but the engine's ChooseMode only
+  supports "choose one". A `ChooseNModes(n, Vec<Effect>)` variant would
+  unlock Command cards and similar multi-mode selections.
+
+- **Cascade keyword**: Needed for Quandrix, the Proof and other cascade
+  cards. Would require a cast-from-exile pipeline + "exile until nonland
+  with lesser MV, cast it for free" resolution path.

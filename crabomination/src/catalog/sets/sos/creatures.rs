@@ -2079,13 +2079,13 @@ pub fn cuboid_colony() -> CardDefinition {
 /// a 0/0 green and blue Fractal creature token and put three +1/+1
 /// counters on it."
 ///
-/// Approximation: body + `Keyword::Ward(2)` wired. Increment trigger
-/// + end-step Fractal-with-counters payoff are both omitted (Increment
-/// requires mana-spent introspection on cast; the end-step trigger
-/// would key off a "did this creature gain a counter this turn"
-/// per-permanent flag the engine doesn't track yet). The card still
-/// slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-/// keyword is wired so future Ward enforcement picks it up.
+/// Approximation: body + `Keyword::Ward(2)` wired. Increment trigger and
+/// end-step Fractal-with-counters payoff are both omitted (Increment
+/// requires mana-spent introspection on cast; the end-step trigger would
+/// key off a "did this creature gain a counter this turn" per-permanent
+/// flag the engine doesn't track yet). The card still slots into Quandrix
+/// as a 3/3 attacker with a Ward stub, and the keyword is wired so future
+/// Ward enforcement picks it up.
 pub fn fractal_tender() -> CardDefinition {
     use crate::mana::{g, u};
     CardDefinition {
