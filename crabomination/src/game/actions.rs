@@ -710,12 +710,18 @@ impl GameState {
             self.check_target_legality(tgt, p)?;
         }
 
-        // Pay the flashback cost.
-        let cost = if flashback_cost.has_x() {
+        // Pay the flashback cost (+ Ward tax on targeted permanents).
+        let mut cost = if flashback_cost.has_x() {
             flashback_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             flashback_cost
         };
+        if let Some(ref tgt) = target {
+            let ward = self.ward_tax_for_target(tgt, p);
+            if ward > 0 {
+                cost.symbols.push(crate::mana::ManaSymbol::Generic(ward));
+            }
+        }
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         if receipt.side_effects.life_lost > 0 {
             self.players[p].life -= receipt.side_effects.life_lost as i32;
@@ -843,13 +849,16 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution + static-ability tax).
+        // Pay the alt mana cost (with X substitution + static-ability tax + Ward).
         let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card);
+        let mut tax = extra_cost_for_spell(self, p, &card);
+        if let Some(ref tgt) = target {
+            tax += self.ward_tax_for_target(tgt, p);
+        }
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }

@@ -1413,21 +1413,9 @@ them.
 
 ### Engine
 
-- **Ward enforcement primitive**. `Keyword::Ward(u32)` exists as a
-  variant and is now carried on Inkshape Demonstrator (Ward {2}),
-  Fractal Tender (Ward {2}), and Thornfist Striker (Ward {1}). Real
-  enforcement still needs:
-  - A `BecameTarget(CardId)` event emitted by the cast/activation
-    paths when a permanent first becomes the target of an opponent's
-    spell or ability.
-  - A "counter the spell unless that player pays N" decision shape
-    consumable by an `EventScope::Opponent` Ward trigger reading
-    `Keyword::Ward(N)` off the source. The decision answer is yes/no
-    (pay) — paid means proceed with cost+resolve; refused means
-    counter the spell.
-  - Hard-mode variant: Ward—Pay X life / Ward—Discard a card / Ward—
-    Sacrifice a creature (Mica, Tragedy Feaster, Forum Necroscribe,
-    Strife Scholar, Inkshape Demonstrator's printed mode is just mana).
+- ✅ **Ward enforcement** (push XVII). Ward {N} enforced as a targeting
+  tax across all three cast paths + flashback + alternative cost. Hard-mode
+  Ward variants (pay life, discard, sacrifice) still ⏳.
 
 - **Multi-target prompt for spells/abilities**. Push X works around
   this in Pull from the Grave by auto-picking the top 2 creature
@@ -1900,3 +1888,40 @@ listed here so the next pass can pick them up.
 - **Cascade keyword**: Needed for Quandrix, the Proof and other cascade
   cards. Would require a cast-from-exile pipeline + "exile until nonland
   with lesser MV, cast it for free" resolution path.
+
+## New suggestions (added 2026-05-26 push XVII)
+
+### Engine
+
+- **Ward on activated abilities**: Ward currently only taxes spell casts.
+  Per CR 702.21a, Ward also triggers when the permanent becomes the target
+  of an ability an opponent controls. Adding a Ward tax check in
+  `activate_ability` would be the natural extension.
+
+- **Stun counter on Effect::Untap**: The CR 122.1b replacement (stun counter
+  prevents untap, removes stun counter instead) is now enforced during the
+  untap step. But `Effect::Untap` from spells/abilities (e.g. "untap target
+  creature") should also check stun counters. Currently it bypasses stun.
+
+- **Opus keyword (SOS-specific)**: Several Prismari/blue SOS creatures have
+  "Opus — Whenever you cast an IS spell, [small effect]. If five or more
+  mana was spent to cast that spell, [big effect] instead." This needs a
+  `Predicate::ManaSpentOnCastAtLeast(Value)` gating the if-else branch.
+  Currently the big mode is always omitted.
+
+- **Increment keyword (SOS-specific)**: Several Quandrix/blue creatures
+  have "Increment — Whenever you cast a spell, if the amount of mana you
+  spent is greater than this creature's power or toughness, put a +1/+1
+  counter on this creature." Needs mana-spent-on-cast introspection.
+
+### UI
+
+- **Ward cost display in targeting UI**: When the player selects a target
+  for a spell, display the Ward cost so they know the extra mana required
+  before committing.
+
+### Server
+
+- **Ward tax in legal-action generation**: The bot's legal-action generator
+  should factor in Ward cost when computing whether a spell can target a
+  given permanent, so it doesn't attempt unaffordable casts.
