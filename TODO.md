@@ -1629,3 +1629,77 @@ listed here so the next pass can pick them up without re-deriving.
   pool-decrease is silent. A `LifePaid`-style `ManaPaidForOptional`
   event (with source CardId + amount) would help replays diagnose
   surprising pool drops.
+
+## New suggestions (added 2026-05-26 session)
+
+These items came up during the 2026-05-26 implementation session and are
+listed here so the next pass can pick them up.
+
+### Engine — Done this session
+
+- ✅ **Ward enforcement (generic mana)** — `Keyword::Ward(u32)` is now
+  enforced at cast time. When a spell targets an opponent's permanent with
+  Ward(N), the caster must pay N additional generic mana. Approximation:
+  real MTG Ward is a triggered counter-unless-pay; this implementation
+  adds the cost to the spell's total. Ward—Pay life variants (Mica, Prismari
+  the Inspiration) are approximated as generic mana.
+
+- ✅ **Stun counter untap replacement (CR 122.1c)** — permanents with stun
+  counters no longer untap during the untap step. Instead one stun counter
+  is removed and the permanent stays tapped. Also respected by `Effect::
+  Untap` so spell-based untap effects (Frantic Search, etc.) honor stun.
+
+- ✅ **Protection from color targeting (CR 702.16)** — spells whose mana
+  cost contains a color that a target has protection from are rejected at
+  cast time. Controller's own spells bypass the check (matching MTG rules).
+
+- ✅ **ManaCost::colors()** — returns the set of distinct colors in a cost.
+
+- ✅ **PermanentView.ward_cost** — surfaces Ward mana cost in the client
+  view so the UI can display targeting cost hints.
+
+- ✅ **Opus partial wiring** — 11 body-only 🟡 creatures promoted to have
+  their basic IS-cast trigger (Opus small effect). The 5+-mana branch
+  remains omitted pending `Value::CastSpellManaSpent`.
+
+### Engine — Discovered gaps
+
+- **Ward—Pay life / Ward—Discard variants**. The current Ward(u32) is
+  generic-mana-only. Cards like Mica Reader of Ruins (Ward—Pay 3 life),
+  Tragedy Feaster (Ward—Discard), Forum Necroscribe (Ward—Discard) use
+  life or discard as the Ward cost. A `Keyword::WardLife(u32)` and
+  `Keyword::WardDiscard` variant (or a `WardCost` enum on the keyword)
+  would express these faithfully.
+
+- **Protection from damage**. CR 702.16 also prevents damage from sources
+  of the protected color. The engine currently tracks damage as a flat u32
+  counter with no source identity, so color-keyed damage prevention isn't
+  implementable without a damage-source tracking system.
+
+- **Protection from blocking (blocker side)**. Protection currently only
+  prevents an attacker with protection from being blocked by a colored
+  creature. The reverse (blocker with protection from attacker's color
+  can't be assigned as a blocker) is not checked. This is less commonly
+  relevant but worth tracking.
+
+### UI
+
+- **Ward cost indicator**. `PermanentView.ward_cost` is now surfaced.
+  The 3D client should render a small shield icon or "{N}" badge on
+  Ward-bearing permanents so opponents know the targeting surcharge.
+
+### Cards — Remaining ⏳ blockers
+
+- **Copy-spell/permanent primitive** still blocks ~12 ⏳ cards
+  (Choreographed Sparks, Silverquill the Disputant, Social Snub,
+  Applied Geometry, Quandrix the Proof, etc.).
+
+- **Cascade keyword** blocks Quandrix the Proof.
+
+- **Cast-from-exile pipeline** blocks ~8 ⏳ cards (Archaic's Agony,
+  Elemental Mascot 5+-mana, Improvisation Capstone, etc.).
+
+- **Prepare mechanic** blocks 2 colorless ⏳ cards (Biblioplex
+  Tomekeeper, Skycoach Waypoint).
+
+- **Vehicle/Crew** blocks Strixhaven Skycoach.
