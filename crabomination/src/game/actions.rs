@@ -506,6 +506,15 @@ impl GameState {
             cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
 
+        // Ward tax: if the spell targets an opponent's permanent with Ward,
+        // the caster must pay the Ward cost or the spell can't be cast.
+        if let Some(ref tgt) = target {
+            let ward_tax = self.ward_tax_for_target(tgt, p);
+            if ward_tax > 0 {
+                cost.symbols.push(crate::mana::ManaSymbol::Generic(ward_tax));
+            }
+        }
+
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
         // auto-tap tapped.
@@ -906,6 +915,28 @@ impl GameState {
             return Err(GameError::TargetHasHexproof(*cid));
         }
         Ok(())
+    }
+
+    /// Returns the Ward tax (generic mana) that `caster` must pay when
+    /// targeting `target`. Returns 0 if the target has no Ward or the
+    /// caster controls the permanent.
+    pub(crate) fn ward_tax_for_target(&self, target: &Target, caster: usize) -> u32 {
+        let cid = match target {
+            Target::Player(_) => return 0,
+            Target::Permanent(c) => c,
+        };
+        let Some(card) = self.battlefield_find(*cid) else {
+            return 0;
+        };
+        if card.controller == caster {
+            return 0;
+        }
+        for kw in &card.definition.keywords {
+            if let Keyword::Ward(n) = kw {
+                return *n;
+            }
+        }
+        0
     }
 
     /// True if `player` controls any permanent granting "you have hexproof"

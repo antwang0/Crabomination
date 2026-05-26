@@ -1062,6 +1062,135 @@ pub fn lluwen_exchange_student() -> CardDefinition {
     front
 }
 
+// ── Blue MDFCs (Ward-bearing) ──────────────────────────────────────────────
+
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral
+/// Recall (target player draws 3 cards; collapsed to "you draw 3").
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+///
+/// Front: 3/4 Merfolk Bard with Ward {1}. Back: sorcery — Aqueous
+/// Aria. The back face is approximated as "draw 2 cards" (a typical
+/// blue sorcery effect at 5 mana).
+pub fn campus_composer() -> CardDefinition {
+    let back = spell_back(
+        "Aqueous Aria",
+        cost(&[generic(4), u()]),
+        CardType::Sorcery,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+    );
+    vanilla_front(
+        "Campus Composer",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Bard],
+        3,
+        4,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
+// ── Black MDFCs ────────────────────────────────────────────────────────────
+
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock with Surveil 2 ETB. Back: sorcery —
+/// Reanimate (return target creature card from any graveyard to the
+/// battlefield; approximated as return from your graveyard to bf).
+pub fn grave_researcher() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let back = spell_back(
+        "Reanimate",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
+            },
+        },
+    );
+    CardDefinition {
+        name: "Grave Researcher",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: Some(Box::new(back)),
+        opening_hand: None,
+    }
+}
+
+// ── Red MDFCs (Ward-bearing) ───────────────────────────────────────────────
+
+/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
+///
+/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — Awaken
+/// the Ages. Approximated as "deal 5 damage to target creature" (a
+/// reasonable 6-mana red sorcery effect).
+pub fn strife_scholar() -> CardDefinition {
+    let back = spell_back(
+        "Awaken the Ages",
+        cost(&[generic(5), r()]),
+        CardType::Sorcery,
+        Effect::DealDamage {
+            amount: Value::Const(5),
+            to: target_filtered(SelectionRequirement::Creature),
+        },
+    );
+    vanilla_front(
+        "Strife Scholar",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Orc, CreatureType::Sorcerer],
+        3,
+        2,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
 // ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
 #[allow(dead_code)]
 fn _suppress_unused() {

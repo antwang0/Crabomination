@@ -7118,3 +7118,279 @@ fn zaffai_and_the_tempests_body_legendary_5_7() {
     assert!(card.has_creature_type(crate::card::CreatureType::Human));
     assert!(card.has_creature_type(crate::card::CreatureType::Bard));
 }
+
+// ── 2026-05-26: Ward enforcement + Opus partial + new MDFCs ────────────────
+
+#[test]
+fn ward_taxes_opponent_spell_targeting() {
+    let mut g = two_player_game();
+    let ward_creature = g.add_card_to_battlefield(1, catalog::colorstorm_stallion());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    // Give P0 enough mana for Tome Blast ({1}{R}) but NOT the Ward {1} tax.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(ward_creature)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "Should fail when caster cannot pay Ward tax");
+}
+
+#[test]
+fn ward_does_not_tax_own_creatures() {
+    let mut g = two_player_game();
+    let ward_creature = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    let pump = g.add_card_to_hand(0, catalog::masterful_flourish());
+    g.players[0].mana_pool.add(Color::Black, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(ward_creature)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_ok(), "Ward should not tax the controller's own spells");
+}
+
+#[test]
+fn ward_allows_spell_when_extra_mana_available() {
+    let mut g = two_player_game();
+    let ward_creature = g.add_card_to_battlefield(1, catalog::colorstorm_stallion());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    // Tome Blast costs {1}{R}, Ward {1} adds {1} → total {2}{R}
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(ward_creature)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_ok(), "Should succeed with enough mana to pay Ward");
+}
+
+#[test]
+fn colorstorm_stallion_has_ward_and_haste() {
+    let card = catalog::colorstorm_stallion();
+    assert_eq!(card.name, "Colorstorm Stallion");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&Keyword::Haste));
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+}
+
+#[test]
+fn colorstorm_stallion_opus_pumps_on_is_cast() {
+    let mut g = two_player_game();
+    let stallion_id = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(stallion_id).unwrap();
+    assert!(view.power >= 4, "Stallion should be pumped to at least 4/4");
+}
+
+#[test]
+fn elemental_mascot_has_flying_vigilance_and_opus() {
+    let card = catalog::elemental_mascot();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
+}
+
+#[test]
+fn mica_reader_of_ruins_has_ward_3() {
+    let card = catalog::mica_reader_of_ruins();
+    assert_eq!(card.name, "Mica, Reader of Ruins");
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(3)));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+#[test]
+fn prismari_the_inspiration_has_flying_and_ward_5() {
+    let card = catalog::prismari_the_inspiration();
+    assert_eq!(card.name, "Prismari, the Inspiration");
+    assert_eq!(card.power, 7);
+    assert_eq!(card.toughness, 7);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Ward(5)));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+#[test]
+fn emeritus_of_ideation_mdfc_with_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("Should have a back face");
+    assert_eq!(back.name, "Ancestral Recall");
+    assert!(back.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn campus_composer_mdfc_with_ward() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    let back = card.back_face.as_ref().expect("Should have a back face");
+    assert_eq!(back.name, "Aqueous Aria");
+}
+
+#[test]
+fn grave_researcher_mdfc_with_surveil_etb() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(!card.triggered_abilities.is_empty(), "Should have ETB surveil");
+    let back = card.back_face.as_ref().expect("Should have a back face");
+    assert_eq!(back.name, "Reanimate");
+}
+
+#[test]
+fn strife_scholar_mdfc_with_ward() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    let back = card.back_face.as_ref().expect("Should have a back face");
+    assert_eq!(back.name, "Awaken the Ages");
+}
+
+#[test]
+fn expressive_firedancer_opus_pumps_on_is_cast() {
+    let mut g = two_player_game();
+    let dancer_id = g.add_card_to_battlefield(0, catalog::expressive_firedancer());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(dancer_id).unwrap();
+    assert!(view.power >= 3, "Firedancer should be pumped to at least 3/3");
+}
+
+#[test]
+fn tackle_artist_opus_adds_counter_on_is_cast() {
+    let mut g = two_player_game();
+    let artist_id = g.add_card_to_battlefield(0, catalog::tackle_artist());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    let artist = g.battlefield.iter().find(|c| c.id == artist_id).unwrap();
+    let counter_count = artist.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0);
+    assert!(counter_count >= 1, "Tackle Artist should have at least 1 +1/+1 counter");
+}
+
+#[test]
+fn thunderdrum_soloist_opus_pings_opponent_on_is_cast() {
+    let mut g = two_player_game();
+    let _soloist_id = g.add_card_to_battlefield(0, catalog::thunderdrum_soloist());
+    let bolt = g.add_card_to_hand(0, catalog::tome_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life_before = g.players[1].life;
+
+    let opp_creature = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(opp_creature)),
+        mode: None,
+        x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.players[1].life < opp_life_before, "Opponent should have taken damage from Soloist trigger");
+}
+
+#[test]
+fn spectacular_skywhale_opus_pumps_on_is_cast() {
+    let card = catalog::spectacular_skywhale();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
+}
+
+#[test]
+fn molten_core_maestro_opus_adds_counter() {
+    let card = catalog::molten_core_maestro();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Menace));
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus trigger");
+}
+
+#[test]
+fn muse_seeker_opus_loots_on_is_cast() {
+    let card = catalog::muse_seeker();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 2);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus loot trigger");
+}
+
+#[test]
+fn exhibition_tidecaller_opus_mills_on_is_cast() {
+    let card = catalog::exhibition_tidecaller();
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 2);
+    assert!(!card.triggered_abilities.is_empty(), "Should have Opus mill trigger");
+}
+
+#[test]
+fn pensive_professor_counter_draw_trigger() {
+    let card = catalog::pensive_professor();
+    assert_eq!(card.power, 0);
+    assert_eq!(card.toughness, 2);
+    assert!(!card.triggered_abilities.is_empty(), "Should have counter-add draw trigger");
+}
+
+#[test]
+fn aberrant_manawurm_opus_pumps_on_is_cast() {
+    let card = catalog::aberrant_manawurm();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(!card.triggered_abilities.is_empty(), "Should have IS-cast pump trigger");
+}

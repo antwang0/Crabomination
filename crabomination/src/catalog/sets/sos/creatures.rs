@@ -2,8 +2,9 @@
 
 use super::no_abilities;
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, SelectionRequirement, Subtypes, TokenDefinition,
+    TriggeredAbility,
 };
 use crate::effect::{Duration, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, generic, w};
@@ -2179,6 +2180,7 @@ pub fn hungry_graffalon() -> CardDefinition {
 /// Pensive Professor — {1}{U}{U}, 0/2 Human Wizard. Increment + counter
 /// trigger omitted.
 pub fn pensive_professor() -> CardDefinition {
+    use crate::card::CounterType;
     use crate::mana::u;
     CardDefinition {
         name: "Pensive Professor",
@@ -2194,7 +2196,16 @@ pub fn pensive_professor() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2232,8 +2243,10 @@ pub fn tester_of_the_tangential() -> CardDefinition {
     }
 }
 
-/// Muse Seeker — {1}{U}, 1/2 Elf Wizard. Opus loot rider omitted.
+/// Muse Seeker — {1}{U}, 1/2 Elf Wizard.
+/// Opus partial: loot (draw 1 + discard 1) on IS-cast.
 pub fn muse_seeker() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::u;
     CardDefinition {
         name: "Muse Seeker",
@@ -2249,7 +2262,17 @@ pub fn muse_seeker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2259,9 +2282,10 @@ pub fn muse_seeker() -> CardDefinition {
     }
 }
 
-/// Aberrant Manawurm — {3}{G}, 2/5 Wurm with Trample. Spell-cast +X/+0 EOT
-/// rider omitted (mana-spent introspection).
+/// Aberrant Manawurm — {3}{G}, 2/5 Wurm with Trample.
+/// IS-cast trigger gives +2/+0 EOT (approximation of mana-spent).
 pub fn aberrant_manawurm() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     use crate::mana::g;
     CardDefinition {
         name: "Aberrant Manawurm",
@@ -2277,7 +2301,7 @@ pub fn aberrant_manawurm() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2287,9 +2311,10 @@ pub fn aberrant_manawurm() -> CardDefinition {
     }
 }
 
-/// Tackle Artist — {3}{R}, 4/3 Orc Sorcerer with Trample. Opus +1/+1
-/// counter rider omitted.
+/// Tackle Artist — {3}{R}, 4/3 Orc Sorcerer with Trample.
+/// Opus partial: +1/+1 counter on IS-cast.
 pub fn tackle_artist() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Tackle Artist",
@@ -2305,7 +2330,11 @@ pub fn tackle_artist() -> CardDefinition {
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2315,9 +2344,10 @@ pub fn tackle_artist() -> CardDefinition {
     }
 }
 
-/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach. Opus damage
-/// rider omitted.
+/// Thunderdrum Soloist — {1}{R}, 1/3 Dwarf Bard with Reach.
+/// Opus partial: 1 damage to each opponent on IS-cast.
 pub fn thunderdrum_soloist() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Thunderdrum Soloist",
@@ -2333,7 +2363,10 @@ pub fn thunderdrum_soloist() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            amount: Value::Const(1),
+            to: Selector::Player(PlayerRef::EachOpponent),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2343,9 +2376,10 @@ pub fn thunderdrum_soloist() -> CardDefinition {
     }
 }
 
-/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace. Opus rider
-/// omitted.
+/// Molten-Core Maestro — {1}{R}, 2/2 Goblin Bard with Menace.
+/// Opus partial: +1/+1 counter on IS-cast.
 pub fn molten_core_maestro() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Molten-Core Maestro",
@@ -2361,7 +2395,11 @@ pub fn molten_core_maestro() -> CardDefinition {
         keywords: vec![Keyword::Menace],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2371,8 +2409,10 @@ pub fn molten_core_maestro() -> CardDefinition {
     }
 }
 
-/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer. Opus rider omitted.
+/// Expressive Firedancer — {1}{R}, 2/2 Human Sorcerer.
+/// Opus partial: +1/+1 EOT on IS-cast.
 pub fn expressive_firedancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     use crate::mana::r;
     CardDefinition {
         name: "Expressive Firedancer",
@@ -2388,7 +2428,7 @@ pub fn expressive_firedancer() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3207,6 +3247,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
 /// the "if 5+ mana, mill 10 instead" branch can fire. The 0/2 body
 /// fits in the Blue color pool as a 1-drop blocker.
 pub fn exhibition_tidecaller() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
     use crate::mana::u;
     CardDefinition {
         name: "Exhibition Tidecaller",
@@ -3222,7 +3263,10 @@ pub fn exhibition_tidecaller() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft(Effect::Mill {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(3),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3411,6 +3455,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
 /// spent)" rider is omitted (mana-spent introspection on cast — same gap
 /// as Aberrant Manawurm, Tackle Artist, Expressive Firedancer).
 pub fn spectacular_skywhale() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Spectacular Skywhale",
@@ -3426,7 +3471,7 @@ pub fn spectacular_skywhale() -> CardDefinition {
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        triggered_abilities: vec![magecraft_self_pump(3, 0)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4504,6 +4549,123 @@ pub fn essenceknit_scholar() -> CardDefinition {
                 },
             },
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+
+// ── 2026-05-26: Ward enforcement + Opus partial wiring ─────────────────────
+
+/// Colorstorm Stallion — {1}{U}{R}, 3/3 Elemental Horse.
+/// Ward {1} + Haste. Opus partial: +1/+1 EOT on IS-cast.
+pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Colorstorm Stallion",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Elemental Mascot — {1}{U}{R}, 1/4 Elemental Bird.
+/// Flying + Vigilance. Opus partial: +1/+0 EOT on IS-cast.
+pub fn elemental_mascot() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Elemental Mascot",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Mica, Reader of Ruins — {3}{R}, 4/4 Legendary Human Artificer.
+/// Ward(3) approximated as generic mana (real: 3 life).
+pub fn mica_reader_of_ruins() -> CardDefinition {
+    use crate::mana::r;
+    CardDefinition {
+        name: "Mica, Reader of Ruins",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Ward(3)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Prismari, the Inspiration — {5}{U}{R}, 7/7 Legendary Elder Dragon.
+/// Flying + Ward(5). Storm grant omitted.
+pub fn prismari_the_inspiration() -> CardDefinition {
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Prismari, the Inspiration",
+        cost: cost(&[generic(5), u(), r()]),
+        supertypes: vec![crate::card::Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elder, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Flying, Keyword::Ward(5)],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
