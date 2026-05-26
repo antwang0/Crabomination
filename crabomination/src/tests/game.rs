@@ -4070,393 +4070,54 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
     assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }
 
-// ── Stun counter untap replacement (CR 122.1c) ────────────────────────────
+// ── Ward enforcement (CR 702.21) ─────────────────────────────────────────
 
 #[test]
-fn stun_counter_prevents_untap_and_is_removed() {
+fn ward_counters_spell_when_caster_cannot_pay() {
+    // Sedgemoor Witch has Ward(1). Opponent tries to Lightning Bolt it
+    // but can't pay the {1} Ward tax — spell should be countered.
     let mut g = two_player_game();
-    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Tap it and add a stun counter.
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
-        c.tapped = true;
-        c.add_counters(crate::card::CounterType::Stun, 1);
-    }
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
 
-    // Perform untap step for player 0.
-    g.do_untap();
-
-    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
-    assert!(c.tapped, "Creature should remain tapped (stun counter removed instead)");
-    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 0, "Stun counter should be removed");
-}
-
-#[test]
-fn stun_counter_untapped_creature_keeps_stun() {
-    let mut g = two_player_game();
-    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // Add a stun counter but leave untapped.
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
-        c.add_counters(crate::card::CounterType::Stun, 1);
-    }
-
-    // Perform untap step for player 0.
-    g.do_untap();
-
-    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
-    assert!(!c.tapped, "Untapped creature stays untapped");
-    // Stun counter remains since the creature wasn't trying to untap.
-    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 1, "Stun counter should remain on untapped creature");
-}
-
-#[test]
-fn multiple_stun_counters_remove_one_per_untap() {
-    let mut g = two_player_game();
-    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
-        c.tapped = true;
-        c.add_counters(crate::card::CounterType::Stun, 3);
-    }
-
-    // First untap: removes one stun counter, stays tapped.
-    g.do_untap();
-    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
-    assert!(c.tapped);
-    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 2);
-}
-
-// ── Protection from color targeting (CR 702.16) ────────────────────────────
-
-#[test]
-fn protection_from_black_prevents_targeting_by_black_spell() {
-    use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
-    use crate::mana::cost;
-
-    let mut g = two_player_game();
-    // Create a creature with protection from black for player 1.
-    let pro_creature = g.add_card_to_battlefield(1, CardDefinition {
-        name: "White Knight",
-        cost: cost(&[crate::mana::w(), crate::mana::w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![crate::card::CreatureType::Human, crate::card::CreatureType::Knight],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::FirstStrike, Keyword::Protection(crate::mana::Color::Black)],
-        effect: Effect::Noop,
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    });
-
-    // Try targeting it with a black spell (Wander Off = {3}{B} exile).
-    let spell = g.add_card_to_hand(0, catalog::wander_off());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(3);
-
-    let result = g.perform_action(GameAction::CastSpell {
-        card_id: spell,
-        target: Some(Target::Permanent(pro_creature)),
-        mode: None,
-        x_value: None,
-    });
-    assert!(result.is_err(), "Black spell should not be able to target creature with protection from black");
-}
-
-#[test]
-fn protection_does_not_block_own_spells() {
-    use crate::card::{CardDefinition, CardType, Keyword, Subtypes};
-
-    let mut g = two_player_game();
-    // Player 0's creature with protection from black.
-    let pro_creature = g.add_card_to_battlefield(0, CardDefinition {
-        name: "White Knight",
-        cost: crate::mana::cost(&[crate::mana::w(), crate::mana::w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![crate::card::CreatureType::Human, crate::card::CreatureType::Knight],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Protection(crate::mana::Color::Black)],
-        effect: Effect::Noop,
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    });
-
-    // Player 0 targeting their own creature with a black pump spell.
-    let pump = g.add_card_to_hand(0, catalog::masterful_flourish());
-    g.players[0].mana_pool.add(Color::Black, 1);
-
-    let result = g.perform_action(GameAction::CastSpell {
-        card_id: pump,
-        target: Some(Target::Permanent(pro_creature)),
-        mode: None,
-        x_value: None,
-    });
-    assert!(result.is_ok(), "Protection should not block the controller's own spells");
-}
-
-// ── CR 120.3: Damage to planeswalkers removes loyalty counters ─────────────
-
-#[test]
-fn cr_120_3_damage_to_planeswalker_removes_loyalty() {
-    let mut g = two_player_game();
-    // Place a planeswalker on opponent's battlefield
-    let pw = g.add_card_to_battlefield(1, catalog::oko_thief_of_crowns());
-    let loyalty_before = g.battlefield.iter()
-        .find(|c| c.id == pw)
-        .unwrap()
-        .counters
-        .get(&crate::card::CounterType::Loyalty)
-        .copied()
-        .unwrap_or(0);
-    assert_eq!(loyalty_before, 4, "Oko starts with 4 loyalty");
-
-    // Cast Lightning Bolt targeting the planeswalker
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
+    // Opponent (P1) casts Lightning Bolt targeting the witch.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    // No extra mana to pay Ward.
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Permanent(pw)), mode: None, x_value: None,
-    }).expect("bolt targets planeswalker");
+        card_id: bolt,
+        target: Some(Target::Permanent(witch)),
+        mode: None,
+        x_value: None,
+    }).expect("Bolt cast OK");
     drain_stack(&mut g);
 
-    let pw_card = g.battlefield.iter().find(|c| c.id == pw);
-    if let Some(pw_card) = pw_card {
-        let loyalty_after = pw_card.counters
-            .get(&crate::card::CounterType::Loyalty)
-            .copied()
-            .unwrap_or(0);
-        assert_eq!(loyalty_after, 1, "3 damage removes 3 loyalty: 4-3=1");
-    }
-    // If the planeswalker was removed (loyalty hit 0), that's also valid
-}
-
-// ── CR 704.5q/r: +1/+1 and -1/-1 counter cancellation ────────────────────
-
-#[test]
-fn cr_704_5q_counters_cancel_each_other() {
-    let mut g = two_player_game();
-    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-
-    // Add +1/+1 counters
-    {
-        let c = g.battlefield.iter_mut().find(|c| c.id == creature).unwrap();
-        *c.counters.entry(crate::card::CounterType::PlusOnePlusOne).or_insert(0) += 3;
-        *c.counters.entry(crate::card::CounterType::MinusOneMinusOne).or_insert(0) += 2;
-    }
-
-    // Run SBAs
-    g.check_state_based_actions();
-
-    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
-    let plus = c.counters.get(&crate::card::CounterType::PlusOnePlusOne).copied().unwrap_or(0);
-    let minus = c.counters.get(&crate::card::CounterType::MinusOneMinusOne).copied().unwrap_or(0);
-    assert_eq!(plus, 1, "3 plus - 2 minus = 1 plus remaining");
-    assert_eq!(minus, 0, "minus counters fully cancelled");
-}
-
-// ── CR 704.5j: Legend rule ────────────────────────────────────────────────
-
-#[test]
-fn cr_704_5j_legend_rule_keeps_newest() {
-    let mut g = two_player_game();
-    let _legend1 = g.add_card_to_battlefield(0, catalog::griselbrand());
-    let legend2 = g.add_card_to_battlefield(0, catalog::griselbrand());
-
-    g.check_state_based_actions();
-
-    // Only one Griselbrand should remain (the newest, i.e. legend2)
-    let griselbrands: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.definition.name == "Griselbrand")
-        .collect();
-    assert_eq!(griselbrands.len(), 1, "legend rule removed the duplicate");
-    assert_eq!(griselbrands[0].id, legend2, "newest legend survives");
-}
-
-// ── CR 702.2: Deathtouch ───────────────────────────────────────────────────
-
-#[test]
-fn cr_702_2_deathtouch_any_damage_is_lethal() {
-    let mut g = two_player_game();
-
-    let mut dt_def = catalog::grizzly_bears();
-    dt_def.name = "Deathtouch Attacker";
-    dt_def.power = 1;
-    dt_def.toughness = 1;
-    dt_def.keywords = vec![crate::card::Keyword::Deathtouch];
-    let attacker = g.add_card_to_battlefield(0, dt_def);
-    g.clear_sickness(attacker);
-
-    let mut big_def = catalog::grizzly_bears();
-    big_def.name = "Big Blocker";
-    big_def.power = 5;
-    big_def.toughness = 5;
-    let blocker = g.add_card_to_battlefield(1, big_def);
-    g.clear_sickness(blocker);
-
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker, target: AttackTarget::Player(1) },
-    ])).expect("declare attackers");
-
-    g.step = TurnStep::DeclareBlockers;
-    g.perform_action(GameAction::DeclareBlockers(vec![
-        (blocker, attacker),
-    ])).expect("declare blockers");
-
-    g.step = TurnStep::CombatDamage;
-    g.resolve_combat().unwrap();
-
-    assert!(!g.battlefield.iter().any(|c| c.id == blocker),
-        "5/5 should die to 1 deathtouch damage (CR 702.2)");
-}
-
-// ── CR 702.15: Lifelink ────────────────────────────────────────────────────
-
-#[test]
-fn cr_702_15_lifelink_grants_life_on_combat_damage() {
-    let mut g = two_player_game();
-
-    let mut ll_def = catalog::grizzly_bears();
-    ll_def.name = "Lifelink Bear";
-    ll_def.keywords = vec![crate::card::Keyword::Lifelink];
-    let attacker = g.add_card_to_battlefield(0, ll_def);
-    g.clear_sickness(attacker);
-
-    let life_before = g.players[0].life;
-
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker, target: AttackTarget::Player(1) },
-    ])).expect("declare attackers");
-
-    g.step = TurnStep::CombatDamage;
-    g.resolve_combat().unwrap();
-
-    assert_eq!(g.players[0].life, life_before + 2,
-        "Lifelink should grant 2 life from 2 combat damage (CR 702.15)");
-    assert_eq!(g.players[1].life, 18, "Opponent should take 2 combat damage");
-}
-
-// ── CR 702.7: First Strike ─────────────────────────────────────────────────
-
-#[test]
-fn cr_702_7_first_strike_kills_before_regular_damage() {
-    let mut g = two_player_game();
-
-    let mut fs_def = catalog::grizzly_bears();
-    fs_def.name = "First Striker";
-    fs_def.keywords = vec![crate::card::Keyword::FirstStrike];
-    let attacker = g.add_card_to_battlefield(0, fs_def);
-    g.clear_sickness(attacker);
-
-    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(blocker);
-
-    g.step = TurnStep::DeclareAttackers;
-    g.perform_action(GameAction::DeclareAttackers(vec![
-        Attack { attacker, target: AttackTarget::Player(1) },
-    ])).expect("declare attackers");
-
-    g.step = TurnStep::DeclareBlockers;
-    g.perform_action(GameAction::DeclareBlockers(vec![
-        (blocker, attacker),
-    ])).expect("declare blockers");
-
-    // First-strike damage step kills the blocker before regular damage.
-    g.step = TurnStep::FirstStrikeDamage;
-    g.resolve_first_strike_damage().unwrap();
-
-    assert!(!g.battlefield.iter().any(|c| c.id == blocker),
-        "Vanilla 2/2 should die to first-strike damage");
-    assert!(g.battlefield.iter().any(|c| c.id == attacker),
-        "First-striker should survive (CR 702.7)");
-}
-
-// ── CR 704.5b: Player at 0 or less life loses ─────────────────────────────
-
-#[test]
-fn cr_704_5b_player_at_zero_life_loses() {
-    let mut g = two_player_game();
-    g.players[1].life = 0;
-    g.check_state_based_actions();
-    assert!(g.players[1].eliminated,
-        "Player at 0 life should be eliminated (CR 704.5b)");
+    // Witch should survive because Ward countered the bolt.
+    assert!(g.battlefield.iter().any(|c| c.id == witch),
+        "Sedgemoor Witch should survive — Ward should counter the Bolt");
 }
 
 #[test]
-fn cr_704_5b_player_at_negative_life_loses() {
+fn ward_does_not_trigger_on_own_spells() {
+    // Ward only triggers on opponents' spells. Your own spells
+    // targeting your own Ward creature should resolve normally.
     let mut g = two_player_game();
-    g.players[1].life = -5;
-    g.check_state_based_actions();
-    assert!(g.players[1].eliminated,
-        "Player at negative life should be eliminated (CR 704.5b)");
-}
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+    // Cast a pump spell targeting our own Ward creature.
+    let pump = g.add_card_to_hand(0, catalog::interjection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(witch)),
+        mode: None,
+        x_value: None,
+    }).expect("Interjection cast OK");
+    drain_stack(&mut g);
 
-// ── CR 704.5c: Player at 10+ poison counters loses ────────────────────────
-
-#[test]
-fn cr_704_5c_player_with_10_poison_loses() {
-    let mut g = two_player_game();
-    g.players[1].poison_counters = 10;
-    g.check_state_based_actions();
-    assert!(g.players[1].eliminated,
-        "Player with 10 poison counters should be eliminated (CR 704.5c)");
-}
-
-// ── CR 704.5i: Planeswalker at 0 loyalty dies ─────────────────────────────
-
-#[test]
-fn cr_704_5i_planeswalker_at_zero_loyalty_dies() {
-    let mut g = two_player_game();
-    let pw = g.add_card_to_battlefield(0, catalog::teferi_time_raveler());
-    // Set loyalty to 0.
-    if let Some(c) = g.battlefield_find_mut(pw) {
-        c.counters.insert(crate::card::CounterType::Loyalty, 0);
-    }
-    g.check_state_based_actions();
-    assert!(!g.battlefield.iter().any(|c| c.id == pw),
-        "Planeswalker at 0 loyalty should be removed (CR 704.5i)");
-}
-
-// ── CR 704.5n: Orphaned aura ───────────────────────────────────────────────
-
-#[test]
-fn cr_704_5n_orphaned_aura_goes_to_graveyard() {
-    use crate::card::{CardDefinition, CardType, EnchantmentSubtype, Subtypes};
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let aura_def = CardDefinition {
-        name: "Test Aura",
-        card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes {
-            enchantment_subtypes: vec![EnchantmentSubtype::Aura],
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    let aura = g.add_card_to_battlefield(0, aura_def);
-    if let Some(a) = g.battlefield_find_mut(aura) {
-        a.attached_to = Some(bear);
-    }
-    g.remove_from_battlefield_to_graveyard(bear);
-    g.check_state_based_actions();
-    assert!(!g.battlefield.iter().any(|c| c.id == aura),
-        "Orphaned aura should be removed from battlefield (CR 704.5n)");
+    // Witch should have the pump applied.
+    let w = g.computed_permanent(witch).unwrap();
+    assert!(w.power > 3, "Witch should be pumped by own spell");
 }

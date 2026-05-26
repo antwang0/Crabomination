@@ -9,12 +9,12 @@
 use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Selector, SelectionRequirement, SpellSubtype, Subtypes, TokenDefinition,
+    EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, LibraryPosition, PlayerRef, ZoneDest};
-use crate::mana::{Color, b, cost, g, generic, u, w, x};
+use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
+use crate::mana::{Color, b, cost, g, generic, r, u, w, x};
 
 // ── Pop Quiz ────────────────────────────────────────────────────────────────
 
@@ -444,461 +444,18 @@ pub fn test_of_talents() -> CardDefinition {
 
 // ── Multiple Choice ─────────────────────────────────────────────────────────
 
-// ── Environmental Sciences ─────────────────────────────────────────────────
-
-/// Environmental Sciences — {2} Sorcery — Lesson. "Search your library
-/// for a basic land card, reveal it, put it into your hand, then shuffle.
-/// You gain 2 life."
-pub fn environmental_sciences() -> CardDefinition {
-    CardDefinition {
-        name: "Environmental Sciences",
-        cost: cost(&[generic(2)]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(2),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Introduction to Annihilation ───────────────────────────────────────────
-
-/// Introduction to Annihilation — {5} Sorcery — Lesson. "Exile target
-/// nonland permanent. Its controller draws a card."
-pub fn introduction_to_annihilation() -> CardDefinition {
-    CardDefinition {
-        name: "Introduction to Annihilation",
-        cost: cost(&[generic(5)]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Exile {
-                what: target_filtered(
-                    SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-                ),
-            },
-            Effect::Draw {
-                who: Selector::Player(
-                    PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                ),
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Introduction to Prophecy ───────────────────────────────────────────────
-
-/// Introduction to Prophecy — {3} Sorcery — Lesson. "Scry 2, then draw
-/// a card."
-pub fn introduction_to_prophecy() -> CardDefinition {
-    CardDefinition {
-        name: "Introduction to Prophecy",
-        cost: cost(&[generic(3)]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Scry {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Expanded Anatomy ───────────────────────────────────────────────────────
-
-/// Expanded Anatomy — {3} Sorcery — Lesson. "Put two +1/+1 counters on
-/// target creature. It gains vigilance until end of turn."
-pub fn expanded_anatomy() -> CardDefinition {
-    CardDefinition {
-        name: "Expanded Anatomy",
-        cost: cost(&[generic(3)]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes {
-            spell_subtypes: vec![SpellSubtype::Lesson],
-            ..Default::default()
-        },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::Vigilance,
-                duration: Duration::EndOfTurn,
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Cram Session ───────────────────────────────────────────────────────────
-
-/// Cram Session — {1}{W/B} Sorcery. "You gain 4 life. Learn."
-/// Hybrid approximated as {1}{W}. Learn → Draw 1.
-pub fn cram_session() -> CardDefinition {
-    CardDefinition {
-        name: "Cram Session",
-        cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(4),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Professor of Symbology ─────────────────────────────────────────────────
-
-/// Professor of Symbology — {1}{W}, 2/1 Human Cleric. "When this enters,
-/// you may discard a card. If you do, draw a card." (Learn approximation.)
-pub fn professor_of_symbology() -> CardDefinition {
-    CardDefinition {
-        name: "Professor of Symbology",
-        cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 1,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::etb(
-            Effect::MayDo {
-                description: "Learn (discard a card, then draw a card)?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Discard {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                        random: false,
-                    },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
-                ])),
-            },
-        )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Guiding Voice ──────────────────────────────────────────────────────────
-
-/// Guiding Voice — {W} Sorcery. "Put a +1/+1 counter on target creature.
-/// Learn." (Learn → Draw 1)
-pub fn guiding_voice() -> CardDefinition {
-    CardDefinition {
-        name: "Guiding Voice",
-        cost: cost(&[w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::Creature),
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(1),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Divide by Zero ─────────────────────────────────────────────────────────
-
-/// Divide by Zero — {2}{U} Instant. "Return target spell or permanent
-/// with MV ≤ 4 to its owner's hand. Learn." (Learn → Draw 1)
+/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more — • Scry 2.
+/// • Create a 1/1 blue Pest creature token. (We use a Bird with flying
+/// since the printed card is a 'Pest'? No — Multiple Choice creates a
+/// 1/1 blue Pest. We use a generic Pest token.) • Target creature gets
+/// +1/+0 and gains hexproof until end of turn. • If you chose all of
+/// the above, ..."
 ///
-/// 🟡 Collapsed to bounce nonland permanent (spell-on-stack bounce
-/// collapsed).
-pub fn divide_by_zero() -> CardDefinition {
-    CardDefinition {
-        name: "Divide by Zero",
-        cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::ManaValueAtMost(4)),
-                ),
-                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Flunk ──────────────────────────────────────────────────────────────────
-
-/// Flunk — {1}{B} Instant. "Target creature gets -X/-X until end of turn,
-/// where X is 7 minus the number of cards in its controller's hand."
-///
-/// 🟡 Approximated as flat -4/-4 (typical hand of 3 → -4/-4).
-pub fn flunk() -> CardDefinition {
-    CardDefinition {
-        name: "Flunk",
-        cost: cost(&[generic(1), b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-4),
-            toughness: Value::Const(-4),
-            duration: Duration::EndOfTurn,
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Curate ─────────────────────────────────────────────────────────────────
-
-/// Curate — {1}{U} Instant. "Surveil 2. Draw a card."
-pub fn curate() -> CardDefinition {
-    CardDefinition {
-        name: "Curate",
-        cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(2),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Igneous Inspiration ────────────────────────────────────────────────────
-
-/// Igneous Inspiration — {2}{R} Sorcery. "Igneous Inspiration deals 3
-/// damage to any target. Learn." (Learn → Draw 1)
-pub fn igneous_inspiration() -> CardDefinition {
-    CardDefinition {
-        name: "Igneous Inspiration",
-        cost: cost(&[generic(2), crate::mana::r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
-                amount: Value::Const(3),
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
-// ── Charge Through ─────────────────────────────────────────────────────────
-
-/// Charge Through — {G} Instant. "Target creature gains trample until
-/// end of turn. Draw a card."
-pub fn charge_through() -> CardDefinition {
-    CardDefinition {
-        name: "Charge Through",
-        cost: cost(&[g()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Trample,
-                duration: Duration::EndOfTurn,
-            },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-    }
-}
-
+/// 🟡 Single-mode `ChooseMode` instead of Magic's "choose one or more" —
+/// we surface only the first three modes (mode 0/1/2). Mode 3 (all four
+/// at once) needs a multi-mode primitive.
 pub fn multiple_choice() -> CardDefinition {
+    use crate::effect::Duration;
     let pest = TokenDefinition {
         name: "Pest".to_string(),
         power: 1,
@@ -946,6 +503,152 @@ pub fn multiple_choice() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                 },
             ]),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Teach by Example ───────────────────────────────────────────────────────
+
+/// Teach by Example — {1}{R} Instant. "When you cast this spell, copy
+/// target instant or sorcery spell you control. You may choose new
+/// targets for the copy."
+///
+/// Approximated as: draw 1 card (simulating card advantage from copying).
+/// A full implementation would need a copy-spell-on-cast trigger that
+/// fires during resolution, which the engine doesn't support yet.
+pub fn teach_by_example() -> CardDefinition {
+    CardDefinition {
+        name: "Teach by Example",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Introduction to Prophecy ───────────────────────────────────────────────
+
+/// Introduction to Prophecy — {2}{U} Sorcery. "Scry 2, then draw a card."
+///
+/// Straightforward scry-then-draw spell. No Lesson subtype on this one.
+pub fn introduction_to_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Prophecy",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Introduction to Annihilation ───────────────────────────────────────────
+
+/// Introduction to Annihilation — {5} Sorcery — Lesson. "Exile target
+/// nonland permanent."
+///
+/// Colorless Lesson removal spell. The Lesson subtype allows future
+/// Learn mechanics to tutor for it.
+pub fn introduction_to_annihilation() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Annihilation",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Nonland),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Environmental Sciences ─────────────────────────────────────────────────
+
+/// Environmental Sciences — {2} Sorcery — Lesson. "Search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle.
+/// You gain 2 life."
+///
+/// Two-step: search for a basic land into hand, then gain 2 life.
+pub fn environmental_sciences() -> CardDefinition {
+    CardDefinition {
+        name: "Environmental Sciences",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

@@ -218,3 +218,32 @@ pub fn petrified_hamlet() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+/// Skycoach Waypoint — Land.
+/// Real Oracle: "{T}: Add {C}." plus a prepare ability (omitted).
+///
+/// Approximation: wired as a simple colorless-producing land via the
+/// shared `tap_add_colorless` helper. The prepare modal ability is
+/// omitted (engine has no prepare primitive yet).
+pub fn skycoach_waypoint() -> CardDefinition {
+    use super::super::tap_add_colorless;
+    CardDefinition {
+        name: "Skycoach Waypoint",
+        cost: ManaCost::default(),
+        supertypes: vec![],
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![tap_add_colorless()],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

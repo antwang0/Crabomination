@@ -7312,3 +7312,108 @@ fn fix_whats_broken_returns_creatures_from_gy() {
     // 2 life lost.
     assert_eq!(g.players[0].life, life_before - 2);
 }
+
+// ── Skycoach Waypoint ─────────────────────────────────────────────────
+
+#[test]
+fn skycoach_waypoint_taps_for_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .definition.card_types.contains(&CardType::Land));
+
+    // Activate {T}: Add {C}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Tap for colorless should succeed");
+
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1,
+        "Skycoach Waypoint should produce 1 colorless mana");
+    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped,
+        "Land should be tapped after activation");
+}
+
+// ── Biblioplex Tomekeeper ─────────────────────────────────────────────
+
+#[test]
+fn biblioplex_tomekeeper_enters_as_3_4_construct() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Biblioplex Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Tomekeeper should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Artifact));
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 3);
+    assert_eq!(view.toughness, 4);
+}
+
+// ── Strixhaven Skycoach ───────────────────────────────────────────────
+
+#[test]
+fn strixhaven_skycoach_etb_searches_for_basic_land() {
+    let mut g = two_player_game();
+    // Seed library with a basic land to find.
+    let forest = g.add_card_to_library(0, catalog::forest());
+
+    let id = g.add_card_to_hand(0, catalog::strixhaven_skycoach());
+    g.players[0].mana_pool.add_colorless(3);
+
+    // Script the decider to pick the Forest from the search.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Strixhaven Skycoach castable for {3}");
+    drain_stack(&mut g);
+
+    // Skycoach on battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Skycoach should be on battlefield");
+    let view = g.computed_permanent(id).unwrap();
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Skycoach should have flying");
+
+    // Forest should be in hand (searched from library).
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest),
+        "Forest should have been searched into hand");
+}
+
+// ── The Dawning Archaic ───────────────────────────────────────────────
+
+#[test]
+fn the_dawning_archaic_enters_as_7_7_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+    g.players[0].mana_pool.add_colorless(10);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("The Dawning Archaic castable for {10}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("The Dawning Archaic should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 7);
+    assert_eq!(view.toughness, 7);
+    assert!(view.keywords.contains(&Keyword::Reach),
+        "The Dawning Archaic should have reach");
+}

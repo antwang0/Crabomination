@@ -12,12 +12,12 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
-    SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition, TriggeredAbility,
-    Value,
+    CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
+    Keyword, SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition,
+    TriggeredAbility, Value,
 };
 use crate::effect::PlayerRef;
-use crate::mana::{cost, generic, b, g, w, Color};
+use crate::mana::{cost, generic, b, g, r, u, w, x, Color};
 
 /// Strixhaven Pest token: 1/1 black-and-green creature with
 /// "When this creature dies, you gain 1 life." Shared by Pest
@@ -145,6 +145,112 @@ pub fn tend_the_pests() -> CardDefinition {
                 }),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fractal Summoning (Lesson) ─────────────────────────────────────────────
+
+/// Fractal Summoning — {X}{G}{U} Sorcery — Lesson. "Create a 0/0 green
+/// and blue Fractal creature token. Put X +1/+1 counters on it."
+///
+/// Uses `Value::XFromCost` so the counter count is read from the X
+/// chosen at cast time. The resulting Fractal is effectively an X/X.
+pub fn fractal_summoning() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Fractal Summoning",
+        cost: cost(&[x(), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Spirit Summoning (Lesson) ──────────────────────────────────────────────
+
+/// Spirit Summoning — {1}{R}{W} Sorcery — Lesson. "Create a 3/2 red and
+/// white Spirit creature token."
+pub fn spirit_summoning() -> CardDefinition {
+    let spirit = TokenDefinition {
+        name: "Spirit".to_string(),
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Spirit Summoning",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: spirit,
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

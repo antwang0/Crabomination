@@ -906,6 +906,149 @@ fn decisive_denial_mode_one_fights_creatures() {
         "Bear should survive the fight");
 }
 
+// ── Teach by Example ───────────────────────────────────────────────────────
+
+#[test]
+fn teach_by_example_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::teach_by_example());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Teach by Example castable for {1}{R}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+// ── Introduction to Prophecy ───────────────────────────────────────────────
+
+#[test]
+fn introduction_to_prophecy_scrys_then_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Introduction to Prophecy castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Should draw 1 card (net zero from casting + drawing)");
+}
+
+// ── Introduction to Annihilation ───────────────────────────────────────────
+
+#[test]
+fn introduction_to_annihilation_exiles_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
+
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Introduction to Annihilation castable for {5}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be off the battlefield (exiled)");
+}
+
+// ── Environmental Sciences ─────────────────────────────────────────────────
+
+#[test]
+fn environmental_sciences_fetches_basic_land_and_gains_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with a basic Forest.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::environmental_sciences());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Environmental Sciences castable for {2}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (search to hand) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Should fetch a basic land to hand");
+    assert_eq!(g.players[0].life, life_before + 2,
+        "Should gain 2 life");
+}
+
+// ── Fractal Summoning ──────────────────────────────────────────────────────
+
+#[test]
+fn fractal_summoning_creates_token_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fractal_summoning());
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(3),
+    })
+    .expect("Fractal Summoning castable for {X=3}{G}{U}");
+    drain_stack(&mut g);
+
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal")
+        .expect("Fractal token present");
+    let counters = fractal.counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 3, "Fractal should have 3 +1/+1 counters (X=3)");
+    assert_eq!(fractal.power(), 3, "Fractal should be a 3/3");
+    assert_eq!(fractal.toughness(), 3);
+}
+
+// ── Spirit Summoning ───────────────────────────────────────────────────────
+
+#[test]
+fn spirit_summoning_creates_three_two_spirit_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_summoning());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spirit Summoning castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit")
+        .collect();
+    assert_eq!(spirits.len(), 1, "should create one Spirit token");
+    let s = spirits[0];
+    assert_eq!(s.power(), 3, "Spirit should be 3/2");
+    assert_eq!(s.toughness(), 2);
+}
+
 // Suppress unused-import lint when CounterType isn't used in this batch.
 #[allow(dead_code)]
 fn _keepalive(_: CounterType) {}

@@ -386,4 +386,46 @@ pub fn ark_of_hunger() -> CardDefinition {
     }
 }
 
+/// Strixhaven Skycoach — {3} Artifact — Vehicle 3/2. Flying.
+/// "When this Vehicle enters, you may search your library for a basic
+/// land card, reveal it, put it into your hand, then shuffle."
+///
+/// Body + ETB search wired. Crew is omitted (no Crew primitive yet —
+/// the card sits on the battlefield as an artifact with P/T but lacks
+/// the activation that would animate it into a creature). The ETB
+/// land-search uses the same `Effect::Search` pattern as Environmental
+/// Scientist / Studious First-Year back face.
+pub fn strixhaven_skycoach() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, Keyword};
+    CardDefinition {
+        name: "Strixhaven Skycoach",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 

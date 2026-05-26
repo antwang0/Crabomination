@@ -73,7 +73,7 @@ pub fn galazeth_prismari() -> CardDefinition {
 /// Now wired: the activated ability uses `life_cost: 10` +
 /// `sorcery_speed: true` + `Effect::Untap` over each land you control.
 pub fn beledros_witherbloom() -> CardDefinition {
-    use crate::card::{SelectionRequirement, Value};
+    use crate::card::SelectionRequirement;
     use crate::effect::ActivatedAbility;
     use crate::mana::ManaCost;
     CardDefinition {

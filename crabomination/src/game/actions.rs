@@ -621,6 +621,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable(p, &card);
 
         let was_creature_spell = card.definition.is_creature();
+        let ward_target = target.clone();
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -638,6 +639,10 @@ impl GameState {
         // (e.g. CastSpellTargetsMatch) read the just-cast spell's target
         // from the stack while the spell still sits there.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell);
+        // Ward: if the spell targets a permanent with Ward controlled by an
+        // opponent, push a "counter unless pays {N}" trigger onto the stack
+        // above the spell. This matches CR 702.21c.
+        self.fire_ward_triggers(p, card_id, ward_target);
         self.give_priority_to_active();
     }
 
@@ -968,6 +973,59 @@ impl GameState {
                     .iter()
                     .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
         })
+    }
+
+    /// Ward enforcement (CR 702.21): when a spell or ability targets a
+    /// permanent with Ward controlled by an opponent, push a "counter
+    /// unless controller pays {N}" trigger onto the stack. The Ward
+    /// trigger resolves before the spell, giving the caster a chance to
+    /// pay. If they can't (or won't), the spell is countered.
+    pub(crate) fn fire_ward_triggers(
+        &mut self,
+        caster: usize,
+        spell_id: CardId,
+        target: Option<Target>,
+    ) {
+        let Some(Target::Permanent(target_id)) = target else { return };
+        let ward_cost = {
+            let Some(card) = self.battlefield_find(target_id) else { return };
+            if card.controller == caster { return; }
+            let computed = self.compute_battlefield();
+            let kws = computed.iter()
+                .find(|c| c.id == target_id)
+                .map(|c| c.keywords.as_slice())
+                .unwrap_or(&card.definition.keywords);
+            let mut ward = None;
+            for kw in kws {
+                if let Keyword::Ward(n) = kw {
+                    ward = Some(*n);
+                    break;
+                }
+            }
+            match ward {
+                Some(n) if n > 0 => n,
+                _ => return,
+            }
+        };
+        let ward_mana = crate::mana::ManaCost {
+            symbols: vec![crate::mana::ManaSymbol::Generic(ward_cost)],
+        };
+        let ward_source = target_id;
+        let ward_controller = self.battlefield_find(target_id)
+            .map(|c| c.controller)
+            .unwrap_or(0);
+        self.stack.push(StackItem::Trigger {
+            source: ward_source,
+            controller: ward_controller,
+            effect: Box::new(Effect::CounterUnlessPaid {
+                what: crate::effect::Selector::Target(0),
+                mana_cost: ward_mana,
+            }),
+            target: Some(Target::Permanent(spell_id)),
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+        });
     }
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
