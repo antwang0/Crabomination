@@ -379,16 +379,178 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
     }
 }
 
-// ── Witherbloom Pledgemage ──────────────────────────────────────────────────
+// ── Witherbloom Command ─────────────────────────────────────────────────
 
-/// Witherbloom Pledgemage — {1}{B}{G}, 3/3 Plant Warlock. "{T}, Pay 1
-/// life: Add {B} or {G}."
+/// Witherbloom Command — {2}{B}{G} Sorcery. Choose two among 4 modes.
+/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+pub fn witherbloom_command() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Command",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: Return target creature or PW card from gy to hand.
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            // Mode 1: Destroy target noncreature, nonland permanent with MV ≤ 3.
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Noncreature
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+            // Mode 2: Target player mills 3 cards.
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+            // Mode 3: You gain 3 life.
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Culling Ritual ─────────────────────────────────────────────────────────
+
+/// Culling Ritual — {2}{B}{G} Sorcery. "Destroy each nonland permanent
+/// with mana value 2 or less. Add {B} or {G} for each permanent destroyed
+/// this way."
+///
+/// 🟡 Mana-add-per-destroyed rider omitted (no count-destroyed primitive).
+/// Destruction of MV ≤ 2 nonland permanents is faithful.
+pub fn culling_ritual() -> CardDefinition {
+    CardDefinition {
+        name: "Culling Ritual",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+            body: Box::new(Effect::Destroy {
+                what: Selector::TriggerSource,
+            }),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Rushed Rebirth ─────────────────────────────────────────────────────────
+
+/// Rushed Rebirth — {B}{G} Instant. "Choose target creature. When that
+/// creature dies this turn, search your library for a creature card with
+/// lesser MV, put it onto the battlefield tapped, then shuffle."
 ///
 /// Life is paid up front during cost-payment so the effect is a pure
 /// `AddMana` — qualifies as a true mana ability (CR 605.1a) and
 /// resolves without the stack. "B or G" is approximated as
 /// `ManaPayload::AnyOneColor`: broader than printed but matches the
 /// typical cube-pool ramp pattern.
+/// 🟡 Approximated as: search for any creature into hand (the MV check
+/// and battlefield entry are collapsed).
+pub fn rushed_rebirth() -> CardDefinition {
+    CardDefinition {
+        name: "Rushed Rebirth",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Creature,
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Callous Bloodmage ──────────────────────────────────────────────────────
+
+/// Callous Bloodmage — {2}{B}, 2/1 Vampire Warlock. "When this enters,
+/// choose one — • Create a 1/1 Pest token. • Exile target player's
+/// graveyard. • Draw a card and lose 1 life."
+pub fn callous_bloodmage() -> CardDefinition {
+    let pest = stx_pest_token();
+    CardDefinition {
+        name: "Callous Bloodmage",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(
+            Effect::ChooseMode(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: pest,
+                },
+                Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+                ]),
+            ]),
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 pub fn witherbloom_pledgemage() -> CardDefinition {
     let _ = Color::Black;
     CardDefinition {

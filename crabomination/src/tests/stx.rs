@@ -1297,7 +1297,303 @@ fn field_trip_fetches_forest_and_draws_a_card() {
         "Hand size unchanged (cast -1 + draw +1)");
 }
 
-// ── Reduce to Memory ────────────────────────────────────────────────────────
+// ── Beledros Witherbloom activated ability ─────────────────────────────────
+
+#[test]
+fn beledros_witherbloom_pay_ten_life_untaps_lands() {
+    let mut g = two_player_game();
+    let bele = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.clear_sickness(bele);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    // Tap the lands.
+    g.battlefield.iter_mut().find(|c| c.id == forest).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == island).unwrap().tapped = true;
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bele, ability_index: 0, target: None,
+    }).expect("Beledros activated for 10 life");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().find(|c| c.id == forest).unwrap().tapped,
+        "Forest should be untapped");
+    assert!(!g.battlefield.iter().find(|c| c.id == island).unwrap().tapped,
+        "Island should be untapped");
+    assert_eq!(g.players[0].life, life_before - 10,
+        "Should have paid 10 life");
+}
+
+// ── Decisive Denial mode 1 fight ──────────────────────────────────────────
+
+#[test]
+fn decisive_denial_mode_one_fights_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Put a 1/1 on opponent's side.
+    let opp = g.add_card_to_battlefield(1, catalog::eyetwitch());
+    g.add_card_to_library(1, catalog::island()); // library for Eyetwitch draw
+    let id = g.add_card_to_hand(0, catalog::decisive_denial());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+
+    // Target the opponent's creature (defender) — our creature (attacker)
+    // is auto-picked via the `Take(EachPermanent(your creature), 1)` selector.
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(opp)),
+        mode: Some(1),
+        x_value: None,
+    }).expect("Decisive Denial mode 1 castable");
+    drain_stack(&mut g);
+
+    // Eyetwitch (1/1) takes 2 damage from Bear (2/2) and dies.
+    assert!(!g.battlefield.iter().any(|c| c.id == opp),
+        "Eyetwitch should be dead from fight");
+    // Bear survives (took 1 damage, has 2 toughness).
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should survive the fight");
+}
+
+// ── Teach by Example ───────────────────────────────────────────────────────
+
+#[test]
+fn teach_by_example_is_instant() {
+    let card = catalog::teach_by_example();
+    assert_eq!(card.name, "Teach by Example");
+    assert!(card.card_types.contains(&crate::card::CardType::Instant));
+}
+
+// ── Introduction to Prophecy ───────────────────────────────────────────────
+
+#[test]
+fn introduction_to_prophecy_scrys_then_draws() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::introduction_to_prophecy());
+    let hand_before = g.players[0].hand.len();
+
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Introduction to Prophecy castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (draw) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Should draw 1 card (net zero from casting + drawing)");
+}
+
+// ── Introduction to Annihilation ───────────────────────────────────────────
+
+#[test]
+fn introduction_to_annihilation_exiles_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
+
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    })
+    .expect("Introduction to Annihilation castable for {5}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be off the battlefield (exiled)");
+}
+
+// ── Environmental Sciences ─────────────────────────────────────────────────
+
+#[test]
+fn environmental_sciences_fetches_basic_land_and_gains_life() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed library with a basic Forest.
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::environmental_sciences());
+    let life_before = g.players[0].life;
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Environmental Sciences castable for {2}");
+    drain_stack(&mut g);
+
+    // Hand: -1 (cast) +1 (search to hand) = 0 net.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "Should fetch a basic land to hand");
+    assert_eq!(g.players[0].life, life_before + 2,
+        "Should gain 2 life");
+}
+
+// ── Fractal Summoning ──────────────────────────────────────────────────────
+
+#[test]
+fn fractal_summoning_creates_token_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fractal_summoning());
+
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: Some(3),
+    })
+    .expect("Fractal Summoning castable for {X=3}{G}{U}");
+    drain_stack(&mut g);
+
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal")
+        .expect("Fractal token present");
+    let counters = fractal.counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(counters, 3, "Fractal should have 3 +1/+1 counters (X=3)");
+    assert_eq!(fractal.power(), 3, "Fractal should be a 3/3");
+    assert_eq!(fractal.toughness(), 3);
+}
+
+// ── Spirit Summoning ───────────────────────────────────────────────────────
+
+#[test]
+fn spirit_summoning_creates_three_two_spirit_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spirit_summoning());
+
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Spirit Summoning castable for {1}{R}{W}");
+    drain_stack(&mut g);
+
+    let spirits: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit")
+        .collect();
+    assert_eq!(spirits.len(), 1, "should create one Spirit token");
+    let s = spirits[0];
+    assert_eq!(s.power(), 3, "Spirit should be 3/2");
+    assert_eq!(s.toughness(), 2);
+}
+
+// ── Silverquill Apprentice ─────────────────────────────────────────────────
+
+#[test]
+fn silverquill_apprentice_drains_on_instant_cast() {
+    let mut g = two_player_game();
+    let _app = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Magecraft drain: P0 +1 life, P1 -1 life (on top of Bolt's 3 damage).
+    assert_eq!(g.players[0].life, p0_life + 1,
+        "Silverquill Apprentice should drain +1 life to controller");
+    assert_eq!(g.players[1].life, p1_life - 3 - 1,
+        "Opponent loses 3 (Bolt) + 1 (Magecraft drain)");
+}
+
+#[test]
+fn silverquill_apprentice_is_two_one_human_wizard() {
+    let card = catalog::silverquill_apprentice();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}
+
+// ── Shadewing Laureate ────────────────────────────────────────────────────
+
+#[test]
+fn shadewing_laureate_has_flying_and_is_two_two() {
+    let card = catalog::shadewing_laureate();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Bird));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Warlock));
+}
+
+// ── Returned Pastcaller ───────────────────────────────────────────────────
+
+#[test]
+fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let id = g.add_card_to_hand(0, catalog::returned_pastcaller());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), mode: None, x_value: None,
+    })
+    .expect("Returned Pastcaller castable for {4}{R}{W}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt should be returned to hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt should no longer be in graveyard");
+}
+
+#[test]
+fn returned_pastcaller_is_four_four_flying_spirit_cleric() {
+    let card = catalog::returned_pastcaller();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Spirit));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Cleric));
+}
+
+// ── Elemental Expressionist ───────────────────────────────────────────────
+
+#[test]
+fn elemental_expressionist_taps_and_stuns_on_magecraft() {
+    let mut g = two_player_game();
+    let _expr = g.add_card_to_battlefield(0, catalog::elemental_expressionist());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.tapped, "Opponent creature should be tapped by Magecraft");
+    assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
+        "Opponent creature should have a stun counter");
+}
+
+#[test]
+fn elemental_expressionist_is_four_three_human_wizard() {
+    let card = catalog::elemental_expressionist();
+    assert_eq!(card.power, 4);
+    assert_eq!(card.toughness, 3);
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Human));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Wizard));
+}
+
+// Suppress unused-import lint when CounterType isn't used in this batch.
+#[allow(dead_code)]
+fn _keepalive(_: CounterType) {}
 
 /// Reduce to Memory exiles the targeted permanent and mints a 2/2
 /// colorless Inkling artifact creature for its controller.

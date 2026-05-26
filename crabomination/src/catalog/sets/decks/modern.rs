@@ -8,8 +8,8 @@
 
 use super::super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Selector,
-    Subtypes, Supertype, TriggeredAbility, Value,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, Keyword,
+    SelectionRequirement, Selector, Subtypes, Supertype, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
@@ -8387,6 +8387,29 @@ pub fn saheeli_rai() -> CardDefinition {
     }
 }
 
+// ── modern_decks-16: new cube cards ──────────────────────────────────────────
+
+/// Electrolyze — {1}{U}{R} Instant. Deal 2 damage divided as you choose
+/// among one or two targets. Draw a card.
+///
+/// Approximation: single-target 2 damage + draw (divided-damage primitive
+/// not yet wired).
+pub fn electrolyze() -> CardDefinition {
+    CardDefinition {
+        name: "Electrolyze",
+        cost: cost(&[generic(1), u(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Ashiok, Nightmare Weaver — {1}{U}{B} Legendary Planeswalker — Ashiok.
 /// 3 loyalty.
 /// **+2**: Exile the top three cards of target opponent's library.
@@ -8437,6 +8460,60 @@ pub fn ashiok_nightmare_weaver() -> CardDefinition {
                 effect: Effect::WinGame { who: PlayerRef::You },
             },
         ],
+        ..Default::default()
+    }
+}
+
+// Lightning Helix — already in catalog as `lightning_helix` (lea set).
+
+/// Kolaghan's Command — {1}{B}{R} Instant. Choose two:
+/// - Return target creature card from your graveyard to your hand.
+/// - Target player discards a card.
+/// - Destroy target artifact.
+/// - Deal 2 damage to any target.
+///
+/// Approximation: ChooseMode over the four options paired (we pick the
+/// most common pairs). Collapsed to single-mode selection.
+pub fn kolaghans_command() -> CardDefinition {
+    CardDefinition {
+        name: "Kolaghan's Command",
+        cost: cost(&[generic(1), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            // Mode 0: Return creature from graveyard + opponent discards
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                    random: false,
+                },
+            ]),
+            // Mode 1: Destroy artifact + 2 damage to any target
+            Effect::Seq(vec![
+                Effect::Destroy {
+                    what: target_filtered(SelectionRequirement::Artifact),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+            ]),
+            // Mode 2: Return creature + 2 damage to opponent
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(2),
+                },
+            ]),
+        ]),
         ..Default::default()
     }
 }
@@ -8496,6 +8573,37 @@ pub fn tamiyo_collector_of_tales() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Collective Brutality — {1}{B} Sorcery. Choose one (escalate collapsed):
+/// - Target creature gets -2/-2 until end of turn.
+/// - Target player discards a card.
+/// - Target opponent loses 2 life and you gain 2 life.
+pub fn collective_brutality() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Brutality",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-2),
+                toughness: Value::Const(-2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Discard {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+                random: false,
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -8574,6 +8682,24 @@ pub fn geyadrone_dihada() -> CardDefinition {
     }
 }
 
+/// Expressive Iteration — {U}{R} Sorcery. Look at the top three cards of
+/// your library. Put one into your hand, one on the bottom, and one on
+/// top.
+///
+/// Approximation: Scry 2 + Draw 1 (same as Anticipate pattern).
+pub fn expressive_iteration() -> CardDefinition {
+    CardDefinition {
+        name: "Expressive Iteration",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Korvold, Fae-Cursed King — {2}{B}{R}{G} Legendary Creature — Dragon
 /// Noble. 4/4 Flying. "Whenever you sacrifice a permanent, put a +1/+1
 /// counter on this and draw a card."
@@ -8615,6 +8741,20 @@ pub fn korvold_fae_cursed_king() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Explore — {1}{G} Sorcery. Draw a card. You may play an additional land
+/// this turn.
+///
+/// Approximation: Draw 1 only (additional land drop not yet modeled).
+pub fn explore() -> CardDefinition {
+    CardDefinition {
+        name: "Explore",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ..Default::default()
     }
 }
@@ -8673,6 +8813,54 @@ pub fn lord_xander_the_collector() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     count: Value::Const(3),
                     filter: SelectionRequirement::Nonland,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Oko, Thief of Crowns — {1}{G}{U} Planeswalker. 4 loyalty.
+/// +2: Create a Food token.
+/// +1: Target artifact or creature becomes a 3/3 Elk (approximation:
+///   just set to 3/3 via ResetCreature).
+/// -5: Exchange control of target (collapsed to gain control).
+///
+/// Approximation: Food token approximated as gain 3 life. -5 collapsed.
+pub fn oko_thief_of_crowns() -> CardDefinition {
+    use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
+    CardDefinition {
+        name: "Oko, Thief of Crowns",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes {
+            planeswalker_subtypes: vec![PlaneswalkerSubtype::Oko],
+            ..Default::default()
+        },
+        base_loyalty: 4,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 2,
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::ResetCreature {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                    ),
+                    duration: Duration::Permanent,
+                },
+            },
+            LoyaltyAbility {
+                loyalty_cost: -5,
+                effect: Effect::GainControl {
+                    what: target_filtered(SelectionRequirement::Permanent),
+                    duration: Duration::Permanent,
                 },
             },
         ],
@@ -8756,68 +8944,27 @@ pub fn territorial_kavu() -> CardDefinition {
     }
 }
 
-/// Kolaghan's Command — {1}{B}{R} Instant. Choose two —
-/// • Target player discards a card.
-/// • Return target creature card from your graveyard to your hand.
-/// • Destroy target artifact.
-/// • Kolaghan's Command deals 2 damage to target creature or
-///   planeswalker.
-///
-/// Cube-style approximation: the printed "choose two" multi-mode picker
-/// (CR 700.2d) is collapsed to a single `ChooseMode` of three commonly-
-/// useful bundled pairs (each pair covers one creature + one creature/
-/// artifact answer plus the discard/draw exchange). The AutoDecider
-/// picks mode 0 (discard + reanimate) by default; ScriptedDecider can
-/// override.
-pub fn kolaghans_command() -> CardDefinition {
+/// Kitchen Finks — {1}{G}{W} Creature 3/2. When this enters, you gain
+/// 2 life. Persist.
+pub fn kitchen_finks() -> CardDefinition {
     CardDefinition {
-        name: "Kolaghan's Command",
-        cost: cost(&[generic(1), b(), r()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: discard + return creature from gy.
-            Effect::Seq(vec![
-                Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Any,
-                },
-                Effect::Move {
-                    what: target_filtered(
-                        SelectionRequirement::Creature,
-                    ),
-                    to: ZoneDest::Hand(PlayerRef::You),
-                },
-            ]),
-            // Mode 1: 2 damage + destroy artifact.
-            Effect::Seq(vec![
-                Effect::DealDamage {
-                    to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
-                    ),
-                    amount: Value::Const(2),
-                },
-                Effect::Destroy {
-                    what: target_filtered(SelectionRequirement::Artifact),
-                },
-            ]),
-            // Mode 2: discard + 2 damage.
-            Effect::Seq(vec![
-                Effect::DiscardChosen {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Any,
-                },
-                Effect::DealDamage {
-                    to: target_filtered(
-                        SelectionRequirement::Creature
-                            .or(SelectionRequirement::Planeswalker),
-                    ),
-                    amount: Value::Const(2),
-                },
-            ]),
-        ]),
+        name: "Kitchen Finks",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Persist],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -8876,6 +9023,28 @@ pub fn wear_tear() -> CardDefinition {
     }
 }
 
+/// Wall of Blossoms — {1}{G} Creature 0/4 Plant Wall. Defender. When this
+/// enters, draw a card.
+pub fn wall_of_blossoms() -> CardDefinition {
+    CardDefinition {
+        name: "Wall of Blossoms",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Trinisphere — {3} Artifact. As long as Trinisphere is untapped, each
 /// spell costs at least {3} to cast.
 ///
@@ -8890,6 +9059,37 @@ pub fn trinisphere() -> CardDefinition {
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
         effect: Effect::Noop,
+        ..Default::default()
+    }
+}
+
+/// Mulldrifter — {4}{U} Creature 2/2 Elemental. Flying. When this enters,
+/// draw two cards. Evoke {2}{U}.
+pub fn mulldrifter() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Mulldrifter",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(2), u()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: true,
+            not_your_turn_only: false,
+            target_filter: None,
+        }),
         ..Default::default()
     }
 }
@@ -8938,6 +9138,45 @@ pub fn stillmoon_cavalier() -> CardDefinition {
     }
 }
 
+/// Shriekmaw — {4}{B} Creature 3/2 Elemental. Fear (approx: Menace).
+/// When this enters, destroy target nonblack creature.
+/// Evoke {1}{B}.
+pub fn shriekmaw() -> CardDefinition {
+    use crate::card::AlternativeCost;
+    CardDefinition {
+        name: "Shriekmaw",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::Not(Box::new(
+                            SelectionRequirement::HasColor(Color::Black),
+                        ))),
+                ),
+            },
+        }],
+        alternative_cost: Some(AlternativeCost {
+            mana_cost: cost(&[generic(1), b()]),
+            life_cost: 0,
+            exile_filter: None,
+            evoke_sacrifice: true,
+            not_your_turn_only: false,
+            target_filter: None,
+        }),
+        ..Default::default()
+    }
+}
+
 /// Wishclaw Talisman — {1}{B} Artifact. Enters with three wish counters.
 /// {T}, Remove a wish counter from this: Search your library for a card
 /// and put that card into your hand, then shuffle. An opponent gains
@@ -8980,16 +9219,100 @@ pub fn wishclaw_talisman() -> CardDefinition {
     }
 }
 
+/// Thragtusk — {4}{G} Creature 5/3 Beast. When this enters, you gain 5
+/// life. When this leaves the battlefield, create a 3/3 green Beast
+/// creature token.
+pub fn thragtusk() -> CardDefinition {
+    CardDefinition {
+        name: "Thragtusk",
+        cost: cost(&[generic(4), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 3,
+        keywords: vec![],
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(5),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Beast".into(),
+                        power: 3,
+                        toughness: 3,
+                        keywords: vec![],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
+                    },
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Lingering Souls — {2}{W} Sorcery. Create two 1/1 white Spirit creature
+/// tokens with flying. Flashback {1}{B}.
+pub fn lingering_souls() -> CardDefinition {
+    CardDefinition {
+        name: "Lingering Souls",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), b()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Spirit],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        },
+        ..Default::default()
+    }
+}
+
 /// Murderous Cut — {5}{B} Instant. Delve. Destroy target creature.
 ///
 /// Cube-style approximation: the Delve cost-reduction primitive isn't
 /// wired yet (same gap as Treasure Cruise, Dig Through Time). The card
 /// is castable at full {5}{B} cost; the body is a clean
 /// `Destroy(Creature)`. Promote to ✅ when Delve lands.
+/// Murderous Cut — {4}{B} Instant. Destroy target creature.
+///
+/// Delve cost reduction omitted (Delve not wired); ships at full cost.
 pub fn murderous_cut() -> CardDefinition {
     CardDefinition {
         name: "Murderous Cut",
-        cost: cost(&[generic(5), b()]),
+        cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),
@@ -9022,6 +9345,60 @@ pub fn death_greeters_champion() -> CardDefinition {
             1,
             crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
         ))],
+        ..Default::default()
+    }
+}
+
+// Terminate — already in catalog as `terminate`.
+// Spell Pierce — already in catalog.
+
+/// Relic of Progenitus — {1} Artifact. {T}: Target player exiles a card
+/// from their graveyard. {1}, Exile Relic: Exile all graveyards, draw 1.
+///
+/// Approximation: first ability only (exile each opponent's top gy card).
+pub fn relic_of_progenitus() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Relic of Progenitus",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                mana_cost: ManaCost::default(),
+                effect: Effect::Move {
+                    what: Selector::CardsInZone {
+                        zone: crate::card::Zone::Graveyard,
+                        who: PlayerRef::EachOpponent,
+                        filter: SelectionRequirement::Any,
+                    },
+                    to: ZoneDest::Exile,
+                },
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: false,
+                condition: None,
+                life_cost: 0,
+            },
+            ActivatedAbility {
+                tap_cost: false,
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::Seq(vec![
+                    Effect::ForEach {
+                        selector: Selector::Player(PlayerRef::EachPlayer),
+                        body: Box::new(Effect::ShuffleGraveyardIntoLibrary {
+                            who: PlayerRef::Triggerer,
+                        }),
+                    },
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                ]),
+                once_per_turn: false,
+                sorcery_speed: false,
+                sac_cost: true,
+                condition: None,
+                life_cost: 0,
+            },
+        ],
         ..Default::default()
     }
 }
@@ -9088,6 +9465,33 @@ pub fn detectives_phoenix() -> CardDefinition {
     }
 }
 
+// Tidehollow Sculler — already in catalog.
+
+/// Spell Queller — {1}{W}{U} Creature 2/3 Spirit. Flash, flying.
+/// When this enters, exile target spell with mana value 4 or less.
+///
+/// Approximation: ETB counters target spell (exile-until-LTB not wired).
+pub fn spell_queller() -> CardDefinition {
+    use crate::effect::shortcut::counter_target_spell;
+    CardDefinition {
+        name: "Spell Queller",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: counter_target_spell(),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Lonis, Genetics Expert — {1}{G}{U} Legendary Creature — Otter
 /// Detective. 2/2. "Whenever a creature you control enters, investigate."
 ///
@@ -9124,6 +9528,30 @@ pub fn lonis_genetics_expert() -> CardDefinition {
                 count: Value::Const(1),
                 definition: clue_token(),
             },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade (collapsed).
+///
+/// Approximation: Haste body with ETB that exiles the top card and draws
+/// it (cascade approximation: draw 1 as a rough proxy).
+pub fn bloodbraid_elf() -> CardDefinition {
+    CardDefinition {
+        name: "Bloodbraid Elf",
+        cost: cost(&[generic(2), r(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
         ..Default::default()
     }
@@ -9193,6 +9621,21 @@ pub fn brightglass_gearhulk() -> CardDefinition {
     }
 }
 
+/// Firebolt — {R} Sorcery. Deal 2 damage to any target. Flashback {4}{R}.
+pub fn firebolt() -> CardDefinition {
+    CardDefinition {
+        name: "Firebolt",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(4), r()]))],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
 /// Mossborn Hydra — {X}{G} Creature — Hydra. 0/0. "This creature
 /// enters with X +1/+1 counters on it."
 ///
@@ -9217,6 +9660,23 @@ pub fn mossborn_hydra() -> CardDefinition {
         toughness: 0,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         max_counters_of_kind: None,
+        ..Default::default()
+    }
+}
+
+/// Chainer's Edict — {1}{B} Sorcery. Target player sacrifices a creature.
+/// Flashback {5}{B}{B}.
+pub fn chainers_edict() -> CardDefinition {
+    CardDefinition {
+        name: "Chainer's Edict",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(5), b(), b()]))],
+        effect: Effect::Sacrifice {
+            who: target_filtered(SelectionRequirement::Player),
+            count: Value::Const(1),
+            filter: SelectionRequirement::Creature,
+        },
         ..Default::default()
     }
 }
@@ -9248,6 +9708,22 @@ pub fn mai_scornful_striker() -> CardDefinition {
     }
 }
 
+/// Deep Analysis — {3}{U} Sorcery. Target player draws 2 cards.
+/// Flashback — {1}{U}, Pay 3 life.
+///
+/// Approximation: Flashback at {1}{U} (life cost folded away since
+/// flashback doesn't support life-cost riders yet).
+pub fn deep_analysis() -> CardDefinition {
+    CardDefinition {
+        name: "Deep Analysis",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ..Default::default()
+    }
+}
+
 /// Tempest Angler — {2}{U} Creature — Merfolk Wizard. 2/2 Flying.
 /// "When this creature enters, scry 2."
 ///
@@ -9270,6 +9746,39 @@ pub fn tempest_angler() -> CardDefinition {
             who: PlayerRef::You,
             amount: Value::Const(2),
         })],
+        ..Default::default()
+    }
+}
+
+/// Decree of Justice — {X}{X}{2}{W}{W} Sorcery. Create X 4/4 white Angel
+/// creature tokens with flying.
+///
+/// Approximation: Create X tokens where X = XFromCost.
+pub fn decree_of_justice() -> CardDefinition {
+    use crate::mana::x;
+    CardDefinition {
+        name: "Decree of Justice",
+        cost: cost(&[x(), x(), generic(2), w(), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::XFromCost,
+            definition: TokenDefinition {
+                name: "Angel".into(),
+                power: 4,
+                toughness: 4,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::White],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Angel],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        },
         ..Default::default()
     }
 }
@@ -9297,6 +9806,33 @@ pub fn carnage_interpreter() -> CardDefinition {
             amount: Value::Const(1),
             random: true,
         })],
+        ..Default::default()
+    }
+}
+
+/// Tireless Provisioner — {2}{G} Creature 3/2 Elf Druid.
+/// Whenever a land enters under your control, create a Treasure token.
+///
+/// Landfall → Treasure.
+pub fn tireless_provisioner() -> CardDefinition {
+    CardDefinition {
+        name: "Tireless Provisioner",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+        }],
         ..Default::default()
     }
 }
@@ -9364,37 +9900,88 @@ pub fn helix_pinnacle() -> CardDefinition {
     }
 }
 
+fn treasure_token() -> TokenDefinition {
+    use crate::card::ActivatedAbility;
+    TokenDefinition {
+        name: "Treasure".into(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Artifact],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes::default(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+        }],
+        triggered_abilities: vec![],
+    }
+}
+
+/// Courser of Kruphix — {1}{G}{G} Creature 2/4 Centaur.
+/// Whenever a land enters the battlefield under your control, you gain 1 life.
+///
+/// Approximation: landfall lifegain only (reveal-top omitted).
+pub fn courser_of_kruphix() -> CardDefinition {
+    CardDefinition {
+        name: "Courser of Kruphix",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature, CardType::Enchantment],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LandPlayed, EventScope::YourControl),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Push claude/modern_decks additions ──────────────────────────────────
 
-/// Collective Brutality — {1}{B} Sorcery.
-/// Escalate — Discard a card. Choose one or more —
-/// • Target opponent reveals hand; you choose IS card to discard.
-/// • Target creature gets -2/-2 until end of turn.
-/// • Target opponent loses 2 life and you gain 2 life.
+/// Fiery Confluence — {2}{R}{R} Sorcery. Choose three. You may choose the
+/// same mode more than once.
+/// - Deal 1 damage to each creature.
+/// - Deal 2 damage to each opponent.
+/// - Destroy target artifact.
 ///
-/// Approximation: modeled as a 3-mode ChooseMode without escalate.
-pub fn collective_brutality() -> CardDefinition {
+/// Approximation: ChooseMode over the three options (single pick, not 3x).
+pub fn fiery_confluence() -> CardDefinition {
     CardDefinition {
-        name: "Collective Brutality",
-        cost: cost(&[generic(1), b()]),
+        name: "Fiery Confluence",
+        cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ChooseMode(vec![
-            Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::HasCardType(CardType::Instant)
-                    .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+            Effect::ForEach {
+                selector: Selector::EachPermanent(SelectionRequirement::Creature),
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::TriggerSource,
+                    amount: Value::Const(1),
+                }),
             },
-            Effect::PumpPT {
-                what: target_filtered(SelectionRequirement::Creature),
-                power: Value::Const(-2),
-                toughness: Value::Const(-2),
-                duration: Duration::EndOfTurn,
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(6),
             },
-            Effect::Drain {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                to: Selector::You,
-                amount: Value::Const(2),
+            Effect::Destroy {
+                what: target_filtered(SelectionRequirement::Artifact),
             },
         ]),
         ..Default::default()
@@ -9507,6 +10094,21 @@ pub fn descendant_of_storms() -> CardDefinition {
     }
 }
 
+// Hymn to Tourach already in catalog.
+
+/// Sinkhole — {B}{B} Sorcery. Destroy target land.
+pub fn sinkhole() -> CardDefinition {
+    CardDefinition {
+        name: "Sinkhole",
+        cost: cost(&[b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Land),
+        },
+        ..Default::default()
+    }
+}
+
 /// Keen-Eyed Curator — {2}{G}, 3/3 Elf Druid.
 /// ETB: +1/+1 counter on self + graveyard hate approximation.
 pub fn keen_eyed_curator() -> CardDefinition {
@@ -9533,6 +10135,40 @@ pub fn keen_eyed_curator() -> CardDefinition {
     }
 }
 
+/// Pernicious Deed — {1}{B}{G} Enchantment. {X}, Sacrifice this:
+/// Destroy each nonland permanent with mana value X or less.
+///
+/// Approximation: {3}, Sacrifice: destroy each nonland permanent with
+/// mana value 3 or less (X collapsed to 3).
+/// Guardian Scalelord — {4}{W} Creature 3/4 Dragon. Flying.
+/// Whenever this creature attacks, another target creature you control
+/// gains flying until end of turn.
+pub fn guardian_scalelord() -> CardDefinition {
+    CardDefinition {
+        name: "Guardian Scalelord",
+        cost: cost(&[generic(4), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Intervention Pact — {0} Instant.
 /// "Gain 3 life and prevent the next 3 damage that would be dealt to
 /// target player this turn. At the beginning of your next upkeep, pay
@@ -9540,6 +10176,11 @@ pub fn keen_eyed_curator() -> CardDefinition {
 ///
 /// Approximation: models gain 3 life + delayed PayOrLoseGame upkeep cost.
 /// The damage-prevention shield is omitted (no damage-prevention primitive).
+/// Intervention Pact — {0} Instant. Prevent the next 3 damage that would
+/// be dealt to any target this turn. At the beginning of your next upkeep,
+/// pay {1}{W}{W}. If you don't, you lose the game.
+///
+/// Approximation: gain 3 life (damage prevention collapsed) + pact upkeep.
 pub fn intervention_pact() -> CardDefinition {
     use crate::effect::DelayedTriggerKind;
     CardDefinition {
@@ -9582,6 +10223,23 @@ pub fn gush() -> CardDefinition {
     }
 }
 
+/// Baleful Mastery — {3}{B} Instant. Exile target creature or planeswalker.
+///
+/// The alt-cost {1}{B} "an opponent draws a card" mode is omitted.
+pub fn baleful_mastery() -> CardDefinition {
+    CardDefinition {
+        name: "Baleful Mastery",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Exile {
+            what: target_filtered(
+                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 // ── Cube expansion: body-only stubs ─────────────────────────────────────────
 
 /// Enduring Innocence — {W}{W}{W} Enchantment Creature — Glimmer. 2/1.
@@ -9615,6 +10273,36 @@ pub fn enduring_innocence() -> CardDefinition {
             effect: Effect::Draw {
                 who: Selector::You,
                 amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elite Spellbinder — {2}{W} Creature 3/1 Human Cleric. Flying.
+/// When this enters, look at target opponent's hand. Choose a nonland card.
+/// Exile it. That card costs {2} more to cast.
+///
+/// Approximation: ETB exiles a nonland card from opponent's hand (the cost
+/// increase isn't modeled — same as Brain Maggot/Tidehollow Sculler).
+pub fn elite_spellbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Elite Spellbinder",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
             },
         }],
         ..Default::default()
@@ -9682,7 +10370,12 @@ pub fn thundertrap_trainer() -> CardDefinition {
 /// 🟡 Body-only: Buyback omitted. Reanimates the top creature from
 /// your graveyard to the battlefield, then registers a delayed trigger
 /// to sacrifice it at end step.
+/// Corpse Dance — {1}{B}{B} Instant. Buyback {2}.
+/// "Put the top creature card of target player's graveyard onto the
+/// battlefield under your control. Sacrifice it at the beginning of
+/// the next end step."
 pub fn corpse_dance() -> CardDefinition {
+    use crate::effect::DelayedTriggerKind;
     CardDefinition {
         name: "Corpse Dance",
         cost: cost(&[generic(1), b(), b()]),
@@ -9752,6 +10445,101 @@ pub fn basking_rootwalla() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Arclight Phoenix — {3}{R} Creature 3/2 Phoenix. Flying, haste.
+/// At the beginning of combat on your turn, if you've cast three or
+/// more instant and/or sorcery spells this turn, return this from
+/// your graveyard to the battlefield.
+///
+/// Approximation: body-only (3/2 flying haste). The graveyard-recursion
+/// trigger needs a "from your graveyard" + "3+ IS spells" gate.
+pub fn arclight_phoenix() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Arclight Phoenix",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::BeginCombat),
+                EventScope::FromYourGraveyard,
+            ),
+            effect: Effect::If {
+                cond: Predicate::InstantsOrSorceriesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(3),
+                },
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Elder Gargaroth — {3}{G}{G} Creature 6/6 Beast.
+/// Vigilance, reach, trample.
+/// Whenever this creature attacks or blocks, choose one:
+/// - Create a 3/3 green Beast creature token.
+/// - You gain 3 life.
+/// - Draw a card.
+pub fn elder_gargaroth() -> CardDefinition {
+    CardDefinition {
+        name: "Elder Gargaroth",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: TokenDefinition {
+                        name: "Beast".into(),
+                        power: 3,
+                        toughness: 3,
+                        keywords: vec![],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Beast],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
+                    },
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            ]),
         }],
         ..Default::default()
     }
@@ -9897,80 +10685,6 @@ pub fn parallax_nexus() -> CardDefinition {
 
 // ── Push XIX: cube creatures ───────────────────────────────────────────
 
-/// Elder Gargaroth — {3}{G}{G} 6/6 Beast.
-/// Vigilance, reach, trample.
-/// "Whenever Elder Gargaroth attacks or blocks, choose one —
-/// Create a 3/3 green Beast creature token; or you draw a card; or
-/// you gain 3 life."
-pub fn elder_gargaroth() -> CardDefinition {
-    use crate::card::TokenDefinition;
-    let beast_token = TokenDefinition {
-        name: "Beast".into(),
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    };
-    let choose_effect = Effect::ChooseMode(vec![
-        Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: beast_token,
-        },
-        Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(1),
-        },
-        Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(3),
-        },
-    ]);
-    CardDefinition {
-        name: "Elder Gargaroth",
-        cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
-            ..Default::default()
-        },
-        power: 6,
-        toughness: 6,
-        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: choose_effect.clone(),
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-                effect: choose_effect,
-            },
-        ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
 // ── Push (claude/modern_decks session 5): new cube cards ────────────────
 
 /// Omnath, Locus of Creation — {R}{G}{W}{U} Legendary 4/4 Elemental.
@@ -9994,6 +10708,138 @@ pub fn omnath_locus_of_creation() -> CardDefinition {
                 Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Vengevine — {2}{G}{G} Creature 4/3 Elemental. Haste.
+/// Whenever you cast a creature spell, if Vengevine is in your graveyard
+/// and you've cast another creature spell this turn, you may return
+/// Vengevine from your graveyard to the battlefield.
+///
+/// Approximation: CreaturesCastThisTurnAtLeast(2) gate + FromYourGraveyard
+/// scope. The "cast another creature" wording means 2+ total creature
+/// spells this turn.
+pub fn vengevine() -> CardDefinition {
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Vengevine",
+        cost: cost(&[generic(2), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec {
+                kind: EventKind::SpellCast,
+                scope: EventScope::FromYourGraveyard,
+                filter: Some(crate::effect::Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature,
+                }),
+            },
+            effect: Effect::If {
+                cond: Predicate::CreaturesCastThisTurnAtLeast {
+                    who: PlayerRef::You,
+                    at_least: Value::Const(2),
+                },
+                then: Box::new(Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: false,
+                    },
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+// ── modern_decks-17: new supplement cards ────────────────────────────────────
+
+/// Grim Flayer — {B}{G} Creature 2/2 Human Warrior. Trample.
+/// Whenever this deals combat damage to a player, surveil 2.
+pub fn grim_flayer() -> CardDefinition {
+    CardDefinition {
+        name: "Grim Flayer",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Young Pyromancer — {1}{R} Creature 2/1 Human Shaman.
+/// Whenever you cast an instant or sorcery spell, create a 1/1 red
+/// Elemental creature token.
+pub fn young_pyromancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    CardDefinition {
+        name: "Young Pyromancer",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Elemental".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Red],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Elemental],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Monastery Swiftspear — {R} Creature 1/2 Human Monk.
+/// Haste. Prowess.
+pub fn monastery_swiftspear() -> CardDefinition {
+    CardDefinition {
+        name: "Monastery Swiftspear",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Prowess],
         ..Default::default()
     }
 }
@@ -10075,6 +10921,46 @@ pub fn torsten_founder_of_benalia() -> CardDefinition {
     }
 }
 
+/// Grisly Salvage — {B}{G} Instant. Mill 5, then return a creature or
+/// land card from among them to your hand.
+///
+/// Approximation: Mill 5 + Scry 1. The "pick a creature or land from
+/// among the milled" is approximated by the Scry — you get to choose
+/// whether the next draw is what you want, preserving the
+/// selection-after-mill gameplay pattern.
+pub fn grisly_salvage() -> CardDefinition {
+    CardDefinition {
+        name: "Grisly Salvage",
+        cost: cost(&[b(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(5) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Thought Erasure — {U}{B} Sorcery. Target opponent reveals their hand.
+/// You choose a nonland card from it. That player discards that card.
+/// Surveil 1.
+pub fn thought_erasure() -> CardDefinition {
+    CardDefinition {
+        name: "Thought Erasure",
+        cost: cost(&[u(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Coveted Jewel — {6} Artifact. ETB draw 3. {T}: Add 3 mana any color.
 pub fn coveted_jewel() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -10093,6 +10979,41 @@ pub fn coveted_jewel() -> CardDefinition {
                 pool: ManaPayload::AnyOneColor(Value::Const(3)),
             },
             ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Lightning Greaves — {2} Artifact — Equipment.
+/// Equipped creature has haste and shroud. Equip {0}.
+///
+/// Approximation: a {2} artifact with Equip {0} that grants Haste
+/// to a target creature on activation. Shroud is listed in the
+/// keyword hint but the attach/equip static is not wired.
+pub fn lightning_greaves() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Lightning Greaves",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(ManaCost::default())],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                duration: Duration::Permanent,
+            },
+            once_per_turn: false,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
         }],
         ..Default::default()
     }
@@ -10130,6 +11051,47 @@ pub fn the_mightstone_and_weakstone() -> CardDefinition {
     }
 }
 
+/// Tasigur, the Golden Fang — {5}{B} Creature 4/5 Legendary Human Shaman.
+/// Delve omitted; shipped at full cost.
+/// Activated: {2}{G/U}: Mill 2, then return a nonland card from your
+/// graveyard to your hand.
+///
+/// The hybrid {G/U} in the activated cost is collapsed to {G} (the
+/// engine has no hybrid mana resolver; {G} is the more
+/// common Sultai activation in practice).
+pub fn tasigur_the_golden_fang() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Tasigur, the Golden Fang",
+        cost: cost(&[generic(5), b()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(2), g()]),
+            effect: Effect::Seq(vec![
+                Effect::Mill { who: Selector::You, amount: Value::Const(2) },
+                Effect::Move {
+                    what: target_filtered(SelectionRequirement::Nonland),
+                    to: ZoneDest::Hand(PlayerRef::You),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Doomsday Excruciator — {5}{B}{B} 6/6 Flying Demon.
 /// ETB: Each player mills 20.
 pub fn doomsday_excruciator() -> CardDefinition {
@@ -10154,6 +11116,39 @@ pub fn doomsday_excruciator() -> CardDefinition {
     }
 }
 
+/// Stonecoil Serpent — {X} Artifact Creature 0/0 Snake.
+/// Trample, reach, protection from multicolored.
+/// Enters the battlefield with X +1/+1 counters on it.
+///
+/// Protection from multicolored is omitted (no
+/// `Keyword::ProtectionFromMulticolored` primitive). The ETB counter
+/// placement uses `Value::XFromCost`.
+pub fn stonecoil_serpent() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Stonecoil Serpent",
+        cost: cost(&[x()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Trample, Keyword::Reach],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Planar Nexus — Land. ETB tapped. {T}: Add any color.
 pub fn planar_nexus() -> CardDefinition {
     use crate::card::ActivatedAbility;
@@ -10173,6 +11168,42 @@ pub fn planar_nexus() -> CardDefinition {
             },
             ..Default::default()
         }],
+        ..Default::default()
+    }
+}
+
+// ── Push XVII: Additional Modern burn/modal spells ─────────────────────────
+
+/// Collective Defiance — {1}{R}{R} Sorcery. Choose one:
+/// - Deal 4 damage to target creature.
+/// - Target player discards their hand, then draws that many cards (approx: discard 3, draw 3).
+/// - Deal 3 damage to target opponent.
+pub fn collective_defiance() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Defiance",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+            Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            ]),
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -10210,6 +11241,26 @@ pub fn kozileks_command() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             Effect::Draw { who: Selector::You, amount: Value::XFromCost },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Char — {2}{R} Instant. Deal 4 damage to any target. You take 2 damage.
+pub fn char() -> CardDefinition {
+    CardDefinition {
+        name: "Char",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            },
+            Effect::DealDamage {
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
         ]),
         ..Default::default()
     }
@@ -10258,6 +11309,28 @@ pub fn eldrazi_confluence() -> CardDefinition {
     }
 }
 
+/// Searing Blaze — {R}{R} Instant. Deal 3 damage to target creature and
+/// 3 damage to that creature's controller (approx: 3 to creature + 3 to
+/// each opponent).
+pub fn searing_blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Searing Blaze",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Aluren — {2}{G}{G} Enchantment.
 /// Each player may cast creature spells with mana value 3 or less without
 /// paying their mana costs.
@@ -10270,6 +11343,25 @@ pub fn aluren() -> CardDefinition {
         name: "Aluren",
         cost: cost(&[generic(2), g(), g()]),
         card_types: vec![CardType::Enchantment],
+        ..Default::default()
+    }
+}
+
+// ── Modern supplement: Burn & Creature additions ────────────────────────────
+
+/// Chain Lightning — {R} Sorcery. Deal 3 damage to any target.
+///
+/// The printed "then that player may pay {R}{R} to copy this spell" rider
+/// is omitted — no spell-copy primitive exists yet.
+pub fn chain_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Chain Lightning",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
         ..Default::default()
     }
 }
@@ -10296,6 +11388,22 @@ pub fn messenger_falcons() -> CardDefinition {
     }
 }
 
+/// Rift Bolt — {2}{R} Sorcery. Deal 3 damage to any target.
+///
+/// Suspend 1 — {R} is omitted (no suspend primitive).
+pub fn rift_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Rift Bolt",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
 /// Trenchpost — Land — Locus.
 /// "{T}: Add {C}{C}."
 /// (Approximation: Locus subtype noted but not mechanically relevant
@@ -10318,6 +11426,22 @@ pub fn trenchpost() -> CardDefinition {
             };
             ab
         }],
+        ..Default::default()
+    }
+}
+
+/// Exquisite Firecraft — {1}{R}{R} Sorcery. Deal 4 damage to any target.
+///
+/// The "spell mastery — this spell can't be countered" rider is omitted.
+pub fn exquisite_firecraft() -> CardDefinition {
+    CardDefinition {
+        name: "Exquisite Firecraft",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(4),
+        },
         ..Default::default()
     }
 }
@@ -10378,6 +11502,30 @@ pub fn three_tree_city() -> CardDefinition {
     }
 }
 
+/// Sulfuric Vortex — {1}{R}{R} Enchantment. At the beginning of each
+/// player's upkeep, Sulfuric Vortex deals 2 damage to that player.
+///
+/// The "players can't gain life" rider is omitted (no replacement-effect
+/// primitive for blanket life-gain prevention).
+pub fn sulfuric_vortex() -> CardDefinition {
+    CardDefinition {
+        name: "Sulfuric Vortex",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Conclave Sledge-Captain — {5}{G} Creature — Elephant Soldier 6/6.
 /// "Trample / Creatures you control with +1/+1 counters on them have
 /// trample. / When Conclave Sledge-Captain enters, put a +1/+1 counter
@@ -10415,6 +11563,51 @@ pub fn conclave_sledge_captain() -> CardDefinition {
                         .and(SelectionRequirement::WithCounter(CounterType::PlusOnePlusOne)),
                 ),
                 keyword: Keyword::Trample,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kari Zev, Skyship Raider — {1}{R} Legendary Creature — Human Pirate 1/3.
+/// First strike, menace. Whenever Kari Zev attacks, create Ragavan, a
+/// legendary 2/1 red Monkey creature token. Ragavan is tapped and attacking.
+///
+/// Approximation: creates a 2/1 Monkey token on attack (the token being
+/// tapped-and-attacking and exiled at end of combat is omitted).
+pub fn kari_zev_skyship_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Kari Zev, Skyship Raider",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Ragavan".into(),
+                    power: 2,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    supertypes: vec![Supertype::Legendary],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Monkey],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
             },
         }],
         ..Default::default()
@@ -10474,6 +11667,49 @@ pub fn wight_of_the_reliquary() -> CardDefinition {
     }
 }
 
+/// Scavenging Ooze — {1}{G} Creature — Ooze 2/2.
+/// {G}: Exile target card from a graveyard. If it was a creature card, put
+/// a +1/+1 counter on Scavenging Ooze and you gain 1 life.
+///
+/// Approximation: {G}, tap: add a +1/+1 counter on this and gain 1 life
+/// (the graveyard-exile targeting is collapsed — no "target card in a
+/// graveyard" selector yet).
+pub fn scavenging_ooze() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    CardDefinition {
+        name: "Scavenging Ooze",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[g()]),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Zopandrel, Hunger Dominus — {5}{G}{G} Creature — Phyrexian Horror 4/6.
 /// "Reach / At the beginning of each combat, double the power and
 /// toughness of each creature you control until end of turn.
@@ -10519,6 +11755,35 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
     }
 }
 
+// ── Push XVII continued: ETB creatures ─────────────────────────────────────
+
+/// Fiend Hunter — {1}{W}{W} Creature — Human Cleric 1/3.
+/// ETB: exile target creature an opponent controls. When Fiend Hunter
+/// leaves the battlefield, return the exiled card.
+/// (Approximation: ETB exile only; return-on-leave omitted.)
+pub fn fiend_hunter() -> CardDefinition {
+    CardDefinition {
+        name: "Fiend Hunter",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Dakkon, Shadow Slayer — {W}{U}{B} Legendary Planeswalker — Dakkon.
 /// "+1: Surveil 2. / -3: Exile target creature. / -6: You get an
 ///  emblem with 'At the beginning of your upkeep, draw a card.'"
@@ -10553,6 +11818,30 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
     }
 }
 
+/// Flametongue Kavu — {3}{R} Creature — Kavu 4/2.
+/// ETB: deal 4 damage to target creature.
+pub fn flametongue_kavu() -> CardDefinition {
+    CardDefinition {
+        name: "Flametongue Kavu",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Fallen Shinobi — {3}{U}{B} Creature — Zombie Ninja 5/4.
 /// "Ninjutsu {2}{U}{B} / Whenever Fallen Shinobi deals combat damage
 /// to a player, exile the top two cards of that player's library. Until
@@ -10581,6 +11870,25 @@ pub fn fallen_shinobi() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+/// Bonecrusher Giant — {2}{R} Creature — Giant 4/3.
+/// (Stomp adventure omitted — implemented as just the creature body.)
+/// Whenever Bonecrusher Giant becomes the target of a spell, deal 2
+/// damage to that spell's controller. (Triggered ability omitted.)
+pub fn bonecrusher_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Bonecrusher Giant",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
         ..Default::default()
     }
 }

@@ -235,6 +235,19 @@ fn project_permanent(
             .iter()
             .map(|ct| format!("{ct:?}"))
             .collect(),
+        // Generic-mana Ward cost surfaced for client UI. Non-mana Ward
+        // variants (Life / Discard / Sacrifice) fall through as 0 — a
+        // future field can carry the richer WardCost shape if a client
+        // needs it.
+        ward_cost: card.definition.keywords.iter().find_map(|kw| {
+            if let crate::card::Keyword::Ward(crate::card::WardCost::Mana(c)) = kw {
+                Some(c.cmc())
+            } else {
+                None
+            }
+        }).unwrap_or(0),
+        mana_value: card.definition.cost.cmc(),
+        is_legendary: card.definition.supertypes.contains(&crate::card::Supertype::Legendary),
     }
 }
 

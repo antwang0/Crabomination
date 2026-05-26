@@ -4370,6 +4370,87 @@ pub fn spectacular_skywhale() -> CardDefinition {
     }
 }
 
+/// Colorstorm Stallion — {1}{U}{R}, 3/3 Elemental Horse.
+/// Ward {1}, haste. "Opus — Whenever you cast an instant or sorcery spell,
+/// this creature gets +1/+1 until end of turn. If five or more mana was
+/// spent to cast that spell, create a token that's a copy of this creature."
+///
+/// 🟡 Body wired with Ward {1}, haste, and the magecraft +1/+1 self-pump.
+/// The "if five or more mana was spent" copy-token rider is omitted (no
+/// copy-permanent primitive). The base body and pump are still strong.
+pub fn colorstorm_stallion() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Colorstorm Stallion",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Ward(1), Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+/// Elemental Mascot — {1}{U}{R}, 1/4 Elemental Bird.
+/// Flying, vigilance. "Opus — Whenever you cast an instant or sorcery spell,
+/// this creature gets +1/+0 until end of turn. If five or more mana was spent
+/// to cast that spell, exile the top card of your library. You may play that
+/// card until the end of your next turn."
+///
+/// 🟡 Body wired with Flying, Vigilance, and the magecraft +1/+0 self-pump.
+/// The "five or more mana" exile-top-card-and-play rider is omitted (no
+/// cast-from-exile pipeline).
+pub fn elemental_mascot() -> CardDefinition {
+    use crate::effect::shortcut::magecraft;
+    use crate::mana::{r, u};
+    CardDefinition {
+        name: "Elemental Mascot",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
 /// Zaffai and the Tempests — {5}{U}{R}, 5/7 Legendary Human Bard Sorcerer.
 /// "Once during each of your turns, you may cast an instant or sorcery
 /// spell from your hand without paying its mana cost."
@@ -6274,143 +6355,7 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
 
 // ── Colorstorm Stallion ─────────────────────────────────────────────────────
 
-/// Colorstorm Stallion — {1}{U}{R} Creature — Elemental Horse, 3/3.
-/// "Ward {1}, haste / Opus — Whenever you cast an instant or sorcery
-/// spell, this creature gets +1/+1 until end of turn. If five or more
-/// mana was spent to cast that spell, create a token that's a copy of
-/// this creature."
-///
-/// 🟡 Body wired: 3/3 Elemental Horse with Ward(1) keyword tag and
-/// Haste. The Opus rider's +1/+1 EOT pump is omitted (mana-spent-on-
-/// cast introspection — same gap as Aberrant Manawurm, Tackle Artist,
-/// Expressive Firedancer, Spectacular Skywhale). The copy-this-creature
-/// branch requires a permanent-copy primitive distinct from
-/// `Effect::CopySpell` (which targets stack items).
-pub fn colorstorm_stallion() -> CardDefinition {
-    use crate::effect::Duration;
-    use crate::effect::shortcut::opus_trigger;
-    use crate::mana::{r, u};
-    let pump_one = || Effect::PumpPT {
-        what: Selector::This,
-        power: Value::Const(1),
-        toughness: Value::Const(1),
-        duration: Duration::EndOfTurn,
-    };
-    CardDefinition {
-        name: "Colorstorm Stallion",
-        cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Horse],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 3,
-        keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        // Push (modern_decks, batch 81): Opus rider fully wired. Small
-        // body (<5 mana): +1/+1 EOT pump. Big body (≥5 mana): +1/+1 EOT
-        // pump + mint a copy of Colorstorm Stallion via the new
-        // `Effect::CreateTokenCopyOf { source: Selector::This }`
-        // primitive. The token is a 3/3 Elemental Horse with Ward(1) +
-        // Haste keywords (inherits the printed body) plus its own Opus
-        // rider (since the copy includes triggered_abilities) — which
-        // chains additively on subsequent IS casts.
-        triggered_abilities: vec![opus_trigger(
-            pump_one(),
-            Effect::Seq(vec![
-                pump_one(),
-                Effect::CreateTokenCopyOf {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    source: Selector::This,
-                    extra_creature_types: vec![],
-                    override_pt: None,
-                },
-            ]),
-        )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
 // ── Elemental Mascot ────────────────────────────────────────────────────────
-
-/// Elemental Mascot — {1}{U}{R} Creature — Elemental Bird, 1/4.
-/// "Flying, vigilance / Opus — Whenever you cast an instant or sorcery
-/// spell, this creature gets +1/+0 until end of turn. If five or more
-/// mana was spent to cast that spell, exile the top card of your
-/// library. You may play that card until the end of your next turn."
-///
-/// Push (modern_decks): full Opus rider now wired. Small body (<5
-/// mana) — +1/+0 EOT. Big body (≥5 mana) — +1/+0 EOT **plus** exile
-/// the top card of your library + `GrantMayPlay(...,
-/// EndOfControllersNextTurn)` so the controller can free-cast the
-/// exiled card during a later sorcery-speed window via
-/// `GameAction::CastFromZoneWithoutPaying`.
-pub fn elemental_mascot() -> CardDefinition {
-    use crate::effect::{Duration, ZoneDest};
-    use crate::effect::shortcut::opus_trigger;
-    use crate::mana::{r, u};
-    let pump = || Effect::PumpPT {
-        what: Selector::This,
-        power: Value::Const(1),
-        toughness: Value::Const(0),
-        duration: Duration::EndOfTurn,
-    };
-    let big_body = Effect::Seq(vec![
-        pump(),
-        Effect::Move {
-            what: Selector::TopOfLibrary {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-            },
-            to: ZoneDest::Exile,
-        },
-        Effect::GrantMayPlay {
-            what: Selector::LastMoved,
-            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-            to_owner: false,
-            exile_after: false,
-        },
-    ]);
-    CardDefinition {
-        name: "Elemental Mascot",
-        cost: cost(&[generic(1), u(), r()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
-            ..Default::default()
-        },
-        power: 1,
-        toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![opus_trigger(pump(), big_body)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
 
 // ── Prismari, the Inspiration ───────────────────────────────────────────────
 
@@ -6471,3 +6416,9 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Colorless Artifact Creatures ───────────────────────────────────────────
+
+// ── Colorless Legendary Creatures ──────────────────────────────────────────
+
+// ── Multicolor Legendary Elder Dragons / Legendary Creatures ──────────────

@@ -5393,6 +5393,606 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   prefer these over the verbose inline form for consistency. Hall
   Monitor (push XXVII) and Witherbloom Apprentice (refactored in
   push XXVII) demonstrate the pattern.
+## Recent additions
+
+- ✅ **modern_decks batch 2 (2026-05-26)**: 21+ new cards + 3 engine
+  improvements + tests:
+  - **Ward enforcement (CR 702.21)**: When a spell targets a permanent
+    with Ward controlled by an opponent, a `CounterUnlessPaid` trigger
+    is placed on the stack. The spell's controller must auto-pay the
+    Ward cost or lose the spell. Promotes all Ward-tagged cards from
+    keyword-only to functional enforcement.
+  - **Stun counter enforcement (CR 701.48)**: Permanents with stun
+    counters no longer untap during the untap step. Instead, one stun
+    counter is removed per step. Promotes Frost Trickster, Deluge
+    Virtuoso, Static Prison, and all stun-counter-adding cards.
+  - **Beledros Witherbloom activation**: Pay-10-life mass-untap-lands
+    activated ability now wired (was body-only 🟡).
+  - **Decisive Denial mode 1**: Fight mode added (attacker auto-picked
+    from your creatures, defender is the target).
+  - New SOS cards: Strife Scholar MDFC, Colorstorm Stallion, Elemental
+    Mascot, Molten Note (Flashback), Social Snub, Fix What's Broken,
+    Skycoach Waypoint, Biblioplex Tomekeeper, Strixhaven Skycoach,
+    The Dawning Archaic, Applied Geometry, Prismari the Inspiration,
+    Nita Forum Conciliator, Silverquill the Disputant, Quandrix the
+    Proof.
+  - New STX cards: Introduction to Prophecy, Introduction to
+    Annihilation, Environmental Sciences, Spirit Summoning.
+  - All 1118+ tests pass.
+
+- ✅ **modern_decks-18 (2026-05-26)**: 35 new STX card factories + engine
+  improvements + 41 new tests. Tests at 1202 (+44 net from 1158):
+  - **35 new STX card factories** across all five Strixhaven schools:
+    Lorehold Command, Academic Dispute, Blade Historian, Reconstruct
+    History, Rip Apart, Prismari Command, Creative Outburst, Elemental
+    Summoning, Teach by Example, Quandrix Command, Fractal Summoning,
+    Dragonsguard Elite, Eureka Moment, Silverquill Command, Umbral Juke,
+    Silverquill Silencer, Fracture, Humiliate, Clever Lumimancer,
+    Witherbloom Command, Culling Ritual, Rushed Rebirth, Callous
+    Bloodmage, Environmental Sciences, Introduction to Annihilation,
+    Introduction to Prophecy, Expanded Anatomy, Cram Session, Professor
+    of Symbology, Guiding Voice, Divide by Zero, Flunk, Curate, Igneous
+    Inspiration, Charge Through.
+  - **Engine: CR 704.5h deathtouch SBA** — new `CardInstance.
+    deathtouch_damaged` flag tracks deathtouch damage sources. SBAs now
+    correctly kill creatures dealt any positive damage by a deathtouch
+    source, regardless of toughness. Previously deathtouch only affected
+    damage assignment (lethal=1) but not the SBA lethality check.
+  - **Engine: CR 702.7 first-strike fix** — the `blocker_filter` parameter
+    in `resolve_combat_damage_with_filter` was unused (`_blocker_filter`);
+    now properly gates which blockers deal damage per step. During
+    first-strike step only FS/DS blockers deal damage; during regular
+    step only non-FS/DS blockers deal damage.
+  - **Beledros Witherbloom activation** — promoted from body-only to
+    functional: pay-10-life sorcery-speed mass-untap via existing
+    `ActivatedAbility.life_cost`.
+  - **Server: PermanentView.is_legendary** — clients can display crown
+    icons or gold borders for legendary permanents.
+  - **8 new CR rules tests**: 702.2 (deathtouch kills), 702.7 (first
+    strike survives), 702.15 (lifelink gains), 704.5b (0 life), 704.5c
+    (10 poison), 704.5i (0 loyalty), 704.5j (legend rule), 704.5n
+    (orphaned aura).
+  - **Clippy**: all warnings resolved except acceptable `too_many_arguments`
+    and `large_size_difference` (both stylistic).
+
+- ✅ **modern_decks-16/17 (2026-05-26)**: 46 new cube cards + CR 120.3
+  planeswalker damage + PermanentView improvements. Tests at 1158 (+55
+  net from 1103):
+  - **46 new card factories** across modern.rs: Wall of Omens, Lingering
+    Souls, Decree of Justice, Mulldrifter, Shriekmaw (Evoke), Deep
+    Analysis (Flashback), Spell Queller, Thragtusk, Kitchen Finks
+    (Persist), Electrolyze, Expressive Iteration, Oko Thief of Crowns,
+    Baleful Mastery, Bloodbraid Elf, Kolaghan's Command, Collective
+    Brutality, Firebolt (Flashback), Chainer's Edict (Flashback),
+    Tireless Provisioner, Courser of Kruphix, Elder Gargaroth, Arclight
+    Phoenix (graveyard recursion), Vengevine (graveyard recursion), Grim
+    Flayer, Young Pyromancer, Monastery Swiftspear, Snapcaster Mage,
+    Stonecoil Serpent, Tasigur, Pernicious Deed, Toxic Deluge, Sinkhole,
+    and more.
+  - **Engine: CR 120.3** — damage dealt to a planeswalker now correctly
+    removes loyalty counters instead of marking regular damage. Lightning
+    Bolt can now kill a low-loyalty planeswalker.
+  - **Engine: PlaneswalkerSubtype::Oko** added.
+  - **Server: PermanentView.mana_value + creature_types** — clients can
+    now display CMC and creature type line.
+  - **Rules tests**: CR 120.3 planeswalker damage, CR 704.5q counter
+    cancellation, CR 704.5j legend rule.
+  - All 1158 lib tests pass.
+
+- ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
+  card promotions. Tests at 1025 (+13 net):
+  - **`Predicate::CastSpellHasX`** — cast-time introspection on the
+    just-cast spell's `{X}` symbols. Used by Quandrix's "whenever
+    you cast a spell with `{X}` in its mana cost" payoffs.
+  - **`Effect::MayPay { description, mana_cost, body }`** — sibling
+    to push XV's `Effect::MayDo`, but with a mana-cost payment.
+    Decline / can't-afford skip the body silently. Powers Bayou
+    Groff's "may pay {1} to return on death" + future "may pay X
+    to do Y" patterns.
+  - **`SelectionRequirement::HasXInCost`** — card-level filter
+    matching cards whose printed cost has at least one `{X}` pip.
+    Wires Paradox Surveyor's "land OR card with {X} in cost"
+    reveal filter to its exact-printed shape.
+  - **`Value::LibrarySizeOf(PlayerRef)`** — `players[p].library
+    .len()`. Promotes Body of Research from `GraveyardSizeOf`
+    proxy to the printed library-size predicate.
+  - **`shortcut::cast_has_x_trigger(effect)`** — Magecraft/Repartee-
+    style helper for "whenever you cast a spell with {X}" payoffs.
+  - **`Selector::CardsInZone(Hand)` filter-evaluation fix** —
+    routing through `evaluate_requirement_on_card` (the card-level
+    evaluator) instead of `evaluate_requirement_static` (which
+    walks battlefield → graveyard → exile → stack only). Fixes
+    silent zero-results for hand-source predicates.
+  - **10 card promotions**: Geometer's Arthropod (⏳→✅),
+    Matterbending Mage (🟡→✅), Paradox Surveyor (🟡→✅), Embrace
+    the Paradox (🟡→✅), Sundering Archaic (🟡 — `{2}` activated
+    ability wired), Aziza Mage Tower Captain (⏳→🟡 body-only),
+    Zaffai and the Tempests (⏳→🟡 body-only); STX: Bayou Groff
+    (🟡→✅), Felisa Fang of Silverquill (🟡→✅), Body of Research
+    (🟡→✅).
+  - 13 new tests in `tests::sos::*` and `tests::stx::*`. All 1025
+    lib tests pass (was 1012).
+
+- ✅ **SOS push XV (2026-05-01)**: Witherbloom (B/G) school complete +
+  `Effect::MayDo` primitive + `ActivatedAbility.life_cost` field + 9
+  card touches (3 new + 6 promotions/expansions):
+  - **`Effect::MayDo { description: String, body: Box<Effect> }`** —
+    first-class "you may [body]" primitive. Emits a yes/no decision via
+    `Decision::OptionalTrigger`; only runs `body` when the decider
+    answers `Bool(true)`. `AutoDecider` defaults to `false` (skip),
+    matching MTG's "you may" defaults. Walkers
+    (`requires_target`, `primary_target_filter`,
+    `target_filter_for_slot_in_mode`) recurse into the inner body so
+    target prompts/filters carry through correctly. The `description`
+    is `String` (not `&'static str`) because `Effect` derives
+    `Deserialize` via `GameState`.
+  - **`ActivatedAbility.life_cost: u32`** — pre-flight life-payment
+    gate on activations. Rejects activation cleanly with new
+    `GameError::InsufficientLife` when controller's life is below the
+    cost; pays up front after tap/mana succeed. Backed by
+    `#[serde(default)]` for snapshot back-compat. The `cost_label`
+    rendering in `server::view` shows "Pay N life" tokens.
+    Powers Great Hall of the Biblioplex's `{T}, Pay 1 life: Add one
+    mana of any color` faithfully — the effect is a pure `AddMana`,
+    so the ability still resolves immediately as a true mana ability.
+  - **Lluwen, Exchange Student // Pest Friend** 🟡 — Witherbloom MDFC
+    (3/4 Legendary Elf Druid front + Pest-token sorcery back). Closes
+    out the Witherbloom (B/G) school (zero ⏳ rows remaining for the
+    school).
+  - **Great Hall of the Biblioplex** 🟡 — Legendary colorless utility
+    land. `{T}: Add {C}` + `{T}, Pay 1 life: Add one mana of any
+    color` (via `life_cost: 1`). The `{5}: becomes 2/4 Wizard
+    creature` clause is omitted (no land-becomes-creature primitive).
+  - **Follow the Lumarets** 🟡 — `{1}{G}` Sorcery with the Infusion
+    rider. `If(LifeGainedThisTurn) → 2× pull : 1× pull` over the top 4
+    library cards (find creature-or-land → hand). Misses go to
+    graveyard (engine default for `RevealUntilFind`).
+  - **Erode** ✅ (was 🟡) — basic-land tutor for the target's
+    controller now wired via
+    `Search { who: ControllerOf(Target(0)), filter: IsBasicLand,
+    to: Battlefield(ControllerOf(Target(0)), tapped) }`. The "may"
+    optionality is collapsed to always-search (decline path covered
+    by `Effect::Search`'s decider returning `Search(None)`).
+  - **5 promotions via `Effect::MayDo`**: Stadium Tidalmage (ETB +
+    Attacks loot), Pursue the Past (discard+draw chain), Witherbloom
+    Charm mode 0 (sacrifice→draw 2), Heated Argument (gy-exile +
+    2-to-controller rider), Rubble Rouser (ETB rummage). All five had
+    been collapsed to always-on; now correctly opt-in.
+  - 13 new tests in `tests::sos::*` (Lluwen P/T + back-face Pest
+    minting; Great Hall mana abilities including the life-cost
+    prepay; Follow the Lumarets mainline + Infusion paths;
+    `MayDo`-skip tests for each promoted card to ensure the
+    AutoDecider's `false` answer keeps the body unfired). All 1012
+    lib tests pass.
+
+- ✅ **SOS pushes XI / XII / XIII / XIV (2026-05-01)**: 29 new MDFC
+  factories + 3 engine improvements + 44 new tests:
+  - **Push XI**: 17 MDFC factories (Elite Interceptor // Rejoinder,
+    Emeritus of Truce // Swords to Plowshares, Honorbound Page // Forum's
+    Favor, Joined Researchers // Secret Rendezvous, Quill-Blade Laureate
+    // Twofold Intent, Spiritcall Enthusiast // Scrollboost, Encouraging
+    Aviator // Jump, Harmonized Trio // Brainstorm, Cheerful Osteomancer
+    // Raise Dead, Emeritus of Woe // Demonic Tutor, Scheming Silvertongue
+    // Sign in Blood, Adventurous Eater // Have a Bite, Emeritus of
+    Conflict // Lightning Bolt, Goblin Glasswright // Craft with Pride,
+    Emeritus of Abundance // Regrowth, Vastlands Scavenger // Bind to
+    Life, Leech Collector // Bloodletting, Pigment Wrangler // Striking
+    Palette). All 🟡 (front-face vanilla + back-face spell wired). New
+    `catalog::sets::sos::mdfcs` module with `vanilla_front` /
+    `spell_back` helpers keeping per-card boilerplate under 20 lines.
+    24 new tests.
+  - **Push XII**: 12 more MDFC factories — 7 mono-color (Spellbook
+    Seeker, Skycoach Conductor, Landscape Painter, Blazing Firesinger,
+    Maelstrom Artisan, Scathing Shadelock, Infirmary Healer) + 5 legendary
+    multicolor (Jadzi, Sanar, Tam, Kirol, Abigale). All 🟡. 16 new
+    tests.
+  - **Push XIII** (engine): `Player.instants_or_sorceries_cast_this_turn`
+    + `Player.creatures_cast_this_turn` tallies bumped in `finalize_cast`
+    (when the resolving spell carries `CardType::Instant`/`Sorcery`/
+    `Creature`). Reset on `do_untap`. New predicates
+    `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` and
+    `Predicate::CreaturesCastThisTurnAtLeast`. Surfaced through
+    `PlayerView` (with `#[serde(default)]`). Promotes Potioner's Trove's
+    lifegain ability gate from the proxy `SpellsCastThisTurnAtLeast` →
+    exact `InstantsOrSorceriesCastThisTurnAtLeast`. New gate label
+    strings ("after instant/sorcery cast", "after creature cast") in
+    `predicate_short_label`. 2 new tests.
+  - **Push XIV** (engine + server): `enum CastFace { Front, Back,
+    Flashback }` threaded through `GameEvent::SpellCast.face` +
+    `GameEventWire::SpellCast.face`. Replays / spectator UIs can now
+    distinguish back-face MDFC casts from normal hand casts and from
+    flashback graveyard replays. New transient
+    `GameState.pending_cast_face`; `cast_spell_back_face` sets `Back`
+    before delegating, `cast_flashback` emits `Flashback` directly,
+    default cast paths emit `Front`. 2 new tests.
+  - All 997 lib tests pass (was 953; +44 net).
+  - Cube color pool wiring: 6 white, 6 blue, 6 black, 5 red, 3 green
+    MDFCs added; legendary multicolor MDFCs (Sanar UR, Tam GU, Kirol
+    RW, Abigale WB) added to the matching cross-pools.
+
+- ✅ **SOS push X (2026-05-01)**: 5 new SOS card factories (1 ✅, 4 🟡)
+  + 4 promotions from 🟡 to ✅ (Flashback wirings) + 3 engine
+  primitives:
+  - **`Selector::Take { inner, count }`** — wraps another selector to
+    clamp how many entities flow through (in resolution order). Sugar:
+    `Selector::one_of(inner)`, `Selector::take(inner, n)`. Promoted
+    Practiced Scrollsmith's gy-exile from "every matching" to "exactly
+    one"; lifted Pull from the Grave from one creature to two. The
+    target-filter/`requires_target` walkers recurse into the `inner`
+    arm so wrapping a `TargetFiltered`/`CardsInZone` selector is
+    transparent. Closes the long-standing "Move at most one matching
+    card" / `Selector::OneOf` gap.
+  - **`GameAction::CastSpellBack`** + **`cast_spell_back_face`** —
+    generalises `PlayLandBack` to non-land MDFC back faces. Mirrors
+    the `PlayLandBack` flow: swaps the in-hand card's `definition` to
+    the back face's, then routes through `cast_spell` so cost / type
+    / target filters / effect all resolve against the back face.
+    First non-land MDFC wired: **Studious First-Year // Rampant
+    Growth**. The 3D client picks this up automatically — the
+    right-click flip on hand cards now routes flipped non-land
+    MDFCs through `CastSpellBack` (in addition to `PlayLandBack` for
+    land MDFCs). New `TargetingState.back_face_pending` flag carries
+    the routing through the targeting prompt.
+  - **`Keyword::Flashback` wirings on 7 SOS cards** — Daydream, Dig
+    Site Inventory, Practiced Offense, Antiquities on the Loose,
+    Pursue the Past, Tome Blast, Duel Tactics. Promotes Daydream,
+    Dig Site Inventory, Tome Blast, Duel Tactics to ✅ (the only
+    omission was Flashback, which is now wired via the engine's
+    existing `cast_flashback` path). Antiquities, Pursue the Past,
+    and Practiced Offense stay 🟡 because of separate non-Flashback
+    omissions (cast-from-elsewhere rider, may-discard collapse,
+    lifelink-or-DS mode pick).
+  - 14 new tests in `tests::sos::*`. Cards: Inkshape Demonstrator 🟡,
+    Studious First-Year // Rampant Growth ✅, Fractal Tender 🟡,
+    Thornfist Striker 🟡, Lumaret's Favor 🟡; Daydream ✅, Dig Site
+    Inventory ✅, Tome Blast ✅, Duel Tactics ✅, Practiced Offense 🟡,
+    Pursue the Past 🟡, Antiquities on the Loose 🟡; Practiced
+    Scrollsmith 🟡 (now exact one-card exile), Pull from the Grave 🟡
+    (now up-to-2). All 953 lib tests pass.
+
+- ✅ **SOS push IX (2026-05-01)**: 12 new SOS card factories
+  (5 ✅, 7 🟡) plus one new engine primitive, finishing the
+  Witherbloom (B/G) school (only the Lluwen MDFC remains, blocked
+  on cast-from-secondary-face plumbing):
+  - **`Player.creatures_died_this_turn`** + **`Predicate::CreaturesDiedThisTurnAtLeast`**
+    — per-turn tally bumped from both the SBA dies handler in
+    `stack.rs::apply_state_based_actions` (lethal-damage path) and
+    `remove_to_graveyard_with_triggers` (destroy-effect path). Reset
+    on `do_untap`. Surfaced through `PlayerView.creatures_died_this_turn`.
+    Powers Essenceknit Scholar's end-step gated draw.
+  - **`CreatureType::Dryad`** + **`PlaneswalkerSubtype::Dellian`** —
+    new subtypes for Witherbloom-flavoured cards.
+  - 17 new tests in `tests::sos::*` (ETB triggers, end-step gated
+    draws, planeswalker loyalty activations, Surveil-anchored
+    instants/sorceries, plus a tally-bumps-on-lethal-damage SBA test).
+    All 932 lib tests pass.
+  - Cards: Essenceknit Scholar ✅, Unsubtle Mockery ✅, Muse's
+    Encouragement ✅, Prismari Charm ✅; Professor Dellian Fel 🟡,
+    Textbook Tabulator 🟡, Deluge Virtuoso 🟡, Moseo Vein's New
+    Dean 🟡, Stone Docent 🟡, Page Loose Leaf 🟡, Ral Zarek Guest
+    Lecturer 🟡, Flow State 🟡.
+  - Several 🔍-needs-review cards previously flagged as
+    "Needs: Surveil keyword primitive" in the auto-generated table
+    were already unblocked — Surveil is a first-class
+    `Effect::Surveil` primitive. The script's
+    `COMPLEX_KWS`/keyword-heuristic was stale. Fixed in-doc; future
+    `gen_strixhaven2.py` runs should drop "Surveil" from
+    `COMPLEX_KWS` so newly-fetched cards don't get flagged.
+
+- ✅ **SOS push VIII (2026-05-01)**: 14 new SOS card factories
+  (2 ✅, 12 🟡) plus two engine primitives that unblock conditional
+  activations and counter-add self triggers:
+  - **`ActivatedAbility.condition: Option<Predicate>`** — first-class
+    "activate only if …" gate. Evaluated against the controller/source
+    context **before** any cost is paid, so a failed gate doesn't burn
+    the tap-cost or once-per-turn budget. New
+    `GameError::AbilityConditionNotMet` for failed gates. Powers
+    Resonating Lute's `{T}: Draw a card. Activate only if you have
+    seven or more cards in your hand.` and promotes Potioner's Trove's
+    lifegain ability to its printed gate. The struct field is
+    `#[serde(default)]`; all 100+ existing literal initializations
+    pick up `condition: None` via a one-shot patch.
+  - **`EventScope::SelfSource` + `EventKind::CounterAdded` recognition**
+    — `event_card`/`SelfSource` now match CounterAdded events to the
+    source card. Berta, Wise Extrapolator's "whenever one or more +1/+1
+    counters are put on Berta, add one mana of any color" trigger now
+    fires only when counters land on Berta. Same hook unblocks
+    Heliod-style "whenever a counter is put on this …" payoffs.
+  - 19 new tests in `tests::sos::*`. Cards: Primary Research ✅,
+    Artistic Process ✅, Decorum Dissertation 🟡, Restoration Seminar 🟡,
+    Germination Practicum 🟡, Ennis the Debate Moderator 🟡, Tragedy
+    Feaster 🟡, Forum Necroscribe 🟡, Berta the Wise Extrapolator 🟡,
+    Paradox Surveyor 🟡, Magmablood Archaic 🟡, Wildgrowth Archaic 🟡,
+    Ambitious Augmenter 🟡, Resonating Lute 🟡. Potioner's Trove was
+    previously 🟡 (no gate); the gate is now wired so its lifegain
+    ability rejects activation without an IS-cast that turn.
+  - All 910 lib tests pass.
+
+- ✅ **SOS push VII (2026-05-01)**: 11 new SOS card factories
+  (3 ✅, 8 🟡) + 2 promotions (Owlin Historian 🟡 → ✅; Postmortem
+  Professor's printed `Keyword::CantBlock` now wired). Engine adds:
+  - **`SelectionRequirement::Multicolored`** + **`Colorless`** —
+    counts the distinct colored pips in a card's mana cost (hybrid
+    pips count both halves; Phyrexian counts the colored side;
+    generic / colorless / Snow / X don't count). Backed by the new
+    `ManaCost::distinct_colors()` helper. Wired into both the
+    battlefield-resolve and library-search requirement evaluators
+    so it works for cast-time triggers and selector-based
+    cardpool filters. Promotes Mage Tower Referee
+    (multicolored-cast → +1/+1 counter); ready for any future
+    "multicolored matters" / "colorless matters" payoff.
+  - **`tap_add_colorless()` shared helper** under
+    `catalog::sets::mod` — `{T}: Add {C}` mana ability shorthand
+    used by Petrified Hamlet and ready for Wastes / Eldrazi-flavoured
+    colorless lands.
+  - 11 new functionality tests in `tests::sos::*` + 3 in
+    `tests::mana::*`. All 885 lib tests pass.
+  - Cards: Mage Tower Referee ✅, Additive Evolution ✅, Owlin
+    Historian ✅ (was 🟡), Spectacular Skywhale 🟡, Lorehold the
+    Historian 🟡, Homesickness 🟡, Fractalize 🟡, Divergent Equation 🟡,
+    Rubble Rouser 🟡, Zimone's Experiment 🟡, Petrified Hamlet 🟡.
+    Postmortem Professor stays 🟡 but the printed "this creature
+    can't block" static is now wired via `Keyword::CantBlock`.
+
+- ✅ **SOS push VI (2026-05-01)**: 12 new SOS cards (4 ✅, 8 🟡) plus
+  Topiary Lecturer rewrite + 5 false-negative cleanups, with three
+  new engine primitives:
+  - **`TokenDefinition.triggered_abilities`** + plumbing through
+    `token_to_card_definition`. Promotes Send in the Pest, Pestbrood
+    Sloth, Pest Summoning, Tend the Pests, Hunt for Specimens — the
+    Pest tokens those spells mint now correctly carry their printed
+    "die / attack → gain 1 life" rider. Added `stx_pest_token()`
+    helper in `catalog::sets::stx::shared` for the death-trigger
+    Witherbloom Pests.
+  - **`ManaPayload::OfColor(Color, Value)`** — fixed-color, value-
+    scaled mana adder. Single AddMana call, no player choice. Powers
+    Topiary Lecturer's "{T}: Add G equal to power" cleanly (was a
+    `Repeat × Colors([Green])` approximation).
+  - **`Keyword::CantBlock`** — first-class "this creature can't block"
+    keyword. Enforced inside `declare_blockers`, `can_block_any_attacker`,
+    and `blocker_can_block_attacker`. Used by Duel Tactics's transient
+    grant; Postmortem Professor's static restriction can be promoted
+    to use it.
+  - **`move_card_to` library traversal** — `Effect::Move` from a
+    `Selector::TopOfLibrary` source now actually moves the top library
+    card (previously the library branch was missing in `move_card_to`,
+    so Suspend Aggression's exile-top-of-library half no-op'd). The
+    library-source move is last in the search order to avoid
+    accidentally consuming a hand card with the same id.
+  - **Auto-target picker improvement**: friendly pumps (Magecraft /
+    Repartee +1/+1 fan-out, transient PumpPT spells) now prefer the
+    highest-power friendly creature, not the first-in-Vec match. This
+    correctly aims Hardened Academic's CardLeftGraveyard counter at
+    the biggest threat instead of the first 1-drop. Hostile picks
+    still use first-match.
+  - 12 new tests in `tests::sos::*`. All 870 lib tests pass.
+  - Cards: Snarl Song ✅, Wild Hypothesis ✅, Send in the Pest ✅,
+    Pestbrood Sloth ✅, Daydream 🟡, Soaring Stoneglider 🟡, Tome
+    Blast 🟡, Duel Tactics 🟡, Ark of Hunger 🟡, Suspend Aggression
+    🟡, Wilt in the Heat 🟡, Practiced Scrollsmith 🟡, Topiary
+    Lecturer (rewrite, kept 🟡 — Increment rider still missing).
+  - 5 false-negative status cleanups (the cards were already wired
+    but the doc still said ⏳): Hydro-Channeler, Geometer's
+    Arthropod, Sundering Archaic, Transcendent Archaic, Ulna Alley
+    Shopkeep — all 🟡.
+
+- ✅ **SOS push V (2026-04-30)**: 12 new SOS cards (3 ✅, 9 🟡) plus
+  three new engine primitives that unblock Lorehold "cards leave your
+  graveyard" payoffs and proper fight resolution:
+  - **`EventKind::CardLeftGraveyard`** + `GameEvent::CardLeftGraveyard`
+    — fires per card removed from a graveyard (return-to-hand,
+    flashback cast, persist/undying battlefield-return, exile-from-gy).
+    Plumbed in `move_card_to`'s graveyard branch, `cast_spell_flashback`
+    in actions.rs, and persist/undying returns in stack.rs. Each
+    emission also bumps the new
+    `Player.cards_left_graveyard_this_turn` tally (reset on
+    `do_untap`), surfaced through `PlayerView` for client UIs.
+  - **`Predicate::CardsLeftGraveyardThisTurnAtLeast`** — gates Lorehold
+    "if a card left your graveyard this turn" payoffs (Living
+    History's combat trigger; Primary Research's end-step draw and
+    Wilt in the Heat's cost reduction will use the same predicate).
+  - **`Predicate::SpellsCastThisTurnAtLeast`** — gates Burrog
+    Barrage's "if you've cast another instant or sorcery this turn"
+    pump.
+  - **`Effect::Fight { attacker, defender }`** — proper bidirectional
+    fight primitive. Snapshots both creatures' powers up-front; no-ops
+    cleanly when either selector resolves to no permanent. Unblocks
+    Chelonian Tackle's "fight up to one opp creature" (single-target
+    collapse on the defender pick), and is ready for Decisive Denial
+    mode 1 + future fight-style cards.
+  - **`Effect::Untap.up_to: Option<Value>`** — untap-with-cap. Frantic
+    Search's "untap up to three lands" now honors the printed cap
+    precisely (was "untap all"). Other Untap callers opt-out via
+    `up_to: None`.
+  - 13 new tests in `tests::sos::*` + 1 in `tests::modern::*`. All 857
+    lib tests pass.
+  - Cards: Hardened Academic ✅, Spirit Mascot ✅, Garrison Excavator ✅,
+    Living History 🟡, Witherbloom the Balancer 🟡, Burrog Barrage 🟡,
+    Chelonian Tackle 🟡, Rabid Attack 🟡, Practiced Offense 🟡, Mana
+    Sculpt 🟡, Tablet of Discovery 🟡, Steal the Show 🟡.
+
+- ✅ **modern_decks post-push III batch (2026-04-30)**: 10 SOS cards
+  (5 ✅, 5 🟡) plus 5 new engine primitives:
+  - **`Value::Pow2(Box<Value>)`** — 2ˣ with the exponent capped at
+    30. Powers Mathemagics's "draw 2ˣ cards".
+  - **`Value::HalfDown(Box<Value>)`** — half of a value, rounded
+    down. Powers Pox Plague's "loses half / discards half / sacs
+    half" three-stage effect.
+  - **`Value::PermanentCountControlledBy(PlayerRef)`** — counts
+    permanents controlled by the resolved player. Lets per-player
+    iteration in `ForEach Selector::Player(EachPlayer)` correctly
+    compute the iterated player's permanent count instead of always
+    reading `ctx.controller`'s board.
+  - **`Selector::CastSpellTarget(u8)`** — resolves the chosen target
+    slot of the spell whose `SpellCast` event produced the current
+    trigger. Walks the stack for the matching spell. Used by
+    Conciliator's Duelist's Repartee body to exile the cast spell's
+    chosen creature target.
+  - **`AffectedPermanents::AllWithCounter { controller, card_types,
+    counter, at_least }`** — counter-filtered lord-style statics.
+    `affected_from_requirement` recognises `SelectionRequirement::
+    WithCounter(...)` in the static's selector and routes through the
+    new variant. Powers Emil's "creatures with +1/+1 counters have
+    trample" + future "monstrous / leveled creatures gain
+    [keyword]" buffs.
+  - 12 new tests in `tests::sos::*`. Cards: Mathemagics ✅, Visionary's
+    Dance ✅, Pox Plague ✅, Emil Vastlands Roamer ✅, Orysa ✅
+    (post-push III), Conciliator's Duelist 🟡 (Repartee exile half
+    promoted), Abstract Paintmage 🟡, Matterbending Mage 🟡,
+    Exhibition Tidecaller 🟡, Colossus of the Blood Age 🟡. All 851
+    lib tests pass.
+
+- ✅ **SOS push III + Multicolored predicate (2026-04-30)**: 13 new SOS
+  card factories (4 fully ✅, 9 body-only 🟡) plus engine wins:
+  - **`SelectionRequirement::Multicolored`** + **`Colorless`** —
+    counts distinct colored pips in a card's cost (hybrid counts both
+    sides; Phyrexian counts the colored side). Unblocks Mage Tower
+    Referee's "whenever you cast a multicolored spell" trigger.
+  - **`Effect::Move` from library** — `move_card_to` now walks each
+    player's library when locating the source card, so a `Selector::
+    TopOfLibrary { count } → ZoneDest::Exile` move actually exiles the
+    top card. Suspend Aggression uses this; Daydream / Practiced
+    Scrollsmith and other "exile top of library, then …" cards get
+    library-source moves for free.
+  - 14 new tests in `tests::sos::*`. All 838 lib tests pass.
+  - Cards: Mage Tower Referee ✅, Transcendent Archaic ✅, Snarl Song ✅,
+    Poisoner's Apprentice ✅, Sundering Archaic 🟡, Hydro-Channeler 🟡,
+    Ulna Alley Shopkeep 🟡, Topiary Lecturer 🟡, Garrison Excavator 🟡,
+    Spirit Mascot 🟡, Geometer's Arthropod 🟡, Suspend Aggression 🟡,
+    Living History 🟡.
+
+- ✅ **SOS body-only batch (2026-04-30)**: 13 SOS creatures previously
+  marked ⏳ are now 🟡 with their printed cost / type / P/T / keywords
+  correct. Cards are usable in cube color pools and combat; their
+  Increment / Opus / mana-spent-pump riders are omitted pending the
+  "mana-paid-on-cast introspection" engine primitive (see Engine —
+  Missing Mechanics below). Plus Ajani's Response shipped with destroy
+  but no cost-reduction. New `CreatureType::Dwarf` added for
+  Thunderdrum Soloist. 11 functionality tests in `tests::sos::*`. All
+  822 lib tests pass.
+
+- ✅ **Auto-target source-avoidance (2026-04-30)**: triggered abilities
+  now skip the trigger source as a target candidate when another legal
+  target is available. New `auto_target_for_effect_avoiding(eff,
+  controller, avoid_source)` API; all trigger-creation paths updated
+  (ETB, combat, dies/leaves, delayed). Quandrix Apprentice's Magecraft
+  pump now deterministically prefers a non-source creature; falls back
+  to the source when it's the only legal pick. 2 new tests in
+  `tests::stx::*`.
+
+- ✅ **SOS expansion II (2026-04-30)**: 11 more cards bridging the
+  Silverquill (W/B) and Lorehold (R/W) schools, plus a handful of
+  cross-school staples and mono-color removal/utility.
+  - Silverquill: Moment of Reckoning (modal destroy/return), Stirring
+    Honormancer (look-at-X-find-creature via `RevealUntilFind`),
+    Conciliator's Duelist (ETB body wired; Repartee exile-with-return
+    is omitted).
+  - Lorehold: Lorehold Charm (all 3 modes), Borrowed Knowledge (mode 0
+    faithful, mode 1 collapsed to "draw 7").
+  - Witherbloom: Vicious Rivalry (X-life cost approximation +
+    `ForEach.If(ManaValueOf ≤ X) → Destroy`).
+  - Quandrix: Proctor's Gaze (bounce + Search basic to bf tapped).
+  - Mono-color staples: Dissection Practice ({B} drain+shrink), End of
+    the Hunt ({1}{B} exile opp creature/PW), Heated Argument ({4}{R} 6
+    + 2-to-controller), Planar Engineering ({3}{G} sac 2 lands +
+    Repeat×4 fetch basics).
+  - 11 functionality tests in `tests::sos::*`. All 807 lib tests pass.
+  - Cube cross-pool pools updated for W/B, B/G, G/U, R/W; mono-color
+    pools (Black, Red, Green) picked up the new mono-color cards.
+
+- ✅ **SOS expansion (2026-04-30)**: 10 new / improved cards.
+  - Graduation Day ({W} Repartee enchantment) — new.
+  - Stirring Hopesinger / Informed Inkwright / Inkling Mascot /
+    Snooping Page — Repartee riders fully wired (was 🟡, now ✅).
+  - Withering Curse ({1}{B}{B}) — Infusion-gated mass debuff/wrath.
+  - Root Manipulation ({3}{B}{G}) — pump + menace fan-out (🟡:
+    on-attack rider stubbed pending transient-trigger-grant primitive).
+  - Blech, Loafing Pest ({1}{B}{G}) — lifegain-multi-tribe pump.
+  - Cauldron of Essence ({1}{B}{G}) — death drain + sac-reanimation.
+  - Diary of Dreams + Potioner's Trove (colorless artifacts, 🟡 with
+    minor caveats noted in STRIXHAVEN2.md).
+  - Spectacle Summit (Prismari U/R school land).
+  - 13 new tests in `tests::sos::*`.
+  - Cube color pools refreshed: Witherbloom (B/G), Silverquill (W/B),
+    Prismari (U/R) cross-pools each picked up the relevant cards.
+- ✅ **`scripts/gen_strixhaven2.py`** — oracle text is no longer
+  truncated. Earlier revisions cut to 220 chars (then 600); both
+  silently dropped late keywords (Flashback, Crew, Prepare reminder
+  text). The script now passes the full oracle through unmodified.
+  All STRIXHAVEN2.md rows whose oracle was previously clipped were
+  marked **🔍 needs review (oracle previously truncated)** so future
+  card-implementation passes know to cross-check the body before
+  authoring against the row's existing notes (52 rows tagged).
+- ✅ **STX schools expanded**: new modules under `catalog::sets::stx` for
+  Lorehold, Quandrix, and Prismari. 11 new STX cards across the four
+  colleges (Lorehold Apprentice/Pledgemage, Pillardrop Rescuer, Heated
+  Debate, Storm-Kiln Artist, Quandrix Apprentice/Pledgemage, Decisive
+  Denial, Prismari Pledgemage/Apprentice, Symmetry Sage) plus
+  Witherbloom Pledgemage. Pest Summoning bumped from 1 → 2 tokens to
+  match the printed Oracle. 13 new functionality tests.
+- ✅ **`scripts/gen_strixhaven2.py` parsing fixes**:
+  - Oracle truncation cap raised 220 → 600 chars (was clipping the
+    bodies of cards with reminder-text-laden modes — including the
+    Prepare keyword's definition on its grantor cards).
+  - Recognises new SOS-only mechanics (Repartee, Magecraft, Increment,
+    Opus, Infusion, Paradigm, Converge, Casualty, Prepare) as needing
+    engine primitives, so the per-card hint column now points at the
+    right plumbing.
+  - Added a "Prepare mechanic" explainer to STRIXHAVEN2.md and a TODO
+    item for the per-permanent prepared flag + setter primitive.
+- ✅ `once_per_turn` flag on activated abilities is now enforced engine-side
+  (was a struct field with no validation). Cards: Mindful Biomancer, etc.
+- ✅ Strixhaven creature/spell subtypes added: Inkling, Pest, Fractal, Orc,
+  Warlock, Bard, Sorcerer, Pilot, Elk.
+- ✅ SOS catalog scaffolded under `catalog::sets::sos` with 51+ card
+  factories wired into the cube color pools (white, blue, black, red,
+  green, plus W/B Silverquill, B/G Witherbloom, G/U Quandrix, U/R
+  Prismari, R/W Lorehold cross-pools).
+- ✅ `Player.life_gained_this_turn` tally added (with `Effect::GainLife`,
+  `Effect::Drain`-recipient, and combat-lifelink integration). Cleared on
+  `do_untap`. Surfaced through `PlayerView` for client UIs.
+- ✅ `Predicate::LifeGainedThisTurnAtLeast { who, at_least }` for "if you
+  gained life this turn" Infusion riders (Foolish Fate, Old-Growth
+  Educator, Efflorescence wired so far).
+- ✅ `PlayerRef::OwnerOf(Selector)` / `ControllerOf(Selector)` now fall
+  back through graveyards / hands / library / exile when the target has
+  already changed zones (typical case: destroy-then-drain-controller),
+  via the new `GameState::find_card_owner` helper.
+- ✅ **`StackItem::Trigger.x_value`** — ETB triggers fired off a
+  resolving spell now inherit that spell's paid X. `Effect::AddCounter
+  { amount: Value::XFromCost }` and similar X-driven effects on
+  creature/permanent ETBs read the correct X (Pterafractyl, Static
+  Prison). `ResumeContext::Trigger` carries the same `x_value` so a
+  suspended trigger resumes with the right X.
+- ✅ **`Selector::LastCreatedToken`** + **`Value::CardsDrawnThisTurn`**
+  + **`Player.cards_drawn_this_turn`**. `Effect::CreateToken` stashes
+  the freshly-minted token id on the game state so a follow-up
+  `AddCounter` / `PumpPT` in the same `Effect::Seq` can target it via
+  `Selector::LastCreatedToken`. Combined with `Player.draw_top()`
+  incrementing `cards_drawn_this_turn` (reset on the controller's
+  untap), the new primitives unblock Quandrix scaling (Fractal Anomaly
+  is now ✅).
+- ✅ **`ClientView.exile`** + **`ExileCardView`**. The shared exile
+  zone now projects through the per-seat view so a client UI can
+  render an exile browser. Each entry carries the card's owner so the
+  UI can distinguish "exiled by you" from "exiled from your library".
+- ✅ **`PlayerView.cards_drawn_this_turn`**. Surfaced for client UIs
+  to preview Quandrix scaling on cards in hand.
+- ✅ **STX (Strixhaven base set) module** under `catalog::sets::stx`,
+  parallel to the existing SOS module. 14 cards across Silverquill,
+  Witherbloom, and shared (Inkling Summoning / Tend the Pests). 15
+  functionality tests, all passing. See `STRIXHAVEN2.md` ("Strixhaven
+  base set (STX)" section).
+- ✅ **`effect::shortcut::magecraft(effect)` helper** + supporting
+  `cast_is_instant_or_sorcery()` predicate. Lets a Magecraft trigger
+  drop into a card factory in one line instead of seven. Used by
+  Eager First-Year and Witherbloom Apprentice.
+- ✅ **12 stale-test fixes** — Devourer of Destiny re-cost (5→7), plus
+  Biorhythm/Holy Light/Loran/Path of Peace/Read the Tides cost drift,
+  Lumra keyword (Reach→Trample), and a cube-prefetch test that lost
+  several no-longer-pooled card names. All 736 → 751 tests now pass.
+
+---
 
 ## Engine — Missing Mechanics
 
@@ -8408,6 +9008,354 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
 - ✅ **Fractal Summoning** (STX): {X}{G}{U} Sorcery — Lesson. Create
   a 0/0 Fractal with X +1/+1 counters. X-cost scaling via
   `Value::XFromCost` + `Selector::LastCreatedToken`.
+## New suggestions (added 2026-05-01 push VIII)
+
+These items came up while implementing the push VIII batch and are
+listed here so the next pass can pick them up without re-deriving them.
+
+### Engine
+
+- **X-cost activated abilities**. `ActivatedAbility.mana_cost` accepts
+  `ManaSymbol::X` symbols today, but the activation entry point doesn't
+  surface an X-value prompt (unlike `cast_spell`, which has
+  `x_value: Option<u32>`). Berta, the Wise Extrapolator's `{X}, {T}:
+  Create a Fractal token + X +1/+1 counters` is currently stubbed
+  because X resolves to 0 at activation time. Adding an `x_value` arg
+  to `GameAction::ActivateAbility` (and threading it through
+  `Effect::AddCounter { amount: Value::XFromCost }`) would unblock
+  Berta plus several X-cost utility activations across MTG history
+  (Forerunner of the Empire-style scaling).
+
+- **Per-spell-type per-turn tallies**. `Player.spells_cast_this_turn`
+  counts every cast — Potioner's Trove's printed "Activate only if
+  you've cast an instant or sorcery spell this turn" approximates by
+  reading any spell. A sibling `instant_or_sorcery_cast_this_turn`
+  (and `creature_cast_this_turn` for creature-spell triggers) would
+  promote Potioner's Trove + a handful of Magecraft-adjacent payoffs
+  to their exact-printed gates.
+
+- **Per-turn exile count tally**. Ennis, Debate Moderator's end-step
+  counter is gated on `CardsLeftGraveyardThisTurnAtLeast` as a proxy
+  for the printed "if one or more cards were put into exile this
+  turn". A first-class `Player.cards_exiled_this_turn` (incremented in
+  `move_card_to`'s exile branch) + `Predicate::CardsExiledThisTurnAtLeast`
+  would land Ennis on the printed predicate and unblock other
+  exile-matters Strixhaven cards (Decadence's Lament, Devoted Caretaker
+  variants).
+
+- **CounterAdded scope filter**. `EventScope::SelfSource` for
+  CounterAdded fires only for counters on the source card. The
+  remaining Berta/Heliod-style payoffs need scope variants for
+  "any creature you control" (Heliod, Sun-Crowned) and "any permanent"
+  (Vorinclex, Monstrous Raider). Add `EventScope::AnotherOfYours` and
+  `AnyPlayer` matching for CounterAdded events.
+
+- **Counter-transfer-on-death primitive**. Ambitious Augmenter and
+  several SOS Increment-payoff cards trigger "when this dies, if it
+  had counters, create a token with those counters." Today there's no
+  way to snapshot the dying creature's counter set in a death
+  trigger's body. Adding `Selector::DyingPermanent` (or a
+  `Effect::TransferCountersToToken { kind, count }`) would unblock
+  this whole subtheme.
+
+- **Per-cast converge introspection on the just-cast spell**.
+  Magmablood Archaic and Wildgrowth Archaic have spell-cast triggers
+  whose body reads the *cast spell's* converge value (number of colors
+  spent on the iterated cast), not the source card's own converge
+  value. Today the trigger fires but `Value::ConvergedValue` resolves
+  to the source's own ETB-recorded value. A
+  `Value::CastSpellConvergedValue` (mirror to the existing
+  `Selector::CastSpellTarget`) would unblock both Archaic spell-cast
+  riders + similar future cards.
+
+### UI
+
+- **Activate-ability gate hint**. When the new
+  `ActivatedAbility.condition` rejects an activation,
+  `GameError::AbilityConditionNotMet` bubbles up. The 3D client's
+  ability-tray UI doesn't yet show "needs 7+ in hand" or "needs IS
+  this turn" hint text — add a small tooltip or grayed-out treatment
+  that surfaces the predicate in human-readable form (`Predicate ⇒
+  "you need ≥7 cards in hand"` etc.) so players don't get cryptic
+  rejection feedback.
+
+### Server
+
+- **Per-trigger gate evaluation logging**. Push VIII's
+  `EventScope::SelfSource` extension landed silently; the server has
+  no instrumentation for which triggers fired vs. were filtered out
+  by scope. A debug flag on `dispatch_triggers_for_events` that emits
+  `TriggerFiltered { source, kind, scope, reason }` events would help
+  diagnose silent-no-fire reports during cube playtesting.
+
+## New suggestions (added 2026-05-01 push IX)
+
+These items came up while implementing the push IX batch and are
+listed here so the next pass can pick them up without re-deriving them.
+
+### Engine
+
+- **Look-and-distribute-by-count primitive**. Flow State's printed
+  shape ("look at top 3, put 1 in hand and 2 on bottom") and a
+  handful of similar SOS cards (Stress Dream, Zimone's Experiment)
+  need a `Effect::LookSplit { count, to_hand: Value, to_bottom: Value }`
+  primitive that deals out the looked-at cards by category. Today we
+  approximate with `Scry N + Draw 1` (correct first-card-to-hand,
+  but the controller can't reorder mid-resolution). A first-class
+  primitive would also unblock the conditional "instead pick 2"
+  upgrade rider on Flow State (gated on a graveyard-IS-pair predicate).
+
+- **Multi-target prompt for instants/sorceries**. Several SOS cards
+  specify two target slots (Prismari Charm's "1 damage to one or two
+  targets", Pull from the Grave's "up to two creature cards", Cost of
+  Brilliance's "draw + LoseLife on player + counter on creature").
+  Engine fix tracked in TODO.md "Multi-Target Prompt for Sorceries /
+  Instants". Push IX collapses Prismari Charm mode 1 to single-target.
+
+- **Emblem zone**. Professor Dellian Fel's -7 ult and Ral Zarek
+  Guest Lecturer's -7 ult both produce emblems that grant ongoing
+  abilities. The engine has no emblem zone or `Zone::Emblem` model
+  yet. Adding one would unblock dozens of planeswalker ults
+  (Elspeth's "creatures get +1/+1, vigilance, lifelink", Liliana's
+  "your creatures get +2/+2 menace", etc.). A flat-list `Vec<Emblem>`
+  per-player with the same trigger/static plumbing as battlefield
+  permanents would suffice.
+
+- **Coin-flip primitive**. Ral Zarek Guest Lecturer's -7 ult
+  ("flip five coins"), Krark's Thumb-style replay, and Fiery Gambit
+  use coin-flip mechanics. Add `Effect::FlipCoins { count, then }`
+  with a `Value::HeadsCount` reading the most recent flip-coin batch.
+
+- **Skip-turn primitive**. Ral Zarek Guest Lecturer's -7 ult also
+  needs "target opponent skips their next X turns". Add
+  `Effect::SkipTurns { who, count }` + a per-player
+  `extra_turn_skip: u32` counter consumed at turn-roll time
+  (mirror to the existing `extra_turns_to_take` pattern).
+
+- **Card-name-as-cost activation (Grandeur)**. Page, Loose Leaf
+  has Grandeur — "Discard another card named Page, Loose Leaf:
+  do thing." Adding `ActivatedAbility.discard_named_self: bool` (or
+  a sibling `ActivatedAbility.cost: ActivationCost` enum) would
+  unblock Grandeur-style mechanics across MTG history (the original
+  Future Sight cycle).
+
+### UI
+
+- **Witherbloom end-step hint**. The new
+  `PlayerView.creatures_died_this_turn` field surfaces the
+  "Essenceknit Scholar will draw at end step" predicate. The 3D
+  client doesn't yet render this hint — adding a small icon or
+  badge over Witherbloom-flavoured payoffs (Essenceknit Scholar,
+  Cauldron of Essence's death drain) would improve readability.
+
+### Server
+
+- **Death-trigger event ordering audit**. Push IX's tally bumps in
+  both `apply_state_based_actions` (SBA path) and
+  `remove_to_graveyard_with_triggers` (destroy path) are correct
+  for the common case but assume mutual exclusivity. Audit the
+  call graph to ensure no creature-death path bumps the tally
+  twice (e.g. if a destroy effect both calls
+  `remove_to_graveyard_with_triggers` *and* triggers SBA in the
+  same resolution window). Today they're disjoint, but this is a
+  silent invariant worth a comment + a regression test.
+
+## New suggestions (added 2026-05-01 push X)
+
+These items came up while implementing the push X batch and are
+listed here so the next pass can pick them up without re-deriving
+them.
+
+### Engine
+
+- ✅ **Ward enforcement** (push XVII). Ward {N} enforced as a targeting
+  tax across all three cast paths + flashback + alternative cost. Hard-mode
+  Ward variants (pay life, discard, sacrifice) still ⏳.
+
+- **Multi-target prompt for spells/abilities**. Push X works around
+  this in Pull from the Grave by auto-picking the top 2 creature
+  cards from the controller's graveyard via `Selector::Take(_, 2)`,
+  but the printed cards specify *target* slots — the current
+  implementation can't accept opponent-side targets. A real fix
+  needs `GameAction::CastSpell`'s `target` field to become
+  `Vec<Target>` (or a sibling `targets: Vec<Target>` channel) and
+  the cost/effect path to address `Selector::Target(0)`,
+  `Selector::Target(1)`, etc., to the corresponding entries.
+  Unblocks Cost of Brilliance, Render Speechless, Homesickness,
+  Prismari Charm mode 1, Stress Dream, Vibrant Outburst, and
+  several SOS instants/sorceries that bake two target slots.
+
+- **Cast-from-zone snapshot on `StackItem`**. Antiquities on the
+  Loose's "if this spell was cast from anywhere other than your hand,
+  +1/+1 counter on each Spirit you control" rider reads the cast's
+  source zone. The engine already differentiates flashback casts via
+  the `CardInstance.kicked` flag, but the rider needs a clean
+  `cast_zone: Zone` snapshot stashed on the resolving spell so a
+  `Predicate::CastFromGraveyard` (or `CastFromExile`) can gate the
+  bonus branch. Same plumbing unblocks Lurrus-style "cast
+  permanent-from-graveyard" payoffs.
+
+- **Per-permanent "gained-counter-this-turn" flag**. Fractal Tender's
+  end-step "if you put a counter on this creature this turn, mint a
+  Fractal" + Tester of the Tangential's pay-X-move-counters need a
+  per-`Permanent.counters_added_this_turn: bool` toggle, set on any
+  AddCounter event scoped to the permanent and reset on
+  begin-of-untap.
+
+### UI
+
+- **Non-land MDFC flip indicator**. The 3D client's right-click flip
+  now routes flipped non-land MDFCs through `CastSpellBack`
+  (push X). The art swap is already wired (the existing
+  `back_face_name` hand-card visual flow handles this), but the cast
+  button's tooltip should change from "Cast for {front cost}" to
+  "Cast back face for {back cost}" when flipped, so players
+  understand which cost will be charged. Today the tooltip still
+  reflects the front face's cost.
+
+### Server
+
+- **Action telemetry: `CastSpellBack` audit log**. The new MDFC
+  back-face cast path emits the same `SpellCast` event as the front-
+  face path. The server's wire log doesn't distinguish "cast as front"
+  vs "cast as back" — both look identical from the spectator's view.
+  Add a `cast_face: CastFace::{Front,Back,Flashback}` payload on
+  `GameEventWire::SpellCast` so replays / spectator UIs can render
+  the right face name without round-tripping through the engine.
+  **DONE** in push XIV: `GameEvent::SpellCast.face` +
+  `GameEventWire::SpellCast.face` now carry the tag.
+
+## New suggestions (added 2026-05-01 pushes XI–XIV)
+
+These items came up while implementing the MDFC + per-spell-type
+batches; listed here so the next pass can pick them up without
+re-deriving them.
+
+### Engine
+
+- **`Predicate::CastFace`** for triggers that gate on cast face. Push
+  XIV added the audit log; future cards like Lurrus / Yorion-style
+  "if cast from a non-hand zone" payoffs need a predicate that reads
+  the resolving spell's `face` to gate triggers / static effects.
+
+- **MDFC back-face mana-cost label in client**. Push X / XI's right-
+  click flip routes through `CastSpellBack`, but the cast button's
+  tooltip still shows the front face's cost. Tracked in TODO.md "UI
+  — Non-land MDFC flip indicator". Once a `CastingState.flipped: bool`
+  flag flows from the targeting prompt to the tooltip layer, the
+  tooltip can swap to "Cast back face for {N}".
+
+- **`CastFace::Back` payload on `GameAction::CastSpellBack`** (UI hint).
+  The action input has no face indicator today — `CastSpellBack` is
+  the only signal. Adding a `face: CastFace` field to other cast
+  actions (front cast, alt cast) would make the input log fully
+  symmetric with the output event log.
+
+- **Multi-face MDFC support beyond two faces**. Currently
+  `CardDefinition.back_face: Option<Box<CardDefinition>>` supports a
+  single back face. Modal triple-faced cards (MDF triples like Esika
+  // Esika's Chariot, or future cycles) would need
+  `back_faces: Vec<Box<CardDefinition>>` + a face-index in
+  `CastSpellBack`. Not pressing today but worth tracking.
+
+### UI
+
+- **Per-MDFC card-front recognition**. The 3D client's hand renders
+  the card name + cost based on `definition.name`. A right-click flip
+  swaps `definition` to the back face's definition; the UI can render
+  the new face's name, but the original front face's name is lost
+  during the swap. Adding a `back_face_visible: bool` field on the
+  client-side hand-card state (instead of mutating `definition`) would
+  let the UI flip the rendering without touching the engine state.
+
+### Server
+
+- **MDFC cast face metric**. Push XIV's `CastFace` event payload
+  unblocks per-face replay counting. A `metrics::cast_face_counts`
+  Prometheus-style histogram (or simple Vec<(CastFace, u32)>
+  tally) on the server would surface "how many MDFC back-face casts
+  per game" stats useful for cube tuning.
+
+## New suggestions (added 2026-05-01 push XV)
+
+These items came up while implementing the `Effect::MayDo` +
+`ActivatedAbility.life_cost` batch and are listed here so the next
+pass can pick them up without re-deriving them.
+
+### Engine
+
+- **`Effect::MayPay { mana_cost, body }`** — sibling to push XV's
+  `Effect::MayDo`. Adds an optional mana payment (rather than just
+  yes/no). Bayou Groff's "may pay {1} to return on death", Killian's
+  Confidence's "may pay {W/B} on combat damage to reanimate from gy",
+  Tenured Concocter's may-draw-on-target. Today these are collapsed
+  to always-do or always-skip. Cleanest path: a new `Decision::
+  OptionalCost` variant carrying both the prompt + the mana cost so
+  the bot/UI can evaluate affordability before answering yes/no.
+
+- **`Effect::MayChoose { description: String, options: Vec<(String,
+  Effect)> }`** — multi-option pick (rather than yes/no). Practiced
+  Offense's "lifelink-or-DS" mode pick, Dina's Guidance's "hand or
+  graveyard" destination pick, future "name a card" prompts. Today
+  these collapse to one always-on branch.
+
+- **`MayDo` for `wants_ui` players**. Today the synchronous decider
+  path means UI players land on AutoDecider's default `false`
+  answer when their `wants_ui` is true. A future refinement: surface
+  `MayDo` through the `suspend_signal` flow so a human-in-the-loop
+  player sees the prompt directly. (Current bot/test play is
+  unaffected.)
+
+- **`Predicate::CastFace`** — cast-face introspection on the
+  resolving spell. Push XIV's `CastFace` event payload added the
+  audit log; future cards like Lurrus / Yorion-style "if cast from
+  a non-hand zone" payoffs need a predicate that reads the
+  resolving spell's `face` (Front / Back / Flashback) to gate
+  triggers / static effects.
+
+- **Land-becomes-creature primitive**. Great Hall of the Biblioplex's
+  `{5}: becomes 2/4 Wizard creature with 'whenever you cast IS, +1/+0
+  EOT'` clause is omitted (push XV) because the engine has no
+  Mishra's Factory-style transient creature-grant. Adding `Effect::
+  BecomeCreature { p, t, types: Vec<CreatureType>, abilities: …,
+  duration }` would unblock this card, Mishra's Factory, Mutavault,
+  and the rest of the manland cycle.
+
+- **Bottom-of-library miss path on `RevealUntilFind`**. Today the
+  effect mills misses; many SOS cards (Follow the Lumarets, Zimone's
+  Experiment, Stirring Honormancer) want misses to go to the bottom
+  of the library instead. Add a `to_misses: ZoneDest` field on
+  `RevealUntilFind` (defaulting to `ZoneDest::Graveyard` for
+  back-compat) and update existing callers to opt into bottom-of-lib.
+
+### UI
+
+- **MayDo prompt rendering**. The 3D client doesn't yet route
+  `OptionalTrigger` decisions through a UI affordance — `wants_ui`
+  players land on the AutoDecider's `false` answer by default. A
+  small "Yes / No" prompt panel anchored to the source card would
+  surface the prompt without breaking the existing bot/test paths.
+
+- **"Pay N life" cost label**. The new `cost_label` rendering shows
+  "Pay 1 life" for activations carrying `life_cost > 0`. The 3D
+  client's ability-tray could use a different color (red?) for the
+  life portion of a hybrid mana+life cost so players spot the life
+  payment at a glance.
+
+### Server
+
+- **Snapshot test for `life_cost` round-trip**. The new field has
+  `#[serde(default)]` so older snapshots load with `life_cost: 0`.
+  Add a snapshot round-trip test that exercises a `life_cost: 1`
+  ability across a serialize/deserialize cycle to lock in the
+  back-compat invariant.
+
+## New suggestions (added 2026-05-01 push XVI)
+
+These items came up while implementing the `Predicate::CastSpellHasX`
++ `Effect::MayPay` + `SelectionRequirement::HasXInCost` +
+`Value::LibrarySizeOf` + `CardsInZone(Hand)` filter-fix batch and are
+listed here so the next pass can pick them up without re-deriving.
 
 ### Engine
 - **Equipment subtype + attach mechanic** — several cube cards need
@@ -8468,3 +9416,250 @@ Lorehold, 14 Witherbloom, 12 Prismari, 12 Quandrix, 12 Silverquill),
   and toughness" needs a `Value::PowerOf(Each)` → `PumpPT(PowerOf,
   ToughnessOf)` per-creature application. Currently approximated
   as a flat +4/+4.
+
+- **Right-click MayPay prompt**. The 3D client's existing decision
+  panel handles `Decision::OptionalTrigger` for `MayDo` (push XV).
+  `MayPay` reuses the same decision shape but the prompt text should
+  also surface the affordability gate (gray-out the "Yes" button
+  when the mana pool can't afford the cost, instead of letting the
+  click silently no-op via the engine's "decline = false" fallback).
+  Today wants_ui players land on AutoDecider's Bool(false) anyway.
+
+- **HasXInCost label tooltip**. The new `SelectionRequirement::Has
+  XInCost` filter renders as part of a card's reveal/move target
+  prompt. The 3D client's target-prompt UI doesn't yet have a
+  dedicated tooltip explaining "card must have {X} in its mana
+  cost" — useful for Paradox Surveyor's "Land OR HasXInCost"
+  reveal filter.
+
+### Server
+
+- **MayPay payment audit log**. The server's `GameEventWire` doesn't
+  emit a dedicated "mana cost paid via MayPay" event today; the
+  pool-decrease is silent. A `LifePaid`-style `ManaPaidForOptional`
+  event (with source CardId + amount) would help replays diagnose
+  surprising pool drops.
+
+## New suggestions (added 2026-05-26 session)
+
+These items came up during the 2026-05-26 implementation session and are
+listed here so the next pass can pick them up.
+
+### Engine — Done this session
+
+- ✅ **Ward enforcement (generic mana)** — `Keyword::Ward(u32)` is now
+  enforced at cast time. When a spell targets an opponent's permanent with
+  Ward(N), the caster must pay N additional generic mana. Approximation:
+  real MTG Ward is a triggered counter-unless-pay; this implementation
+  adds the cost to the spell's total. Ward—Pay life variants (Mica, Prismari
+  the Inspiration) are approximated as generic mana.
+
+- ✅ **Stun counter untap replacement (CR 122.1c)** — permanents with stun
+  counters no longer untap during the untap step. Instead one stun counter
+  is removed and the permanent stays tapped. Also respected by `Effect::
+  Untap` so spell-based untap effects (Frantic Search, etc.) honor stun.
+
+- ✅ **Protection from color targeting (CR 702.16)** — spells whose mana
+  cost contains a color that a target has protection from are rejected at
+  cast time. Controller's own spells bypass the check (matching MTG rules).
+
+- ✅ **ManaCost::colors()** — returns the set of distinct colors in a cost.
+
+- ✅ **PermanentView.ward_cost** — surfaces Ward mana cost in the client
+  view so the UI can display targeting cost hints.
+
+- ✅ **Opus partial wiring** — 11 body-only 🟡 creatures promoted to have
+  their basic IS-cast trigger (Opus small effect). The 5+-mana branch
+  remains omitted pending `Value::CastSpellManaSpent`.
+
+### Engine — Discovered gaps
+
+- **Ward—Pay life / Ward—Discard variants**. The current Ward(u32) is
+  generic-mana-only. Cards like Mica Reader of Ruins (Ward—Pay 3 life),
+  Tragedy Feaster (Ward—Discard), Forum Necroscribe (Ward—Discard) use
+  life or discard as the Ward cost. A `Keyword::WardLife(u32)` and
+  `Keyword::WardDiscard` variant (or a `WardCost` enum on the keyword)
+  would express these faithfully.
+
+- **Protection from damage**. CR 702.16 also prevents damage from sources
+  of the protected color. The engine currently tracks damage as a flat u32
+  counter with no source identity, so color-keyed damage prevention isn't
+  implementable without a damage-source tracking system.
+
+- **Protection from blocking (blocker side)**. Protection currently only
+  prevents an attacker with protection from being blocked by a colored
+  creature. The reverse (blocker with protection from attacker's color
+  can't be assigned as a blocker) is not checked. This is less commonly
+  relevant but worth tracking.
+
+### UI
+
+- **Ward cost indicator**. `PermanentView.ward_cost` is now surfaced.
+  The 3D client should render a small shield icon or "{N}" badge on
+  Ward-bearing permanents so opponents know the targeting surcharge.
+
+### Cards — Remaining ⏳ blockers
+
+- **Copy-spell/permanent primitive** still blocks ~12 ⏳ cards
+  (Choreographed Sparks, Silverquill the Disputant, Social Snub,
+  Applied Geometry, Quandrix the Proof, etc.).
+
+- **Cascade keyword** blocks Quandrix the Proof.
+
+- **Cast-from-exile pipeline** blocks ~8 ⏳ cards (Archaic's Agony,
+  Elemental Mascot 5+-mana, Improvisation Capstone, etc.).
+
+- **Prepare mechanic** blocks 2 colorless ⏳ cards (Biblioplex
+  Tomekeeper, Skycoach Waypoint).
+
+- **Vehicle/Crew** blocks Strixhaven Skycoach.
+
+## New suggestions (added 2026-05-26 modern_decks session)
+
+### Engine
+
+- **0/0 creature ETB-with-counters**: Stonecoil Serpent ({X} 0/0 with ETB
+  AddCounter(+1/+1, X)) dies to SBAs before the ETB trigger resolves. Real
+  MTG handles this as a replacement effect ("enters with X counters") not a
+  triggered ability. Need either `CardDefinition.enters_with_counters:
+  Option<(CounterType, Value)>` applied during `place_on_battlefield`, or a
+  special "as-enters" replacement effect layer. Affects: Walking Ballista,
+  Hangarback Walker, Hydroid Krasis, all Hydra-style X-cost creatures.
+
+- **Evoke sacrifice timing**: Mulldrifter/Shriekmaw evoke triggers sacrifice
+  on ETB after ETB triggers fire. Verify the `evoke_sacrifice` path in
+  stack.rs fires the ETB first, then sacrifices. Currently works by ordering
+  but edge cases (Flickerwisp on an evoked creature) aren't tested.
+
+- **Cascade approximation**: Bloodbraid Elf approximated as ETB draw 1.
+  Real cascade needs "exile cards until you find a nonland with CMC less than
+  this spell's CMC, cast it free, put the rest on bottom." A first-class
+  `Keyword::Cascade` + `Effect::Cascade` would unblock Bloodbraid Elf,
+  Shardless Agent, Violent Outburst, and Quandrix the Proof.
+
+- **Planeswalker damage in combat**: `deal_damage_to` now handles spell
+  damage to planeswalkers (CR 120.3), but combat damage to planeswalkers
+  (when a creature attacks a planeswalker directly) needs the same loyalty-
+  removal path in `resolve_combat_damage`.
+
+### Cards
+
+- **STRIXHAVEN2.md table staleness**: Fix What's Broken, Archaic's Agony,
+  and Molten Note are all implemented but their table entries still show ⏳.
+  Run the audit script to reconcile.
+
+- **Cube pool diversity**: The cube now has 46+ new cards but several color
+  pairs (GW, UR) have much deeper pools than others (WU, BG). A card-count
+  audit per pair would identify thin pools that need supplementing.
+
+## New suggestions (added 2026-05-26 modern_decks-18 session)
+
+### Engine
+
+- **Deathtouch + non-combat damage**: `deathtouch_damaged` is only set
+  during combat damage. Spell damage from a deathtouch source (e.g. Goblin
+  Chainwhirler with deathtouch from Equipment) should also set the flag.
+  Needs damage-source identity tracking in `deal_damage_to`.
+
+- **Choose-two commands**: All five STX commands are collapsed to
+  single-mode ChooseMode. A `ChooseMultipleMode { modes: Vec<Effect>,
+  count: usize }` variant would let the controller pick exactly N modes
+  from the list, matching the printed "choose two" pattern.
+
+- **Hybrid mana**: Every hybrid pip ({W/B}, {G/U}, etc.) is approximated
+  as one color. A `ManaSymbol::Hybrid(Color, Color)` variant + payment
+  logic would let players pay either half.
+
+- **Learn/Lesson sideboard**: Learn is collapsed to Draw 1 across ~12
+  cards. A minimal Lesson sideboard (separate from the main deck, searched
+  by Learn) would give Strixhaven Limited decks their intended play pattern.
+
+- **0/0 enters-with-counters**: The `enters_with_counters: Option<
+  (CounterType, Value)>` field approach was explored but reverted because
+  it adds a required field to every CardDefinition constructor (~588 sites).
+  Alternative: use `#[serde(default)]` and make `Default` handle it, or
+  apply counters in the spell-resolution path before SBAs based on a flag
+  on the definition. Needed for Stonecoil Serpent, Walking Ballista, etc.
+
+### UI
+
+- **Legendary indicator**: `PermanentView.is_legendary` is now surfaced.
+  The 3D client should render a crown icon or gold name border.
+
+### Cards
+
+- **STX Command full modes**: Lorehold/Prismari/Quandrix/Silverquill/
+  Witherbloom Commands all ship single-mode; promoting to choose-two would
+  match the printed cards and significantly increase gameplay depth.
+
+- **Lesson cards not in Lesson sideboard**: Environmental Sciences,
+  Introduction to Annihilation, Introduction to Prophecy, Expanded Anatomy,
+  Fractal Summoning, Elemental Summoning, Pop Quiz are all Lessons but only
+  playable from hand since there's no sideboard model.
+
+- **Tanazir Quandrix ETB**: The counter-doubling ETB is still omitted.
+  A `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1,
+  CountersOn(TriggerSource, +1/+1))` pattern would approximate it.
+
+- **Ward cost adds {1} generic to bolt cost**: When a spell targets a
+  Ward creature, an extra {1} generic appears in the spell's cost.
+  Investigation needed — may be an interaction with extra_cost_for_spell
+  or a Ward-triggered tax that fires too early. Tests pass with extra
+  mana but the root cause of the phantom {1} tax is unclear.
+
+- **Deathtouch on non-combat damage**: The Fight effect deals damage but
+  doesn't mark it as from a deathtouch source. To properly implement
+  this (CR 702.2b), the engine would need to track damage sources and
+  apply deathtouch lethality in SBA. Currently only combat damage checks
+  for deathtouch.
+
+- **Lifelink on non-combat damage**: The `deal_damage_to` function in
+  effects.rs doesn't track the damage source, so lifelink from fight
+  effects or DealDamage effects from creatures doesn't gain life.
+  Combat damage correctly tracks lifelink.
+
+- **Witherbloom Command / multi-mode selection**: STX Command cycle cards
+  want "choose two" from N modes, but the engine's ChooseMode only
+  supports "choose one". A `ChooseNModes(n, Vec<Effect>)` variant would
+  unlock Command cards and similar multi-mode selections.
+
+- **Cascade keyword**: Needed for Quandrix, the Proof and other cascade
+  cards. Would require a cast-from-exile pipeline + "exile until nonland
+  with lesser MV, cast it for free" resolution path.
+
+## New suggestions (added 2026-05-26 push XVII)
+
+### Engine
+
+- **Ward on activated abilities**: Ward currently only taxes spell casts.
+  Per CR 702.21a, Ward also triggers when the permanent becomes the target
+  of an ability an opponent controls. Adding a Ward tax check in
+  `activate_ability` would be the natural extension.
+
+- **Stun counter on Effect::Untap**: The CR 122.1b replacement (stun counter
+  prevents untap, removes stun counter instead) is now enforced during the
+  untap step. But `Effect::Untap` from spells/abilities (e.g. "untap target
+  creature") should also check stun counters. Currently it bypasses stun.
+
+- **Opus keyword (SOS-specific)**: Several Prismari/blue SOS creatures have
+  "Opus — Whenever you cast an IS spell, [small effect]. If five or more
+  mana was spent to cast that spell, [big effect] instead." This needs a
+  `Predicate::ManaSpentOnCastAtLeast(Value)` gating the if-else branch.
+  Currently the big mode is always omitted.
+
+- **Increment keyword (SOS-specific)**: Several Quandrix/blue creatures
+  have "Increment — Whenever you cast a spell, if the amount of mana you
+  spent is greater than this creature's power or toughness, put a +1/+1
+  counter on this creature." Needs mana-spent-on-cast introspection.
+
+### UI
+
+- **Ward cost display in targeting UI**: When the player selects a target
+  for a spell, display the Ward cost so they know the extra mana required
+  before committing.
+
+### Server
+
+- **Ward tax in legal-action generation**: The bot's legal-action generator
+  should factor in Ward cost when computing whether a spell can target a
+  given permanent, so it doesn't attempt unaffordable casts.

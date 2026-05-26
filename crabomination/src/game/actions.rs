@@ -797,6 +797,24 @@ impl GameState {
             }
         }
 
+        // CR 702.16: Protection from [color] prevents targeting by spells
+        // of that color. Check the spell's colors against the target's
+        // protection keywords.
+        if let Some(Target::Permanent(cid)) = target
+            && let Some(target_card) = self.battlefield_find(cid)
+            && target_card.controller != p
+        {
+            let spell_colors = card.definition.cost.colors();
+            for kw in &target_card.definition.keywords {
+                if let Keyword::Protection(prot_color) = kw
+                    && spell_colors.contains(prot_color)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
+                }
+            }
+        }
+
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
         // slot N and the chosen target doesn't match, reject the cast.
@@ -849,6 +867,15 @@ impl GameState {
         let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
         if reduction > 0 {
             cost.reduce_generic(reduction);
+        }
+
+        // Ward tax: if the spell targets an opponent's permanent with Ward,
+        // the caster must pay the Ward cost or the spell can't be cast.
+        if let Some(ref tgt) = target {
+            let ward_tax = self.ward_tax_for_target(tgt, p);
+            if ward_tax > 0 {
+                cost.symbols.push(crate::mana::ManaSymbol::Generic(ward_tax));
+            }
         }
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
@@ -962,6 +989,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = card.definition.is_creature();
+        let ward_target = target.clone();
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -1829,13 +1857,16 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pay the alt mana cost (with X substitution + static-ability tax).
+        // Pay the alt mana cost (with X substitution + static-ability tax + Ward).
         let mut mana_cost = if alt.mana_cost.has_x() {
             alt.mana_cost.with_x_value(x_value.unwrap_or(0))
         } else {
             alt.mana_cost.clone()
         };
-        let tax = extra_cost_for_spell(self, p, &card);
+        let mut tax = extra_cost_for_spell(self, p, &card);
+        if let Some(ref tgt) = target {
+            tax += self.ward_tax_for_target(tgt, p);
+        }
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -2000,6 +2031,28 @@ impl GameState {
         Ok(())
     }
 
+    /// Returns the Ward tax (generic mana) that `caster` must pay when
+    /// targeting `target`. Returns 0 if the target has no Ward or the
+    /// caster controls the permanent.
+    pub(crate) fn ward_tax_for_target(&self, target: &Target, caster: usize) -> u32 {
+        let cid = match target {
+            Target::Player(_) => return 0,
+            Target::Permanent(c) => c,
+        };
+        let Some(card) = self.battlefield_find(*cid) else {
+            return 0;
+        };
+        if card.controller == caster {
+            return 0;
+        }
+        for kw in &card.definition.keywords {
+            if let Keyword::Ward(n) = kw {
+                return *n;
+            }
+        }
+        0
+    }
+
     /// True if `player` controls any permanent granting "you have hexproof"
     /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub(crate) fn player_has_static_hexproof(&self, player: usize) -> bool {
@@ -2011,6 +2064,59 @@ impl GameState {
                     .iter()
                     .any(|sa| matches!(sa.effect, StaticEffect::ControllerHasHexproof))
         })
+    }
+
+    /// Ward enforcement (CR 702.21): when a spell or ability targets a
+    /// permanent with Ward controlled by an opponent, push a "counter
+    /// unless controller pays {N}" trigger onto the stack. The Ward
+    /// trigger resolves before the spell, giving the caster a chance to
+    /// pay. If they can't (or won't), the spell is countered.
+    pub(crate) fn fire_ward_triggers(
+        &mut self,
+        caster: usize,
+        spell_id: CardId,
+        target: Option<Target>,
+    ) {
+        let Some(Target::Permanent(target_id)) = target else { return };
+        let ward_cost = {
+            let Some(card) = self.battlefield_find(target_id) else { return };
+            if card.controller == caster { return; }
+            let computed = self.compute_battlefield();
+            let kws = computed.iter()
+                .find(|c| c.id == target_id)
+                .map(|c| c.keywords.as_slice())
+                .unwrap_or(&card.definition.keywords);
+            let mut ward = None;
+            for kw in kws {
+                if let Keyword::Ward(n) = kw {
+                    ward = Some(*n);
+                    break;
+                }
+            }
+            match ward {
+                Some(n) if n > 0 => n,
+                _ => return,
+            }
+        };
+        let ward_mana = crate::mana::ManaCost {
+            symbols: vec![crate::mana::ManaSymbol::Generic(ward_cost)],
+        };
+        let ward_source = target_id;
+        let ward_controller = self.battlefield_find(target_id)
+            .map(|c| c.controller)
+            .unwrap_or(0);
+        self.stack.push(StackItem::Trigger {
+            source: ward_source,
+            controller: ward_controller,
+            effect: Box::new(Effect::CounterUnlessPaid {
+                what: crate::effect::Selector::Target(0),
+                mana_cost: ward_mana,
+            }),
+            target: Some(Target::Permanent(spell_id)),
+            mode: None,
+            x_value: 0,
+            converged_value: 0,
+        });
     }
 
     /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)

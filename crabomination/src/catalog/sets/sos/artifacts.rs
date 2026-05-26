@@ -479,6 +479,17 @@ pub fn strixhaven_skycoach() -> CardDefinition {
     // play pattern. The full Crew mechanic would need a tap-creatures-
     // as-cost activation that transiently flips `CardType::Creature`
     // on — same engine gap as Crew across the catalog.
+/// Strixhaven Skycoach — {3} Artifact — Vehicle 3/2. Flying.
+/// "When this Vehicle enters, you may search your library for a basic
+/// land card, reveal it, put it into your hand, then shuffle."
+///
+/// Body + ETB search wired. Crew is omitted (no Crew primitive yet —
+/// the card sits on the battlefield as an artifact with P/T but lacks
+/// the activation that would animate it into a creature). The ETB
+/// land-search uses the same `Effect::Search` pattern as Environmental
+/// Scientist / Studious First-Year back face.
+pub fn strixhaven_skycoach() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, Keyword};
     CardDefinition {
         name: "Strixhaven Skycoach",
         cost: cost(&[generic(3)]),
@@ -487,6 +498,9 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         subtypes: Subtypes {
             artifact_subtypes: vec![ArtifactSubtype::Vehicle],
             creature_types: vec![CreatureType::Construct],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
             ..Default::default()
         },
         power: 3,
@@ -500,6 +514,9 @@ pub fn strixhaven_skycoach() -> CardDefinition {
                 who: PR::You,
                 filter: SelectionRequirement::IsBasicLand,
                 to: ZD::Hand(PR::You),
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
         static_abilities: vec![],
@@ -514,4 +531,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         affinity_filter: None,
     }
 }
+    }
+}
+
 

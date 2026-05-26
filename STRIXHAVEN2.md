@@ -239,6 +239,741 @@ per-card status and notes.
   Sacrifice picks the first matching creature. An interactive surface
   should later prompt the controller for both Discard and Sacrifice
   choices, but bot games run end-to-end as-is.
+## Implementation Progress
+
+Counts reflect the regenerated tables below (audited via
+`scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
+
+- ✅ done: **93** (+5 in push XVI: Geometer's Arthropod, Matterbending
+  Mage, Paradox Surveyor, Embrace the Paradox, Sundering Archaic; STX
+  cards Bayou Groff, Felisa Fang, Body of Research not counted in SOS
+  totals).
+- 🟡 partial: **146** (+8 in 2026-05-26 session: Ward enforcement
+  unblocked Campus Composer, Emeritus of Ideation, Strife Scholar,
+  Colorstorm Stallion, Elemental Mascot, Mica Reader of Ruins,
+  Prismari the Inspiration; Grave Researcher MDFC wired with Surveil
+  ETB. Opus partial triggers added to 11 body-only creatures).
+- ⏳ todo: **22** (-8 from 30 in 2026-05-26 session: 4 Ward-gated MDFCs,
+  3 Ward-gated creatures, 1 Surveil-gated MDFC promoted).
+
+All 229 cards marked ✅ or 🟡 have a corresponding factory in
+`crabomination/src/catalog/sets/sos/`; the audit script reports 0 false
+positives and 0 stale ⏳ rows.
+
+## 2026-05-01 push XVI: CastSpellHasX + MayPay + HasXInCost + LibrarySizeOf
+
+Six engine primitives + 10 SOS/STX card promotions. Five new
+predicates/effects/values + a `CardsInZone(Hand)` filter-evaluation
+fix that was silently breaking hand-source MayDo riders. Tests pass at
+1025 (+13).
+
+Engine improvements:
+
+- **`Predicate::CastSpellHasX`** — cast-time introspection on the
+  just-cast spell's `{X}` symbols. Used by Quandrix's "whenever you
+  cast a spell with `{X}` in its mana cost" payoffs (Geometer's
+  Arthropod, Matterbending Mage). Reads the cast spell's
+  `card.definition.cost.has_x()` from `StackItem::Spell` via
+  `ctx.trigger_source`.
+- **`Effect::MayPay { description, mana_cost, body }`** — sibling to
+  push XV's `Effect::MayDo`, but with a mana-cost payment. The
+  controller is asked yes/no; on yes + sufficient pool, the engine
+  deducts the mana and runs `body`. Decline / can't-afford skip the
+  body silently. Powers Bayou Groff's printed "may pay {1} to return
+  on death" rider, Killian's Confidence-style optional reanimation,
+  and any future "may pay X to do Y" pattern with a pure-mana cost.
+- **`SelectionRequirement::HasXInCost`** — card-level filter that
+  matches if the card's printed mana cost contains an `{X}` pip.
+  Wires Paradox Surveyor's "land OR card with {X} in cost" reveal
+  filter to its exact-printed shape.
+- **`Value::LibrarySizeOf(PlayerRef)`** — reads `players[p].library.
+  len()` at evaluation time. Promotes Body of Research's "for each
+  card in your library" Fractal scaling from the prior
+  `GraveyardSizeOf` approximation to the printed exact predicate.
+- **`shortcut::cast_has_x_trigger(effect)`** — Magecraft/Repartee-
+  style helper for "whenever you cast a spell with {X}" payoffs.
+  Bundles `EventKind::SpellCast / YourControl` with a `CastSpellHasX`
+  filter.
+- **`Selector::CardsInZone(Hand)` filter-evaluation fix** — was
+  routing through `evaluate_requirement_static` (which only walks
+  battlefield → graveyard → exile → stack), so any predicate against
+  a hand-resident card silently returned false (e.g. Embrace the
+  Paradox's `MayDo(Move(one_of(CardsInZone(Hand, Land)) → bf
+  tapped))` couldn't see the lands in hand). Now routes through
+  `evaluate_requirement_on_card`, the card-level evaluator that
+  works for non-battlefield zones. Also benefits any future
+  hand/library/exile-source `Move` chain.
+
+Cards (10 promotions):
+
+| Card | Status before | Status after |
+|---|---|---|
+| Geometer's Arthropod | ⏳ | ✅ (CastSpellHasX trigger fully wired) |
+| Matterbending Mage | 🟡 | ✅ (X-cast trigger grants Unblockable EOT) |
+| Paradox Surveyor | 🟡 | ✅ (Land OR HasXInCost reveal filter) |
+| Embrace the Paradox | 🟡 | ✅ (MayDo land-from-hand → bf tapped) |
+| Sundering Archaic | 🟡 | 🟡 ({2}: graveyard → bottom-of-library wired) |
+| Aziza, Mage Tower Captain | ⏳ | 🟡 (body-only; copy-spell still gating ult) |
+| Zaffai and the Tempests | ⏳ | 🟡 (body-only; once-per-turn free cast omitted) |
+| Bayou Groff (STX) | 🟡 | ✅ (MayPay {1} → return-to-hand on death) |
+| Felisa, Fang of Silverquill (STX) | 🟡 | ✅ (counter-bearing-creature dies → Inkling) |
+| Body of Research (STX) | 🟡 | ✅ (LibrarySizeOf promotes from gy proxy) |
+
+13 new tests in `tests::sos::*` and `tests::stx::*`. All 1025 lib
+tests pass.
+
+## 2026-05-01 push XV: MayDo primitive + Witherbloom MDFC closer + life-cost activations
+
+Closes out the **Witherbloom (B/G) school** (Lluwen MDFC was the last ⏳)
+and lands two long-tracked engine primitives — `Effect::MayDo` and
+`ActivatedAbility.life_cost`. New cards: **Lluwen, Exchange Student //
+Pest Friend** (Witherbloom MDFC), **Great Hall of the Biblioplex**
+(legendary colorless utility land), **Follow the Lumarets** (G Infusion
+sorcery). Promotions of "you may"-bearing 🟡 cards: Stadium Tidalmage,
+Pursue the Past, Witherbloom Charm mode 0, Heated Argument, Rubble
+Rouser; Erode now wires the basic-land tutor for the target's
+controller.
+
+Engine improvements:
+
+- **`Effect::MayDo { description, body }`** — first-class "you may [body]"
+  primitive. Emits a yes/no via `Decision::OptionalTrigger`; `AutoDecider`
+  defaults to `Bool(false)` (skip), matching MTG's "you may defaults to no"
+  rule. The `description` is a `String` (rather than `&'static str`)
+  because `Effect` is bound to `Deserialize` via `GameState`'s serde
+  derive. Walkers (`requires_target`, `primary_target_filter`,
+  `target_filter_for_slot_in_mode`) recurse into the inner body.
+
+- **`ActivatedAbility.life_cost: u32`** — additional life-payment cost on
+  activations. Pre-flight gate rejects activation cleanly when controller
+  has insufficient life (new `GameError::InsufficientLife`); life is
+  paid up front after tap/mana succeed. Powers Great Hall of the
+  Biblioplex's `{T}, Pay 1 life: Add one mana of any color` printed
+  ability faithfully — the effect itself is a pure `AddMana`, so the
+  ability still qualifies as a true mana ability and resolves
+  immediately without going on the stack. New
+  `ActivatedAbilityView.cost_label` rendering shows "Pay N life" tokens.
+
+- **Erode's basic-land tutor for target's controller** — uses
+  `PlayerRef::ControllerOf(Box::new(Selector::Target(0)))` for both the
+  `Search.who` field and the `ZoneDest::Battlefield.controller` field, so
+  the tutor and battlefield-place both target the correct (gy-resident)
+  player. Unblocks the printed "its controller may search their library
+  for a basic land" half.
+
+Cards (3 new + 6 promotions = 9 SOS rows touched):
+
+| Card | Status before | Status after |
+|---|---|---|
+| Lluwen, Exchange Student // Pest Friend | ⏳ | 🟡 |
+| Great Hall of the Biblioplex | ⏳ | 🟡 |
+| Follow the Lumarets | ⏳ | 🟡 |
+| Stadium Tidalmage | 🟡 | 🟡 (may-loot now opt-in) |
+| Pursue the Past | 🟡 | 🟡 (may-discard now opt-in) |
+| Witherbloom Charm mode 0 | 🟡 | 🟡 (may-sac now opt-in) |
+| Heated Argument | 🟡 | 🟡 (may-exile rider now opt-in) |
+| Rubble Rouser | 🟡 | 🟡 (may-rummage now opt-in) |
+| Erode | 🟡 | ✅ (basic-land tutor now wired) |
+
+All 1012 lib tests pass.
+
+## 2026-05-01 pushes XI/XII: 29 MDFCs + per-spell-type tallies + CastFace audit log
+
+Two batches of MDFCs (modal-double-faced cards) under a new
+`catalog::sets::sos::mdfcs` module, plus three engine improvements:
+
+- **`enum CastFace { Front, Back, Flashback }`** — threaded through
+  `GameEvent::SpellCast.face` + `GameEventWire::SpellCast.face`. Replays
+  / spectator UIs can distinguish a back-face MDFC cast from a normal
+  hand cast and from a graveyard-replay flashback cast. New transient
+  `GameState.pending_cast_face` field; `cast_spell_back_face` sets it to
+  `Back`, `cast_flashback` emits `Flashback` directly, default cast
+  paths emit `Front`.
+- **`Player.instants_or_sorceries_cast_this_turn`** +
+  **`Player.creatures_cast_this_turn`** — refines
+  `spells_cast_this_turn` (which counts every spell type) so cards that
+  explicitly gate on the IS or creature subset can target the
+  exact-printed predicate. Backed by two new predicates:
+  `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` and
+  `Predicate::CreaturesCastThisTurnAtLeast`. Surfaced through
+  `PlayerView` for client UIs (with `#[serde(default)]` for snapshot
+  back-compat).
+- **Potioner's Trove** — gate promoted from the proxy
+  `SpellsCastThisTurnAtLeast(You, 1)` → exact
+  `InstantsOrSorceriesCastThisTurnAtLeast(You, 1)` matching the printed
+  Oracle text.
+
+Push XI (17 MDFCs, all 🟡):
+
+| Card | Color | Front | Back |
+|---|---|---|---|
+| Elite Interceptor // Rejoinder | W | 1/2 Human Wizard | Counter target creature spell |
+| Emeritus of Truce // Swords to Plowshares | W | 3/3 Cat Cleric | Exile + lifegain via `PlayerRef::ControllerOf` |
+| Honorbound Page // Forum's Favor | W | 3/3 Cat Cleric | +1/+1 EOT + 1 life |
+| Joined Researchers // Secret Rendezvous | W | 2/2 Human Cleric Wizard | Draw 3 (collapsed to caster) |
+| Quill-Blade Laureate // Twofold Intent | W | 1/1 Human Cleric | +1/+1 EOT + Inkling token |
+| Spiritcall Enthusiast // Scrollboost | W | 3/3 Cat Cleric | Fan-out +1/+1 counter on each creature you control |
+| Encouraging Aviator // Jump | U | 2/3 Bird Wizard w/ Flying | Grant Flying EOT |
+| Harmonized Trio // Brainstorm | U | 1/1 Merfolk Bard Wizard | Draw 3 + put 2 on top |
+| Cheerful Osteomancer // Raise Dead | B | 4/2 Orc Warlock | Return creature card from gy → hand |
+| Emeritus of Woe // Demonic Tutor | B | 5/4 Vampire Warlock | Search library for any card → hand |
+| Scheming Silvertongue // Sign in Blood | B | 1/3 Vampire Warlock | Target player draws 2 + loses 2 |
+| Adventurous Eater // Have a Bite | B | 3/2 Human Warlock | -3/-3 EOT |
+| Emeritus of Conflict // Lightning Bolt | R | 2/2 Human Wizard | 3 dmg to any target |
+| Goblin Glasswright // Craft with Pride | R | 2/2 Goblin Sorcerer | +2/+0 + Haste EOT |
+| Emeritus of Abundance // Regrowth | G | 3/4 Elf Druid | Return any card from gy → hand |
+| Vastlands Scavenger // Bind to Life | G | 4/4 Trample Bear Druid | Return up to 2 creatures from gy |
+| Leech Collector // Bloodletting | B | 2/2 Human Warlock | Drain 2 |
+| Pigment Wrangler // Striking Palette | R | 4/4 Orc Sorcerer | 2 dmg to any target |
+
+Push XII (12 more MDFCs, all 🟡):
+
+| Card | Color | Front | Back |
+|---|---|---|---|
+| Spellbook Seeker // Careful Study | U | 3/3 Bird Wizard w/ Flying | Draw 2 + discard 2 |
+| Skycoach Conductor // All Aboard | U | 2/3 Bird Pilot w/ Flying | Bounce target creature to owner's hand |
+| Landscape Painter // Vibrant Idea | U | 2/1 Merfolk Wizard | Draw 3 |
+| Blazing Firesinger // Seething Song | R | 2/3 Dwarf Bard | Add `{R}{R}{R}{R}{R}` |
+| Maelstrom Artisan // Rocket Volley | R | 3/2 Minotaur Sorcerer | 2 dmg each opp + 2 dmg to opp creature |
+| Scathing Shadelock // Venomous Words | B | 4/6 Snake Warlock w/ Deathtouch | -2/-2 EOT |
+| Infirmary Healer // Stream of Life | G | 2/3 Cat Cleric w/ Lifelink | Gain X life |
+| Jadzi, Steward of Fate // Oracle's Gift | U | Legendary 2/4 Human Wizard w/ Flying | Draw 2X cards |
+| Sanar, Unfinished Genius // Wild Idea | U/R | Legendary 0/4 Goblin Sorcerer | Draw 3 |
+| Tam, Observant Sequencer // Deep Sight | G/U | Legendary 4/3 Snake Wizard w/ Deathtouch | Scry 4 + Draw 1 |
+| Kirol, History Buff // Pack a Punch | R/W | Legendary 2/3 Vampire Cleric w/ Lifelink | 3 dmg to creature |
+| Abigale, Poet Laureate // Heroic Stanza | W/B | Legendary 2/3 Bird Bard w/ Flying | +2/+2 EOT + Lifelink |
+
+Cube color pool wiring:
+- White: + 6 white MDFCs.
+- Blue: + 6 blue MDFCs (incl. Jadzi).
+- Black: + 6 black MDFCs.
+- Red: + 5 red MDFCs.
+- Green: + 3 green MDFCs.
+- Cross-pools: Sanar (UR), Tam (GU), Kirol (RW), Abigale (WB).
+
+Test additions: 42 new tests in `tests::sos::*`. All 997 lib tests
+pass.
+
+## 2026-05-01 push X: Flashback wirings, Selector::Take, MDFC back-face cast
+
+5 new SOS card factories (4 🟡 + 1 ✅), 4 promotions from 🟡 to ✅, plus
+three engine primitives:
+
+- **`Selector::Take { inner, count }`** — wraps another selector to
+  clamp how many entities flow through (in resolution order). Primary
+  payoff is "select up to N from a graveyard / library / hand": it
+  promotes Practiced Scrollsmith's gy-exile from "every matching
+  noncreature/nonland card" to "exactly one"; lifts Pull from the
+  Grave's gy-recursion from one card to two; available for future SOS
+  Heated Argument-style "may exile a card" wraps. Sugar:
+  `Selector::one_of(inner)` and `Selector::take(inner, n)`.
+
+- **`GameAction::CastSpellBack`** + **`cast_spell_back_face`** —
+  generalises `PlayLandBack` to non-land MDFC back faces. Mirrors the
+  PlayLandBack flow: swaps the in-hand card's `definition` to the
+  back face's, then routes through the regular `cast_spell` path so
+  cost / type / target filters / effect all resolve against the back
+  face. Unblocks the SOS MDFC cycles whose backs are
+  creatures/instants/sorceries (Studious First-Year // Rampant
+  Growth wired as the first one; the rest of the cycle is wireable
+  one-by-one as oracle text becomes available). The 3D client picks
+  this up automatically: the right-click flip on hand cards now
+  routes flipped non-land MDFCs through `CastSpellBack` (in addition
+  to the existing `PlayLandBack` for land MDFCs). New
+  `TargetingState.back_face_pending` flag carries the routing through
+  the targeting prompt for back-face spells that need a target.
+
+- **`Keyword::Flashback` wirings on 7 SOS cards** — Daydream, Dig
+  Site Inventory, Practiced Offense, Antiquities on the Loose,
+  Pursue the Past, Tome Blast, Duel Tactics. The engine's existing
+  `cast_flashback` path replays each card's body identically when
+  cast from graveyard for the flashback cost; the result is exiled
+  on resolution.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Daydream | White | ✅ (was 🟡) | Flashback {2}{W} now wired via `Keyword::Flashback`. The flicker pattern + counter rider already worked. |
+| Dig Site Inventory | White | ✅ (was 🟡) | Flashback {W} now wired. |
+| Tome Blast | Red | ✅ (was 🟡) | Flashback {4}{R} now wired. |
+| Duel Tactics | Red | ✅ (was 🟡) | Flashback {1}{R} now wired (mainline ping + transient `CantBlock` from push VI). |
+| Studious First-Year // Rampant Growth | Green (MDFC) | ✅ (was ⏳) | First non-land MDFC. Front: 1/1 vanilla Bear Wizard at {G}; back: Rampant Growth ({1}{G} basic-land tutor). The new `GameAction::CastSpellBack` casts the back face. |
+| Inkshape Demonstrator | White | 🟡 (was ⏳) | Body + `Keyword::Ward(2)` wired (Ward keyword tagged for future enforcement). Repartee body wired faithfully via `repartee()` shortcut: source +1/+0 + Lifelink (EOT). |
+| Fractal Tender | Quandrix | 🟡 (was ⏳) | Body + `Keyword::Ward(2)` wired. Increment trigger and end-step Fractal-with-counters payoff omitted. |
+| Thornfist Striker | Green | 🟡 (was ⏳) | Body + `Keyword::Ward(1)` wired. Infusion continuous static omitted. |
+| Lumaret's Favor | Green | 🟡 (was ⏳) | Mainline +2/+4 EOT pump wired faithfully. Infusion copy half omitted (no copy-spell primitive). |
+| Practiced Scrollsmith | Lorehold | 🟡 | ETB now exiles **exactly one** matching noncreature/nonland card via the new `Selector::Take(_, 1)`. May-cast-until-next-turn rider still omitted. |
+| Pull from the Grave | Black | 🟡 | Returns up to **two** creature cards (was: one) via `Selector::Take(_, 2)`. Lifegain unchanged. |
+| Antiquities on the Loose | White | 🟡 | Flashback {4}{W}{W} now wired; cast-from-elsewhere counter rider still omitted. |
+| Pursue the Past | Lorehold | 🟡 | Flashback {2}{R}{W} now wired; "may discard" optionality still collapsed. |
+| Practiced Offense | White | 🟡 | Flashback {1}{W} now wired; lifelink-or-DS mode pick still collapsed. |
+
+Cube color pool updates:
+- White: + Inkshape Demonstrator
+- Green: + Studious First-Year, Thornfist Striker, Lumaret's Favor
+- G/U (Quandrix): + Fractal Tender
+
+Test additions: 14 new tests in `tests::sos::*` covering the new
+primitives (Selector::Take, CastSpellBack), Flashback keyword presence,
+Flashback graveyard-replay (Daydream + Pursue the Past), and per-card
+body shape (Inkshape Demonstrator, Fractal Tender, Thornfist Striker,
+Lumaret's Favor, Studious First-Year MDFC). All 953 lib tests pass.
+
+## 2026-05-01 push IX: Witherbloom finisher + Surveil-anchored cards + creatures-died tally
+
+12 new SOS card factories (5 ✅, 7 🟡) plus one new engine primitive,
+finishing the Witherbloom (B/G) school except for the Lluwen MDFC
+(blocked on cast-from-secondary-face plumbing):
+
+- **`Player.creatures_died_this_turn` + `Predicate::CreaturesDiedThisTurnAtLeast`**
+  — per-turn tally bumped from the SBA dies handler in `stack.rs`
+  (lethal-damage path) and from `remove_to_graveyard_with_triggers`
+  (destroy-effect path). Reset to 0 in `do_untap`. Surfaced on
+  `PlayerView.creatures_died_this_turn` so a UI can hint
+  "Witherbloom end-step ready". Powers Essenceknit Scholar's
+  end-step gated draw.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Essenceknit Scholar | Witherbloom | ✅ (was ⏳) | ETB Pest token (with on-attack lifegain rider) + end-step gated draw via the new `Predicate::CreaturesDiedThisTurnAtLeast`. Hybrid `{B/G}` pip approximated as `{B}`. |
+| Professor Dellian Fel | Witherbloom | 🟡 (was ⏳) | New `PlaneswalkerSubtype::Dellian` + 5 base loyalty. +2 (gain 3 life), 0 (draw 1 / lose 1 life), -3 (destroy target creature) all wired faithfully. The -7 emblem ult is omitted (no emblem zone yet). |
+| Unsubtle Mockery | Red | ✅ (was ⏳) | 4-to-creature + Surveil 1. Surveil is a first-class engine primitive (the script's `COMPLEX_KWS` heuristic was stale). |
+| Muse's Encouragement | Blue | ✅ (was ⏳) | Mints a 3/3 U/R Flying Elemental token + Surveil 2. Same Surveil-already-shipped fix. |
+| Prismari Charm | Prismari | ✅ (was ⏳) | 3-mode: Surveil 2 + draw / 1 dmg to creature-or-PW / bounce nonland to owner. Single-target collapse on mode 1 (printed "one or two targets" — multi-target gap). |
+| Textbook Tabulator | Blue | 🟡 (was ⏳) | 0/3 Frog Wizard + ETB Surveil 2. Increment rider omitted (mana-spent introspection). |
+| Deluge Virtuoso | Blue | 🟡 (was ⏳) | 2/2 Human Wizard + ETB tap+stun against target opp creature. Opus +1/+1-or-+2/+2 rider omitted. |
+| Moseo, Vein's New Dean | Black | 🟡 (was ⏳) | 2/1 Flying Bird Skeleton Warlock + ETB Pest token. Infusion end-step rider omitted (oracle truncated; no MayDo per-turn-lifegain primitive). |
+| Stone Docent | White | 🟡 (was ⏳) | 3/1 Spirit body. Graveyard-exile activated ability omitted (engine activated-ability walker only iterates the battlefield — same gap as Eternal Student, Summoned Dromedary). |
+| Page, Loose Leaf | Colorless | 🟡 (was ⏳) | 0/2 Legendary Construct artifact creature + `{T}: Add {C}` mana ability. Grandeur (discard-named-this-card) ability omitted (no card-name-as-cost activation). |
+| Ral Zarek, Guest Lecturer | Black | 🟡 (was ⏳) | 3 base loyalty + +1 Surveil 2 / -1 each opp discards 1 (single-target collapse) / -2 return ≤3 MV creature card from your gy → bf. -7 coin-flip emblem omitted. |
+| Flow State | Blue | 🟡 (was ⏳) | Approximated as `Scry 3 + Draw 1`. The conditional "instead pick 2 to hand" upgrade rider when both an instant and sorcery sit in your gy is omitted (no "look-and-distribute-by-count" primitive). |
+
+Cube color pool updates:
+- White: + Stone Docent
+- Blue: + Deluge Virtuoso, Flow State, Muse's Encouragement, Textbook Tabulator
+- Black: + Moseo Vein's New Dean, Ral Zarek Guest Lecturer
+- Red: + Unsubtle Mockery
+- Witherbloom (B/G): + Essenceknit Scholar, Professor Dellian Fel
+- Prismari (U/R): + Prismari Charm
+
+Test additions: 17 new tests in `tests::sos::*` (ETB triggers, end-step
+gated draws, planeswalker loyalty activations, Surveil card resolution,
+plus a tally-bumps-on-lethal-damage SBA test). All 932 lib tests pass.
+
+## 2026-05-01 push VIII: Lesson cycle + Berta's CounterAdded(SelfSource) + ActivatedAbility.condition
+
+14 new card factories (2 ✅, 12 🟡) bridging the Lesson cycle
+(Decorum Dissertation, Restoration Seminar, Germination Practicum)
+and a handful of body-only converge / Increment / Repartee bodies.
+Engine ships two new primitives unblocking these cards (and several
+others):
+
+- **`ActivatedAbility.condition: Option<Predicate>`** — first-class
+  "activate only if …" gating. Evaluated against the controller/
+  source context **before** any cost is paid, so a failed gate doesn't
+  burn the tap-cost or once-per-turn budget. Powers Resonating Lute's
+  `{T}: Draw a card. Activate only if you have seven or more cards in
+  your hand.` (gate: `ValueAtLeast(HandSizeOf(You), 7)`). Promotes
+  Potioner's Trove's lifegain ability — `{T}: You gain 2 life.
+  Activate only if you've cast an instant or sorcery spell this turn.`
+  — to its printed gate (`SpellsCastThisTurnAtLeast(You, 1)`, an
+  approximation of the printed "instant or sorcery"-only filter; the
+  engine's per-turn spell tally tracks all spells today). New
+  `GameError::AbilityConditionNotMet` for failed gates.
+- **`EventScope::SelfSource` for `EventKind::CounterAdded`** —
+  `event_card`/`SelfSource` extended to recognise CounterAdded events.
+  Berta, the Wise Extrapolator's "whenever one or more +1/+1 counters
+  are put on Berta, add one mana of any color" trigger now fires only
+  when counters land on Berta (not on every +1/+1 counter on every
+  permanent). Same hook will unblock Heliod-style "whenever a counter
+  is put on this …" payoffs in future sets.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Primary Research | White | ✅ (was ⏳) | ETB return Nonland & ManaValueAtMost(3) gy → bf + end-step gated draw via `Predicate::CardsLeftGraveyardThisTurnAtLeast`. |
+| Artistic Process | Red | ✅ (was ⏳) | Three modes wired: 6-to-creature, 2-to-each-opp-creature (via `Selector::EachPermanent(Creature & ControlledByOpponent)`), Elemental + transient haste via `LastCreatedToken`. |
+| Decorum Dissertation | Black (Lesson) | 🟡 (was ⏳) | Mode 0 wired (you draw 2, lose 2 life — collapses target-player to caster). Paradigm rider omitted. |
+| Restoration Seminar | White (Lesson) | 🟡 (was ⏳) | Mode 0 wired (return Nonland gy → bf). Paradigm rider omitted. |
+| Germination Practicum | Green (Lesson) | 🟡 (was ⏳) | `ForEach Creature & ControlledByYou → AddCounter +1/+1 ×2` fan-out. Paradigm rider omitted. |
+| Ennis, Debate Moderator | White | 🟡 (was ⏳) | 1/1 body + ETB flicker (`Exile + DelayUntil(NextEndStep, Move(Target → Battlefield(OwnerOf)))`) + end-step gated counter via `CardsLeftGraveyardThisTurnAtLeast` proxy. |
+| Tragedy Feaster | Black | 🟡 (was ⏳) | 7/6 Trample Demon body. Ward—Discard rider + Infusion sac-unless-lifegain rider both omitted. |
+| Forum Necroscribe | Black | 🟡 (was ⏳) | 5/4 Troll Warlock body + Repartee gy-creature-recursion (`repartee()` chained with `Move(target Creature → bf)`). Ward—Discard rider omitted. |
+| Berta, Wise Extrapolator | Quandrix | 🟡 (was ⏳) | 1/4 Legendary Frog Druid + CounterAdded(+1/+1, SelfSource) → `AddMana(AnyOneColor)` trigger + X-cost Fractal-token activation (X resolves to 0 today). Increment rider omitted. |
+| Paradox Surveyor | Quandrix | 🟡 (was ⏳) | 3/3 Reach Elf Druid + ETB `RevealUntilFind(IsBasicLand, cap 5)`. Hybrid {G/U} approximated as {G}. |
+| Magmablood Archaic | Red | 🟡 (was ⏳) | 2/2 Trample+Reach Avatar + Converge ETB `AddCounter(Value::ConvergedValue)`. IS-cast pump rider omitted (per-cast converge introspection). Hybrid `{2/R}` approximated as `{2}+{R}` per pip. |
+| Wildgrowth Archaic | Green | 🟡 (was ⏳) | 0/0 Trample+Reach Avatar + Converge ETB AddCounter. Hybrid `{2/G}` approximated as `{2}+{G}` per pip. The "creature spells you cast enter with X extra counters" rider is omitted. |
+| Ambitious Augmenter | Green | 🟡 (was ⏳) | 1/1 Turtle Wizard at {G}. Increment + dies-with-counters → Fractal-with-counters omitted. |
+| Resonating Lute | Prismari | 🟡 (was ⏳) | {T}: Draw a card with new `ActivatedAbility.condition: ValueAtLeast(HandSizeOf(You), 7)` gate. Lands-grant tap-for-2 omitted. |
+
+Cube color pool updates:
+- White: + Primary Research, Restoration Seminar, Ennis the Debate Moderator
+- Black: + Decorum Dissertation, Tragedy Feaster, Forum Necroscribe
+- Red: + Artistic Process, Magmablood Archaic
+- Green: + Germination Practicum, Wildgrowth Archaic, Ambitious Augmenter
+- G/U (Quandrix): + Berta the Wise Extrapolator, Paradox Surveyor
+- U/R (Prismari): + Resonating Lute
+
+Test additions: 22 new tests in `tests::sos::*` covering the new
+factories' primary play patterns + the new Resonating Lute and
+Potioner's Trove condition gates (positive + negative cases). All
+910 lib tests pass.
+
+## 2026-05-01 push VII: Multicolored predicate + MDFC bodies + Lorehold capstone
+
+10 new card factories (3 ✅, 7 🟡) plus 2 promotions (Owlin Historian
+🟡 → ✅, Postmortem Professor — kept 🟡 but now carries the printed
+`Keyword::CantBlock`). Engine ships two new primitives:
+
+- **`SelectionRequirement::Multicolored`** + **`Colorless`** — count
+  the *distinct* colored pips in a card's mana cost. Hybrid pips
+  (`{W/B}`) contribute both halves; Phyrexian (`{B/P}`) contributes
+  the colored half; generic / colorless / Snow / X don't count. Cost
+  ≥ 2 distinct ⇒ multicolored; cost = 0 distinct ⇒ colorless.
+  Powered by the new `ManaCost::distinct_colors()` helper.
+
+- **`tap_add_colorless()` shared land helper** — `{T}: Add {C}` mana
+  ability shorthand under `catalog::sets::mod`. Used by Petrified
+  Hamlet (and ready for Wastes / future Eldrazi-flavoured colorless
+  lands).
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Mage Tower Referee | Colorless | ✅ (was ⏳) | Trigger filtered on `EntityMatches(TriggerSource, Multicolored)`. |
+| Additive Evolution | Green | ✅ (was ⏳) | ETB Fractal token + 3 +1/+1 counters via `Selector::LastCreatedToken`; begin-combat counter+vigilance pump. |
+| Owlin Historian | White | ✅ (was 🟡) | Now wires the cards-leave-graveyard +1/+1 EOT pump via `EventKind::CardLeftGraveyard`. |
+| Spectacular Skywhale | Prismari | 🟡 (was ⏳) | 1/4 Flying body. Opus rider omitted. |
+| Lorehold, the Historian | Lorehold | 🟡 (was ⏳) | 5/5 Flying+Haste Legendary Elder Dragon body. Miracle grant + opp-upkeep loot omitted. |
+| Homesickness | Blue | 🟡 (was ⏳) | Draw 2 (you) + Tap target creature + Stun 1. Multi-target prompts collapsed. |
+| Fractalize | Blue | 🟡 (was ⏳) | `PumpPT(+(X+1), +(X+1)) EOT` — base-(X+1)/(X+1) rewrite collapsed. |
+| Divergent Equation | Blue | 🟡 (was ⏳) | Single-target return one IS card from graveyard to hand. |
+| Rubble Rouser | Red | 🟡 (was ⏳) | ETB rummage (collapsed `you may` to always-do). Activated `{T}, Exile from graveyard` omitted. |
+| Zimone's Experiment | Green | 🟡 (was ⏳) | RevealUntilFind(creature → hand) + Search(IsBasicLand → bf tapped) approximation. |
+| Petrified Hamlet | Colorless | 🟡 (was ⏳) | `{T}: Add {C}` only. Choose-name prompt + name-keyed lock-out omitted. |
+| Postmortem Professor | Black | 🟡 (was 🟡) | Now carries `Keyword::CantBlock`; gy recursion still omitted. |
+
+Cube color pool updates:
+- Blue: + Divergent Equation, Fractalize, Homesickness
+- Red: + Rubble Rouser
+- Green: + Additive Evolution, Zimone's Experiment
+- U/R (Prismari): + Spectacular Skywhale
+- R/W (Lorehold): + Lorehold, the Historian
+
+Test additions: 11 new tests in `tests::sos::*` covering Homesickness,
+Fractalize, Divergent Equation, Spectacular Skywhale (def shape),
+Lorehold the Historian (def shape), Mage Tower Referee (multicolored
++ mono-color cast), Rubble Rouser, Additive Evolution (ETB +
+combat), Zimone's Experiment, Petrified Hamlet, Owlin Historian's
+new pump trigger, Postmortem Professor's CantBlock keyword. Plus
+3 mana-cost tests covering `ManaCost::distinct_colors`. All 885
+lib tests pass.
+
+## 2026-05-01 push VI: Lorehold completion + token-side triggers + ManaPayload::OfColor
+
+12 new card factories + ~12 new functionality tests under
+`tests::sos::*`. Engine ships three new primitives unblocking these
+cards (and several more):
+
+- **`TokenDefinition.triggered_abilities`** — token definitions now
+  carry triggered abilities. `token_to_card_definition` copies them
+  through, so the SOS Pest token's "Whenever this token attacks, you
+  gain 1 life" rider and the STX Pest token's "When this creature
+  dies, you gain 1 life" rider both fire. Witherbloom payoffs (Pest
+  Mascot's lifegain → +1/+1 counter, Blech's per-creature-type counter
+  fan-out, Bogwater Lumaret, Cauldron of Essence's death drain triple-
+  loop) get the printed lifegain trickle for free. Promoted Send in
+  the Pest, Pestbrood Sloth, Pest Summoning, Tend the Pests, Hunt for
+  Specimens (their tokens now print correctly).
+- **`ManaPayload::OfColor(Color, Value)`** — fixed-color, value-scaled
+  mana adder. Single AddMana call produces N pips of a specified
+  color. Powers Topiary Lecturer's "{T}: Add G equal to power"
+  (replaces the prior `Repeat × Colors([Green])` approximation), and
+  is ready for any future power-scaled mana ability (Llanowar Mentor,
+  Wirewood Channeler, Cryptolith Rite-style scaling).
+- **`Keyword::CantBlock`** — "this creature can't block" as a first-
+  class keyword. Enforced inside `declare_blockers` and the
+  `can_block_*` helpers. Used by Duel Tactics's "1 damage + can't
+  block this turn" pump and the static restriction on Postmortem
+  Professor (which can now be promoted).
+- **`move_card_to` library traversal** — `Effect::Move` from a
+  `Selector::TopOfLibrary` source now actually moves the top library
+  card to the destination. Previously the library branch in
+  `move_card_to` was missing, so Suspend Aggression's "exile the top
+  card of your library" half silently no-op'd. The library-source
+  move is now last in the search order (battlefield → graveyard →
+  exile → hand → library) to avoid accidentally consuming a hand card
+  with the same id.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Daydream | White | 🟡 (was ⏳) | Restoration-Angel-style flicker pattern (`Exile + Move(target → bf) + AddCounter +1/+1`). Flashback half omitted. |
+| Soaring Stoneglider | White | 🟡 (was ⏳) | 4/3 Flying-Vigilance Elephant Cleric at the **paid** cost path: full {3}{W}. Alt cost (exile two from gy) omitted. |
+| Tome Blast | Red | 🟡 (was ⏳) | 2-to-any-target burn. Flashback half omitted. |
+| Duel Tactics | Red | 🟡 (was ⏳) | 1-to-creature ping + new `Keyword::CantBlock` (EOT). Flashback half omitted. |
+| Snarl Song | Green | ✅ (was ⏳) | Two Fractal tokens, each stamped with X +1/+1 counters via `Selector::LastCreatedToken`, plus X life. X = `Value::ConvergedValue`. |
+| Wild Hypothesis | Green | ✅ (was ⏳) | Fractal token + X +1/+1 counters + Surveil 2 (all first-class primitives). |
+| Topiary Lecturer | Green | 🟡 (was ⏳) | Now uses `ManaPayload::OfColor(Green, PowerOf(This))` — single AddMana, value-scaled count. Increment rider still omitted. |
+| Ark of Hunger | Lorehold | 🟡 (was ⏳) | `EventKind::CardLeftGraveyard` drain trigger + {T}: Mill 1. May-play-from-mill rider omitted. |
+| Suspend Aggression | Lorehold | 🟡 (was ⏳) | Exile target nonland permanent + exile top of library (library traversal added to `move_card_to`). May-play rider omitted. |
+| Wilt in the Heat | Lorehold | 🟡 (was ⏳) | 5-to-creature. Cost reduction + die-replace-with-exile rider omitted. |
+| Practiced Scrollsmith | Lorehold | 🟡 (was ⏳) | First strike body + ETB exiles every matching noncreature/nonland in your gy (no `Selector::OneOf` primitive yet). May-cast-until-next-turn rider omitted. Hybrid `{R/W}` approximated as `{R}`. |
+| Send in the Pest | Black | ✅ (was 🟡) | Token-side attack-trigger lifegain wired. |
+| Pestbrood Sloth | Green | ✅ (was 🟡) | Token-side attack-trigger lifegain wired. |
+
+Cube color pool updates:
+- White: + Daydream, Soaring Stoneglider
+- Red: + Tome Blast, Duel Tactics
+- Green: + Snarl Song, Wild Hypothesis, Topiary Lecturer
+- R/W (Lorehold): + Ark of Hunger, Wilt in the Heat
+
+## 2026-04-30 push V: CardLeftGraveyard event + Lorehold/mono-color batch
+
+12 new card factories + 13 new functionality tests under
+`tests::sos::*` (+1 in `tests::modern::*` for the new Untap cap).
+Engine ships three new primitives unblocking these cards (and others
+in the future):
+
+- **`EventKind::CardLeftGraveyard`** + `GameEvent::CardLeftGraveyard`
+  — fires per card removed from a graveyard. Plumbed in:
+  `move_card_to`'s graveyard branch, `cast_spell_flashback` in
+  actions.rs, and persist/undying battlefield-returns in stack.rs.
+  Each emission also bumps the new
+  `Player.cards_left_graveyard_this_turn` tally (reset on `do_untap`),
+  which `Predicate::CardsLeftGraveyardThisTurnAtLeast` reads. Surfaced
+  through `PlayerView` so client UIs can render "Lorehold ready"
+  hints.
+- **`Predicate::SpellsCastThisTurnAtLeast`** — gates Burrog Barrage's
+  conditional pump on "have you already cast another spell this turn".
+- **`Effect::Fight { attacker, defender }`** — proper bidirectional
+  fight primitive. Snapshots both creatures' powers up-front so the
+  back-swing isn't affected by the first hit. No-ops cleanly when
+  either selector resolves to no permanent (matches MTG's "if either
+  is no longer a creature, no damage is dealt"). Used by Chelonian
+  Tackle; future cards (Decisive Denial mode 1, fight-style green
+  removal) can drop in trivially.
+- **`Effect::Untap.up_to: Option<Value>`** — untap-with-cap. Frantic
+  Search's "untap up to three lands" now honors the printed cap
+  precisely (previously the engine collapsed it to "untap all"). Other
+  Untap callers (Cryptolith Rite, mass-untap effects) opt-out via
+  `up_to: None`.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Hardened Academic | Lorehold | ✅ (was 🟡) | Cards-leave-gy → +1/+1 counter on a friendly creature. Triggers per-card (the printed "one or more" wording is approximated by per-card emission). |
+| Spirit Mascot | Lorehold | ✅ (was 🟡) | Self +1/+1 counter on every gy-leave event. |
+| Garrison Excavator | Red mono / Lorehold | ✅ (was 🟡) | 2/2 R/W Spirit token on every gy-leave event. |
+| Living History | Red mono / Lorehold | 🟡 (was ⏳) | ETB Spirit token + on-attack +2/+0 to attacker if a card left your graveyard this turn (gated on the new per-turn tally). |
+| Witherbloom, the Balancer | Witherbloom | 🟡 (was ⏳) | 5/5 Legendary Elder Dragon (new `CreatureType::Elder`); Flying + Deathtouch. Affinity-for-creatures cost reduction stub (engine work tracked in TODO.md). |
+| Burrog Barrage | Green mono | 🟡 (was ⏳) | Conditional pump (gated on `Predicate::SpellsCastThisTurnAtLeast`) + power-as-damage to target. |
+| Chelonian Tackle | Green mono | 🟡 (was ⏳) | +0/+10 EOT pump + `Effect::Fight` against auto-selected opp creature (single-target collapse on the defender pick). |
+| Rabid Attack | Black mono | 🟡 (was ⏳) | +1/+0 friendly pump (multi-target prompt + die-to-draw rider omitted). |
+| Practiced Offense | White mono | 🟡 (was ⏳) | Fan-out +1/+1 to friendly creatures + double-strike grant on a target. Mode-pick (DS vs lifelink) collapsed to DS. |
+| Mana Sculpt | Blue mono | 🟡 (was ⏳) | Counter target spell + wizard-mana-refund rider (fixed +{C}{C} as mana-spent introspection unavailable). |
+| Tablet of Discovery | Red mono | 🟡 (was ⏳) | ETB-mill + `{T}: Add {R}` mana abilities (may-play-from-mill rider + spend-restriction omitted). |
+| Steal the Show | Red mono | 🟡 (was ⏳) | Modal sorcery: discard-then-draw (collapsed to "discard 2, draw 2") OR damage = #IS-cards-in-your-gy to target creature/PW. |
+| Frantic Search | Modern (cube) | ✅ upgrade | Untap-up-to-three now precise (was "untap all") via the new `Effect::Untap.up_to` cap. |
+
+Cube color pool updates:
+- White: + Practiced Offense
+- Blue: + Mana Sculpt
+- Black: + Rabid Attack
+- Red: + Tablet of Discovery, Garrison Excavator, Living History, Steal the Show
+- Green: + Burrog Barrage, Chelonian Tackle
+- R/W (Lorehold): + Hardened Academic, Spirit Mascot
+- B/G (Witherbloom): + Witherbloom, the Balancer
+
+## 2026-04-30 push IV: post-push-III modern_decks batch
+
+10 new card factories + 11 new functionality tests under
+`tests::sos::*`. Engine ships five new primitives unblocking these
+cards (and others in the future):
+
+- **`Value::Pow2(Box<Value>)`** — two raised to a value, capped at
+  exponent 30. Powers Mathemagics's "draw 2ˣ cards".
+- **`Value::HalfDown(Box<Value>)`** — half of a value, rounded down.
+  Powers Pox Plague's "loses half their life / discards half / sacs
+  half" clauses.
+- **`Value::PermanentCountControlledBy(PlayerRef)`** — counts the
+  permanents controlled by the resolved player. Lets Pox Plague's
+  per-player iteration compute the right "half their permanents"
+  count under a `ForEach` over each player.
+- **`Selector::CastSpellTarget(u8)`** — resolves the chosen target
+  slot of the just-cast spell whose `SpellCast` event produced the
+  current trigger. Walks the stack for the topmost matching spell.
+  Used by Conciliator's Duelist's Repartee exile half (the body
+  pulls the target off the cast spell rather than choosing a fresh
+  target). Future Repartee-exile-bounce-counter spells get this for
+  free.
+- **`AffectedPermanents::AllWithCounter`** — counter-filtered
+  lord-style statics. `affected_from_requirement` recognises
+  `SelectionRequirement::WithCounter(...)` and routes through the
+  new variant. Powers Emil's "creatures with +1/+1 counters have
+  trample" + future "monstrous / leveled creatures gain
+  [keyword]" buffs.
+
+| Card | School / Color | Status | Note |
+|---|---|---|---|
+| Mathemagics | Blue | ✅ | Draw 2ˣ cards via `Value::Pow2(XFromCost)`; multi-target collapsed to "you draw". |
+| Visionary's Dance | Prismari | ✅ | Two 3/3 flying Elemental tokens (new `elemental_token()` helper); discard activation from hand omitted. |
+| Pox Plague | Black | ✅ | `ForEach Player` body using `HalfDown(Life/Hand/PermanentCount)` for each clause. |
+| Emil, Vastlands Roamer | Green | ✅ | Static GrantKeyword(Trample) filtered to creatures with +1/+1 counters via `AllWithCounter`; tap+{4}{G} fractal-token activation scaling on lands. |
+| Orysa, Tide Choreographer | Blue | ✅ | ETB draw 2; conditional cost reduction omitted. |
+| Conciliator's Duelist | Silverquill | 🟡 | Repartee exile of cast spell's target via `Selector::CastSpellTarget(0)`; "return at next end step" rider still omitted. |
+| Abstract Paintmage | Prismari | 🟡 | Trigger fires {U}{R} on PreCombatMain step; spend restriction omitted. |
+| Matterbending Mage | Blue | 🟡 | ETB bounce target creature; "spell with X" trigger omitted. |
+| Exhibition Tidecaller | Blue | 🟡 | 0/2 body wired; Opus mill rider omitted. |
+| Colossus of the Blood Age | Lorehold | 🟡 | ETB drain wired; death "discard any number" collapsed to discard 1 / draw 2. |
+
+Cube color pool updates:
+- Blue: + Mathemagics, Matterbending Mage, Orysa Tide Choreographer,
+  Exhibition Tidecaller
+- Black: + Pox Plague
+- Green: + Emil, Vastlands Roamer
+- U/R (Prismari): + Visionary's Dance, Abstract Paintmage
+- R/W (Lorehold): + Colossus of the Blood Age
+
+Earlier counts in this section quoted 86 ✅ / 38 🟡 / 138 ⏳; that
+header drift was reconciled when `scripts/gen_strixhaven2.py` was
+re-run with full Scryfall oracle text. Some rows that had been claimed
+✅ on a stub (no implementation in the SOS module) were corrected back
+to 🟡 or ⏳, and several ⏳ cards from the body-only batch were
+correctly reclassified to 🟡.
+
+## 2026-04-30 push II: SOS Increment / Opus body-only batch
+
+13 cards bumped from ⏳ → 🟡 by shipping the printed cost / type / P/T /
+keywords without their Increment / Opus / mana-spent-pump rider. Each
+rider depends on a "mana-paid-to-cast introspection on cast" engine
+primitive (tracked in TODO.md). The vanilla bodies are still useful: they
+fill out cube color pools, take combat correctly, and can be promoted to
+✅ once the engine grows the right hooks. 11 functionality tests in
+`tests::sos::*` exercise the bodies (P/T, keywords, ETB/attack triggers
+where relevant).
+
+Plus one new ✅-functionality card with omitted-rider note:
+- **Ajani's Response** {4}{W} — destroy creature; cost-reduction-when-
+  target-tapped omitted (logged as a TODO under "target-aware cost
+  reduction").
+
+New CreatureTypes: `Dwarf` (Thunderdrum Soloist, Scolding
+Administrator), `Badger` (Shopkeeper's Bane), `Salamander` (Noxious
+Newt), `Giraffe` (Hungry Graffalon).
+
+Plus a follow-up Silverquill card: **Scolding Administrator** {W}{B} 2/2
+Dwarf Cleric — Menace + Repartee +1/+1 counter on self (the truncated
+"When this creature dies, …" trigger is unimplemented pending an
+oracle-fetch refresh).
+
+Cube color pool updates:
+- White: + Ajani's Response
+- Blue: + Pensive Professor, Tester of the Tangential, Muse Seeker
+- U/G: + Cuboid Colony
+- Red: + Tackle Artist, Thunderdrum Soloist, Molten-Core Maestro,
+  Expressive Firedancer
+- Green: + Aberrant Manawurm, Hungry Graffalon
+- Black: + Eternal Student, Postmortem Professor
+
+## 2026-04-30 push: Silverquill / Lorehold / mono-color expansion
+
+11 new cards bridging the Silverquill (W/B) school's gap and a
+handful of cross-school removal/utility staples, all wired entirely on
+existing primitives (no engine work needed). Plus 11 functionality
+tests in `tests::sos::*`.
+
+| Card | School | Status | Note |
+|---|---|---|---|
+| Moment of Reckoning | Silverquill | ✅ | Modal destroy / graveyard return — "choose up to four" collapsed to single mode pick. |
+| Stirring Honormancer | Silverquill | ✅ | ETB look-at-X-find-creature via `RevealUntilFind`. |
+| Conciliator's Duelist | Silverquill | 🟡 | ETB draw + each-player-loses-1; Repartee exile-with-return rider omitted. |
+| Dissection Practice | Black mono | 🟡 | Drain 1 + creature -1/-1; +1/+1 mode collapsed (multi-target gap). |
+| Heated Argument | Red mono | 🟡 | 6 to creature + 2 to controller; "may exile" optionality dropped. |
+| End of the Hunt | Black mono | 🟡 | Exile opponent's creature/PW; "greatest mana value" picker not enforced. |
+| Vicious Rivalry | Witherbloom | ✅ | X-life cost approximation via `LoseLife` + `ForEach.If(ManaValueAtMost X)` destroy. |
+| Proctor's Gaze | Quandrix | ✅ | Bounce nonland + Search basic to bf tapped. |
+| Lorehold Charm | Lorehold | ✅ | All three modes (sac-artifact / return ≤2-mv / +2/+1). |
+| Borrowed Knowledge | Lorehold | 🟡 | Mode 0 wired faithfully; mode 1 collapsed to "draw 7" (no track-discarded primitive). |
+| Planar Engineering | Green mono | ✅ | Sacrifice 2 lands + Repeat×4 Search basic to bf tapped. |
+
+Cross-pool wiring updated in `cube.rs`:
+- W/B (Silverquill): added Moment of Reckoning, Stirring Honormancer,
+  Conciliator's Duelist
+- B/G (Witherbloom): added Vicious Rivalry
+- G/U (Quandrix): added Proctor's Gaze
+- R/W (Lorehold): added Borrowed Knowledge, Lorehold Charm
+
+Mono-color pools picked up Dissection Practice, End of the Hunt
+(Black), Heated Argument (Red), Planar Engineering (Green).
+
+## Oracle re-fetch (2026-04-30)
+
+`scripts/gen_strixhaven2.py` no longer truncates oracle text (was 600
+chars, now unlimited). 52 SOS rows whose oracle column was previously
+clipped have been tagged **🔍 needs review (oracle previously
+truncated)** in the Notes column. Re-running the script against fresh
+Scryfall pages (`sos_p1.json`, `sos_p2.json`) will replace the
+truncated bodies with the full oracle, but until that happens the
+🔍 marker flags every row whose status / engine-gap analysis was
+based on incomplete text. When implementing one of these cards the
+first step is to fetch the full oracle from Scryfall and verify the
+existing Notes are still accurate.
+
+First-pass coverage focuses on Silverquill (W/B) and Witherbloom (B/G)
+plus the easier mono-color removal/utility cards. School lands
+(Forum of Amity, Titan's Grave, Fields of Strife, Paradox Gardens) are
+all wired since the surveil primitive is already in the engine. Quandrix
+(G/U) and Prismari (U/R) now have first-pass coverage too — Pterafractyl,
+Fractal Mascot, Mind into Matter, Growth Curve, Quandrix Charm,
+Stadium Tidalmage, Vibrant Outburst, Stress Dream, and Traumatic Critique
+are wired. Remaining SOS gaps are mostly **Repartee** (spell-targets-
+creature predicate), **Increment** / **Opus** (mana-paid introspection on
+cast), **Casualty** (copy-spell primitive), and **Flashback / Paradigm**
+(cast-from-graveyard pipeline).
+
+**X-cost ETB triggers** now correctly read the spell's paid X via
+`StackItem::Trigger.x_value`. Pterafractyl's "enters with X +1/+1
+counters" and Static Prison's "enters with X stun counters" both
+honour the cast-time X (previously the trigger context defaulted to
+`x_value: 0`).
+
+**Infusion** ("if you gained life this turn, …") is now wired engine-side
+via `Predicate::LifeGainedThisTurnAtLeast`, with **Foolish Fate**,
+**Old-Growth Educator**, and **Efflorescence** as the first three
+beneficiaries. Remaining Infusion cards (Tenured Concocter,
+Ulna Alley Shopkeep, Tragedy Feaster, Withering Curse, …) need either
+Ward enforcement or static "as long as you've gained life this turn"
+gating which is a separate engine primitive.
+
+### Prepare mechanic (SOS colorless)
+
+A small SOS sub-theme where one card toggles a "prepared" flag on a
+creature and another card cares about it. The flag works like a stun /
+phased / monstrosity counter: it's a per-permanent boolean (or counter
+of count 1) set by `becomes prepared` and cleared by `becomes
+unprepared`. Cards that *care* about the flag have a **Prepare {cost}**
+activated/triggered ability and reminder text "(Only creatures with
+prepare spells can become prepared.)".
+
+Cards in the SOS table that touch the mechanic:
+
+- **Biblioplex Tomekeeper** ({4} 3/4) — ETB toggle (prepare or unprepare).
+- **Skycoach Waypoint** (land) — `{3},{T}: prepare target`.
+- Cards whose oracle text was previously truncated by the gen script's
+  220-char cap (now 600 chars) may also expose a `Prepare {cost}` ability;
+  when re-running `scripts/gen_strixhaven2.py` look for "prepare " or
+  "prepared" in the oracle column to spot them.
+
+Engine-side this needs:
+
+1. A new `CounterType::Prepared` (or a `PermanentFlag::Prepared` boolean)
+   on `Permanent`, surfaced through `PermanentView` for the client UI.
+2. `Effect::SetPrepared { what, value: bool }` to flip the flag.
+3. A `Predicate::IsPrepared` so prepare-payoff cards (the cards
+   *granting* a Prepare ability) can gate their riders on the flag.
+4. The activated ability *itself* on payoff cards — those need an
+   ability authored from the truncated body of the card.
+
+None of these are wired today; all prepare cards are ⏳ until at least
+(1) and (2) land. Track in `TODO.md` under Engine — Missing Mechanics.
+
+---
 
 ## White
 
@@ -292,6 +1027,16 @@ per-card status and notes.
 | Encouraging Aviator // Jump | {2}{U} // {U} | Creature — Bird Wizard // Instant | 2/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Exhibition Tidecaller | {U} | Creature — Djinn Wizard | 0/2 | Opus — Whenever you cast an instant or sorcery spell, target player mills three cards. If five or more mana was spent to cast that spell, that player mills ten cards instead. | ✅ | Push XXIX: Body + Opus rider wired via `shortcut::opus_trigger(Mill 3, Mill 10)`. The mill target uses `PlayerRef::Target(0)` so the auto-target picker hits an opponent. |
 | Flow State | {1}{U} | Sorcery |  | Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order. If there is an instant card and a sorcery card in your graveyard, instead put two of… | ✅ (was 🟡) | Push XXXIII: conditional draw upgrade wired via `Effect::If` gated on `SelectorExists(IS in gy) AND SelectorExists(Sorcery in gy)`. Mainline (`Scry 3 → Draw 1`) vs. upgrade (`Scry 3 → Draw 2`). Tests: `flow_state_draws_one_when_graveyard_lacks_is_pair`, `flow_state_draws_two_when_graveyard_has_is_pair`. |
+| Brush Off | {2}{U}{U} | Instant |  | This spell costs {1}{U} less to cast if it targets an instant or sorcery spell. / Counter target spell. | 🟡 | Wired in `catalog::sets::sos::instants` as a 4-mana hard counter. The conditional cost-reduction-when-targeting-IS rider is omitted (no target-aware cost reduction primitive). |
+| Campus Composer // Aqueous Aria | {3}{U} // {4}{U} | Creature — Merfolk Bard // Sorcery | 3/4 |  | 🟡 | Ward {1} front + draw 2 back. Ward enforced. |
+| Chase Inspiration | {U} | Instant |  | Target creature you control gets +0/+3 and gains hexproof until end of turn. (It can't be the target of spells or abilities your opponents control.) | ✅ | Wired in `catalog::sets::sos::instants`. |
+| Deluge Virtuoso | {2}{U} | Creature — Human Wizard | 2/2 | When this creature enters, tap target creature an opponent controls and put a stun counter on it. (If a permanent with a stun counter would become untapped, remove one from it instead.) / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, this creature gets +2/+2 until end of turn instead. | 🟡 | ETB tap+stun wired (same shape as Fractal Mascot's Quandrix variant). Opus +1/+1-or-+2/+2 rider omitted (mana-spent introspection — same gap as Tackle Artist, Spectacular Skywhale, etc.). |
+| Divergent Equation | {X}{X}{U} | Instant |  | Return up to X target instant and/or sorcery cards from your graveyard to your hand. / Exile Divergent Equation. | 🟡 | Wired in `catalog::sets::sos::instants` as a single-target return. The "up to X" multi-target prompt is collapsed to one target (no `Selector::OneOf` / count-bounded pick primitive yet — TODO.md). The "exile this" rider is omitted (no replay-prevention payoff). |
+| Echocasting Symposium | {4}{U}{U} | Sorcery — Lesson |  | Target player creates a token that's a copy of target creature you control. / Paradigm (Then exile this spell. After you first resolve a spell with this name, you may cast a copy of it from exile without paying its mana cost at the beginning of each of your first main phases.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: copy-spell/permanent primitive; cast-from-exile pipeline. |
+| Emeritus of Ideation // Ancestral Recall | {3}{U}{U} // {U} | Creature — Human Wizard // Instant | 5/5 |  | 🟡 | Ward {2} front + Ancestral Recall (draw 3) back. Ward enforced. |
+| Encouraging Aviator // Jump | {2}{U} // {U} | Creature — Bird Wizard // Instant | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
+| Exhibition Tidecaller | {U} | Creature — Djinn Wizard | 0/2 | Opus — Whenever you cast an instant or sorcery spell, target player mills three cards. If five or more mana was spent to cast that spell, that player mills ten cards instead. | 🟡 | Body-only wire (0/2 Djinn Wizard). Opus mill rider omitted (mana-spent introspection). |
+| Flow State | {1}{U} | Sorcery |  | Look at the top three cards of your library. Put one of them into your hand and the rest on the bottom of your library in any order. If there is an instant card and a sorcery card in your graveyard, instead put two of… | 🟡 | Approximated as `Scry 3 + Draw 1`. Conditional "instead pick 2 to hand" gy-IS-pair upgrade rider is omitted (no "look-and-distribute-by-count" primitive). |
 | Fractal Anomaly | {U} | Instant |  | Create a 0/0 green and blue Fractal creature token and put X +1/+1 counters on it, where X is the number of cards you've drawn this turn. | ✅ | Wired in `catalog::sets::sos::instants` using the engine's new `Selector::LastCreatedToken` + `Value::CardsDrawnThisTurn` primitives. X=0 → 0/0 token dies to SBA (matches printed). |
 | Fractalize | {X}{U} | Instant |  | Until end of turn, target creature becomes a green and blue Fractal with base power and toughness each equal to X plus 1. (It loses all other colors and creature types.) | ✅ (was 🟡) | Push (modern_decks): base-P/T rewrite now wired via `Effect::SetBasePT` (layer-7b primitive — same path as Square Up / Mercurial Transformation). The printed "becomes a Fractal" creature-type rewrite (layer 4) + color rewrite (layer 5) stay omitted; tribal interactions on the target's original type may see the wrong value. Counters and +N/+M still stack per CR 613.7c-f. Tests: `fractalize_sets_target_to_x_plus_one_base` (X=3 → 4/4), `fractalize_layers_under_plus_one_counters` (X=2 + a +1/+1 counter → 4/4). |
 | Harmonized Trio // Brainstorm | {U} // {U} | Creature — Merfolk Bard Wizard // Instant | 1/1 |  | ✅ | Push XXVIII promotion: vanilla 1/1 Merfolk Bard Wizard front + faithful Brainstorm back (`Draw 3 + PutOnLibraryFromHand 2`). All Oracle clauses wired. Tests: `harmonized_trio_back_face_is_brainstorm`, `harmonized_trio_back_face_draws_three_then_puts_two_back`. |
@@ -332,6 +1077,8 @@ per-card status and notes.
 | Foolish Fate | {2}{B} | Instant |  | Destroy target creature. / Infusion — If you gained life this turn, that creature's controller loses 3 life. | ✅ | Wired with the new `Predicate::LifeGainedThisTurnAtLeast` Infusion gate. |
 | Forum Necroscribe | {5}{B} | Creature — Troll Warlock | 5/4 | Ward—Discard a card. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, return target creature card from your graveyard to the battlefield. | ✅ (was 🟡) | Push (modern_decks): Ward—Discard a card now wired via `Keyword::Ward(WardCost::Discard(1))` and the new `Effect::CounterUnless` resolver — auto-pays by discarding the first card in the spell controller's hand. Insufficient cards in hand → spell countered. Repartee body unchanged. Tests: `ward_discard_counters_when_payer_has_no_other_cards_in_hand`, `ward_discard_resolves_when_payer_has_a_spare_card`. |
 | Grave Researcher // Reanimate | {2}{B} // {B} | Creature — Troll Warlock // Sorcery | 3/3 |  | ✅ (was 🟡) | Push (modern_decks): All three printed clauses now ship. Front 3/3 Troll Warlock with ETB Surveil 1. Back-face Reanimate at {B} — `target_filtered(Creature)` graveyard pick → Move to Battlefield(You) → `LoseLife(ManaValueOf(Target(0)))`. The lose-life-equal-to-MV clause reads off the post-Move target's CardId via `Value::ManaValueOf`'s zone walk (battlefield / graveyard / exile / hand). Tests: `grave_researcher_back_face_reanimates_creature_from_graveyard` (asserts both reanimation and -CMC life loss), `grave_researcher_front_etb_surveils_one`. |
+| Forum Necroscribe | {5}{B} | Creature — Troll Warlock | 5/4 | Ward—Discard a card. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, return target creature card from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::creatures` (5/4 Troll Warlock body + Repartee gy-creature-recursion via the `repartee()` shortcut chained with `Effect::Move(target Creature → Battlefield(You))`). Ward—Discard a card omitted (no Ward keyword primitive yet — tracked in TODO.md). |
+| Grave Researcher // Reanimate | {2}{B} // {B} | Creature — Troll Warlock // Sorcery | 3/3 |  | 🟡 | ETB Surveil 2 front + Reanimate (gy creature to bf) back. |
 | Lecturing Scornmage | {B} | Creature — Human Warlock | 1/1 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, put a +1/+1 counter on this creature. | ✅ | Repartee +1/+1 counter via `effect::shortcut::repartee()`. |
 | Leech Collector // Bloodletting | {1}{B} // {B} | Creature — Human Warlock // Sorcery | 2/2 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Masterful Flourish | {B} | Instant |  | Target creature you control gets +1/+0 and gains indestructible until end of turn. (Damage and effects that say "destroy" don't destroy it.) | ✅ | Wired in `catalog::sets::sos::instants`. |
@@ -383,6 +1130,23 @@ per-card status and notes.
 | Tablet of Discovery | {2}{R} | Artifact |  | When this artifact enters, mill a card. You may play that card this turn. (To mill a card, put the top card of your library into your graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 (was 🟡) | Push (modern_decks): ETB Mill 1 now stamps the milled card with `Effect::GrantMayPlay { duration: EndOfThisTurn }` via the engine's `GrantMayPlay` primitive (push X) — controller can cast the milled card via `GameAction::CastFromZoneWithoutPaying`. Two `{T}: Add {R}` mana abilities wired. The spend-restriction on the {T}: Add {R}{R} ability is still omitted (no spend-restricted mana primitive). Test: `tablet_of_discovery_etb_mills_and_grants_may_play`. |
 | Tackle Artist | {3}{R} | Creature — Orc Sorcerer | 4/3 | Trample / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, put two +1/+1 counters on this creature instead. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: one +1/+1 counter. Big body (≥5 mana): two +1/+1 counters instead. Tests: `tackle_artist_opus_lands_*_counter*`. |
 | Thunderdrum Soloist | {1}{R} | Creature — Dwarf Bard | 1/3 | Reach / Opus — Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent. If five or more mana was spent to cast that spell, this creature deals 3 damage to each opponent instead. | ✅ | Push XXIX: Opus rider **now wired** via `shortcut::opus_trigger`. Small body: 1 dmg to each opp. Big body (≥5 mana): 3 dmg to each opp. Test: `thunderdrum_soloist_opus_pings_one_at_small_three_at_big`. |
+| Goblin Glasswright // Craft with Pride | {1}{R} // {R} | Creature — Goblin Sorcerer // Sorcery | 2/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
+| Heated Argument | {4}{R} | Instant |  | Heated Argument deals 6 damage to target creature. You may exile a card from your graveyard. If you do, Heated Argument also deals 2 damage to that creature's controller. | 🟡 | Push XV: 6-to-creature is unconditional; the gy-exile + 2-to-controller chain is now wrapped in `Effect::MayDo` and either both fire or both skip. Uses `Selector::take(CardsInZone(GY), 1)` to pick exactly one gy card to exile (matching "a card", not "every card"). |
+| Impractical Joke | {R} | Sorcery |  | Damage can't be prevented this turn. Impractical Joke deals 3 damage to up to one target creature or planeswalker. | 🟡 | 3-to-creature/PW wired; "damage can't be prevented" rider is a no-op (engine has no damage-prevention layer). |
+| Improvisation Capstone | {5}{R}{R} | Sorcery — Lesson |  | Exile cards from the top of your library until you exile cards with total mana value 4 or greater. You may cast any number of spells from among them without paying their mana costs. / Paradigm (Then exile this spell. After you first resolve a spell with this name, you may cast a copy of it from exile without paying its mana cost at the beginning of each of your first main phases.) | ⏳ | 🔍 needs review (oracle previously truncated). Needs: copy-spell/permanent primitive; cast-from-exile pipeline. |
+| Living History | {1}{R} | Enchantment |  | When this enchantment enters, create a 2/2 red and white Spirit creature token. / Whenever you attack, if a card left your graveyard this turn, target attacking creature gets +2/+0 until end of turn. | 🟡 | ETB Spirit token + on-attack +2/+0 EOT (gated on the new `Predicate::CardsLeftGraveyardThisTurnAtLeast`). The "target attacking creature" picks the trigger source (the just-declared attacker) rather than a fresh target — collapsed for the per-attacker auto-target framework. |
+| Maelstrom Artisan // Rocket Volley | {1}{R}{R} // {1}{R} | Creature — Minotaur Sorcerer // Sorcery | 3/2 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
+| Magmablood Archaic | {2/R}{2/R}{2/R} | Creature — Avatar | 2/2 | Trample, reach / Converge — This creature enters with a +1/+1 counter on it for each color of mana spent to cast it. / Whenever you cast an instant or sorcery spell, creatures you control get +1/+0 until end of turn for each color of mana spent to cast that spell. | 🟡 | Body wired in `catalog::sets::sos::creatures` (2/2 Avatar with Trample+Reach + Converge ETB AddCounter using `Value::ConvergedValue`). The IS-cast pump rider is omitted pending per-cast converge introspection on the *just-cast* spell (the trigger fires but reads the Archaic's own ETB converge value, not the iterated cast's). Hybrid `{2/R}` pips approximated as `{2}+{R}` per pip. |
+| Mica, Reader of Ruins | {3}{R} | Legendary Creature — Human Artificer | 4/4 | Ward—Pay 3 life. / Whenever you cast an instant or sorcery spell, you may sacrifice an artifact. If you do, copy that spell and you may choose new targets for the copy. | 🟡 | Ward(3) approximated as generic mana. IS-cast copy trigger omitted. |
+| Molten-Core Maestro | {1}{R} | Creature — Goblin Bard | 2/2 | Menace / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, add an amount of {R} equal to this creature's power. | 🟡 | 2/2 Menace body wired. Opus +1/+1-counter + R-mana-from-power riders omitted. |
+| Pigment Wrangler // Striking Palette | {4}{R} // {R} | Creature — Orc Sorcerer // Sorcery | 4/4 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
+| Rearing Embermare | {4}{R} | Creature — Horse Beast | 4/5 | Reach, haste | ✅ | Wired in `catalog::sets::sos::creatures`. |
+| Rubble Rouser | {2}{R} | Creature — Dwarf Sorcerer | 1/4 | When this creature enters, you may discard a card. If you do, draw a card. / {T}, Exile a card from your graveyard: Add {R}. When you do, this creature deals 1 damage to each opponent. | 🟡 | Push XV: ETB rummage now wrapped in `Effect::MayDo` so the "you may discard" optionality is honored. The `{T}, Exile a card from your graveyard:` activated ability is still omitted (engine activated-ability path has no `from-your-graveyard` cost variant — separate from `sac_cost`). |
+| Steal the Show | {2}{R} | Sorcery |  | Choose one or both — / • Target player discards any number of cards, then draws that many cards. / • Steal the Show deals damage equal to the number of instant and sorcery cards in your graveyard to target creature or planeswalker. | 🟡 | Modal sorcery: mode 0 (target player discards N then draws N — collapsed to "discard 2, draw 2" since the engine has no "any number" prompt for the targeted player); mode 1 deals damage = `Value::CountOf(CardsInZone(your graveyard, IS-cards))` to a creature/PW. The "choose one or both" rider collapses to "pick one mode" (no multi-mode-pick primitive yet). |
+| Strife Scholar // Awaken the Ages | {2}{R} // {5}{R} | Creature — Orc Sorcerer // Sorcery | 3/2 |  | 🟡 | Ward {1} front + 5 damage to creature back. Ward enforced. |
+| Tablet of Discovery | {2}{R} | Artifact |  | When this artifact enters, mill a card. You may play that card this turn. (To mill a card, put the top card of your library into your graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::artifacts` — ETB Mill 1 + two `{T}: Add {R}` mana abilities. The "may play that card this turn" mill-rider is omitted (no per-card may-play primitive yet). The spend-restriction on the {T}: Add {R}{R} ability is omitted (no spend-restricted mana primitive). |
+| Tackle Artist | {3}{R} | Creature — Orc Sorcerer | 4/3 | Trample / Opus — Whenever you cast an instant or sorcery spell, put a +1/+1 counter on this creature. If five or more mana was spent to cast that spell, put two +1/+1 counters on this creature instead. | 🟡 | 4/3 Trample body wired in `catalog::sets::sos::creatures`. Opus +1/+1-counter rider omitted. |
+| Thunderdrum Soloist | {1}{R} | Creature — Dwarf Bard | 1/3 | Reach / Opus — Whenever you cast an instant or sorcery spell, this creature deals 1 damage to each opponent. If five or more mana was spent to cast that spell, this creature deals 3 damage to each opponent instead. | 🟡 | 1/3 Reach body wired (with the new `Dwarf` creature subtype). Opus damage rider omitted. |
 | Tome Blast | {1}{R} | Sorcery |  | Tome Blast deals 2 damage to any target. / Flashback {4}{R} (You may cast this card from your graveyard for its flashback cost. Then exile it.) | ✅ | Wired as a 2-to-any-target burn spell. Flashback {4}{R} now wired via `Keyword::Flashback` (push X). |
 | Unsubtle Mockery | {2}{R} | Instant |  | Unsubtle Mockery deals 4 damage to target creature. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | `DealDamage(4) + Surveil 1` via `Effect::Surveil`. |
 | Zealous Lorecaster | {5}{R} | Creature — Giant Sorcerer | 4/4 | When this creature enters, return target instant or sorcery card from your graveyard to your hand. | ✅ | Wired in `catalog::sets::sos::creatures` with a Move-target-from-graveyard ETB trigger. |
@@ -433,6 +1197,11 @@ per-card status and notes.
 | Elemental Mascot | {1}{U}{R} | Creature — Elemental Bird | 1/4 | Flying, vigilance / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn. If five or more mana was spent to cast that spell, exile the top card of your library. You may play that card until the end of your next turn. | ✅ (was 🟡) | Push (modern_decks, batch 76 doc-sync): all printed clauses ship. Body + Flying + Vigilance unchanged. Opus small body: `+1/+0 EOT` pump. Opus big body (≥5 mana spent): `+1/+0 EOT` + `Move(top of library → Exile)` + `GrantMayPlay { duration: EndOfControllersNextTurn }` on the exiled card. The earlier "exile top + may play" omission note was stale — the chain has been wired in `catalog::sets::sos::creatures::elemental_mascot` since the cast-from-exile-with-timer primitive landed (the same `LastMoved` + `GrantMayPlay` pattern Velomachus, Mavinda, and Nita all use). |
 | Prismari Charm | {U}{R} | Instant |  | Choose one — / • Surveil 2, then draw a card. / • Prismari Charm deals 1 damage to each of one or two targets. / • Return target nonland permanent to its owner's hand. | ✅ | 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to creature-or-PW / bounce nonland to owner. Single-target collapse on mode 1 (printed "one or two targets" — multi-target gap). |
 | Prismari, the Inspiration | {5}{U}{R} | Legendary Creature — Elder Dragon | 7/7 | Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast have storm. (Whenever you cast an instant or sorcery spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.) | ✅ (was 🟡) | Push (modern_decks, batch 89): Body 7/7 Flying + Ward(5) unchanged. The "Instant and sorcery spells you cast have storm" static is wired via a SpellCast/YourControl trigger on Prismari gated on `cast_is_instant_or_sorcery()` + `Effect::CopySpell { what: TriggerSource, count: Value::StormCount }`. Each IS spell cast while Prismari is on the bf fires a copy-it-N-times trigger (N = `spells_cast_this_turn − 1`, the printed Storm semantics). Approximation: copies inherit the original's targets — the "you may choose new targets for the copies" rider is engine-wide ⏳ (same gap as every other CopySpell user, e.g. Wandering Archaic, Twinscroll Shaman). |
+| Abstract Paintmage | {U}{U/R}{R} | Creature — Djinn Sorcerer | 2/2 | At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::creatures` with a `StepBegins(PreCombatMain)/ActivePlayer` trigger that adds {U}{R} via `ManaPayload::Colors`. The spend restriction is omitted (no per-pip mana metadata). The hybrid `{U/R}` pip is approximated as `{U}`. |
+| Colorstorm Stallion | {1}{U}{R} | Creature — Elemental Horse | 3/3 | Ward {1}, haste / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+1 until end of turn. If five or more mana was spent to cast that spell, create a token that's a copy of this creature. | 🟡 | Ward {1} + Haste + Opus partial (+1/+1 EOT on IS-cast). Copy-token branch omitted. |
+| Elemental Mascot | {1}{U}{R} | Creature — Elemental Bird | 1/4 | Flying, vigilance / Opus — Whenever you cast an instant or sorcery spell, this creature gets +1/+0 until end of turn. If five or more mana was spent to cast that spell, exile the top card of your library. You may play that card until the end of your next turn. | 🟡 | Flying + Vigilance + Opus partial (+1/+0 EOT on IS-cast). Cast-from-exile branch omitted. |
+| Prismari Charm | {U}{R} | Instant |  | Choose one — / • Surveil 2, then draw a card. / • Prismari Charm deals 1 damage to each of one or two targets. / • Return target nonland permanent to its owner's hand. | ✅ | 3-mode `ChooseMode`: Surveil 2 + draw / 1 dmg to creature-or-PW / bounce nonland to owner. Single-target collapse on mode 1 (printed "one or two targets" — multi-target gap). |
+| Prismari, the Inspiration | {5}{U}{R} | Legendary Creature — Elder Dragon | 7/7 | Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast have storm. | 🟡 | Flying + Ward(5) approximated as generic mana. Storm grant omitted. |
 | Rapturous Moment | {4}{U}{R} | Sorcery |  | Draw three cards, then discard two cards. Add {U}{U}{R}{R}{R}. | ✅ | Wired in `catalog::sets::sos::sorceries`: Draw 3 + Discard 2 + AddMana with the printed UU/RRR pool. |
 | Resonating Lute | {2}{U}{R} | Artifact |  | Lands you control have "{T}: Add two mana of any one color. Spend this mana only to cast instant and sorcery spells." / {T}: Draw a card. Activate only if you have seven or more cards in your hand. | ✅ (was 🟡) | Push (modern_decks, batch 96): both printed clauses ship. The `{T}: Draw a card. Activate only if you have seven or more cards in your hand.` activation stays wired via `ActivatedAbility.condition: Predicate::ValueAtLeast(HandSizeOf(You), 7)`. The "Lands you control have {T}: Add two mana of any one color" static **is now wired** via a new `resonating_lute_land_grant(controller)` helper in `activate_ability` — mirrors the existing `galazeth_artifact_grant` pattern (Galazeth grants tap-for-any-color to artifacts; Lute grants the same to lands). Approximation: the printed 2-mana payout is collapsed to 1 mana, and the "spend only on IS spells" restriction is dropped (no spend-restricted-mana primitive). The collapse keeps the card balanced — printed Lute is a powerful mana doubler when paired with the restriction; without the restriction, dropping to 1-of-any-color matches the printed power level for a {2}{U}{R} artifact. Same dispatch pattern unblocks future "lands you control have …" grants. |
 | Sanar, Unfinished Genius // Wild Idea | {U}{R} // {3}{U}{R} | Legendary Creature — Goblin Sorcerer // Sorcery | 0/4 |  | ✅ (was 🟡) | Push (modern_decks): back-face Wild Idea now resolves with each-player fan-out via `Selector::Player(PlayerRef::EachPlayer)` (printed "each player draws 3"). Same primitive as Wheel of Fortune. Test: `sanar_back_face_each_player_draws_three`. |
@@ -475,6 +1244,9 @@ per-card status and notes.
 | Abigale, Poet Laureate // Heroic Stanza | {1}{W}{B} // {1}{W/B} | Legendary Creature — Bird Bard // Sorcery | 2/3 |  | ✅ (was 🟡) | Push (modern_decks doc-sync): vanilla front + faithful back-face spell wired via the `GameAction::CastSpellBack` path (push XI/XII). The stale "Standard primitives — should be straightforward to wire" note was the original ⏳ flag from before MDFC plumbing landed; the body has been at-parity-with-printed-Oracle since push XII. Tests live in `tests::sos` keyed by the back-face spell name.|
 | Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | ✅ (was 🟡) | Push (modern_decks): the "return at next end step" delayed rider is **now wired** via an extension to `Effect::DelayUntil` that falls back to `Selector::CastSpellTarget(0)` (the cast spell's target on the stack) when `ctx.targets` is empty. Repartee body becomes `Seq(Exile(CastSpellTarget(0)) + DelayUntil(NextEndStep, Move→Battlefield(OwnerOf)))`; the captured target survives through the delayed-trigger fire, so the exiled creature returns under its owner's control at the next end step. Tests: `conciliators_duelist_etb_draws_and_each_player_loses_one`, `conciliators_duelist_repartee_exiles_target`, `conciliators_duelist_repartee_returns_target_at_end_step`. |
 | Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | ✅ (was 🟡) | Push (modern_decks doc-sync): Pay-X-life folds into resolution as `Effect::LoseLife(XFromCost)` (Vicious-Rivalry pattern — the auto-decider always commits to the cast, so cost-vs-resolution timing is gameplay-invariant). The MV=X gate on the graveyard walk uses `Predicate::ValueEquals(ManaValueOf(TriggerSource), XFromCost)` (the engine's `ValueEquals` primitive — adopted after the doc note was last revised). Returns each matching artifact/creature card via `ForEach(EachMatching(Graveyard(You), Artifact ∨ Creature)) + Move → Battlefield`. Test: `fix_whats_broken_returns_mana_value_x_artifact_from_graveyard`. |
+| Abigale, Poet Laureate // Heroic Stanza | {1}{W}{B} // {1}{W/B} | Legendary Creature — Bird Bard // Sorcery | 2/3 |  | 🟡 | Wired in `catalog::sets::sos::mdfcs` (push XI/XII): vanilla front + back-face spell via the new `GameAction::CastSpellBack` path. Original ⏳ note: Standard primitives — should be straightforward to wire.|
+| Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | 🟡 | ETB body wired (draw 1 + each player loses 1). Repartee exile half wired via the new `Selector::CastSpellTarget(0)` primitive. The "return at next end step" rider is still omitted (no capture-as-target-from-selector primitive yet). |
+| Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::sorceries`. Approximation: lose X life + reanimate one creature (mass-reanimation at exact MV X collapsed to single-creature return). |
 | Forum of Amity |  | Land |  | This land enters tapped. / {T}: Add {W} or {B}. / {2}{W}{B}, {T}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Wired in `catalog::sets::sos::lands`. |
 | Imperious Inkmage | {1}{W}{B} | Creature — Orc Warlock | 3/3 | Vigilance / When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.) | ✅ | Wired in `catalog::sets::sos::creatures`. |
 | Inkling Mascot | {W}{B} | Creature — Inkling Cat | 2/2 | Repartee — Whenever you cast an instant or sorcery spell that targets a creature, this creature gains flying until end of turn. Surveil 1. (Look at the top card of your library. You may put it into your graveyard.) | ✅ | Repartee trigger grants Flying (EOT) on `Selector::This` + Surveil 1. |

@@ -18984,9 +18984,42 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
 /// Create two 1/1 R/W Spirit creature tokens.
 pub fn lorehold_spiritforge_b164() -> CardDefinition {
     use crate::effect::shortcut::mint_lorehold_spirits;
+    let _ = mint_lorehold_spirits;
     CardDefinition {
         name: "Lorehold Spiritforge (b164)",
         cost: cost(&[generic(3), w()]),
+        ..Default::default()
+    }
+}
+
+// ── Lorehold Command ───────────────────────────────────────────────────────
+
+/// Lorehold Command — {3}{R}{W} Sorcery. Choose two:
+/// • Create a 3/2 red and white Spirit creature token.
+/// • Creatures you control get +1/+0 and gain indestructible and haste EOT.
+/// • Exile target nonland permanent with MV ≤ 3.
+/// • Return target creature card with MV ≤ 2 from your graveyard to bf.
+///
+/// 🟡 Collapsed to single-mode ChooseMode of 4 modes (printed: choose two).
+pub fn lorehold_command() -> CardDefinition {
+    let spirit_32 = TokenDefinition {
+        name: "Spirit".into(),
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Lorehold Command",
+        cost: cost(&[generic(3), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -19098,6 +19131,49 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        effect: Effect::ChooseMode(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: spirit_32,
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::TriggerSource,
+                        power: Value::Const(1),
+                        toughness: Value::Const(0),
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Indestructible,
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::GrantKeyword {
+                        what: Selector::TriggerSource,
+                        keyword: Keyword::Haste,
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
+            },
+            Effect::Exile {
+                what: target_filtered(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                ),
+            },
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19150,6 +19226,19 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralward (b164)",
         cost: cost(&[r(), w()]),
+    }
+}
+
+// ── Academic Dispute ───────────────────────────────────────────────────────
+
+/// Academic Dispute — {R} Instant. "Target creature gets +2/+0 and gains
+/// reach until end of turn. It must be blocked this turn if able."
+///
+/// 🟡 "Must be blocked" rider is omitted (no forced-block primitive).
+pub fn academic_dispute() -> CardDefinition {
+    CardDefinition {
+        name: "Academic Dispute",
+        cost: cost(&[r()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -19161,11 +19250,15 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
                 what: Selector::Target(0),
                 power: Value::Const(1),
                 toughness: Value::Const(1),
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(0),
                 duration: Duration::EndOfTurn,
             },
             Effect::GrantKeyword {
                 what: Selector::Target(0),
                 keyword: Keyword::Lifelink,
+                keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
         ]),
@@ -19195,6 +19288,27 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+// ── Blade Historian ────────────────────────────────────────────────────────
+
+/// Blade Historian — {R}{R}{W}{W}, 2/3 Human Cleric.
+/// "Attacking creatures you control have double strike."
+///
+/// 🟡 The continuous static granting double strike to attackers needs a
+/// layer-based keyword-grant primitive. We ship the body only.
+pub fn blade_historian() -> CardDefinition {
+    CardDefinition {
+        name: "Blade Historian",
+        cost: cost(&[r(), r(), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
         power: 2,
@@ -19254,30 +19368,10 @@ pub fn lorehold_sunweave_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sunweave (b165)",
         cost: cost(&[generic(3), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::GainLife { who: Selector::You, amount: Value::Const(5) },
-            Effect::Scry { who: crate::effect::PlayerRef::You, amount: Value::Const(1) },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
     }
 }
+
+// ── Reconstruct History ────────────────────────────────────────────────────
 
 /// Lorehold Pyreguard (b165) — {2}{R}{W} 3/3 Spirit Soldier Vigilance.
 /// ETB: 2 damage to target player.
@@ -19328,6 +19422,12 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Noncreature.and(SelectionRequirement::Nonland),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19351,21 +19451,37 @@ pub fn lorehold_fireshield_b165() -> CardDefinition {
         cost: cost(&[r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
+    }
+}
+
+// ── Rip Apart ──────────────────────────────────────────────────────────────
+
+/// Rip Apart — {R}{W} Sorcery. "Choose one — • Rip Apart deals 3 damage
+/// to target creature or planeswalker. • Destroy target artifact or
+/// enchantment."
+pub fn rip_apart() -> CardDefinition {
+    CardDefinition {
+        name: "Rip Apart",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::PumpPT {
-                what: Selector::Target(0),
-                power: Value::Const(2),
-                toughness: Value::Const(2),
-                duration: Duration::EndOfTurn,
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
             },
-            Effect::GrantKeyword {
-                what: Selector::Target(0),
-                keyword: Keyword::FirstStrike,
-                duration: Duration::EndOfTurn,
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Enchantment),
+                ),
             },
         ]),
         activated_abilities: no_abilities(),
@@ -19389,6 +19505,19 @@ pub fn lorehold_bonepreacher_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonepreacher (b165)",
         cost: cost(&[generic(3), r(), w()]),
+        ..Default::default()
+    }
+}
+
+// ── Returned Pastcaller ───────────────────────────────────────────────────
+
+/// Returned Pastcaller — {4}{R}{W}, 4/4 Spirit Cleric. Flying.
+/// ETB: "Return target instant or sorcery card from your graveyard to
+/// your hand." Same shape as Pillardrop Rescuer.
+pub fn returned_pastcaller() -> CardDefinition {
+    CardDefinition {
+        name: "Returned Pastcaller",
+        cost: cost(&[generic(4), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -19401,6 +19530,20 @@ pub fn lorehold_bonepreacher_b165() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(3)],
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -19413,3 +19556,4 @@ pub fn lorehold_bonepreacher_b165() -> CardDefinition {
         affinity_filter: None,
     }
 }
+

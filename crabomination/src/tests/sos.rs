@@ -12290,3 +12290,541 @@ fn social_snub_each_player_sacrifices_and_drains() {
         "Caster should gain 1 life");
 }
 
+// ── Strife Scholar MDFC ─────────────────────────────────────────────────
+
+#[test]
+fn strife_scholar_has_ward_and_back_face() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Awaken the Ages");
+    assert!(back.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn strife_scholar_back_face_deals_five_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::strife_scholar());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: None,
+    }).expect("Awaken the Ages castable for {5}{R}");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be destroyed by 5 damage");
+}
+
+// ── Colorstorm Stallion ─────────────────────────────────────────────────
+
+#[test]
+fn colorstorm_stallion_body_and_keywords() {
+    let card = catalog::colorstorm_stallion();
+    assert_eq!(card.name, "Colorstorm Stallion");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    assert!(card.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn colorstorm_stallion_magecraft_pump() {
+    let mut g = two_player_game();
+    let stallion = g.add_card_to_battlefield(0, catalog::colorstorm_stallion());
+    g.clear_sickness(stallion);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let s = g.computed_permanent(stallion).unwrap();
+    assert_eq!(s.power, 4, "Stallion should be 4/4 after magecraft +1/+1");
+    assert_eq!(s.toughness, 4);
+}
+
+// ── Elemental Mascot ─────────────────────────────────────────────────
+
+#[test]
+fn elemental_mascot_body_and_keywords() {
+    let card = catalog::elemental_mascot();
+    assert_eq!(card.name, "Elemental Mascot");
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+}
+
+#[test]
+fn elemental_mascot_magecraft_pump() {
+    let mut g = two_player_game();
+    let mascot = g.add_card_to_battlefield(0, catalog::elemental_mascot());
+    g.clear_sickness(mascot);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+
+    let m = g.computed_permanent(mascot).unwrap();
+    assert_eq!(m.power, 2, "Mascot should be 2/4 after magecraft +1/+0");
+    assert_eq!(m.toughness, 4);
+}
+
+// ── Molten Note ─────────────────────────────────────────────────────────
+
+#[test]
+fn molten_note_deals_x_plus_two_damage_and_untaps() {
+    let mut g = two_player_game();
+    // 5/5 creature on opp side.
+    let big = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Tap the attacker.
+    g.battlefield.iter_mut().find(|c| c.id == attacker).unwrap().tapped = true;
+
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // X=4 → total damage = 4+2 = 6.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(big)),
+        mode: None,
+        x_value: Some(4),
+    }).expect("Molten Note castable for {X=4}{R}{W}");
+    drain_stack(&mut g);
+
+    // 6 damage to a 6/6 kills it.
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "6/6 should be killed by 6 damage");
+    // Our creature should be untapped.
+    assert!(!g.battlefield.iter().find(|c| c.id == attacker).unwrap().tapped,
+        "Our creature should be untapped");
+}
+
+#[test]
+fn molten_note_has_flashback() {
+    let card = catalog::molten_note();
+    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
+        "Molten Note should have Flashback keyword");
+}
+
+// ── Social Snub ─────────────────────────────────────────────────────────
+
+#[test]
+fn social_snub_each_player_sacs_and_drains() {
+    let mut g = two_player_game();
+    let _bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let _opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::social_snub());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life0_before = g.players[0].life;
+    let life1_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Social Snub castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // Each player should have sacrificed one creature.
+    let p0_creatures = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_creature()).count();
+    let p1_creatures = g.battlefield.iter().filter(|c| c.controller == 1 && c.definition.is_creature()).count();
+    assert_eq!(p0_creatures, 0, "P0 should have sacrificed their creature");
+    assert_eq!(p1_creatures, 0, "P1 should have sacrificed their creature");
+    // Drain 1: opp loses 1, you gain 1.
+    assert_eq!(g.players[1].life, life1_before - 1);
+    assert_eq!(g.players[0].life, life0_before + 1);
+}
+
+// ── Fix What's Broken ─────────────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_returns_creatures_from_gy() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    }).expect("Fix What's Broken castable");
+    drain_stack(&mut g);
+
+    // Bear (MV 2) should be on battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be returned from graveyard to battlefield");
+    // 2 life lost.
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+// ── Skycoach Waypoint ─────────────────────────────────────────────────
+
+#[test]
+fn skycoach_waypoint_taps_for_colorless() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .definition.card_types.contains(&CardType::Land));
+
+    // Activate {T}: Add {C}.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Tap for colorless should succeed");
+
+    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1,
+        "Skycoach Waypoint should produce 1 colorless mana");
+    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped,
+        "Land should be tapped after activation");
+}
+
+// ── Biblioplex Tomekeeper ─────────────────────────────────────────────
+
+#[test]
+fn biblioplex_tomekeeper_enters_as_3_4_construct() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::biblioplex_tomekeeper());
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Biblioplex Tomekeeper castable for {4}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Tomekeeper should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Artifact));
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 3);
+    assert_eq!(view.toughness, 4);
+}
+
+// ── Strixhaven Skycoach ───────────────────────────────────────────────
+
+#[test]
+fn strixhaven_skycoach_etb_searches_for_basic_land() {
+    let mut g = two_player_game();
+    // Seed library with a basic land to find.
+    let forest = g.add_card_to_library(0, catalog::forest());
+
+    let id = g.add_card_to_hand(0, catalog::strixhaven_skycoach());
+    g.players[0].mana_pool.add_colorless(3);
+
+    // Script the decider to pick the Forest from the search.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest)),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Strixhaven Skycoach castable for {3}");
+    drain_stack(&mut g);
+
+    // Skycoach on battlefield.
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Skycoach should be on battlefield");
+    let view = g.computed_permanent(id).unwrap();
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Skycoach should have flying");
+
+    // Forest should be in hand (searched from library).
+    assert!(g.players[0].hand.iter().any(|c| c.id == forest),
+        "Forest should have been searched into hand");
+}
+
+// ── The Dawning Archaic ───────────────────────────────────────────────
+
+#[test]
+fn the_dawning_archaic_enters_as_7_7_reach() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::the_dawning_archaic());
+    g.players[0].mana_pool.add_colorless(10);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("The Dawning Archaic castable for {10}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("The Dawning Archaic should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 7);
+    assert_eq!(view.toughness, 7);
+    assert!(view.keywords.contains(&Keyword::Reach),
+        "The Dawning Archaic should have reach");
+}
+
+// ── Prismari, the Inspiration ────────────────────────────────────────
+
+#[test]
+fn prismari_the_inspiration_enters_as_7_7_flying() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_the_inspiration());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(5);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Prismari castable for {5}{U}{R}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Prismari should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 7);
+    assert_eq!(view.toughness, 7);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Prismari should have flying");
+}
+
+// ── Nita, Forum Conciliator ──────────────────────────────────────────
+
+#[test]
+fn nita_forum_conciliator_enters_as_2_3() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::nita_forum_conciliator());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Nita castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Nita should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Human));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Advisor));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 2);
+    assert_eq!(view.toughness, 3);
+}
+
+// ── Silverquill, the Disputant ───────────────────────────────────────
+
+#[test]
+fn silverquill_the_disputant_enters_as_4_4_flying_vigilance() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_the_disputant());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Silverquill castable for {2}{W}{B}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Silverquill should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 4);
+    assert_eq!(view.toughness, 4);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Silverquill should have flying");
+    assert!(view.keywords.contains(&Keyword::Vigilance),
+        "Silverquill should have vigilance");
+}
+
+// ── Quandrix, the Proof ──────────────────────────────────────────────
+
+#[test]
+fn quandrix_the_proof_enters_as_6_6_flying_trample() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_the_proof());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Quandrix castable for {4}{G}{U}");
+    drain_stack(&mut g);
+
+    let perm = g.battlefield.iter().find(|c| c.id == id)
+        .expect("Quandrix should be on battlefield");
+    assert!(perm.definition.card_types.contains(&CardType::Creature));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Elder));
+    assert!(perm.definition.has_creature_type(crate::card::CreatureType::Dragon));
+    let view = g.computed_permanent(id).unwrap();
+    assert_eq!(view.power, 6);
+    assert_eq!(view.toughness, 6);
+    assert!(view.keywords.contains(&Keyword::Flying),
+        "Quandrix should have flying");
+    assert!(view.keywords.contains(&Keyword::Trample),
+        "Quandrix should have trample");
+}
+
+// ── Applied Geometry ────────────────────────────────────────────────────
+
+#[test]
+fn applied_geometry_creates_fractal_with_six_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Applied Geometry castable for {2}{G}{U}");
+    drain_stack(&mut g);
+
+    let frac = g.battlefield.iter().find(|c| c.definition.name == "Fractal")
+        .expect("Fractal token should be on the battlefield");
+    assert_eq!(frac.counter_count(CounterType::PlusOnePlusOne), 6,
+        "Fractal should have six +1/+1 counters");
+    // 0/0 base + 6 counters = 6/6.
+    assert_eq!(frac.power(), 6);
+    assert_eq!(frac.toughness(), 6);
+}
+
+// ── Push XVII: Ward MDFCs + Modern supplement ──────────────────────────────
+
+#[test]
+fn campus_composer_has_ward_two_and_back_face() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Aqueous Aria");
+}
+
+#[test]
+fn emeritus_of_ideation_has_ward_two_and_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Ancestral Recall");
+}
+
+#[test]
+fn grave_researcher_etb_surveils_and_has_reanimate_back() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(!card.triggered_abilities.is_empty(), "should have ETB surveil");
+    let back = card.back_face.as_ref().expect("should have Reanimate back");
+    assert_eq!(back.name, "Reanimate");
+}
+
+#[test]
+fn archaics_agony_deals_converge_damage() {
+    let card = catalog::archaics_agony();
+    assert_eq!(card.name, "Archaic's Agony");
+    assert!(card.is_sorcery());
+}
+
+#[test]
+fn char_deals_four_to_target_and_two_to_self() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::char());
+
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Char castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should be dead from 4 damage");
+    assert_eq!(g.players[0].life, life_before - 2,
+        "caster should lose 2 life");
+}
+
+#[test]
+fn searing_blaze_hits_creature_and_opponent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::searing_blaze());
+
+    let opp_life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Searing Blaze castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should die from 3 damage");
+    assert_eq!(g.players[1].life, opp_life_before - 3,
+        "opponent should lose 3 life");
+}
+
+#[test]
+fn collective_defiance_mode_zero_deals_four_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::collective_defiance());
+
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    }).expect("Collective Defiance castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should die from 4 damage");
+}

@@ -62,6 +62,8 @@ pub enum CreatureType {
     Dwarf, Badger, Salamander, Giraffe,
     // SOS Witherbloom Dryad subtype (Essenceknit Scholar).
     Dryad,
+    // Modern supplement: Kari Zev's Ragavan token.
+    Monkey,
     // Strixhaven Elder Dragon legendary creatures (Lorehold, Prismari,
     // Quandrix, Silverquill, Witherbloom, the Balancer).
     Elder,
@@ -111,7 +113,7 @@ pub enum SpellSubtype {
 pub enum PlaneswalkerSubtype {
     Chandra, Jace, Liliana, Ajani, Garruk, Elspeth, Gideon, Nissa, Sorin,
     Teferi, Karn, Ugin, Bolas, Ashiok, Nahiri, Vraska, Domri, Ral, Vivien,
-    Tezzeret,
+    Tezzeret, Oko,
     // SOS Witherbloom Dellian planeswalker subtype (Professor Dellian Fel).
     Dellian,
     // Modern_decks cube expansion (Saheeli Rai, Tamiyo Collector of Tales,
@@ -788,6 +790,9 @@ pub struct CardInstance {
     pub controller: usize,
     pub tapped: bool,
     pub damage: u32,
+    /// CR 704.5h: true if this creature has been dealt damage by a source
+    /// with deathtouch since the last time SBAs were checked.
+    pub deathtouch_damaged: bool,
     pub summoning_sick: bool,
     pub power_bonus: i32,
     pub toughness_bonus: i32,
@@ -859,6 +864,7 @@ impl CardInstance {
             controller: owner,
             tapped: false,
             damage: 0,
+            deathtouch_damaged: false,
             summoning_sick,
             power_bonus: 0,
             toughness_bonus: 0,

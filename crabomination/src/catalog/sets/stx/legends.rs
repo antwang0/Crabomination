@@ -81,8 +81,16 @@ pub fn galazeth_prismari() -> CardDefinition {
 ///   activation is rejected cleanly when the controller can't pay 10
 ///   life. Existing `up_to: None` keeps the printed "untap each land"
 ///   semantics (cap-free mass untap).
+/// Beledros Witherbloom — Legendary 6/6 Witherbloom Elder Dragon with flying,
+/// trample, lifelink. "Pay 10 life: Untap each land you control. Activate
+/// only as a sorcery."
+///
+/// Now wired: the activated ability uses `life_cost: 10` +
+/// `sorcery_speed: true` + `Effect::Untap` over each land you control.
 pub fn beledros_witherbloom() -> CardDefinition {
-    use crate::card::{ActivatedAbility, Selector, SelectionRequirement};
+    use crate::card::SelectionRequirement;
+    use crate::effect::ActivatedAbility;
+    use crate::mana::ManaCost;
     CardDefinition {
         name: "Beledros Witherbloom",
         cost: cost(&[generic(3), b(), b(), g(), g()]),
@@ -98,10 +106,11 @@ pub fn beledros_witherbloom() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
-            mana_cost: crate::mana::cost(&[]),
+            mana_cost: ManaCost::default(),
             effect: Effect::Untap {
-                what: Selector::EachPermanent(
-                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                what: crate::effect::Selector::EachPermanent(
+                    SelectionRequirement::Land
+                        .and(SelectionRequirement::ControlledByYou),
                 ),
                 up_to: None,
             },

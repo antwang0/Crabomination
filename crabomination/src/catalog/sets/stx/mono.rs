@@ -1114,3 +1114,115 @@ pub fn tangletrap() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Introduction to Prophecy ───────────────────────────────────────────────
+
+/// Introduction to Prophecy — {2}{U} Sorcery. "Scry 2, then draw a card."
+///
+/// Straightforward scry-then-draw spell. No Lesson subtype on this one.
+pub fn introduction_to_prophecy() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Prophecy",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Introduction to Annihilation ───────────────────────────────────────────
+
+/// Introduction to Annihilation — {5} Sorcery — Lesson. "Exile target
+/// nonland permanent."
+///
+/// Colorless Lesson removal spell. The Lesson subtype allows future
+/// Learn mechanics to tutor for it.
+pub fn introduction_to_annihilation() -> CardDefinition {
+    CardDefinition {
+        name: "Introduction to Annihilation",
+        cost: cost(&[generic(5)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Exile {
+            what: target_filtered(SelectionRequirement::Nonland),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Environmental Sciences ─────────────────────────────────────────────────
+
+/// Environmental Sciences — {2} Sorcery — Lesson. "Search your library
+/// for a basic land card, reveal it, put it into your hand, then shuffle.
+/// You gain 2 life."
+///
+/// Two-step: search for a basic land into hand, then gain 2 life.
+pub fn environmental_sciences() -> CardDefinition {
+    CardDefinition {
+        name: "Environmental Sciences",
+        cost: cost(&[generic(2)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}

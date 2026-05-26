@@ -1,3 +1,6 @@
+#![allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::large_enum_variant)]
+
 pub mod card;
 pub mod catalog;
 pub mod cube;

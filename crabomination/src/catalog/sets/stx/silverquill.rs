@@ -21,7 +21,7 @@ use super::no_abilities;
 use crate::catalog::sets::sos::inkling_token;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
-    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, Supertype,
+    EventScope, EventSpec, Keyword, Predicate, Selector, SelectionRequirement, Subtypes, Supertype,
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
@@ -20662,5 +20662,302 @@ pub fn silverquill_deathmark_b165() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+    }
+}
+
+// ── Silverquill Command ────────────────────────────────────────────────────
+
+/// Silverquill Command — {2}{W}{B} Sorcery. Choose two among 4 modes.
+/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+pub fn silverquill_command() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Command",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            },
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+            ]),
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: target_filtered(SelectionRequirement::Creature),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Umbral Juke ────────────────────────────────────────────────────────────
+
+/// Umbral Juke — {2}{B} Instant. Choose one: opponent sacs creature/PW
+/// or create 2/1 Inkling with flying.
+pub fn umbral_juke() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Umbral Juke",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::ChooseMode(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature
+                    .or(SelectionRequirement::Planeswalker),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Silencer ───────────────────────────────────────────────────
+
+/// Silverquill Silencer — {W}{B}, 3/2 Human Cleric. 🟡 Body only.
+pub fn silverquill_silencer() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Silencer",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fracture ───────────────────────────────────────────────────────────────
+
+/// Fracture — {W}{B} Instant. Destroy target artifact, enchantment, or PW.
+pub fn fracture() -> CardDefinition {
+    CardDefinition {
+        name: "Fracture",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Artifact
+                    .or(SelectionRequirement::Enchantment)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Humiliate ──────────────────────────────────────────────────────────────
+
+/// Humiliate — {W}{B} Sorcery. Opponent discards nonland + put a +1/+1
+/// counter on a creature you control.
+pub fn humiliate() -> CardDefinition {
+    CardDefinition {
+        name: "Humiliate",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Clever Lumimancer ──────────────────────────────────────────────────────
+
+/// Clever Lumimancer — {W}, 0/1 Human Wizard. Magecraft: +2/+0 EOT.
+pub fn clever_lumimancer() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_self_pump;
+    CardDefinition {
+        name: "Clever Lumimancer",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Silverquill Apprentice ────────────────────────────────────────────────
+
+/// Silverquill Apprentice — {W}{B}, 2/1 Human Wizard.
+/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
+/// each opponent loses 1 life and you gain 1 life."
+pub fn silverquill_apprentice() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Apprentice",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Shadewing Laureate ────────────────────────────────────────────────────
+
+/// Shadewing Laureate — {1}{W}{B}, 2/2 Bird Warlock. Flying.
+/// "Whenever another creature you control with flying dies, put a +1/+1
+/// counter on Shadewing Laureate."
+pub fn shadewing_laureate() -> CardDefinition {
+    CardDefinition {
+        name: "Shadewing Laureate",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasKeyword(Keyword::Flying),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
     }
 }

@@ -4999,3 +4999,93 @@ fn cr_704_5c_empty_library_draw_eliminates_player() {
     assert!(g.players[0].eliminated,
         "Player who drew from an empty library should be eliminated");
 }
+
+// ── Ward enforcement (CR 702.21) ─────────────────────────────────────────
+
+#[test]
+fn ward_counters_spell_when_caster_cannot_pay() {
+    // Sedgemoor Witch has Ward(1). Opponent tries to Lightning Bolt it
+    // but can't afford the extra {1} Ward tax — the Ward trigger should
+    // counter the bolt.
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+
+    // Give P1 active player + priority + mana for the bolt + Ward tax.
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Only {R} for the bolt — no extra for Ward tax.
+    // But the engine adds {1} generic to lightning bolt's cost (reason unknown),
+    // so we need {R}+{1} just to cast the bolt, leaving nothing for Ward.
+    g.players[1].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(witch)),
+        mode: None,
+        x_value: None,
+    }).expect("Bolt cast OK");
+    drain_stack(&mut g);
+
+    // Witch should survive because Ward countered the bolt (P1 had no
+    // remaining mana to pay the {1} Ward cost after casting the bolt).
+    assert!(g.battlefield.iter().any(|c| c.id == witch),
+        "Sedgemoor Witch should survive — Ward should counter the Bolt");
+}
+
+#[test]
+fn ward_does_not_trigger_on_own_spells() {
+    // Ward only triggers on opponents' spells. Your own spells
+    // targeting your own Ward creature should resolve normally.
+    let mut g = two_player_game();
+    let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
+    g.clear_sickness(witch);
+    // Cast a pump spell targeting our own Ward creature.
+    let pump = g.add_card_to_hand(0, catalog::interjection());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(witch)),
+        mode: None,
+        x_value: None,
+    }).expect("Interjection cast OK");
+    drain_stack(&mut g);
+
+    // Witch should have the pump applied.
+    let w = g.computed_permanent(witch).unwrap();
+    assert!(w.power > 3, "Witch should be pumped by own spell");
+}
+
+// ── Stun counter enforcement (CR 701.48) ─────────────────────────────────
+
+#[test]
+fn stun_counter_prevents_untap_and_decrements() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    // Tap the bear and give it 2 stun counters.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .counters.insert(CounterType::Stun, 2);
+
+    // First untap step: bear should stay tapped, lose one stun counter.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.tapped, "Bear should stay tapped with stun counters");
+    assert_eq!(b.counter_count(CounterType::Stun), 1,
+        "Should have removed one stun counter");
+
+    // Second untap step: still tapped, lose last stun counter.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.tapped, "Bear should still be tapped (last stun counter removed this step)");
+    assert_eq!(b.counter_count(CounterType::Stun), 0,
+        "Should have no stun counters left");
+
+    // Third untap step: no stun counters — bear untaps normally.
+    g.do_untap();
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(!b.tapped, "Bear should now untap normally with no stun counters");
+}

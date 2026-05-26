@@ -265,6 +265,9 @@ fn colorless_pool() -> Vec<CardFactory> {
         kozileks_command,
         eldrazi_confluence,
         planar_nexus,
+        // ── modern_decks-17 ──
+        lightning_greaves,
+        stonecoil_serpent,
     ]
 }
 
@@ -366,6 +369,13 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion: body-only stubs ──
         enduring_innocence,
         thundertrap_trainer,
+        // ── modern_decks-16 ──
+        wall_of_omens,
+        lingering_souls,
+        decree_of_justice,
+        guardian_scalelord,
+        intervention_pact,
+        elite_spellbinder,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -418,11 +428,15 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(dakkon_shadow_slayer);
         // ── Cube expansion: WB cards ──
         v.push(elite_spellbinder);
+        // ── modern_decks-16 ──
+        v.push(lingering_souls);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
         v.push(razortide_bridge);
+        // ── modern_decks-16 ──
+        v.push(spell_queller);
     }
     v
 }
@@ -525,6 +539,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         opposition,
         omniscience,
         blustersquall,
+        // ── modern_decks-16 ──
+        mulldrifter,
+        deep_analysis,
+        vapor_snag,
+        // ── modern_decks-17 ──
+        snapcaster_mage,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -541,6 +561,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(proctors_gaze);
         v.push(cuboid_colony);
         v.push(tam_observant_sequencer);
+        // ── modern_decks-16 ──
+        v.push(oko_thief_of_crowns);
     }
     if pair_contains(pair, Color::Red) {
         v.push(stormchaser_mage);
@@ -560,12 +582,16 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(sanar_unfinished_genius);
         // ── modern_decks batch 102 (UR cube expansion) ──
         v.push(saheeli_rai);
+        // ── modern_decks-16 ──
+        v.push(electrolyze);
         v.push(expressive_iteration);
     }
     if pair_contains(pair, Color::White) {
         v.push(teferi_time_raveler);
         v.push(dovins_veto);
         v.push(razortide_bridge);
+        // ── modern_decks-16 ──
+        v.push(spell_queller);
     }
     if pair_contains(pair, Color::Black) {
         v.push(marauding_mako);
@@ -580,6 +606,10 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion: UB cards ──
         v.push(master_of_death);
         v.push(fallen_shinobi);
+        // ── modern_decks-16 ──
+        v.push(baleful_strix);
+        // ── modern_decks-17 ──
+        v.push(thought_erasure);
     }
     v
 }
@@ -710,6 +740,17 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern cube supplement ──
         baleful_mastery,
         parallax_nexus,
+        // ── modern_decks-16 ──
+        shriekmaw,
+        collective_brutality,
+        murderous_cut,
+        chainers_edict,
+        toxic_deluge,
+        sinkhole,
+        baleful_mastery,
+        corpse_dance,
+        // ── modern_decks-17 ──
+        tasigur_the_golden_fang,
     ];
     if pair_contains(pair, Color::Red) {
         v.push(terminate);
@@ -755,6 +796,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-14 (UB cross-pool) ──
         v.push(drown_in_the_loch);
         v.push(master_of_death);
+        // ── modern_decks-17 ──
+        v.push(thought_erasure);
     }
     if pair_contains(pair, Color::Green) {
         v.push(darkmoss_bridge);
@@ -762,6 +805,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(tear_asunder);
         v.push(assassins_trophy);
         v.push(maelstrom_pulse);
+        // ── modern_decks-16 ──
+        v.push(putrefy);
+        v.push(pernicious_deed);
         // ── SOS Witherbloom (B/G) ──
         v.push(witherbloom_charm);
         v.push(bogwater_lumaret);
@@ -779,6 +825,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(lluwen_exchange_student);
         // ── modern_decks batch 102 (BG cube expansion) ──
         v.push(putrefy_modern);
+        // ── modern_decks-17 ──
+        v.push(grim_flayer);
+        v.push(grisly_salvage);
     }
     if pair_contains(pair, Color::White) {
         // ── modern_decks-14 (WB cross-pool removal) ──
@@ -896,6 +945,19 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         dreadhorde_arcanist,
         // ── Cube expansion: body-only stubs ──
         amped_raptor,
+        // ── modern_decks-16 ──
+        firebolt,
+        fiery_confluence,
+        arclight_phoenix,
+        // ── modern_decks-17 ──
+        young_pyromancer,
+        monastery_swiftspear,
+        // ── modern_decks-18 ──
+        chain_lightning,
+        rift_bolt,
+        exquisite_firecraft,
+        sulfuric_vortex,
+        kari_zev_skyship_raider,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -919,6 +981,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-15 (BR cross-pool removal) ──
         v.push(dreadbore);
         v.push(bedevil);
+        // ── modern_decks-16 ──
+        v.push(kolaghans_command);
     }
     if pair_contains(pair, Color::Green) {
         v.push(ghor_clan_rampager);
@@ -951,6 +1015,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── SOS push XI: Lorehold (R/W) MDFC ──
         v.push(kirol_history_buff);
         // ── modern_decks batch 102 (RW cube expansion) ──
+        // ── modern_decks-16 ──
         v.push(wear_tear);
     }
     v
@@ -1063,6 +1128,16 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         ursine_monstrosity,
         conclave_sledge_captain,
         zopandrel_hunger_dominus,
+        // ── modern_decks-16 ──
+        wall_of_blossoms,
+        thragtusk,
+        tireless_provisioner,
+        courser_of_kruphix,
+        explore,
+        elder_gargaroth,
+        vengevine,
+        // ── modern_decks-18 ──
+        scavenging_ooze,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
@@ -1077,6 +1152,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 103 (GW cube expansion) ──
         v.push(loot_the_pathfinder);
         v.push(messenger_falcons);
+        // ── modern_decks-16 ──
+        v.push(kitchen_finks);
     }
     if pair_contains(pair, Color::Red) {
         v.push(ghor_clan_rampager);
@@ -1085,6 +1162,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 102 (RG cube expansion) ──
         v.push(territorial_kavu);
         v.push(omnath_locus_of_rage);
+        // ── modern_decks-16 ──
+        v.push(bloodbraid_elf);
     }
     if pair_contains(pair, Color::Blue) {
         v.push(gaeas_skyfolk);
@@ -1127,6 +1206,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(vicious_rivalry);
         v.push(lluwen_exchange_student);
         v.push(wight_of_the_reliquary);
+        // ── modern_decks-17 ──
+        v.push(grim_flayer);
+        v.push(grisly_salvage);
     }
     if pair_contains(pair, Color::Blue) {
         // ── SOS Quandrix (G/U) ──

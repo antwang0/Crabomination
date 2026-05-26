@@ -405,6 +405,17 @@ pub struct PermanentView {
     /// tribal-filter UIs without decoding the full card definition.
     #[serde(default)]
     pub creature_types: Vec<String>,
+    /// Ward cost (generic mana) on this permanent, if any. 0 means no Ward.
+    #[serde(default)]
+    pub ward_cost: u32,
+    /// Mana value (converted mana cost) of the card. Useful for UI display
+    /// and for client-side filtering/sorting.
+    #[serde(default)]
+    pub mana_value: u32,
+    /// Whether this permanent is legendary. Surfaced for UI display
+    /// (crown icon, gold name border).
+    #[serde(default)]
+    pub is_legendary: bool,
 }
 
 impl PermanentView {
