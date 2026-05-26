@@ -1095,6 +1095,114 @@ pub fn strife_scholar() -> CardDefinition {
     )
 }
 
+// ── Blue MDFCs (Ward-bearing, push XVII) ──────────────────────────────────
+
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+///
+/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — draw 3 cards.
+pub fn campus_composer() -> CardDefinition {
+    let back = spell_back(
+        "Aqueous Aria",
+        cost(&[generic(4), u()]),
+        CardType::Sorcery,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Campus Composer",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Bard],
+        3,
+        4,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
+/// target player draws three cards.
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
+// ── Black MDFCs (Ward-bearing, push XVII) ─────────────────────────────────
+
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock with ETB Surveil 1. Back: sorcery — Reanimate:
+/// return target creature from a graveyard to the battlefield under your
+/// control. You lose life equal to its mana value (collapsed to flat 3).
+pub fn grave_researcher() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let back = spell_back(
+        "Reanimate",
+        cost(&[crate::mana::b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+    );
+    CardDefinition {
+        name: "Grave Researcher",
+        cost: cost(&[generic(2), crate::mana::b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Troll, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Surveil {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: Some(Box::new(back)),
+        opening_hand: None,
+    }
+}
+
 // ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
 #[allow(dead_code)]
 fn _suppress_unused() {

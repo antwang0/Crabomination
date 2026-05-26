@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, generic, w};
+use crate::mana::{Color, b, cost, generic, r, w};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -2455,6 +2455,38 @@ pub fn applied_geometry() -> CardDefinition {
                 amount: Value::Const(6),
             },
         ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Push XVII: Converge damage ────────────────────────────────────────────
+
+/// Archaic's Agony — {4}{R} Sorcery.
+/// "Converge — Deals X damage to target creature, where X is the number
+/// of colors of mana spent to cast this spell."
+/// Exile-from-library rider omitted.
+pub fn archaics_agony() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Archaic's Agony",
+        cost: cost(&[generic(4), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::ConvergedValue,
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

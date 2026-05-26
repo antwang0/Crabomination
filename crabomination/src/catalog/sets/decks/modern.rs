@@ -7892,3 +7892,81 @@ pub fn stonecoil_serpent() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XVII: Additional Modern burn/modal spells ─────────────────────────
+
+/// Collective Defiance — {1}{R}{R} Sorcery. Choose one:
+/// - Deal 4 damage to target creature.
+/// - Target player discards their hand, then draws that many cards (approx: discard 3, draw 3).
+/// - Deal 3 damage to target opponent.
+pub fn collective_defiance() -> CardDefinition {
+    CardDefinition {
+        name: "Collective Defiance",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(4),
+            },
+            Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                    random: false,
+                },
+                Effect::Draw {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(3),
+                },
+            ]),
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Char — {2}{R} Instant. Deal 4 damage to any target. You take 2 damage.
+pub fn char() -> CardDefinition {
+    CardDefinition {
+        name: "Char",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            },
+            Effect::DealDamage {
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Searing Blaze — {R}{R} Instant. Deal 3 damage to target creature and
+/// 3 damage to that creature's controller (approx: 3 to creature + 3 to
+/// each opponent).
+pub fn searing_blaze() -> CardDefinition {
+    CardDefinition {
+        name: "Searing Blaze",
+        cost: cost(&[r(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(3),
+            },
+        ]),
+        ..Default::default()
+    }
+}

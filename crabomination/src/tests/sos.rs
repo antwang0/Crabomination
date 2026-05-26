@@ -7556,3 +7556,104 @@ fn applied_geometry_creates_fractal_with_six_counters() {
     assert_eq!(frac.power(), 6);
     assert_eq!(frac.toughness(), 6);
 }
+
+// ── Push XVII: Ward MDFCs + Modern supplement ──────────────────────────────
+
+#[test]
+fn campus_composer_has_ward_two_and_back_face() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Aqueous Aria");
+}
+
+#[test]
+fn emeritus_of_ideation_has_ward_two_and_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Ancestral Recall");
+}
+
+#[test]
+fn grave_researcher_etb_surveils_and_has_reanimate_back() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(!card.triggered_abilities.is_empty(), "should have ETB surveil");
+    let back = card.back_face.as_ref().expect("should have Reanimate back");
+    assert_eq!(back.name, "Reanimate");
+}
+
+#[test]
+fn archaics_agony_deals_converge_damage() {
+    let card = catalog::archaics_agony();
+    assert_eq!(card.name, "Archaic's Agony");
+    assert!(card.is_sorcery());
+}
+
+#[test]
+fn char_deals_four_to_target_and_two_to_self() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::char());
+
+    let life_before = g.players[0].life;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Char castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should be dead from 4 damage");
+    assert_eq!(g.players[0].life, life_before - 2,
+        "caster should lose 2 life");
+}
+
+#[test]
+fn searing_blaze_hits_creature_and_opponent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::searing_blaze());
+
+    let opp_life_before = g.players[1].life;
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Searing Blaze castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should die from 3 damage");
+    assert_eq!(g.players[1].life, opp_life_before - 3,
+        "opponent should lose 3 life");
+}
+
+#[test]
+fn collective_defiance_mode_zero_deals_four_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let id = g.add_card_to_hand(0, catalog::collective_defiance());
+
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: Some(0), x_value: None,
+    }).expect("Collective Defiance castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
+        "2/2 bear should die from 4 damage");
+}
