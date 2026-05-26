@@ -177,8 +177,8 @@ pub fn dig_site_inventory() -> CardDefinition {
 /// + Move(target → Battlefield) + AddCounter(target, +1/+1)`. The
 /// `Selector::Target(0)` slot persists across the exile so the engine's
 /// `Move`/`AddCounter` resolves against the same card after it lands
-/// back on the battlefield (zone-stable lookup falls back through exile,
-/// which is where the target lives between Exile and Move).
+///   back on the battlefield (zone-stable lookup falls back through exile,
+///   which is where the target lives between Exile and Move).
 ///
 /// The Flashback {2}{W} clause is wired via `Keyword::Flashback`; the
 /// engine's existing `cast_flashback` path replays the body identically.

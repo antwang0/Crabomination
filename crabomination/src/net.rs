@@ -290,6 +290,10 @@ pub struct PermanentView {
     /// Empty for non-creatures.
     #[serde(default)]
     pub creature_types: String,
+    /// Whether this permanent is legendary. Surfaced for UI display
+    /// (crown icon, gold name border).
+    #[serde(default)]
+    pub is_legendary: bool,
 }
 
 impl PermanentView {

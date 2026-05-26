@@ -444,16 +444,6 @@ pub fn test_of_talents() -> CardDefinition {
 
 // ── Multiple Choice ─────────────────────────────────────────────────────────
 
-/// Multiple Choice — {1}{U}{U} Sorcery. "Choose one or more — • Scry 2.
-/// • Create a 1/1 blue Pest creature token. (We use a Bird with flying
-/// since the printed card is a 'Pest'? No — Multiple Choice creates a
-/// 1/1 blue Pest. We use a generic Pest token.) • Target creature gets
-/// +1/+0 and gains hexproof until end of turn. • If you chose all of
-/// the above, ..."
-///
-/// 🟡 Single-mode `ChooseMode` instead of Magic's "choose one or more" —
-/// we surface only the first three modes (mode 0/1/2). Mode 3 (all four
-/// at once) needs a multi-mode primitive.
 // ── Environmental Sciences ─────────────────────────────────────────────────
 
 /// Environmental Sciences — {2} Sorcery — Lesson. "Search your library

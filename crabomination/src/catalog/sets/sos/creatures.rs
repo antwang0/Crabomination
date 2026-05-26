@@ -2602,8 +2602,8 @@ pub fn spirit_mascot() -> CardDefinition {
 ///
 /// Even at the printed {6}{B}{G} the dragon is a high-impact finisher
 /// in Witherbloom's late game and slots into the school's deathtouch
-/// + lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
-/// Mascot's lifegain → +1/+1 counters, etc.).
+/// and lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
+/// Mascot's lifegain to +1/+1 counters, etc.).
 pub fn witherbloom_the_balancer() -> CardDefinition {
     use crate::card::Supertype;
     use crate::mana::g;

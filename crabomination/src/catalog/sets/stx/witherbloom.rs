@@ -150,19 +150,6 @@ pub fn bayou_groff() -> CardDefinition {
     }
 }
 
-// ── Witherbloom Pledgemage ──────────────────────────────────────────────────
-
-/// Witherbloom Pledgemage — {1}{B}{G}, 3/3 Plant Warlock. "{T}, Pay 1
-/// life: Add {B} or {G}."
-///
-/// 🟡 The "pay 1 life as part of the activation cost" half is folded
-/// into resolution: the engine has no `life_cost` flag on
-/// `ActivatedAbility`, so the activation drops a `LoseLife 1` into the
-/// effect's resolution sequence. Net effect is correct (the player
-/// loses 1 life and then gets the mana) — the *timing* difference
-/// (whether life loss is paid before or after the ability resolves) is
-/// invisible to the bot harness today. Tracked under TODO.md "Cost
-/// Stacking" and "Generic activated-ability life-cost primitive".
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
 /// Witherbloom Command — {2}{B}{G} Sorcery. Choose two among 4 modes.

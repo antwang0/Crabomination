@@ -166,6 +166,7 @@ fn project_permanent(
             .map(|ct| format!("{:?}", ct))
             .collect::<Vec<_>>()
             .join(" "),
+        is_legendary: card.definition.supertypes.contains(&crate::card::Supertype::Legendary),
     }
 }
 

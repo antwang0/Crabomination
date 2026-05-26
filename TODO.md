@@ -7,6 +7,41 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **modern_decks-18 (2026-05-26)**: 35 new STX card factories + engine
+  improvements + 41 new tests. Tests at 1202 (+44 net from 1158):
+  - **35 new STX card factories** across all five Strixhaven schools:
+    Lorehold Command, Academic Dispute, Blade Historian, Reconstruct
+    History, Rip Apart, Prismari Command, Creative Outburst, Elemental
+    Summoning, Teach by Example, Quandrix Command, Fractal Summoning,
+    Dragonsguard Elite, Eureka Moment, Silverquill Command, Umbral Juke,
+    Silverquill Silencer, Fracture, Humiliate, Clever Lumimancer,
+    Witherbloom Command, Culling Ritual, Rushed Rebirth, Callous
+    Bloodmage, Environmental Sciences, Introduction to Annihilation,
+    Introduction to Prophecy, Expanded Anatomy, Cram Session, Professor
+    of Symbology, Guiding Voice, Divide by Zero, Flunk, Curate, Igneous
+    Inspiration, Charge Through.
+  - **Engine: CR 704.5h deathtouch SBA** — new `CardInstance.
+    deathtouch_damaged` flag tracks deathtouch damage sources. SBAs now
+    correctly kill creatures dealt any positive damage by a deathtouch
+    source, regardless of toughness. Previously deathtouch only affected
+    damage assignment (lethal=1) but not the SBA lethality check.
+  - **Engine: CR 702.7 first-strike fix** — the `blocker_filter` parameter
+    in `resolve_combat_damage_with_filter` was unused (`_blocker_filter`);
+    now properly gates which blockers deal damage per step. During
+    first-strike step only FS/DS blockers deal damage; during regular
+    step only non-FS/DS blockers deal damage.
+  - **Beledros Witherbloom activation** — promoted from body-only to
+    functional: pay-10-life sorcery-speed mass-untap via existing
+    `ActivatedAbility.life_cost`.
+  - **Server: PermanentView.is_legendary** — clients can display crown
+    icons or gold borders for legendary permanents.
+  - **8 new CR rules tests**: 702.2 (deathtouch kills), 702.7 (first
+    strike survives), 702.15 (lifelink gains), 704.5b (0 life), 704.5c
+    (10 poison), 704.5i (0 loyalty), 704.5j (legend rule), 704.5n
+    (orphaned aura).
+  - **Clippy**: all warnings resolved except acceptable `too_many_arguments`
+    and `large_size_difference` (both stylistic).
+
 - ✅ **modern_decks-16/17 (2026-05-26)**: 46 new cube cards + CR 120.3
   planeswalker damage + PermanentView improvements. Tests at 1158 (+55
   net from 1103):
@@ -1765,3 +1800,52 @@ listed here so the next pass can pick them up.
 - **Cube pool diversity**: The cube now has 46+ new cards but several color
   pairs (GW, UR) have much deeper pools than others (WU, BG). A card-count
   audit per pair would identify thin pools that need supplementing.
+
+## New suggestions (added 2026-05-26 modern_decks-18 session)
+
+### Engine
+
+- **Deathtouch + non-combat damage**: `deathtouch_damaged` is only set
+  during combat damage. Spell damage from a deathtouch source (e.g. Goblin
+  Chainwhirler with deathtouch from Equipment) should also set the flag.
+  Needs damage-source identity tracking in `deal_damage_to`.
+
+- **Choose-two commands**: All five STX commands are collapsed to
+  single-mode ChooseMode. A `ChooseMultipleMode { modes: Vec<Effect>,
+  count: usize }` variant would let the controller pick exactly N modes
+  from the list, matching the printed "choose two" pattern.
+
+- **Hybrid mana**: Every hybrid pip ({W/B}, {G/U}, etc.) is approximated
+  as one color. A `ManaSymbol::Hybrid(Color, Color)` variant + payment
+  logic would let players pay either half.
+
+- **Learn/Lesson sideboard**: Learn is collapsed to Draw 1 across ~12
+  cards. A minimal Lesson sideboard (separate from the main deck, searched
+  by Learn) would give Strixhaven Limited decks their intended play pattern.
+
+- **0/0 enters-with-counters**: The `enters_with_counters: Option<
+  (CounterType, Value)>` field approach was explored but reverted because
+  it adds a required field to every CardDefinition constructor (~588 sites).
+  Alternative: use `#[serde(default)]` and make `Default` handle it, or
+  apply counters in the spell-resolution path before SBAs based on a flag
+  on the definition. Needed for Stonecoil Serpent, Walking Ballista, etc.
+
+### UI
+
+- **Legendary indicator**: `PermanentView.is_legendary` is now surfaced.
+  The 3D client should render a crown icon or gold name border.
+
+### Cards
+
+- **STX Command full modes**: Lorehold/Prismari/Quandrix/Silverquill/
+  Witherbloom Commands all ship single-mode; promoting to choose-two would
+  match the printed cards and significantly increase gameplay depth.
+
+- **Lesson cards not in Lesson sideboard**: Environmental Sciences,
+  Introduction to Annihilation, Introduction to Prophecy, Expanded Anatomy,
+  Fractal Summoning, Elemental Summoning, Pop Quiz are all Lessons but only
+  playable from hand since there's no sideboard model.
+
+- **Tanazir Quandrix ETB**: The counter-doubling ETB is still omitted.
+  A `ForEach(Creature & ControlledByYou) → AddCounter(+1/+1,
+  CountersOn(TriggerSource, +1/+1))` pattern would approximate it.
