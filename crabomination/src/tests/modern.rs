@@ -9477,3 +9477,185 @@ fn grisly_salvage_mills_and_draws() {
 
     assert!(g.players[0].graveyard.len() > gy_before, "cards milled to graveyard");
 }
+
+// ── Chain Lightning ─────────────────────────────────────────────────────────
+
+#[test]
+fn chain_lightning_deals_three_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::chain_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Chain Lightning castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage to opponent");
+}
+
+#[test]
+fn chain_lightning_kills_a_three_toughness_creature() {
+    let mut g = two_player_game();
+    // Centaur Courser is a 3/3 (we use a card with 3 toughness).
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::chain_lightning());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), mode: None, x_value: None,
+    }).expect("Chain Lightning targets creature");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage");
+}
+
+// ── Rift Bolt ───────────────────────────────────────────────────────────────
+
+#[test]
+fn rift_bolt_deals_three_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::rift_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Rift Bolt castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 3, "3 damage to opponent");
+}
+
+// ── Exquisite Firecraft ─────────────────────────────────────────────────────
+
+#[test]
+fn exquisite_firecraft_deals_four_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::exquisite_firecraft());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), mode: None, x_value: None,
+    }).expect("Exquisite Firecraft castable");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, life_before - 4, "4 damage to opponent");
+}
+
+#[test]
+fn exquisite_firecraft_is_a_sorcery() {
+    let card = catalog::exquisite_firecraft();
+    assert!(card.card_types.contains(&CardType::Sorcery));
+    assert_eq!(card.name, "Exquisite Firecraft");
+}
+
+// ── Sulfuric Vortex ─────────────────────────────────────────────────────────
+
+#[test]
+fn sulfuric_vortex_is_an_enchantment_with_upkeep_trigger() {
+    let card = catalog::sulfuric_vortex();
+    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
+    assert_eq!(card.triggered_abilities.len(), 1);
+    let t = &card.triggered_abilities[0];
+    assert!(
+        matches!(t.event.kind, crate::card::EventKind::StepBegins(crate::game::TurnStep::Upkeep)),
+        "trigger should fire on upkeep"
+    );
+}
+
+#[test]
+fn sulfuric_vortex_deals_damage_at_upkeep() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::sulfuric_vortex());
+    let life_before = g.players[0].life;
+
+    // Roll to Alice's upkeep so the trigger fires.
+    g.step = TurnStep::Cleanup;
+    g.active_player_idx = 0;
+    for _ in 0..30 {
+        if g.is_game_over() {
+            break;
+        }
+        if g.active_player_idx == 0
+            && g.step == TurnStep::Upkeep
+            && g.stack.is_empty()
+            && g.players[0].life < life_before
+        {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+
+    assert_eq!(g.players[0].life, life_before - 2,
+        "Sulfuric Vortex should deal 2 to the active player at upkeep");
+}
+
+// ── Kari Zev, Skyship Raider ───────────────────────────────────────────────
+
+#[test]
+fn kari_zev_has_first_strike_and_menace() {
+    let card = catalog::kari_zev_skyship_raider();
+    assert_eq!(card.power, 1);
+    assert_eq!(card.toughness, 3);
+    assert!(card.keywords.contains(&crate::card::Keyword::FirstStrike));
+    assert!(card.keywords.contains(&crate::card::Keyword::Menace));
+    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
+}
+
+#[test]
+fn kari_zev_creates_ragavan_on_attack() {
+    let mut g = two_player_game();
+    let kari = g.add_card_to_battlefield(0, catalog::kari_zev_skyship_raider());
+    g.clear_sickness(kari);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: kari,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("Kari Zev attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Ragavan"),
+        "Attacking with Kari Zev should create a Ragavan token");
+}
+
+// ── Scavenging Ooze ─────────────────────────────────────────────────────────
+
+#[test]
+fn scavenging_ooze_is_a_two_two_creature() {
+    let card = catalog::scavenging_ooze();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.card_types.contains(&CardType::Creature));
+    assert_eq!(card.activated_abilities.len(), 1);
+}
+
+#[test]
+fn scavenging_ooze_gains_counter_and_life() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let ooze = g.add_card_to_battlefield(0, catalog::scavenging_ooze());
+    g.clear_sickness(ooze);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ooze,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("Scavenging Ooze ability activates");
+    drain_stack(&mut g);
+
+    let counters = g.battlefield.iter().find(|c| c.id == ooze)
+        .and_then(|c| c.counters.get(&CounterType::PlusOnePlusOne).copied())
+        .unwrap_or(0);
+    assert_eq!(counters, 1, "Ooze should have one +1/+1 counter");
+    assert_eq!(g.players[0].life, life_before + 1, "Should gain 1 life");
+}

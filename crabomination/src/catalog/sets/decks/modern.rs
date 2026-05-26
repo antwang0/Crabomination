@@ -7970,3 +7970,166 @@ pub fn searing_blaze() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Modern supplement: Burn & Creature additions ────────────────────────────
+
+/// Chain Lightning — {R} Sorcery. Deal 3 damage to any target.
+///
+/// The printed "then that player may pay {R}{R} to copy this spell" rider
+/// is omitted — no spell-copy primitive exists yet.
+pub fn chain_lightning() -> CardDefinition {
+    CardDefinition {
+        name: "Chain Lightning",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Rift Bolt — {2}{R} Sorcery. Deal 3 damage to any target.
+///
+/// Suspend 1 — {R} is omitted (no suspend primitive).
+pub fn rift_bolt() -> CardDefinition {
+    CardDefinition {
+        name: "Rift Bolt",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(3),
+        },
+        ..Default::default()
+    }
+}
+
+/// Exquisite Firecraft — {1}{R}{R} Sorcery. Deal 4 damage to any target.
+///
+/// The "spell mastery — this spell can't be countered" rider is omitted.
+pub fn exquisite_firecraft() -> CardDefinition {
+    CardDefinition {
+        name: "Exquisite Firecraft",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Any),
+            amount: Value::Const(4),
+        },
+        ..Default::default()
+    }
+}
+
+/// Sulfuric Vortex — {1}{R}{R} Enchantment. At the beginning of each
+/// player's upkeep, Sulfuric Vortex deals 2 damage to that player.
+///
+/// The "players can't gain life" rider is omitted (no replacement-effect
+/// primitive for blanket life-gain prevention).
+pub fn sulfuric_vortex() -> CardDefinition {
+    CardDefinition {
+        name: "Sulfuric Vortex",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                EventScope::AnyPlayer,
+            ),
+            effect: Effect::DealDamage {
+                to: Selector::Player(PlayerRef::ActivePlayer),
+                amount: Value::Const(2),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kari Zev, Skyship Raider — {1}{R} Legendary Creature — Human Pirate 1/3.
+/// First strike, menace. Whenever Kari Zev attacks, create Ragavan, a
+/// legendary 2/1 red Monkey creature token. Ragavan is tapped and attacking.
+///
+/// Approximation: creates a 2/1 Monkey token on attack (the token being
+/// tapped-and-attacking and exiled at end of combat is omitted).
+pub fn kari_zev_skyship_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Kari Zev, Skyship Raider",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Menace],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: TokenDefinition {
+                    name: "Ragavan".into(),
+                    power: 2,
+                    toughness: 1,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Red],
+                    supertypes: vec![Supertype::Legendary],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Monkey],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Scavenging Ooze — {1}{G} Creature — Ooze 2/2.
+/// {G}: Exile target card from a graveyard. If it was a creature card, put
+/// a +1/+1 counter on Scavenging Ooze and you gain 1 life.
+///
+/// Approximation: {G}, tap: add a +1/+1 counter on this and gain 1 life
+/// (the graveyard-exile targeting is collapsed — no "target card in a
+/// graveyard" selector yet).
+pub fn scavenging_ooze() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
+    CardDefinition {
+        name: "Scavenging Ooze",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[g()]),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+        }],
+        ..Default::default()
+    }
+}

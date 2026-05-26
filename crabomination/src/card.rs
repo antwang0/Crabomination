@@ -62,6 +62,8 @@ pub enum CreatureType {
     Dwarf, Badger, Salamander, Giraffe,
     // SOS Witherbloom Dryad subtype (Essenceknit Scholar).
     Dryad,
+    // Modern supplement: Kari Zev's Ragavan token.
+    Monkey,
     // Strixhaven Elder Dragon legendary creatures (Lorehold, Prismari,
     // Quandrix, Silverquill, Witherbloom, the Balancer).
     Elder,
