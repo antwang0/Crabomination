@@ -1604,7 +1604,7 @@ fn spectacle_mage_prowess_pumps_on_noncreature_cast() {
     let bolt = g.add_card_to_hand(0, catalog::interjection());
     g.players[0].mana_pool.add(Color::White, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Permanent(mage)), mode: None, x_value: None,
+        card_id: bolt, target: Some(Target::Permanent(mage)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
 
@@ -1622,7 +1622,7 @@ fn spectacle_mage_prowess_does_not_fire_on_creature_cast() {
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
-        card_id: bear, target: None, mode: None, x_value: None,
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("castable");
     drain_stack(&mut g);
 
