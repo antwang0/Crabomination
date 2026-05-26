@@ -160,6 +160,12 @@ fn project_permanent(
         ward_cost: card.definition.keywords.iter().find_map(|kw| {
             if let crate::card::Keyword::Ward(n) = kw { Some(*n) } else { None }
         }).unwrap_or(0),
+        mana_value: card.definition.cost.cmc(),
+        creature_types: card.definition.subtypes.creature_types
+            .iter()
+            .map(|ct| format!("{:?}", ct))
+            .collect::<Vec<_>>()
+            .join(" "),
     }
 }
 

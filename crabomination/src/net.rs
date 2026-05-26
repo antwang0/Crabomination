@@ -282,6 +282,14 @@ pub struct PermanentView {
     /// Ward cost (generic mana) on this permanent, if any. 0 means no Ward.
     #[serde(default)]
     pub ward_cost: u32,
+    /// Mana value (converted mana cost) of the card. Useful for UI display
+    /// and for client-side filtering/sorting.
+    #[serde(default)]
+    pub mana_value: u32,
+    /// Creature type line as a human-readable string (e.g. "Human Wizard").
+    /// Empty for non-creatures.
+    #[serde(default)]
+    pub creature_types: String,
 }
 
 impl PermanentView {
