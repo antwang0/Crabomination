@@ -476,18 +476,17 @@ impl GameState {
         // CR 702.16: Protection from [color] prevents targeting by spells
         // of that color. Check the spell's colors against the target's
         // protection keywords.
-        if let Some(Target::Permanent(cid)) = target {
-            if let Some(target_card) = self.battlefield_find(cid) {
-                if target_card.controller != p {
-                    let spell_colors = card.definition.cost.colors();
-                    for kw in &target_card.definition.keywords {
-                        if let Keyword::Protection(prot_color) = kw {
-                            if spell_colors.contains(prot_color) {
-                                self.players[p].hand.push(card);
-                                return Err(GameError::TargetHasProtection(cid));
-                            }
-                        }
-                    }
+        if let Some(Target::Permanent(cid)) = target
+            && let Some(target_card) = self.battlefield_find(cid)
+            && target_card.controller != p
+        {
+            let spell_colors = card.definition.cost.colors();
+            for kw in &target_card.definition.keywords {
+                if let Keyword::Protection(prot_color) = kw
+                    && spell_colors.contains(prot_color)
+                {
+                    self.players[p].hand.push(card);
+                    return Err(GameError::TargetHasProtection(cid));
                 }
             }
         }
@@ -1365,10 +1364,10 @@ impl GameState {
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack
         // queueing — all of which are guaranteed to commit if we get here.)
-        if ability.once_per_turn {
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
-                card.once_per_turn_used.push(ability_index);
-            }
+        if ability.once_per_turn
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            card.once_per_turn_used.push(ability_index);
         }
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the

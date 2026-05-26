@@ -3846,13 +3846,13 @@ pub fn forum_necroscribe() -> CardDefinition {
 ///   `Selector::LastCreatedToken`. The X-from-cost path uses
 ///   `Value::XFromCost` keyed off the activation's mana payment.
 ///
-/// The Increment rider (whenever you cast a spell, if mana spent > P
-/// or T, +1/+1 counter on Berta) is omitted pending the SOS Increment
-/// engine primitive (mana-spent-on-cast introspection — tracked in
-/// TODO.md).
+/// Increment approximated as magecraft +1/+1 counter on IS-cast. This
+/// synergizes with the counter-add mana trigger (each IS-cast lands a
+/// counter which fires the mana-add, producing a free pip).
 pub fn berta_wise_extrapolator() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::{ManaSymbol, g, u};
     use super::sorceries::fractal_token;
     CardDefinition {
@@ -3891,16 +3891,26 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             condition: None,
             life_cost: 0,
         }],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(
-                EventKind::CounterAdded(CounterType::PlusOnePlusOne),
-                EventScope::SelfSource,
-            ),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+        triggered_abilities: vec![
+            // Increment approximation: magecraft +1/+1 counter.
+            magecraft(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            // Whenever one or more +1/+1 counters are put on Berta,
+            // add one mana of any color.
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                },
             },
-        }],
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -3978,6 +3988,7 @@ pub fn paradox_surveyor() -> CardDefinition {
 /// printed effect on a 2-color cast.
 pub fn magmablood_archaic() -> CardDefinition {
     use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
     use crate::mana::r;
     CardDefinition {
         name: "Magmablood Archaic",
@@ -4003,6 +4014,20 @@ pub fn magmablood_archaic() -> CardDefinition {
                     amount: Value::ConvergedValue,
                 },
             },
+            // IS-cast pump: each creature you control gets +1/+0 EOT.
+            // The printed text uses ConvergedValue per creature, but we
+            // approximate with a flat +1/+0 via magecraft + ForEach.
+            magecraft(Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::PumpPT {
+                    what: Selector::TriggerSource,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                }),
+            }),
         ],
         static_abilities: vec![],
         base_loyalty: 0,

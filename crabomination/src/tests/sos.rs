@@ -5041,9 +5041,9 @@ fn berta_wise_extrapolator_def_is_one_four_legendary_frog_druid() {
         "Berta should have at least one activated ability");
     assert!(card.activated_abilities[0].tap_cost,
         "Berta's activation should be a tap ability");
-    // Has the counter-add → mana trigger (one entry).
-    assert_eq!(card.triggered_abilities.len(), 1,
-        "Berta should have a single counter-add → AnyOneColor mana trigger");
+    // Has the Increment (magecraft) + counter-add → mana triggers.
+    assert_eq!(card.triggered_abilities.len(), 2,
+        "Berta should have Increment magecraft + counter-add → AnyOneColor mana triggers");
 }
 
 #[test]
