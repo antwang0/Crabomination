@@ -279,6 +279,9 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// Ward cost (generic mana) on this permanent, if any. 0 means no Ward.
+    #[serde(default)]
+    pub ward_cost: u32,
 }
 
 impl PermanentView {

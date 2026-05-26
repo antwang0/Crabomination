@@ -157,6 +157,9 @@ fn project_permanent(
         attacking: attacking.contains(&card.id),
         abilities: project_abilities(card),
         loyalty_abilities: project_loyalty_abilities(card),
+        ward_cost: card.definition.keywords.iter().find_map(|kw| {
+            if let crate::card::Keyword::Ward(n) = kw { Some(*n) } else { None }
+        }).unwrap_or(0),
     }
 }
 

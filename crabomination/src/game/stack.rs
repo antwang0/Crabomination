@@ -433,7 +433,14 @@ impl GameState {
         // un-tap a stolen permanent on the wrong player's turn).
         for card in &mut self.battlefield {
             if card.controller == p {
-                card.tapped = false;
+                // CR 122.1c: If a permanent with a stun counter would become
+                // untapped, remove a stun counter from it instead.
+                let stun = card.counter_count(crate::card::CounterType::Stun);
+                if stun > 0 && card.tapped {
+                    card.remove_counters(crate::card::CounterType::Stun, 1);
+                } else {
+                    card.tapped = false;
+                }
                 card.summoning_sick = false;
             }
         }

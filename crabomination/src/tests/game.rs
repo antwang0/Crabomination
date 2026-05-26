@@ -4069,3 +4069,57 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
     ).count();
     assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }
+
+// ── Stun counter untap replacement (CR 122.1c) ────────────────────────────
+
+#[test]
+fn stun_counter_prevents_untap_and_is_removed() {
+    let mut g = two_player_game();
+    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Tap it and add a stun counter.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
+        c.tapped = true;
+        c.add_counters(crate::card::CounterType::Stun, 1);
+    }
+
+    // Perform untap step for player 0.
+    g.do_untap();
+
+    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
+    assert!(c.tapped, "Creature should remain tapped (stun counter removed instead)");
+    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 0, "Stun counter should be removed");
+}
+
+#[test]
+fn stun_counter_untapped_creature_keeps_stun() {
+    let mut g = two_player_game();
+    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Add a stun counter but leave untapped.
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
+        c.add_counters(crate::card::CounterType::Stun, 1);
+    }
+
+    // Perform untap step for player 0.
+    g.do_untap();
+
+    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
+    assert!(!c.tapped, "Untapped creature stays untapped");
+    // Stun counter remains since the creature wasn't trying to untap.
+    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 1, "Stun counter should remain on untapped creature");
+}
+
+#[test]
+fn multiple_stun_counters_remove_one_per_untap() {
+    let mut g = two_player_game();
+    let creature_id = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == creature_id) {
+        c.tapped = true;
+        c.add_counters(crate::card::CounterType::Stun, 3);
+    }
+
+    // First untap: removes one stun counter, stays tapped.
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == creature_id).unwrap();
+    assert!(c.tapped);
+    assert_eq!(c.counter_count(crate::card::CounterType::Stun), 2);
+}
