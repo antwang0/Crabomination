@@ -655,9 +655,15 @@ impl GameState {
                     if let EntityRef::Permanent(cid) = ent
                         && let Some(c) = self.battlefield_find_mut(cid)
                         && c.tapped {
-                            c.tapped = false;
+                            // CR 122.1c: stun counter prevents untap.
+                            let stun = c.counter_count(crate::card::CounterType::Stun);
+                            if stun > 0 {
+                                c.remove_counters(crate::card::CounterType::Stun, 1);
+                            } else {
+                                c.tapped = false;
+                                events.push(GameEvent::PermanentUntapped { card_id: cid });
+                            }
                             count += 1;
-                            events.push(GameEvent::PermanentUntapped { card_id: cid });
                         }
                 }
                 Ok(())
