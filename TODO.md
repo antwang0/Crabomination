@@ -37,6 +37,33 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
     Mica, Prismari the Inspiration, Silverquill the Disputant, etc.).
   - **Cast-from-exile pipeline** still blocks ~10 SOS cards (Archaic's Agony,
     Flashback card, Elemental Mascot, The Dawning Archaic, etc.).
+
+- ✅ **Push XVII.1 — modern_decks (2026-05-27)**: Stun counter untap
+  suppression + hand-size cleanup + Intervention Pact + clippy fixes.
+  Engine: CR 122.1c (stun counters prevent untapping in both `do_untap`
+  and `Effect::Untap` — one counter removed instead of untapping);
+  CR 514.1 (active player discards down to 7 at cleanup). New card:
+  Intervention Pact ({0} Instant, gain 5 life + pact upkeep trigger).
+  Clippy: doc-list-item warnings reduced from 10 to 2. All 1071 tests.
+
+  ### Things noticed but not tackled
+  - **Stun counter from Effect::AddCounter** should also prevent the
+    permanent from untapping on the very next untap step — currently
+    only stun counters that exist at untap time are checked, so a
+    counter added mid-turn is effective. This is correct behavior but
+    worth documenting.
+  - **Maximum hand size modification** — some cards (Reliquary Tower,
+    Spellbook, Wisdom of Ages) grant "no maximum hand size". The
+    cleanup discard-to-7 logic should check for a `no_max_hand_size`
+    flag on the player (currently hardcoded to 7).
+  - **Pact auto-pay** should check if the player can actually pay the
+    mana before auto-paying. Currently if they can't afford it, they
+    lose the game — this is correct MTG behavior but confusing for
+    new players. A warning/confirmation would be nice.
+  - **Back to Basics** (nonbasic lands don't untap) — would be easy
+    to implement now that stun counter untap suppression is wired.
+    Just add a static ability that prevents untapping (or grant stun
+    counters to nonbasics at upkeep).
   - **Prepare mechanic** (SOS colorless) not implemented — Biblioplex
     Tomekeeper, Skycoach Waypoint.
   - **Vehicle/Crew** not implemented — Strixhaven Skycoach.
