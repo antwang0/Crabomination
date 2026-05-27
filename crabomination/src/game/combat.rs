@@ -428,12 +428,20 @@ impl GameState {
                 continue;
             }
 
-            let blocker_ids: Vec<CardId> = self
+            // CR 510.1c: attacker's controller chooses damage assignment
+            // order against multiple blockers. The engine doesn't surface
+            // that choice through a Decision yet, but we MUST iterate in
+            // a deterministic order so replay/snapshot diverge isn't
+            // gated on randomized HashMap iteration order. Sort by
+            // CardId (declaration order proxy — ids are handed out
+            // monotonically by `next_id`).
+            let mut blocker_ids: Vec<CardId> = self
                 .block_map
                 .iter()
                 .filter(|(_, aid)| **aid == atk.id)
                 .map(|(&bid, _)| bid)
                 .collect();
+            blocker_ids.sort_by_key(|id| id.0);
 
             if blocker_ids.is_empty() {
                 let amount = if prevent_combat_damage {
@@ -590,7 +598,13 @@ impl GameState {
                             .unwrap_or(atk.defender_player);
                         *lifelink_by_controller.entry(controller).or_insert(0) += bc.power;
                     }
-                    for (player, gained) in lifelink_by_controller {
+                    // Sort by seat for deterministic event ordering;
+                    // life-gain math is commutative but the event log
+                    // shouldn't shuffle across replays.
+                    let mut lifelink_entries: Vec<(usize, i32)> =
+                        lifelink_by_controller.into_iter().collect();
+                    lifelink_entries.sort_by_key(|(p, _)| *p);
+                    for (player, gained) in lifelink_entries {
                         if gained > 0 {
                             let amt = gained as u32;
                             self.adjust_life(player, gained);

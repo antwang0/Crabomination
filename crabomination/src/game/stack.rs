@@ -781,14 +781,7 @@ impl GameState {
         if !self.players[active].no_maximum_hand_size {
             while self.players[active].hand.len() > MAX_HAND_SIZE {
                 let card = self.players[active].hand.remove(0);
-                let cid = card.id;
                 self.players[active].graveyard.push(card);
-                // Emit the standard discard event so triggers / payoffs see it.
-                // Cleanup discard is still a discard — CR 419.1 + 514.1.
-                // (No event-buffer threading here since do_cleanup runs in a
-                // priority-less window; the event is recorded for snapshot
-                // tracking but doesn't trigger anything per CR 514.3.)
-                let _ = cid;
             }
         }
 
@@ -816,14 +809,6 @@ impl GameState {
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
-        // CR 514.1: Discard down to maximum hand size (7) if over.
-        let active = self.active_player_idx;
-        let max_hand_size = 7usize;
-        while self.players[active].hand.len() > max_hand_size {
-            if let Some(card) = self.players[active].hand.pop() {
-                self.players[active].graveyard.push(card);
-            }
-        }
         // Empty mana pools
         for player in &mut self.players {
             player.mana_pool.empty();

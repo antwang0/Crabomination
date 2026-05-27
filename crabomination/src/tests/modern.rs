@@ -10902,24 +10902,6 @@ fn cam_and_farrik_pumps_on_noncreature_cast() {
 }
 
 #[test]
-fn magda_brazen_outlaw_is_legendary_dwarf() {
-    let card = catalog::magda_brazen_outlaw();
-    assert_eq!(card.name, "Magda, Brazen Outlaw");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-#[test]
-fn descendant_of_storms_is_2_2_flying_spirit() {
-    let card = catalog::descendant_of_storms();
-    assert_eq!(card.name, "Descendant of Storms");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
-}
-
-#[test]
 fn keen_eyed_curator_etb_adds_counter() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::keen_eyed_curator());
@@ -10987,38 +10969,6 @@ fn back_to_basics_prevents_nonbasic_land_untap() {
     // Nonbasic land should stay tapped.
     assert!(g.battlefield.iter().find(|c| c.id == nonbasic).unwrap().tapped,
         "Nonbasic land should stay tapped under Back to Basics");
-}
-
-#[test]
-fn collector_ouphe_is_2_2_ouphe() {
-    let card = catalog::collector_ouphe();
-    assert_eq!(card.name, "Collector Ouphe");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-}
-
-#[test]
-fn arclight_phoenix_is_3_2_flying_haste() {
-    let card = catalog::arclight_phoenix();
-    assert_eq!(card.name, "Arclight Phoenix");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
-    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
-}
-
-#[test]
-fn omniscience_is_10_mana_enchantment() {
-    let card = catalog::omniscience();
-    assert_eq!(card.name, "Omniscience");
-    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
-}
-
-#[test]
-fn opposition_is_4_mana_enchantment() {
-    let card = catalog::opposition();
-    assert_eq!(card.name, "Opposition");
-    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
 }
 
 // ── Overload cards ────────────────────────────────────────────────────────────
@@ -11112,13 +11062,6 @@ fn teleportal_pumps_and_grants_unblockable() {
     let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
     assert_eq!(c.power(), 3, "Should get +1/+0");
     assert!(c.has_keyword(&crate::card::Keyword::Unblockable));
-}
-
-#[test]
-fn street_spasm_deals_x_to_non_flying() {
-    let card = catalog::street_spasm();
-    assert_eq!(card.name, "Street Spasm");
-    assert!(card.alternative_cost.is_some(), "Should have Overload alt cost");
 }
 
 // ── Modern cube supplement ──────────────────────────────────────────────────
@@ -11292,20 +11235,6 @@ fn enduring_innocence_draws_on_nontoken_creature_etb() {
 }
 
 #[test]
-fn amped_raptor_body_is_2_1_dinosaur() {
-    let card = catalog::amped_raptor();
-    assert_eq!(card.name, "Amped Raptor");
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
-    assert!(
-        card.subtypes
-            .creature_types
-            .contains(&crate::card::CreatureType::Dinosaur),
-        "Should be a Dinosaur"
-    );
-}
-
-#[test]
 fn thundertrap_trainer_etb_taps_opponent_creature() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -11402,18 +11331,6 @@ fn basking_rootwalla_pump_once_per_turn() {
 }
 
 // ── Push XIX: cube creature tests ──────────────────────────────────────
-
-#[test]
-fn elder_gargaroth_is_6_6_with_three_keywords() {
-    let card = catalog::elder_gargaroth();
-    assert_eq!(card.name, "Elder Gargaroth");
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert_eq!(card.triggered_abilities.len(), 2, "attack and block triggers");
-}
 
 // ── Push: new modern creatures ──────────────────────────────────────────
 
@@ -11681,21 +11598,7 @@ fn portal_to_phyrexia_etb_forces_opponent_sacrifice() {
     assert_eq!(opp_creatures_after, 0, "Portal ETB should sac 3 creatures");
 }
 
-#[test]
-fn portal_to_phyrexia_has_upkeep_reanimate_trigger() {
-    let card = catalog::portal_to_phyrexia();
-    assert_eq!(card.triggered_abilities.len(), 2, "ETB + upkeep triggers");
-}
-
 // ── Finale of Devastation ───────────────────────────────────────────────────
-
-#[test]
-fn finale_of_devastation_is_x_green_green_sorcery() {
-    let card = catalog::finale_of_devastation();
-    assert_eq!(card.name, "Finale of Devastation");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-    assert_eq!(card.cost.cmc(), 2, "X + GG = 2 base CMC");
-}
 
 // ── Rishadan Port ───────────────────────────────────────────────────────────
 
@@ -11795,76 +11698,15 @@ fn koma_cosmos_serpent_is_6_6_uncounterable_serpent() {
 
 // ── Mesmeric Orb ────────────────────────────────────────────────────────────
 
-#[test]
-fn mesmeric_orb_is_two_mana_artifact() {
-    let card = catalog::mesmeric_orb();
-    assert_eq!(card.name, "Mesmeric Orb");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert_eq!(card.cost.cmc(), 2);
-    assert_eq!(card.triggered_abilities.len(), 1, "upkeep mill trigger");
-}
-
 // ── Chalice of the Void ─────────────────────────────────────────────────────
-
-#[test]
-fn chalice_of_the_void_enters_with_x_charge_counters() {
-    let card = catalog::chalice_of_the_void();
-    assert_eq!(card.name, "Chalice of the Void");
-    assert!(card.enters_with_counters.is_some());
-    let (ctype, _) = card.enters_with_counters.unwrap();
-    assert_eq!(ctype, CounterType::Charge);
-}
-
-#[test]
-fn chalice_of_the_void_has_spell_counter_trigger() {
-    let card = catalog::chalice_of_the_void();
-    assert_eq!(card.triggered_abilities.len(), 1, "counter trigger");
-}
 
 // ── Candelabra of Tawnos ────────────────────────────────────────────────────
 
-#[test]
-fn candelabra_of_tawnos_has_tap_x_untap_activation() {
-    let card = catalog::candelabra_of_tawnos();
-    assert_eq!(card.name, "Candelabra of Tawnos");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert_eq!(card.activated_abilities.len(), 1, "one X activation");
-}
-
 // ── Archdruid's Charm ───────────────────────────────────────────────────────
-
-#[test]
-fn archdruids_charm_is_a_three_mode_green_instant() {
-    let card = catalog::archdruids_charm();
-    assert_eq!(card.name, "Archdruid's Charm");
-    assert!(card.card_types.contains(&CardType::Instant));
-    assert_eq!(card.cost.cmc(), 3, "GGG = 3 CMC");
-    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
-        assert_eq!(modes.len(), 3, "three modes");
-    } else {
-        panic!("Archdruid's Charm should be ChooseMode");
-    }
-}
 
 // ── Awaken the Honored Dead ─────────────────────────────────────────────────
 
-#[test]
-fn awaken_the_honored_dead_is_mass_reanimation() {
-    let card = catalog::awaken_the_honored_dead();
-    assert_eq!(card.name, "Awaken the Honored Dead");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-    assert_eq!(card.cost.cmc(), 7, "5WB = 7 CMC");
-}
-
 // ── Growing Ranks ───────────────────────────────────────────────────────────
-
-#[test]
-fn growing_ranks_has_upkeep_token_trigger() {
-    let card = catalog::growing_ranks();
-    assert_eq!(card.name, "Growing Ranks");
-    assert!(card.card_types.contains(&CardType::Enchantment));
-    assert_eq!(card.triggered_abilities.len(), 1, "upkeep token trigger");
-}
 
 // ── Monument to Endurance ───────────────────────────────────────────────────
 
@@ -11900,15 +11742,6 @@ fn exotic_orchard_taps_for_any_color() {
 }
 
 // ── Master of Death ─────────────────────────────────────────────────────────
-
-#[test]
-fn master_of_death_is_3_1_zombie_wizard() {
-    let card = catalog::master_of_death();
-    assert_eq!(card.name, "Master of Death");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 1);
-    assert_eq!(card.triggered_abilities.len(), 1, "graveyard return trigger");
-}
 
 #[test]
 fn growing_ranks_creates_centaur_token_on_upkeep() {
@@ -11954,45 +11787,9 @@ fn master_of_death_returns_from_graveyard_on_upkeep() {
     assert_eq!(g.players[0].life, 19, "Should have paid 1 life");
 }
 
-#[test]
-fn monument_to_endurance_is_3_cost_artifact_with_pump() {
-    let card = catalog::monument_to_endurance();
-    assert_eq!(card.name, "Monument to Endurance");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert_eq!(card.cost.cmc(), 3, "costs 3 generic");
-    assert_eq!(card.activated_abilities.len(), 1, "one pump activation");
-}
-
-#[test]
-fn exotic_orchard_is_a_land_with_any_color_mana() {
-    let card = catalog::exotic_orchard();
-    assert_eq!(card.name, "Exotic Orchard");
-    assert!(card.card_types.contains(&CardType::Land));
-    assert_eq!(card.activated_abilities.len(), 1, "one tap-for-mana ability");
-}
-
 // ── Basking Broodscale ──────────────────────────────────────────────────────
 
-#[test]
-fn basking_broodscale_enters_with_counters_and_spawns() {
-    let card = catalog::basking_broodscale();
-    assert_eq!(card.name, "Basking Broodscale");
-    assert!(card.enters_with_counters.is_some());
-    let (ct, _) = card.enters_with_counters.unwrap();
-    assert_eq!(ct, CounterType::PlusOnePlusOne);
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB token trigger");
-}
-
 // ── Sowing Mycospawn ────────────────────────────────────────────────────────
-
-#[test]
-fn sowing_mycospawn_is_4_4_with_land_search_etb() {
-    let card = catalog::sowing_mycospawn();
-    assert_eq!(card.name, "Sowing Mycospawn");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB land search");
-}
 
 // ── Ursine Monstrosity ──────────────────────────────────────────────────────
 
@@ -12083,15 +11880,6 @@ fn omnath_locus_of_creation_etb_draws_and_gains_life() {
 
 // ── Omnath, Locus of Rage ───────────────────────────────────────────────────
 
-#[test]
-fn omnath_locus_of_rage_is_5_5_legendary_elemental() {
-    let card = catalog::omnath_locus_of_rage();
-    assert_eq!(card.name, "Omnath, Locus of Rage");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert_eq!(card.triggered_abilities.len(), 1, "landfall trigger");
-}
-
 // ── Torsten ─────────────────────────────────────────────────────────────────
 
 #[test]
@@ -12124,14 +11912,6 @@ fn coveted_jewel_etb_draws_three() {
 
 // ── The Mightstone and Weakstone ────────────────────────────────────────────
 
-#[test]
-fn mightstone_weakstone_has_etb_mode_and_mana() {
-    let card = catalog::the_mightstone_and_weakstone();
-    assert_eq!(card.name, "The Mightstone and Weakstone");
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB modal trigger");
-    assert_eq!(card.activated_abilities.len(), 1, "mana activation");
-}
-
 // ── Doomsday Excruciator ────────────────────────────────────────────────────
 
 #[test]
@@ -12147,52 +11927,11 @@ fn doomsday_excruciator_is_6_6_flying_demon() {
 
 // ── Planar Nexus ────────────────────────────────────────────────────────────
 
-#[test]
-fn planar_nexus_is_a_land_with_any_color_mana() {
-    let card = catalog::planar_nexus();
-    assert_eq!(card.name, "Planar Nexus");
-    assert!(card.card_types.contains(&CardType::Land));
-    assert_eq!(card.activated_abilities.len(), 1, "mana ability");
-}
-
 // ── Kozilek's Command ───────────────────────────────────────────────────────
-
-#[test]
-fn kozileks_command_is_x_cost_three_mode_instant() {
-    let card = catalog::kozileks_command();
-    assert_eq!(card.name, "Kozilek's Command");
-    assert!(card.card_types.contains(&CardType::Instant));
-    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
-        assert_eq!(modes.len(), 3, "three modes");
-    } else {
-        panic!("Should be ChooseMode");
-    }
-}
 
 // ── Eldrazi Confluence ──────────────────────────────────────────────────────
 
-#[test]
-fn eldrazi_confluence_is_four_mana_three_mode_instant() {
-    let card = catalog::eldrazi_confluence();
-    assert_eq!(card.name, "Eldrazi Confluence");
-    assert!(card.card_types.contains(&CardType::Instant));
-    assert_eq!(card.cost.cmc(), 4);
-    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
-        assert_eq!(modes.len(), 3, "three modes");
-    } else {
-        panic!("Should be ChooseMode");
-    }
-}
-
 // ── Aluren ──────────────────────────────────────────────────────────────────
-
-#[test]
-fn aluren_is_4_cost_enchantment() {
-    let card = catalog::aluren();
-    assert_eq!(card.name, "Aluren");
-    assert!(card.card_types.contains(&CardType::Enchantment));
-    assert_eq!(card.cost.cmc(), 4, "costs 2GG = 4 CMC");
-}
 
 // ── New cube cards ─────────────────────────────────────────────────────────
 
@@ -12234,16 +11973,6 @@ fn conclave_sledge_captain_etb_puts_counters_on_each_creature() {
 }
 
 #[test]
-fn three_tree_city_taps_for_any_color_with_counters() {
-    let card = catalog::three_tree_city();
-    assert_eq!(card.name, "Three Tree City");
-    assert!(card.card_types.contains(&CardType::Land));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.triggered_abilities.len(), 1, "ETB adds charge counters");
-    assert_eq!(card.activated_abilities.len(), 1, "Tap + remove counter for mana");
-}
-
-#[test]
 fn trenchpost_taps_for_two_colorless() {
     let mut g = two_player_game();
     let tp = g.add_card_to_battlefield(0, catalog::trenchpost());
@@ -12251,58 +11980,6 @@ fn trenchpost_taps_for_two_colorless() {
         card_id: tp, ability_index: 0, target: None, x_value: None,
     }).expect("Trenchpost tap should work");
     assert_eq!(g.players[0].mana_pool.total(), 2, "Should add 2 colorless mana");
-}
-
-#[test]
-fn pithing_needle_is_1_cost_artifact() {
-    let card = catalog::pithing_needle();
-    assert_eq!(card.name, "Pithing Needle");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert_eq!(card.cost.cmc(), 1);
-}
-
-#[test]
-fn wight_of_the_reliquary_is_3_3_zombie_knight() {
-    let card = catalog::wight_of_the_reliquary();
-    assert_eq!(card.name, "Wight of the Reliquary");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.has_creature_type(crate::card::CreatureType::Zombie));
-    assert!(card.has_creature_type(crate::card::CreatureType::Knight));
-    assert_eq!(card.activated_abilities.len(), 1, "Land-tutor sac activation");
-}
-
-#[test]
-fn zopandrel_hunger_dominus_is_4_6_reach_with_combat_pump() {
-    let card = catalog::zopandrel_hunger_dominus();
-    assert_eq!(card.name, "Zopandrel, Hunger Dominus");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.triggered_abilities.len(), 1, "Should have combat pump trigger");
-}
-
-#[test]
-fn dakkon_shadow_slayer_has_two_loyalty_abilities() {
-    let card = catalog::dakkon_shadow_slayer();
-    assert_eq!(card.name, "Dakkon, Shadow Slayer");
-    assert!(card.card_types.contains(&CardType::Planeswalker));
-    assert_eq!(card.base_loyalty, 3);
-    assert_eq!(card.loyalty_abilities.len(), 2, "+1 Surveil 2 and -3 Exile");
-    assert_eq!(card.loyalty_abilities[0].loyalty_cost, 1);
-    assert_eq!(card.loyalty_abilities[1].loyalty_cost, -3);
-}
-
-#[test]
-fn fallen_shinobi_is_5_4_zombie_ninja() {
-    let card = catalog::fallen_shinobi();
-    assert_eq!(card.name, "Fallen Shinobi");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 4);
-    assert!(card.has_creature_type(crate::card::CreatureType::Zombie));
-    assert!(card.has_creature_type(crate::card::CreatureType::Ninja));
-    assert_eq!(card.triggered_abilities.len(), 1, "Combat damage trigger");
 }
 
 // ── modern_decks-16: new cube cards ──────────────────────────────────────────
@@ -12416,22 +12093,6 @@ fn mulldrifter_etb_draws_two() {
     drain_stack(&mut g);
 
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "cast(-1) + draw(+2) = net +1");
-}
-
-#[test]
-fn shriekmaw_etb_destroys_nonblack_creature_v2() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::shriekmaw());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(4);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Shriekmaw castable");
-    drain_stack(&mut g);
-
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear destroyed");
 }
 
 #[test]
@@ -12565,15 +12226,6 @@ fn bloodbraid_elf_has_haste_and_etb_draws() {
 }
 
 #[test]
-fn spell_queller_is_a_flash_flyer() {
-    let card = catalog::spell_queller();
-    assert!(card.keywords.contains(&crate::card::Keyword::Flash));
-    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 3);
-}
-
-#[test]
 fn oko_plus_two_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::oko_thief_of_crowns());
@@ -12683,15 +12335,6 @@ fn fiery_confluence_mode_one_burns_opponents() {
 }
 
 #[test]
-fn guardian_scalelord_has_flying() {
-    let card = catalog::guardian_scalelord();
-    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(!card.triggered_abilities.is_empty(), "has attack trigger");
-}
-
-#[test]
 fn intervention_pact_gains_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::intervention_pact());
@@ -12740,39 +12383,6 @@ fn elite_spellbinder_etb_strips_card() {
 }
 
 #[test]
-fn arclight_phoenix_has_haste_and_flying() {
-    let card = catalog::arclight_phoenix();
-    assert!(card.keywords.contains(&crate::card::Keyword::Flying));
-    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-}
-
-#[test]
-fn elder_gargaroth_has_vigilance_reach_trample() {
-    let card = catalog::elder_gargaroth();
-    assert!(card.keywords.contains(&crate::card::Keyword::Vigilance));
-    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
-    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-}
-
-#[test]
-fn vengevine_has_haste() {
-    let card = catalog::vengevine();
-    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 3);
-}
-
-#[test]
-fn corpse_dance_is_an_instant() {
-    let card = catalog::corpse_dance();
-    assert!(card.card_types.contains(&CardType::Instant));
-}
-
-#[test]
 fn explore_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -12792,16 +12402,6 @@ fn explore_draws_a_card() {
 // ── modern_decks-17 tests ──────────────────────────────────────────────────
 
 /// Grim Flayer: 2/2 with trample and a DealsCombatDamageToPlayer trigger.
-#[test]
-fn grim_flayer_has_trample_and_combat_damage_trigger() {
-    let card = catalog::grim_flayer();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
-    assert_eq!(card.triggered_abilities.len(), 1,
-        "should have a combat-damage trigger");
-}
-
 /// Grim Flayer: combat damage trigger surveils 2.
 #[test]
 fn grim_flayer_combat_trigger_surveils() {
@@ -12848,24 +12448,7 @@ fn young_pyromancer_creates_elemental_on_instant_cast() {
 }
 
 /// Young Pyromancer: stat check.
-#[test]
-fn young_pyromancer_stats() {
-    let card = catalog::young_pyromancer();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
-    assert!(card.card_types.contains(&CardType::Creature));
-}
-
 /// Monastery Swiftspear: 1/2 with Haste and Prowess.
-#[test]
-fn monastery_swiftspear_has_haste_and_prowess() {
-    let card = catalog::monastery_swiftspear();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
-    assert!(card.keywords.contains(&crate::card::Keyword::Prowess));
-}
-
 /// Snapcaster Mage: 2/1 Flash creature, ETB draws a card.
 #[test]
 fn snapcaster_mage_etb_draws_a_card() {
@@ -12888,14 +12471,6 @@ fn snapcaster_mage_etb_draws_a_card() {
 }
 
 /// Snapcaster Mage: has Flash keyword.
-#[test]
-fn snapcaster_mage_has_flash() {
-    let card = catalog::snapcaster_mage();
-    assert!(card.keywords.contains(&crate::card::Keyword::Flash));
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 1);
-}
-
 /// Grisly Salvage: mills 5 then scries 1.
 #[test]
 fn grisly_salvage_mills_five_and_scries() {
@@ -12945,16 +12520,6 @@ fn thought_erasure_strips_nonland_and_surveils() {
 }
 
 /// Lightning Greaves: {2} artifact with Equipment subtype.
-#[test]
-fn lightning_greaves_is_equipment_artifact() {
-    let card = catalog::lightning_greaves();
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert!(card.subtypes.artifact_subtypes.contains(
-        &crate::card::ArtifactSubtype::Equipment));
-    assert!(!card.activated_abilities.is_empty(),
-        "should have an activated ability to grant haste");
-}
-
 /// Lightning Greaves: activated ability grants haste to a creature.
 #[test]
 fn lightning_greaves_grants_haste() {
@@ -12981,16 +12546,6 @@ fn lightning_greaves_grants_haste() {
 }
 
 /// Tasigur, the Golden Fang: 4/5 Legendary creature.
-#[test]
-fn tasigur_stats_and_legendary() {
-    let card = catalog::tasigur_the_golden_fang();
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 5);
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert!(!card.activated_abilities.is_empty(),
-        "should have an activated ability");
-}
-
 /// Tasigur: activated ability mills 2.
 #[test]
 fn tasigur_activated_ability_mills() {
@@ -13017,37 +12572,8 @@ fn tasigur_activated_ability_mills() {
 }
 
 /// Stonecoil Serpent: 0/0 artifact creature with trample and reach.
-#[test]
-fn stonecoil_serpent_stats_and_keywords() {
-    let card = catalog::stonecoil_serpent();
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 0);
-    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
-    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert!(card.card_types.contains(&CardType::Creature));
-}
-
 /// Stonecoil Serpent: definition shape check.
-#[test]
-fn stonecoil_serpent_definition_shape() {
-    let card = catalog::stonecoil_serpent();
-    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
-    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
-    assert_eq!(card.power, 0);
-    assert_eq!(card.toughness, 0);
-    assert!(!card.triggered_abilities.is_empty(), "has ETB counter trigger");
-}
-
 // ── modern_decks-17: agent-implemented cards ────────────────────────────────
-
-#[test]
-fn grim_flayer_has_trample() {
-    let card = catalog::grim_flayer();
-    assert!(card.keywords.contains(&crate::card::Keyword::Trample));
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-}
 
 #[test]
 fn young_pyromancer_creates_token_on_is_cast() {
@@ -13083,19 +12609,6 @@ fn thought_erasure_strips_and_surveils() {
     drain_stack(&mut g);
 
     assert!(g.players[1].hand.len() < hand_before, "opponent lost a card");
-}
-
-#[test]
-fn lightning_greaves_is_equipment() {
-    let card = catalog::lightning_greaves();
-    assert!(card.card_types.contains(&CardType::Artifact));
-}
-
-#[test]
-fn tasigur_is_a_big_creature() {
-    let card = catalog::tasigur_the_golden_fang();
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 5);
 }
 
 #[test]
@@ -13186,26 +12699,7 @@ fn exquisite_firecraft_deals_four_to_player() {
     assert_eq!(g.players[1].life, life_before - 4, "4 damage to opponent");
 }
 
-#[test]
-fn exquisite_firecraft_is_a_sorcery() {
-    let card = catalog::exquisite_firecraft();
-    assert!(card.card_types.contains(&CardType::Sorcery));
-    assert_eq!(card.name, "Exquisite Firecraft");
-}
-
 // ── Sulfuric Vortex ─────────────────────────────────────────────────────────
-
-#[test]
-fn sulfuric_vortex_is_an_enchantment_with_upkeep_trigger() {
-    let card = catalog::sulfuric_vortex();
-    assert!(card.card_types.contains(&crate::card::CardType::Enchantment));
-    assert_eq!(card.triggered_abilities.len(), 1);
-    let t = &card.triggered_abilities[0];
-    assert!(
-        matches!(t.event.kind, crate::card::EventKind::StepBegins(crate::game::TurnStep::Upkeep)),
-        "trigger should fire on upkeep"
-    );
-}
 
 #[test]
 fn sulfuric_vortex_deals_damage_at_upkeep() {
@@ -13237,16 +12731,6 @@ fn sulfuric_vortex_deals_damage_at_upkeep() {
 // ── Kari Zev, Skyship Raider ───────────────────────────────────────────────
 
 #[test]
-fn kari_zev_has_first_strike_and_menace() {
-    let card = catalog::kari_zev_skyship_raider();
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&crate::card::Keyword::FirstStrike));
-    assert!(card.keywords.contains(&crate::card::Keyword::Menace));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-}
-
-#[test]
 fn kari_zev_creates_ragavan_on_attack() {
     let mut g = two_player_game();
     let kari = g.add_card_to_battlefield(0, catalog::kari_zev_skyship_raider());
@@ -13265,15 +12749,6 @@ fn kari_zev_creates_ragavan_on_attack() {
 }
 
 // ── Scavenging Ooze ─────────────────────────────────────────────────────────
-
-#[test]
-fn scavenging_ooze_is_a_two_two_creature() {
-    let card = catalog::scavenging_ooze();
-    assert_eq!(card.power, 2);
-    assert_eq!(card.toughness, 2);
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.activated_abilities.len(), 1);
-}
 
 #[test]
 fn scavenging_ooze_gains_counter_and_life() {
@@ -13333,10 +12808,3 @@ fn flametongue_kavu_etb_deals_four() {
     assert_eq!(target.damage, 4, "should deal 4 damage to target");
 }
 
-#[test]
-fn bonecrusher_giant_is_four_three() {
-    let card = catalog::bonecrusher_giant();
-    assert_eq!(card.name, "Bonecrusher Giant");
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 3);
-}

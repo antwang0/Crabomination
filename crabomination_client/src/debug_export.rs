@@ -182,9 +182,11 @@ mod tests {
                 cards_exiled_this_turn: 0,
                 instants_or_sorceries_cast_this_turn: 0,
                 creatures_cast_this_turn: 0,
+                spells_cast_this_turn: 0,
                 no_maximum_hand_size: false,
                 command: vec![],
                 commanders: vec![],
+                eliminated: false,
             }],
             battlefield: vec![],
             stack: vec![],
@@ -248,6 +250,7 @@ mod tests {
             trigger_source: None,
             mana_spent: 0,
             event_amount: 0,
+            intervening_if: None,
         });
 
         let cv = empty_view();

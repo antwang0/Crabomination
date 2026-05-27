@@ -790,9 +790,6 @@ pub struct CardInstance {
     pub controller: usize,
     pub tapped: bool,
     pub damage: u32,
-    /// CR 704.5h: true if this creature has been dealt damage by a source
-    /// with deathtouch since the last time SBAs were checked.
-    pub deathtouch_damaged: bool,
     pub summoning_sick: bool,
     pub power_bonus: i32,
     pub toughness_bonus: i32,
@@ -864,7 +861,6 @@ impl CardInstance {
             controller: owner,
             tapped: false,
             damage: 0,
-            deathtouch_damaged: false,
             summoning_sick,
             power_bonus: 0,
             toughness_bonus: 0,

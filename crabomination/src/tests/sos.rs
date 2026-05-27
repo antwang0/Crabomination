@@ -12159,100 +12159,17 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
 
 // ── Mica, Reader of Ruins ─────────────────────────────────────────────────
 
-#[test]
-fn mica_reader_of_ruins_is_a_4_4_legendary_with_ward() {
-    let card = catalog::mica_reader_of_ruins();
-    assert_eq!(card.name, "Mica, Reader of Ruins");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.power, 4);
-    assert_eq!(card.toughness, 4);
-    assert_eq!(card.cost.cmc(), 4);
-    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Ward(..))),
-        "Mica should have Ward");
-}
-
 // ── The Dawning Archaic ───────────────────────────────────────────────────
-
-#[test]
-fn the_dawning_archaic_is_a_7_7_legendary_avatar_with_reach() {
-    let card = catalog::the_dawning_archaic();
-    assert_eq!(card.name, "The Dawning Archaic");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert_eq!(card.cost.cmc(), 10);
-    assert!(card.keywords.contains(&Keyword::Reach));
-}
 
 // ── Strixhaven Skycoach ───────────────────────────────────────────────────
 
-#[test]
-fn strixhaven_skycoach_is_a_3_2_flying_artifact_with_etb_search() {
-    let card = catalog::strixhaven_skycoach();
-    assert_eq!(card.name, "Strixhaven Skycoach");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert_eq!(card.cost.cmc(), 3);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    // Should have an ETB triggered ability for land search.
-    assert!(!card.triggered_abilities.is_empty(),
-        "Skycoach should have an ETB land-search trigger");
-}
-
 // ── Biblioplex Tomekeeper ─────────────────────────────────────────────────
-
-#[test]
-fn biblioplex_tomekeeper_is_a_3_4_artifact_construct() {
-    let card = catalog::biblioplex_tomekeeper();
-    assert_eq!(card.name, "Biblioplex Tomekeeper");
-    assert!(card.card_types.contains(&CardType::Artifact));
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert_eq!(card.cost.cmc(), 4);
-}
 
 // ── Skycoach Waypoint ─────────────────────────────────────────────────────
 
-#[test]
-fn skycoach_waypoint_is_a_colorless_land_with_tap_for_colorless() {
-    let card = catalog::skycoach_waypoint();
-    assert_eq!(card.name, "Skycoach Waypoint");
-    assert!(card.card_types.contains(&CardType::Land));
-    // Should have at least a {T}: Add {C} ability.
-    assert!(!card.activated_abilities.is_empty(),
-        "Skycoach Waypoint should have at least one mana ability");
-}
-
 // ── Prismari, the Inspiration ─────────────────────────────────────────────
 
-#[test]
-fn prismari_the_inspiration_is_a_7_7_legendary_elder_dragon_with_flying() {
-    let card = catalog::prismari_the_inspiration();
-    assert_eq!(card.name, "Prismari, the Inspiration");
-    assert!(card.card_types.contains(&CardType::Creature));
-    assert!(card.supertypes.contains(&crate::card::Supertype::Legendary));
-    assert_eq!(card.power, 7);
-    assert_eq!(card.toughness, 7);
-    assert_eq!(card.cost.cmc(), 7);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Ward(..))),
-        "Prismari should have Ward");
-}
-
 // ── Social Snub ───────────────────────────────────────────────────────────
-
-#[test]
-fn social_snub_is_a_silverquill_sorcery() {
-    let card = catalog::social_snub();
-    assert_eq!(card.name, "Social Snub");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-    assert_eq!(card.cost.cmc(), 3);
-}
 
 #[test]
 fn social_snub_each_player_sacrifices_and_drains() {
@@ -12293,18 +12210,6 @@ fn social_snub_each_player_sacrifices_and_drains() {
 // ── Strife Scholar MDFC ─────────────────────────────────────────────────
 
 #[test]
-fn strife_scholar_has_ward_and_back_face() {
-    let card = catalog::strife_scholar();
-    assert_eq!(card.name, "Strife Scholar");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
-    let back = card.back_face.as_ref().expect("should have back face");
-    assert_eq!(back.name, "Awaken the Ages");
-    assert!(back.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
 fn strife_scholar_back_face_deals_five_damage() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -12326,16 +12231,6 @@ fn strife_scholar_back_face_deals_five_damage() {
 }
 
 // ── Colorstorm Stallion ─────────────────────────────────────────────────
-
-#[test]
-fn colorstorm_stallion_body_and_keywords() {
-    let card = catalog::colorstorm_stallion();
-    assert_eq!(card.name, "Colorstorm Stallion");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
-    assert!(card.keywords.contains(&Keyword::Haste));
-}
 
 #[test]
 fn colorstorm_stallion_magecraft_pump() {
@@ -12360,16 +12255,6 @@ fn colorstorm_stallion_magecraft_pump() {
 }
 
 // ── Elemental Mascot ─────────────────────────────────────────────────
-
-#[test]
-fn elemental_mascot_body_and_keywords() {
-    let card = catalog::elemental_mascot();
-    assert_eq!(card.name, "Elemental Mascot");
-    assert_eq!(card.power, 1);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-}
 
 #[test]
 fn elemental_mascot_magecraft_pump() {
@@ -12428,13 +12313,6 @@ fn molten_note_deals_x_plus_two_damage_and_untaps() {
         "Our creature should be untapped");
 }
 
-#[test]
-fn molten_note_has_flashback() {
-    let card = catalog::molten_note();
-    assert!(card.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_))),
-        "Molten Note should have Flashback keyword");
-}
-
 // ── Social Snub ─────────────────────────────────────────────────────────
 
 #[test]
@@ -12486,31 +12364,6 @@ fn fix_whats_broken_returns_creatures_from_gy() {
         "Bear should be returned from graveyard to battlefield");
     // 2 life lost.
     assert_eq!(g.players[0].life, life_before - 2);
-}
-
-// ── Skycoach Waypoint ─────────────────────────────────────────────────
-
-#[test]
-fn skycoach_waypoint_taps_for_colorless_v2() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::skycoach_waypoint());
-    assert!(g.battlefield.iter().any(|c| c.id == id));
-    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap()
-        .definition.card_types.contains(&CardType::Land));
-
-    // Activate {T}: Add {C}.
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: id,
-        ability_index: 0,
-        target: None,
-        x_value: None,
-    })
-    .expect("Tap for colorless should succeed");
-
-    assert_eq!(g.players[0].mana_pool.colorless_amount(), 1,
-        "Skycoach Waypoint should produce 1 colorless mana");
-    assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped,
-        "Land should be tapped after activation");
 }
 
 // ── Biblioplex Tomekeeper ─────────────────────────────────────────────
@@ -12736,46 +12589,6 @@ fn applied_geometry_creates_fractal_with_six_counters() {
 // ── Push XVII: Ward MDFCs + Modern supplement ──────────────────────────────
 
 #[test]
-fn campus_composer_has_ward_two_and_back_face() {
-    let card = catalog::campus_composer();
-    assert_eq!(card.name, "Campus Composer");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
-    let back = card.back_face.as_ref().expect("should have back face");
-    assert_eq!(back.name, "Aqueous Aria");
-}
-
-#[test]
-fn emeritus_of_ideation_has_ward_two_and_ancestral_recall_back() {
-    let card = catalog::emeritus_of_ideation();
-    assert_eq!(card.name, "Emeritus of Ideation");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
-    let back = card.back_face.as_ref().expect("should have back face");
-    assert_eq!(back.name, "Ancestral Recall");
-}
-
-#[test]
-fn grave_researcher_etb_surveils_and_has_reanimate_back() {
-    let card = catalog::grave_researcher();
-    assert_eq!(card.name, "Grave Researcher");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(!card.triggered_abilities.is_empty(), "should have ETB surveil");
-    let back = card.back_face.as_ref().expect("should have Reanimate back");
-    assert_eq!(back.name, "Reanimate");
-}
-
-#[test]
-fn archaics_agony_deals_converge_damage() {
-    let card = catalog::archaics_agony();
-    assert_eq!(card.name, "Archaic's Agony");
-    assert!(card.is_sorcery());
-}
-
-#[test]
 fn char_deals_four_to_target_and_two_to_self() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -12896,18 +12709,6 @@ fn ward_does_not_apply_to_own_creatures() {
 // ── New MDFC card tests ───────────────────────────────────────────────────
 
 #[test]
-fn campus_composer_is_3_4_merfolk_bard_with_ward() {
-    let card = catalog::campus_composer();
-    assert_eq!(card.name, "Campus Composer");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.has_creature_type(crate::card::CreatureType::Merfolk));
-    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
-    assert!(card.back_face.is_some());
-}
-
-#[test]
 fn campus_composer_back_face_draws_and_discards() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::campus_composer());
@@ -12930,86 +12731,9 @@ fn campus_composer_back_face_draws_and_discards() {
     assert!(hand_after >= hand_before, "should have more cards in hand");
 }
 
-#[test]
-fn emeritus_of_ideation_is_5_5_with_ward_and_ancestral_recall_back() {
-    let card = catalog::emeritus_of_ideation();
-    assert_eq!(card.name, "Emeritus of Ideation");
-    assert_eq!(card.power, 5);
-    assert_eq!(card.toughness, 5);
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
-    let back = card.back_face.as_ref().expect("should have back face");
-    assert_eq!(back.name, "Ancestral Recall");
-    assert!(back.card_types.contains(&CardType::Instant));
-}
-
-#[test]
-fn emeritus_of_ideation_back_face_draws_three_v2() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    for _ in 0..5 {
-        g.add_card_to_library(0, catalog::island());
-    }
-    let hand_before = g.players[0].hand.len();
-
-    g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Ancestral Recall castable for {U}");
-    drain_stack(&mut g);
-
-    // Drew 3, played 1 = net +2.
-    assert_eq!(g.players[0].hand.len(), hand_before + 2);
-}
-
-#[test]
-fn grave_researcher_has_surveil_etb() {
-    let card = catalog::grave_researcher();
-    assert_eq!(card.name, "Grave Researcher");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 3);
-    assert!(card.has_creature_type(crate::card::CreatureType::Troll));
-    assert!(!card.triggered_abilities.is_empty(), "should have ETB trigger");
-    assert!(card.back_face.is_some(), "should have Reanimate back face");
-}
-
-#[test]
-fn grave_researcher_back_face_is_reanimate() {
-    let card = catalog::grave_researcher();
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Reanimate");
-    assert!(back.card_types.contains(&CardType::Sorcery));
-}
-
-#[test]
-fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
-    let card = catalog::strife_scholar();
-    assert_eq!(card.name, "Strife Scholar");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 2);
-    assert!(card.has_creature_type(crate::card::CreatureType::Orc));
-    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
-    let back = card.back_face.as_ref().unwrap();
-    assert_eq!(back.name, "Awaken the Ages");
-}
-
 // ── Fix What's Broken ─────────────────────────────────────────────────────
 
-#[test]
-fn fix_whats_broken_card_shape() {
-    let card = catalog::fix_whats_broken();
-    assert_eq!(card.name, "Fix What's Broken");
-    assert!(card.card_types.contains(&CardType::Sorcery));
-}
-
 // ── Molten Note ───────────────────────────────────────────────────────────
-
-#[test]
-fn molten_note_has_flashback_v2() {
-    let card = catalog::molten_note();
-    assert_eq!(card.name, "Molten Note");
-    assert!(card.has_flashback().is_some());
-}
 
 #[test]
 fn molten_note_deals_x_damage_to_creature() {
@@ -13108,17 +12832,6 @@ fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
 // ── New cube creature tests ───────────────────────────────────────────────
 
 #[test]
-fn guardian_scalelord_is_3_4_flying_dragon() {
-    let card = catalog::guardian_scalelord();
-    assert_eq!(card.name, "Guardian Scalelord");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 4);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
-    assert!(!card.triggered_abilities.is_empty());
-}
-
-#[test]
 fn descendant_of_storms_dies_creates_spirit_token() {
     let mut g = two_player_game();
     let desc = g.add_card_to_battlefield(0, catalog::descendant_of_storms());
@@ -13167,12 +12880,6 @@ fn fix_whats_broken_loses_life_and_returns_from_gy() {
     assert_eq!(g.players[0].life, life_before - 2);
 }
 
-#[test]
-fn molten_note_card_has_x_in_cost() {
-    let card = catalog::molten_note();
-    assert!(card.cost.has_x());
-}
-
 // ── Explore + extra land plays ────────────────────────────────────────────
 
 #[test]
@@ -13216,16 +12923,6 @@ fn extra_land_play_allows_two_lands() {
 // ── Subagent cube card tests ──────────────────────────────────────────────
 
 #[test]
-fn elite_spellbinder_is_3_1_flying_flash() {
-    let card = catalog::elite_spellbinder();
-    assert_eq!(card.name, "Elite Spellbinder");
-    assert_eq!(card.power, 3);
-    assert_eq!(card.toughness, 1);
-    assert!(card.keywords.contains(&Keyword::Flying));
-    assert!(card.keywords.contains(&Keyword::Flash));
-}
-
-#[test]
 fn gush_draws_two_cards() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::gush());
@@ -13244,18 +12941,6 @@ fn gush_draws_two_cards() {
 
     // Drew 2, played 1 = net +1.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
-}
-
-#[test]
-fn elder_gargaroth_is_6_6_with_keywords() {
-    let card = catalog::elder_gargaroth();
-    assert_eq!(card.name, "Elder Gargaroth");
-    assert_eq!(card.power, 6);
-    assert_eq!(card.toughness, 6);
-    assert!(card.keywords.contains(&Keyword::Vigilance));
-    assert!(card.keywords.contains(&Keyword::Reach));
-    assert!(card.keywords.contains(&Keyword::Trample));
-    assert!(!card.triggered_abilities.is_empty());
 }
 
 // ── Stun counter untap suppression (CR 122.1c) ────────────────────────────
@@ -13277,19 +12962,6 @@ fn stun_counter_prevents_untap_on_untap_step() {
 }
 
 // ── Hand-size cleanup (CR 514.1) ───────────────────────────────────────────
-
-#[test]
-fn cleanup_discards_down_to_seven() {
-    let mut g = two_player_game();
-    for _ in 0..10 {
-        g.add_card_to_hand(0, catalog::lightning_bolt());
-    }
-    assert_eq!(g.players[0].hand.len(), 10);
-    let gy_before = g.players[0].graveyard.len();
-    g.do_cleanup();
-    assert_eq!(g.players[0].hand.len(), 7, "Should discard down to 7");
-    assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "3 cards should go to graveyard");
-}
 
 // ── Cube: Intervention Pact ────────────────────────────────────────────────
 

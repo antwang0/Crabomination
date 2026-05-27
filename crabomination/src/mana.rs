@@ -550,6 +550,14 @@ impl ManaPool {
             }
         }
 
+        // The snow counter tracks "of the mana in the pool, how many
+        // came from snow sources." Passes 1/2/3/4/6 drain colored or
+        // colorless buckets without knowing which underlying mana was
+        // snow, so the counter can drift above the remaining total.
+        // Clamp it down — we can't distinguish which mana was snow, so
+        // conservatively cap snow at the actual remaining pool size.
+        tmp.snow = tmp.snow.min(tmp.total());
+
         *self = tmp;
         Ok(side_effects)
     }
@@ -567,6 +575,9 @@ impl ManaPool {
             *have -= drain;
             n -= drain;
         }
+        // See `pay()`: snow counter doesn't track which mana was snow.
+        // Clamp conservatively so we never claim more snow than total.
+        self.snow = self.snow.min(self.total());
     }
 
     pub fn empty(&mut self) {

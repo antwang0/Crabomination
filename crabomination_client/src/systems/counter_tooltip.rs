@@ -269,12 +269,12 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::build_tooltip_body;
-    use crabomination::card::{CardType, CounterType};
+    use crabomination::card::{CardId, CardType, CounterType};
     use crabomination::net::PermanentView;
 
     fn make_permanent_view(damage: u32, toughness: i32) -> PermanentView {
         PermanentView {
-            id: 0,
+            id: CardId(0),
             name: "Grizzly Bears".into(),
             controller: 0,
             owner: 0,
@@ -296,6 +296,13 @@ mod tests {
             static_ability_labels: vec![],
             abilities: vec![],
             loyalty_abilities: vec![],
+            has_stun_counters: false,
+            pt_modified: false,
+            mana_cost_display: String::new(),
+            creature_types: vec![],
+            ward_cost: 0,
+            mana_value: 0,
+            is_legendary: false,
         }
     }
 
