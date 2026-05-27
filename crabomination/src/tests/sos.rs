@@ -7489,3 +7489,48 @@ fn extra_land_play_allows_two_lands() {
     g.perform_action(GameAction::PlayLand(f2)).expect("second land");
     assert!(!g.players[0].can_play_land(), "used all land plays");
 }
+
+// ── Subagent cube card tests ──────────────────────────────────────────────
+
+#[test]
+fn elite_spellbinder_is_3_1_flying_flash() {
+    let card = catalog::elite_spellbinder();
+    assert_eq!(card.name, "Elite Spellbinder");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Flash));
+}
+
+#[test]
+fn gush_draws_two_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gush());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Drew 2, played 1 = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn elder_gargaroth_is_6_6_with_keywords() {
+    let card = catalog::elder_gargaroth();
+    assert_eq!(card.name, "Elder Gargaroth");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(!card.triggered_abilities.is_empty());
+}

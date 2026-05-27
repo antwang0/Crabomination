@@ -915,12 +915,11 @@ impl GameState {
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
-        if card.controller != caster {
-            if let Some(n) = card.ward_cost() {
-                if self.players[caster].mana_pool.total() < n {
-                    return Err(GameError::TargetHasWard(*cid));
-                }
-            }
+        if card.controller != caster
+            && let Some(n) = card.ward_cost()
+            && self.players[caster].mana_pool.total() < n
+        {
+            return Err(GameError::TargetHasWard(*cid));
         }
         Ok(())
     }
@@ -929,14 +928,12 @@ impl GameState {
     /// `check_target_legality` succeeds. No-ops when the target has no Ward
     /// or the caster is the controller.
     pub(crate) fn pay_ward_cost(&mut self, target: &Target, caster: usize) {
-        if let Target::Permanent(cid) = target {
-            if let Some(card) = self.battlefield_find(*cid) {
-                if card.controller != caster {
-                    if let Some(n) = card.ward_cost() {
-                        self.players[caster].mana_pool.spend_generic(n);
-                    }
-                }
-            }
+        if let Target::Permanent(cid) = target
+            && let Some(card) = self.battlefield_find(*cid)
+            && card.controller != caster
+            && let Some(n) = card.ward_cost()
+        {
+            self.players[caster].mana_pool.spend_generic(n);
         }
     }
 
@@ -1348,10 +1345,10 @@ impl GameState {
         // Mark the ability as used for the once-per-turn budget. (After
         // tap/mana cost validation succeeds, before sacrifice or stack
         // queueing — all of which are guaranteed to commit if we get here.)
-        if ability.once_per_turn {
-            if let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id) {
-                card.once_per_turn_used.push(ability_index);
-            }
+        if ability.once_per_turn
+            && let Some(card) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            card.once_per_turn_used.push(ability_index);
         }
 
         // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
