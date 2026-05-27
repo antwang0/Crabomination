@@ -12728,19 +12728,18 @@ fn campus_composer_back_face_draws_and_discards() {
     let id = g.add_card_to_hand(0, catalog::campus_composer());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(4);
-    // Add library cards so draw doesn't deck.
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
     }
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("back face castable");
+    .expect("back face castable, targeting self");
     drain_stack(&mut g);
 
-    // Draw 3 - discard 1 = net +2 (minus the cast card itself).
+    // Draw 3 (minus the cast card itself = net +2).
     let hand_after = g.players[0].hand.len();
     assert!(hand_after >= hand_before, "should have more cards in hand");
 }
