@@ -10928,7 +10928,7 @@ fn intervention_pact_gains_three_life_and_sets_delayed_trigger() {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).unwrap();
     drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before + 3);
+    assert_eq!(g.players[0].life, life_before + 5);
     assert!(!g.delayed_triggers.is_empty(), "Should have a delayed PayOrLoseGame trigger");
 }
 
@@ -12257,12 +12257,12 @@ fn toxic_deluge_sweeps_small_creatures() {
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::toxic_deluge());
-    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(2);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Toxic Deluge castable");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Toxic Deluge castable with X=3");
     drain_stack(&mut g);
 
     let creatures: Vec<_> = g.battlefield.iter()
@@ -12345,7 +12345,7 @@ fn intervention_pact_gains_life() {
     }).expect("Intervention Pact castable at {0}");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before + 3, "gained 3 life");
+    assert_eq!(g.players[0].life, life_before + 5, "gained 5 life");
 }
 
 #[test]

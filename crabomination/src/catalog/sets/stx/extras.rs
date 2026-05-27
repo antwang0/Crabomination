@@ -8070,7 +8070,6 @@ pub fn brawn() -> CardDefinition {
 /// plain mana-cost path. The card-advantage and graveyard-reload are
 /// the headline play patterns.
 pub fn deep_analysis() -> CardDefinition {
-    use crate::effect::PlayerRef as PR;
     CardDefinition {
         name: "Deep Analysis",
         cost: cost(&[generic(3), u()]),
@@ -8080,16 +8079,10 @@ pub fn deep_analysis() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Flashback(cost(&[generic(1), u()]))],
-        effect: Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::Player(PR::Target(0)),
-                amount: Value::Const(2),
-            },
-            Effect::LoseLife {
-                who: Selector::Player(PR::Target(0)),
-                amount: Value::Const(2),
-            },
-        ]),
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

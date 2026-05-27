@@ -3006,6 +3006,9 @@ pub fn descendant_of_storms() -> CardDefinition {
 /// look-at-opponent-hand primitive and no per-card cost-tax static tied
 /// to an exiled card. The 3/1 Flying Flash body is the load-bearing part
 /// for the cube (efficient tempo creature).
+/// Elite Spellbinder — {1}{W}{W}, 3/1 Human Cleric. Flash, Flying.
+/// ETB: look at target opponent's hand and exile a nonland card.
+/// Approximated as ETB discard-opponent-nonland.
 pub fn elite_spellbinder() -> CardDefinition {
     CardDefinition {
         name: "Elite Spellbinder",
@@ -3018,6 +3021,14 @@ pub fn elite_spellbinder() -> CardDefinition {
         power: 3,
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Flash],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DiscardChosen {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Nonland,
+            },
+        }],
         ..Default::default()
     }
 }
