@@ -4973,28 +4973,25 @@ fn cr_704_5c_empty_library_draw_eliminates_player() {
 #[test]
 fn ward_counters_spell_when_caster_cannot_pay() {
     // Sedgemoor Witch has Ward(1). Opponent tries to Lightning Bolt it
-    // but can't afford the extra {1} Ward tax — the Ward trigger should
-    // counter the bolt.
+    // with only {R} — just enough for bolt cost but not Ward. The Ward
+    // trigger should counter the bolt (CR 702.21a).
     let mut g = two_player_game();
     let witch = g.add_card_to_battlefield(0, catalog::sedgemoor_witch());
     g.clear_sickness(witch);
 
-    // Give P1 active player + priority + mana for the bolt + Ward tax.
     g.active_player_idx = 1;
     g.priority.player_with_priority = 1;
     g.step = TurnStep::PreCombatMain;
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
-    // Only {R} for the bolt — no extra for Ward tax.
-    // But the engine adds {1} generic to lightning bolt's cost (reason unknown),
-    // so we need {R}+{1} just to cast the bolt, leaving nothing for Ward.
-    g.players[1].mana_pool.add(Color::Red, 2);
+    // Only {R} for the bolt — nothing left for Ward {1}.
+    g.players[1].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(witch)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    }).expect("Bolt cast OK");
+    }).expect("Bolt cast OK — Ward is triggered, not a cast restriction");
     drain_stack(&mut g);
 
     // Witch should survive because Ward countered the bolt (P1 had no

@@ -10442,7 +10442,7 @@ fn campus_composer_is_three_four_ward_one_merfolk_bard() {
     let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 4);
-    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(1))));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(2))));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Merfolk));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Bard));
     // Back face: Aqueous Aria — draw 3.
@@ -12651,29 +12651,39 @@ fn collective_defiance_mode_zero_deals_four_to_creature() {
 
 #[test]
 fn ward_blocks_targeting_when_caster_cannot_pay() {
+    // CR 702.21a: Ward is a triggered ability. The caster CAN target the
+    // creature — the Ward trigger fires and counters the spell unless the
+    // caster pays. With insufficient mana, the spell is countered.
     let mut g = two_player_game();
-    // Put a Ward {2} creature under P1's control.
     let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
-    // P0 tries to bolt it but has no mana for the ward cost.
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
 
-    let result = g.perform_action(GameAction::CastSpell {
+    g.perform_action(GameAction::CastSpell {
         card_id: bolt,
         target: Some(Target::Permanent(warded)),
         additional_targets: vec![],
         mode: None,
         x_value: None,
-    });
-    assert!(result.is_err(), "should fail — can't pay Ward cost");
+    })
+    .expect("Cast succeeds — Ward is enforced at resolution, not cast time");
+    drain_stack(&mut g);
+
+    // The Ward trigger countered the bolt; Demonstrator is unscathed.
+    assert!(g.battlefield.iter().any(|c| c.id == warded),
+        "Ward creature should survive — Ward countered the bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "Countered bolt should be in caster's graveyard");
 }
 
 #[test]
 fn ward_allows_targeting_when_caster_can_pay() {
+    // CR 702.21a: Ward triggers on the stack. Caster pays the bolt cost
+    // at cast time. The Ward trigger auto-pays {2} from remaining pool
+    // at resolution time. Both succeed with {R}+{2} = {3} total.
     let mut g = two_player_game();
     let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    // 1 R for bolt cost + 2 extra for Ward {2}.
     g.players[0].mana_pool.add(Color::Red, 3);
 
     g.perform_action(GameAction::CastSpell {
@@ -12683,9 +12693,15 @@ fn ward_allows_targeting_when_caster_can_pay() {
         mode: None,
         x_value: None,
     })
-    .expect("should succeed — enough mana for Ward cost");
-    // After cast, P0's pool should have 0 mana (1 for bolt + 2 for ward).
-    assert_eq!(g.players[0].mana_pool.total(), 0);
+    .expect("Cast succeeds — Ward auto-paid at trigger resolution");
+    drain_stack(&mut g);
+
+    // After resolution, P0's pool should be depleted (1 for bolt + 2 for ward).
+    assert_eq!(g.players[0].mana_pool.total(), 0,
+        "Pool should be empty after paying bolt + ward");
+    // The bolt should have resolved and damaged the creature.
+    let bolt_in_gy = g.players[0].graveyard.iter().any(|c| c.id == bolt);
+    assert!(bolt_in_gy, "Bolt resolved and went to graveyard");
 }
 
 #[test]

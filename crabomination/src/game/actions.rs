@@ -869,15 +869,6 @@ impl GameState {
             cost.reduce_generic(reduction);
         }
 
-        // Ward tax: if the spell targets an opponent's permanent with Ward,
-        // the caster must pay the Ward cost or the spell can't be cast.
-        if let Some(ref tgt) = target {
-            let ward_tax = self.ward_tax_for_target(tgt, p);
-            if ward_tax > 0 {
-                cost.symbols.push(crate::mana::ManaSymbol::Generic(ward_tax));
-            }
-        }
-
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
         // auto-tap tapped.
@@ -1866,10 +1857,7 @@ impl GameState {
         } else {
             alt.mana_cost.clone()
         };
-        let mut tax = extra_cost_for_spell(self, p, &card);
-        if let Some(ref tgt) = target {
-            tax += self.ward_tax_for_target(tgt, p);
-        }
+        let tax = extra_cost_for_spell(self, p, &card);
         if tax > 0 {
             mana_cost.symbols.push(crate::mana::ManaSymbol::Generic(tax));
         }
@@ -2033,12 +2021,10 @@ impl GameState {
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
-        if card.controller != caster
-            && let Some(n) = card.ward_cost()
-            && self.players[caster].mana_pool.total() < n
-        {
-            return Err(GameError::TargetHasWard(*cid));
-        }
+        // Ward is enforced via triggered abilities on the stack (CR 702.21a),
+        // not as a pre-flight targeting restriction. The caster CAN target a
+        // Ward creature — the Ward trigger fires and counters the spell unless
+        // the caster pays the Ward cost at resolution time.
         Ok(())
     }
 
