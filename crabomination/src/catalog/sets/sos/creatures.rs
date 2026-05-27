@@ -2080,12 +2080,12 @@ pub fn cuboid_colony() -> CardDefinition {
 /// counters on it."
 ///
 /// Approximation: body + `Keyword::Ward(2)` wired. Increment trigger
-/// + end-step Fractal-with-counters payoff are both omitted (Increment
-/// requires mana-spent introspection on cast; the end-step trigger
-/// would key off a "did this creature gain a counter this turn"
+/// and end-step Fractal-with-counters payoff are both omitted (Increment
+/// needs mana-spent introspection on cast; the end-step trigger
+/// needs a "did this creature gain a counter this turn"
 /// per-permanent flag the engine doesn't track yet). The card still
 /// slots into Quandrix as a 3/3 attacker with a Ward stub, and the
-/// keyword is wired so future Ward enforcement picks it up.
+/// keyword is wired so Ward enforcement picks it up.
 pub fn fractal_tender() -> CardDefinition {
     use crate::mana::{g, u};
     CardDefinition {
@@ -2527,8 +2527,8 @@ pub fn spirit_mascot() -> CardDefinition {
 ///
 /// Even at the printed {6}{B}{G} the dragon is a high-impact finisher
 /// in Witherbloom's late game and slots into the school's deathtouch
-/// + lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
-/// Mascot's lifegain → +1/+1 counters, etc.).
+/// and lifegain themes (Bogwater Lumaret's friendly-ETB lifegain, Pest
+/// Mascot's lifegain into +1/+1 counters, etc.).
 pub fn witherbloom_the_balancer() -> CardDefinition {
     use crate::card::Supertype;
     use crate::mana::g;
