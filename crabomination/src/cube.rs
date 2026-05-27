@@ -306,6 +306,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         joined_researchers,
         quill_blade_laureate,
         spiritcall_enthusiast,
+        // ── New cube cards ──
+        guardian_scalelord,
+        descendant_of_storms,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -729,6 +732,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_glasswright,
         maelstrom_artisan,
         pigment_wrangler,
+        // ── New cube cards ──
+        greasewrench_goblin,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);

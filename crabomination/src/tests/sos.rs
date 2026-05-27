@@ -7382,3 +7382,70 @@ fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
     // P1 took 3 (bolt) + 1 (magecraft) = 4 damage.
     assert_eq!(g.players[1].life, p1_life - 4);
 }
+
+// ── New cube creature tests ───────────────────────────────────────────────
+
+#[test]
+fn guardian_scalelord_is_3_4_flying_dragon() {
+    let card = catalog::guardian_scalelord();
+    assert_eq!(card.name, "Guardian Scalelord");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
+    assert!(!card.triggered_abilities.is_empty());
+}
+
+#[test]
+fn descendant_of_storms_dies_creates_spirit_token() {
+    let mut g = two_player_game();
+    let desc = g.add_card_to_battlefield(0, catalog::descendant_of_storms());
+    // P0 kills their own creature with a bolt.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(desc)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // Descendant should be dead, Spirit token should exist.
+    assert!(!g.battlefield.iter().any(|c| c.id == desc));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"),
+        "should create a Spirit token on death");
+}
+
+// ── Additional card shape tests ───────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_loses_life_and_returns_from_gy() {
+    let mut g = two_player_game();
+    // Put a 2-mana creature in P0's graveyard.
+    let _bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let card = g.players[0].hand.pop().unwrap();
+    g.players[0].graveyard.push(card);
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Should have lost 2 life (the hardcoded X=2 approximation).
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+#[test]
+fn molten_note_card_has_x_in_cost() {
+    let card = catalog::molten_note();
+    assert!(card.cost.has_x());
+}

@@ -1456,3 +1456,103 @@ pub fn temur_ascendancy() -> CardDefinition {
         opening_hand: None,
     }
 }
+
+// ── Guardian Scalelord ────────────────────────────────────────────────────
+
+/// Guardian Scalelord — {3}{W}{W}, 3/4 Dragon. Flying. Whenever this
+/// creature attacks, other attacking creatures you control gain flying
+/// until end of turn.
+pub fn guardian_scalelord() -> CardDefinition {
+    use crate::effect::{Duration, Selector};
+    CardDefinition {
+        name: "Guardian Scalelord",
+        cost: cost(&[generic(3), w(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::IsAttacking)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                body: Box::new(Effect::GrantKeyword {
+                    what: Selector::TriggerSource,
+                    keyword: Keyword::Flying,
+                    duration: Duration::EndOfTurn,
+                }),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Descendant of Storms ──────────────────────────────────────────────────
+
+/// Descendant of Storms — {2}{W}, 2/2 Spirit. Flying. When this creature
+/// dies, create a 1/1 white Spirit token with flying.
+pub fn descendant_of_storms() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color;
+    let spirit_token = TokenDefinition {
+        name: "Spirit".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Descendant of Storms",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: spirit_token,
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+
