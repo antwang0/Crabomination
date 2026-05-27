@@ -369,6 +369,21 @@ impl ManaPool {
         Ok(side_effects)
     }
 
+    /// Spend `n` generic mana from the pool, draining colorless first, then
+    /// colors in WUBRG order. Panics if `total() < n`.
+    pub fn spend_generic(&mut self, mut n: u32) {
+        let drain = n.min(self.colorless);
+        self.colorless -= drain;
+        n -= drain;
+        for color in [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green] {
+            if n == 0 { break; }
+            let have = self.slot_mut(color);
+            let drain = n.min(*have);
+            *have -= drain;
+            n -= drain;
+        }
+    }
+
     pub fn empty(&mut self) {
         *self = Self::default();
     }

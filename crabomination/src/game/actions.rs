@@ -472,6 +472,10 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(e);
         }
+        // Pay Ward cost if applicable (deducts mana from caster's pool).
+        if let Some(ref tgt) = target {
+            self.pay_ward_cost(tgt, p);
+        }
 
         // Enforce the spell's target selection requirement (e.g. Terror's
         // "non-black, non-artifact creature"): if the effect binds a filter to
@@ -676,6 +680,7 @@ impl GameState {
         // Validate target.
         if let Some(ref tgt) = target {
             self.check_target_legality(tgt, p)?;
+            self.pay_ward_cost(tgt, p);
         }
 
         // Pay the flashback cost.
@@ -790,6 +795,9 @@ impl GameState {
             self.players[p].hand.push(card);
             return Err(e);
         }
+        if let Some(ref tgt) = target {
+            self.pay_ward_cost(tgt, p);
+        }
         if let Some(ref tgt) = target
             && let Some(filter) = card
                 .definition
@@ -883,13 +891,15 @@ impl GameState {
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
     /// or has Protection from the caster's color identity. For player targets,
     /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
+    ///
+    /// **Ward** — if the target permanent has `Keyword::Ward(n)` and the caster
+    /// is an opponent, the caster must have `{n}` generic mana available.
+    /// This check is read-only; use `pay_ward_cost` after a successful check
+    /// to actually deduct the mana.
     pub(crate) fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
         let cid = match target {
             Target::Player(p) => {
                 if *p != caster && self.player_has_static_hexproof(*p) {
-                    // No specific card to attach — reuse the permanent-shaped
-                    // Hexproof error variant with a placeholder CardId so the
-                    // UI/server still recognizes "this is a hexproof rejection".
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
                 return Ok(());
@@ -905,7 +915,29 @@ impl GameState {
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
         }
+        if card.controller != caster {
+            if let Some(n) = card.ward_cost() {
+                if self.players[caster].mana_pool.total() < n {
+                    return Err(GameError::TargetHasWard(*cid));
+                }
+            }
+        }
         Ok(())
+    }
+
+    /// Pay the Ward cost for targeting `target` as `caster`. Call after
+    /// `check_target_legality` succeeds. No-ops when the target has no Ward
+    /// or the caster is the controller.
+    pub(crate) fn pay_ward_cost(&mut self, target: &Target, caster: usize) {
+        if let Target::Permanent(cid) = target {
+            if let Some(card) = self.battlefield_find(*cid) {
+                if card.controller != caster {
+                    if let Some(n) = card.ward_cost() {
+                        self.players[caster].mana_pool.spend_generic(n);
+                    }
+                }
+            }
+        }
     }
 
     /// True if `player` controls any permanent granting "you have hexproof"
@@ -1251,6 +1283,7 @@ impl GameState {
         // and self-targeting abilities don't pass a target so they bypass.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
+            self.pay_ward_cost(tgt, p);
         }
 
         // Enforce the ability's own target selection requirement (e.g.

@@ -1062,6 +1062,142 @@ pub fn lluwen_exchange_student() -> CardDefinition {
     front
 }
 
+// ── Campus Composer // Aqueous Aria ────────────────────────────────────────
+
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+///
+/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — draw 3 cards,
+/// then discard 1 (the printed Aqueous Aria is a blue card-selection
+/// sorcery). Ward is now enforced engine-side.
+pub fn campus_composer() -> CardDefinition {
+    let back = spell_back(
+        "Aqueous Aria",
+        cost(&[generic(4), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]),
+    );
+    vanilla_front(
+        "Campus Composer",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Bard],
+        3,
+        4,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
+// ── Emeritus of Ideation // Ancestral Recall ──────────────────────────────
+
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
+/// target player draws 3 cards (collapsed to "you draw 3").
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(2)],
+        back,
+    )
+}
+
+// ── Grave Researcher // Reanimate ─────────────────────────────────────────
+
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock with Surveil 2 ETB. Back: sorcery — Reanimate:
+/// return target creature card from your graveyard to the battlefield; you
+/// lose life equal to its mana value (approximated as fixed 3 life loss).
+pub fn grave_researcher() -> CardDefinition {
+    let back = spell_back(
+        "Reanimate",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature,
+                },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+    );
+    let mut front = vanilla_front(
+        "Grave Researcher",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Troll, CreatureType::Warlock],
+        3,
+        3,
+        vec![],
+        back,
+    );
+    front.triggered_abilities.push(
+        crate::effect::shortcut::etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        }),
+    );
+    front
+}
+
+// ── Strife Scholar // Awaken the Ages ─────────────────────────────────────
+
+/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
+///
+/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — deal 6 damage
+/// to target creature (Awaken the Ages is a high-cost red removal spell).
+pub fn strife_scholar() -> CardDefinition {
+    let back = spell_back(
+        "Awaken the Ages",
+        cost(&[generic(5), r()]),
+        CardType::Sorcery,
+        Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(6),
+        },
+    );
+    vanilla_front(
+        "Strife Scholar",
+        cost(&[generic(2), r()]),
+        vec![CreatureType::Orc, CreatureType::Sorcerer],
+        3,
+        2,
+        vec![Keyword::Ward(1)],
+        back,
+    )
+}
+
 // ── Suppress unused-import warnings on `exile_target`/`counter_target_spell`.
 #[allow(dead_code)]
 fn _suppress_unused() {

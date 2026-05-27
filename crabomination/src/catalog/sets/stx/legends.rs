@@ -68,10 +68,10 @@ pub fn galazeth_prismari() -> CardDefinition {
 
 /// Beledros Witherbloom — {3}{B}{B}{G}{G}, 6/6 Legendary Demon. Flying,
 /// trample, lifelink. Activated: "Pay 10 life: Untap each land you
-/// control. Activate only as a sorcery." Body wired with the three
-/// keywords; the activated mass-untap is 🟡 (no `Untap each X` over a
-/// selector with life-cost gating today).
+/// control. Activate only as a sorcery."
 pub fn beledros_witherbloom() -> CardDefinition {
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    use crate::effect::Selector;
     CardDefinition {
         name: "Beledros Witherbloom",
         cost: cost(&[generic(3), b(), b(), g(), g()]),
@@ -85,7 +85,21 @@ pub fn beledros_witherbloom() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying, Keyword::Trample, Keyword::Lifelink],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: crate::mana::ManaCost::default(),
+            effect: Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+            once_per_turn: true,
+            sorcery_speed: true,
+            sac_cost: false,
+            condition: None,
+            life_cost: 10,
+        }],
         triggered_abilities: vec![],
         static_abilities: vec![],
         base_loyalty: 0,

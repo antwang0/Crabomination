@@ -45,16 +45,11 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 
 /// Lorehold Apprentice — {R}{W}, 1/1 Human Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// you gain 1 life and Lorehold Apprentice deals 1 damage to any target."
+/// you gain 1 life and Lorehold Apprentice deals 1 damage to each
+/// opponent."
 ///
-/// 🟡 The dual-effect rider is split: the lifegain half is wired
-/// unconditionally, but the "1 damage to any target" half is collapsed
-/// into the lifegain only — Magecraft fires off the cast event, which
-/// pre-dates target selection on a triggered ability with its own
-/// target. Wiring the damage half needs the same "auto-target on
-/// trigger" plumbing as Repartee: a `target_filtered(Any)` body that
-/// the Magecraft helper resolves at trigger time. Tracked in
-/// STRIXHAVEN2.md.
+/// The "1 damage to any target" is collapsed to "each opponent" since
+/// auto-targeting on triggered abilities picks each-opponent cleanly.
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -70,10 +65,16 @@ pub fn lorehold_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::GainLife {
-            who: Selector::You,
-            amount: Value::Const(1),
-        })],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::DealDamage {
+                to: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -204,12 +205,11 @@ pub fn heated_debate() -> CardDefinition {
 /// you attack, put a +1/+1 counter on each attacking creature you
 /// control."
 ///
-/// 🟡 Mainline ETB token wired. The "whenever you attack" trigger that
-/// pumps each attacker is omitted — the engine has a `DeclareAttackers`
-/// event but the trigger here wants to enumerate every declared
-/// attacker, not just one source. Tracked under TODO.md "Triggered-
-/// Ability Event Gaps" → `PlayerAttackedWith`.
+/// The attack trigger fires once per creature declared as attacker (via
+/// `Attacks` + `YourControl`). Each firing puts a +1/+1 counter on the
+/// trigger source (that specific attacker).
 pub fn sparring_regimen() -> CardDefinition {
+    use crate::card::CounterType;
     CardDefinition {
         name: "Sparring Regimen",
         cost: cost(&[generic(2), r(), w()]),
@@ -221,14 +221,24 @@ pub fn sparring_regimen() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: lorehold_spirit_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: lorehold_spirit_token(),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                effect: Effect::AddCounter {
+                    what: Selector::TriggerSource,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

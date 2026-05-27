@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, EventKind};
+use crate::effect::{Effect, EventKind, EventScope};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
@@ -95,6 +95,38 @@ impl GameState {
                 }
             });
         }
+        // Walk all battlefield permanents for YourControl-scoped Attacks
+        // triggers (e.g. Sparring Regimen). These fire once per attacker
+        // declared by the trigger's controller. The trigger source is the
+        // *attacker* (not the listening permanent) so `Selector::TriggerSource`
+        // references the attacking creature.
+        let attacker_ids: Vec<(CardId, usize)> = self
+            .attacking
+            .iter()
+            .map(|a| {
+                let ctrl = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == a.attacker)
+                    .map(|c| c.controller)
+                    .unwrap_or(p);
+                (a.attacker, ctrl)
+            })
+            .collect();
+        for perm in &self.battlefield {
+            for t in &perm.definition.triggered_abilities {
+                if t.event.kind == EventKind::Attacks
+                    && matches!(t.event.scope, EventScope::YourControl)
+                {
+                    for &(atk_id, atk_ctrl) in &attacker_ids {
+                        if atk_ctrl == perm.controller {
+                            triggers.push((atk_id, t.effect.clone(), perm.controller));
+                        }
+                    }
+                }
+            }
+        }
+
         for (source, effect, controller) in triggers {
             let auto_target =
                 self.auto_target_for_effect_avoiding(&effect, controller, Some(source));

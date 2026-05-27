@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, generic, w};
+use crate::mana::{Color, b, cost, generic, r, w};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
@@ -2272,6 +2272,112 @@ pub fn follow_the_lumarets() -> CardDefinition {
             // Mainline: pull one creature/land card.
             else_: Box::new(single_pull),
         },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Fix What's Broken (Silverquill) ───────────────────────────────────────
+
+/// Fix What's Broken — {X}{W}{B} (the X is paid as life, not mana).
+///
+/// Sorcery. "As an additional cost to cast this spell, pay X life.
+/// Return each artifact and creature card with mana value X from your
+/// graveyard to the battlefield."
+///
+/// Approximation: The spell's mana cost is {2}{W}{B} (no X in cost);
+/// the controller chooses X at cast time. We model it by losing X life
+/// on resolution and moving matching cards. Since the engine doesn't
+/// support "additional cost = pay X life" as a distinct primitive, the
+/// effect pays the life and returns matching cards.
+pub fn fix_whats_broken() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Fix What's Broken",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Approximation: lose 2 life and return each artifact/creature with
+        // MV ≤ 2 from graveyard to battlefield. The printed card lets you
+        // choose X; we collapse to X=2 for a reasonable default.
+        effect: Effect::Seq(vec![
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::Move {
+                what: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::ManaValueAtMost(2).and(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Creature),
+                    ),
+                },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+    }
+}
+
+// ── Molten Note (Lorehold) ────────────────────────────────────────────────
+
+/// Molten Note — {X}{R}{W}.
+///
+/// Sorcery. "Molten Note deals damage to target creature equal to the
+/// amount of mana spent to cast this spell. Untap all creatures you
+/// control. Flashback {6}{R}{W}."
+///
+/// Approximation: damage = X (from `Value::XFromCost`). Flashback wired.
+pub fn molten_note() -> CardDefinition {
+    use crate::card::Keyword;
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Molten Note",
+        cost: crate::mana::ManaCost::new(vec![
+            crate::mana::ManaSymbol::X,
+            crate::mana::ManaSymbol::Colored(Color::Red),
+            crate::mana::ManaSymbol::Colored(Color::White),
+        ]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Flashback(cost(&[generic(6), r(), w()]))],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::XFromCost,
+            },
+            Effect::Untap {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                up_to: None,
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],

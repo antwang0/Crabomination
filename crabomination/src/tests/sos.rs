@@ -7118,3 +7118,267 @@ fn zaffai_and_the_tempests_body_legendary_5_7() {
     assert!(card.has_creature_type(crate::card::CreatureType::Human));
     assert!(card.has_creature_type(crate::card::CreatureType::Bard));
 }
+
+// ── Ward enforcement tests ────────────────────────────────────────────────
+
+#[test]
+fn ward_blocks_targeting_when_caster_cannot_pay() {
+    let mut g = two_player_game();
+    // Put a Ward {2} creature under P1's control.
+    let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
+    // P0 tries to bolt it but has no mana for the ward cost.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(warded)),
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "should fail — can't pay Ward cost");
+}
+
+#[test]
+fn ward_allows_targeting_when_caster_can_pay() {
+    let mut g = two_player_game();
+    let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // 1 R for bolt cost + 2 extra for Ward {2}.
+    g.players[0].mana_pool.add(Color::Red, 3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(warded)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("should succeed — enough mana for Ward cost");
+    // After cast, P0's pool should have 0 mana (1 for bolt + 2 for ward).
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+#[test]
+fn ward_does_not_apply_to_own_creatures() {
+    let mut g = two_player_game();
+    // P0 owns the Ward creature and targets it with a pump spell.
+    let warded = g.add_card_to_battlefield(0, catalog::campus_composer());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(warded)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("should succeed — Ward doesn't apply to own creatures");
+}
+
+// ── New MDFC card tests ───────────────────────────────────────────────────
+
+#[test]
+fn campus_composer_is_3_4_merfolk_bard_with_ward() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.has_creature_type(crate::card::CreatureType::Merfolk));
+    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    assert!(card.back_face.is_some());
+}
+
+#[test]
+fn campus_composer_back_face_draws_and_discards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::campus_composer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    // Add library cards so draw doesn't deck.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("back face castable");
+    drain_stack(&mut g);
+
+    // Draw 3 - discard 1 = net +2 (minus the cast card itself).
+    let hand_after = g.players[0].hand.len();
+    assert!(hand_after >= hand_before, "should have more cards in hand");
+}
+
+#[test]
+fn emeritus_of_ideation_is_5_5_with_ward_and_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(2)));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Ancestral Recall");
+    assert!(back.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn emeritus_of_ideation_back_face_draws_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Ancestral Recall castable for {U}");
+    drain_stack(&mut g);
+
+    // Drew 3, played 1 = net +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+}
+
+#[test]
+fn grave_researcher_has_surveil_etb() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.has_creature_type(crate::card::CreatureType::Troll));
+    assert!(!card.triggered_abilities.is_empty(), "should have ETB trigger");
+    assert!(card.back_face.is_some(), "should have Reanimate back face");
+}
+
+#[test]
+fn grave_researcher_back_face_is_reanimate() {
+    let card = catalog::grave_researcher();
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Reanimate");
+    assert!(back.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.has_creature_type(crate::card::CreatureType::Orc));
+    assert!(card.keywords.contains(&Keyword::Ward(1)));
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Awaken the Ages");
+}
+
+// ── Fix What's Broken ─────────────────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_card_shape() {
+    let card = catalog::fix_whats_broken();
+    assert_eq!(card.name, "Fix What's Broken");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+}
+
+// ── Molten Note ───────────────────────────────────────────────────────────
+
+#[test]
+fn molten_note_has_flashback() {
+    let card = catalog::molten_note();
+    assert_eq!(card.name, "Molten Note");
+    assert!(card.has_flashback().is_some());
+}
+
+#[test]
+fn molten_note_deals_x_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // X=3, cost = {3}{R}{W}
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Bear (2/2) should be dead from 3 damage.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+// ── Beledros Witherbloom mass-untap ───────────────────────────────────────
+
+#[test]
+fn beledros_witherbloom_mass_untap_activation() {
+    let mut g = two_player_game();
+    let _bel = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    // Add some tapped lands.
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield.iter_mut().filter(|c| c.id == f1 || c.id == f2).for_each(|c| c.tapped = true);
+    g.players[0].life = 20;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: _bel,
+        ability_index: 0,
+        target: None,
+    })
+    .expect("should activate with 10 life");
+    drain_stack(&mut g);
+
+    // Lands should be untapped.
+    assert!(!g.battlefield.iter().find(|c| c.id == f1).unwrap().tapped);
+    assert!(!g.battlefield.iter().find(|c| c.id == f2).unwrap().tapped);
+    // Life should drop by 10.
+    assert_eq!(g.players[0].life, 10);
+}
+
+#[test]
+fn beledros_witherbloom_mass_untap_fails_low_life() {
+    let mut g = two_player_game();
+    let bel = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.players[0].life = 5;
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: bel,
+        ability_index: 0,
+        target: None,
+    });
+    assert!(result.is_err(), "should fail — not enough life");
+}
+
+// ── Lorehold Apprentice magecraft damage ──────────────────────────────────
+
+#[test]
+fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
+    let mut g = two_player_game();
+    let _app = g.add_card_to_battlefield(0, catalog::lorehold_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // P0 gained 1 life from magecraft.
+    assert_eq!(g.players[0].life, p0_life + 1);
+    // P1 took 3 (bolt) + 1 (magecraft) = 4 damage.
+    assert_eq!(g.players[1].life, p1_life - 4);
+}
