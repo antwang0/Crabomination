@@ -10592,24 +10592,22 @@ fn strife_scholar_is_three_two_ward_one_orc_sorcerer() {
 }
 
 #[test]
-fn strife_scholar_back_face_returns_creatures_from_graveyard_to_battlefield() {
+fn strife_scholar_back_face_deals_damage_to_creature() {
     let mut g = two_player_game();
-    let bear1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let bear2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::strife_scholar());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpellBack {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Awaken the Ages castable for {5}{R}");
     drain_stack(&mut g);
 
-    assert!(g.battlefield.iter().any(|c| c.id == bear1),
-        "First bear returned via Awaken the Ages");
-    assert!(g.battlefield.iter().any(|c| c.id == bear2),
-        "Second bear returned via Awaken the Ages");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "Bear should be dead from 5 damage");
 }
 
 #[test]

@@ -468,10 +468,11 @@ impl crate::game::GameState {
     }
 
     /// CR 305.2 — Total lands `player` may play this turn. Defaults to
-    /// 1, plus any `ExtraLandPerTurn` grants. Used by `play_land` to
-    /// permit second-land + plays under Exploration etc.
+    /// 1, plus any `ExtraLandPerTurn` static grants, plus the player's
+    /// manually-set `extra_land_plays` field (set by resolved effects
+    /// like Explore).
     pub fn max_lands_per_turn(&self, player: usize) -> u32 {
-        1 + self.extra_land_plays_per_turn(player)
+        1 + self.extra_land_plays_per_turn(player) + self.players[player].extra_land_plays
     }
 
     /// CR 305.2a — Whether `player` may legally play another land this
