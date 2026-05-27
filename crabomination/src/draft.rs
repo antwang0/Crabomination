@@ -164,7 +164,7 @@ pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardF
     }
     let mut used: std::collections::HashSet<usize> = std::collections::HashSet::new();
     let mut pack: Vec<CardFactory> = Vec::with_capacity(PACK_SIZE);
-    let mut pull_from = |bucket: SosBucket,
+    let pull_from = |bucket: SosBucket,
                         want: usize,
                         by_bucket: &std::collections::HashMap<SosBucket, Vec<usize>>,
                         used: &mut std::collections::HashSet<usize>,

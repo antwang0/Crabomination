@@ -13,7 +13,7 @@ use crate::card::{
 };
 use crate::card::{EventKind, EventScope, EventSpec};
 use crate::effect::shortcut::{etb, etb_gain_life, target_filtered};
-use crate::effect::{DelayedTriggerKind, Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
+use crate::effect::{Duration, ManaPayload, Predicate, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, ManaSymbol, b, cost, g, generic, r, u, w};
 
 // ── Cantrips & card selection ────────────────────────────────────────────────
@@ -9725,7 +9725,6 @@ pub fn helix_pinnacle() -> CardDefinition {
                 kind: CounterType::Charge,
                 amount: Value::XFromCost,
             },
-            ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec {

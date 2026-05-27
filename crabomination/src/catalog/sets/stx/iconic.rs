@@ -10,7 +10,7 @@ use crate::card::{
     EventSpec, Keyword, LoyaltyAbility, PlaneswalkerSubtype, Selector, SelectionRequirement,
     Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, prowess_trigger, target_filtered};
+use crate::effect::shortcut::{etb_drain, etb_gain_life, magecraft, magecraft_drain_each_opp, target_filtered};
 use crate::effect::PlayerRef;
 use crate::mana::{b, cost, g, generic, r, u, w};
 

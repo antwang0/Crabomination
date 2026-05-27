@@ -7,7 +7,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
-use crate::mana::{Color, b, cost, generic, r, w};
+use crate::mana::{Color, b, cost, generic, w};
 
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).

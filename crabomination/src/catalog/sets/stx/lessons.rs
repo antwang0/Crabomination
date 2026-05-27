@@ -25,7 +25,7 @@ use crate::card::{
     SpellSubtype, Subtypes, TokenDefinition, Value,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{Duration, PlayerRef};
 use crate::mana::{b, cost, g, generic, r, u, w, Color};
 
 // ── Environmental Sciences ──────────────────────────────────────────────────

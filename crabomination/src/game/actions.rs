@@ -981,7 +981,7 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = card.definition.is_creature();
-        let ward_target = target.clone();
+        
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
@@ -2027,28 +2027,6 @@ impl GameState {
         // Ward creature — the Ward trigger fires and counters the spell unless
         // the caster pays the Ward cost at resolution time.
         Ok(())
-    }
-
-    /// Returns the Ward tax (generic mana) that `caster` must pay when
-    /// targeting `target`. Returns 0 if the target has no Ward or the
-    /// caster controls the permanent.
-    pub(crate) fn ward_tax_for_target(&self, target: &Target, caster: usize) -> u32 {
-        let cid = match target {
-            Target::Player(_) => return 0,
-            Target::Permanent(c) => c,
-        };
-        let Some(card) = self.battlefield_find(*cid) else {
-            return 0;
-        };
-        if card.controller == caster {
-            return 0;
-        }
-        for kw in &card.definition.keywords {
-            if let Keyword::Ward(crate::card::WardCost::Mana(cost)) = kw {
-                return cost.cmc();
-            }
-        }
-        0
     }
 
     /// True if `player` controls any permanent granting "you have hexproof"

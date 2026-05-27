@@ -1067,28 +1067,6 @@ pub fn lluwen_exchange_student() -> CardDefinition {
     front
 }
 
-// ── Campus Composer // Aqueous Aria ─────────────────────────────────────────
-
-/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
-///
-/// Front: 3/4 Merfolk Bard with `Keyword::Ward(crate::card::WardCost::generic(1))` (engine keyword tag;
-/// targeting enforcement still pending). Back: sorcery — Aqueous Aria:
-/// target player draws three cards.
-///
-/// Push: target-player draw now wired faithfully via
-/// `target_filtered(SelectionRequirement::Player)` — the auto-decider
-/// resolves the player target at cast time, so the chosen player draws 3
-/// (not just the caster). Front-face Ward keyword remains a tag pending
-/// the engine-wide Ward enforcement layer (see TODO.md).
-// ── Red MDFCs (additional) ──────────────────────────────────────────────────
-
-/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
-///
-/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — Awaken the Ages:
-/// deals 5 damage to target creature or planeswalker.
-///
-/// Ward enforcement is still keyword-tag-only (engine doesn't intercept
-/// targeting yet), but the tag is correct for future enforcement.
 // ── Campus Composer // Aqueous Aria ────────────────────────────────────────
 
 /// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.

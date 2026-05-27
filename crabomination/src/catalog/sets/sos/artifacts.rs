@@ -7,8 +7,8 @@
 //! once the Crew primitive lands.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope,
+    EventSpec, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};

@@ -18990,7 +18990,7 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
 /// Lorehold Spiritforge (b164) — {3}{W} Sorcery.
 /// Create two 1/1 R/W Spirit creature tokens.
 pub fn lorehold_spiritforge_b164() -> CardDefinition {
-    use crate::effect::shortcut::mint_lorehold_spirits;
+    
     let _ = mint_lorehold_spirits;
     CardDefinition {
         name: "Lorehold Spiritforge (b164)",
@@ -19009,7 +19009,7 @@ pub fn lorehold_spiritforge_b164() -> CardDefinition {
 ///
 /// 🟡 Collapsed to single-mode ChooseMode of 4 modes (printed: choose two).
 pub fn lorehold_command() -> CardDefinition {
-    let spirit_32 = TokenDefinition {
+    let _spirit_32 = TokenDefinition {
         name: "Spirit".into(),
         power: 3,
         toughness: 2,
@@ -19241,7 +19241,7 @@ pub fn academic_dispute() -> CardDefinition {
 /// Lorehold Spiritcaller (b164) — {3}{R}{W} 2/3 Spirit Wizard.
 /// Magecraft mint a 2/2 R/W Spirit token (lorehold spirit).
 pub fn lorehold_spiritcaller_b164() -> CardDefinition {
-    use crate::effect::shortcut::mint_lorehold_spirits;
+    
     CardDefinition {
         name: "Lorehold Spiritcaller (b164)",
         cost: cost(&[generic(3), r(), w()]),
@@ -19262,6 +19262,7 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
 ///
 /// 🟡 The continuous static granting double strike to attackers needs a
 /// layer-based keyword-grant primitive. We ship the body only.
+#[allow(dead_code)]
 pub fn blade_historian() -> CardDefinition {
     CardDefinition {
         name: "Blade Historian",

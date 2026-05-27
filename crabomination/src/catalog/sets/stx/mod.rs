@@ -23,6 +23,7 @@ mod silverquill;
 mod witherbloom;
 
 pub use all_factories::all_stx_card_factories;
+#[allow(ambiguous_glob_reexports)]
 pub use extras::*;
 pub use iconic::*;
 pub use legends::*;
