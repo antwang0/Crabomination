@@ -1093,25 +1093,17 @@ pub fn lluwen_exchange_student() -> CardDefinition {
 
 /// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
 ///
-/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — draw 3 cards,
-/// then discard 1 (the printed Aqueous Aria is a blue card-selection
-/// sorcery). Ward is now enforced engine-side.
+/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — target player
+/// draws 3 cards.
 pub fn campus_composer() -> CardDefinition {
     let back = spell_back(
         "Aqueous Aria",
         cost(&[generic(4), u()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
-        ]),
+        Effect::Draw {
+            who: Selector::Player(PlayerRef::Target(0)),
+            amount: Value::Const(3),
+        },
     );
     vanilla_front(
         "Campus Composer",
@@ -1129,14 +1121,14 @@ pub fn campus_composer() -> CardDefinition {
 /// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
 ///
 /// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
-/// target player draws 3 cards (collapsed to "you draw 3").
+/// target player draws 3 cards.
 pub fn emeritus_of_ideation() -> CardDefinition {
     let back = spell_back(
         "Ancestral Recall",
         cost(&[u()]),
         CardType::Instant,
         Effect::Draw {
-            who: Selector::You,
+            who: Selector::Player(PlayerRef::Target(0)),
             amount: Value::Const(3),
         },
     );

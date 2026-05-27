@@ -2930,16 +2930,21 @@ pub fn echocasting_symposium() -> CardDefinition {
 /// mechanic is identical: the controller invokes
 /// `GameAction::CastFromZoneWithoutPaying` on each exiled card within
 /// the next-turn window.
+/// Archaic's Agony — {4}{R}, Sorcery. Converge — deals X damage to
+/// target creature, where X is the number of colors of mana spent to
+/// cast this spell. The exile-top-cards rider is omitted (no cast-from-
+/// exile pipeline).
 pub fn archaics_agony() -> CardDefinition {
-    use crate::effect::ZoneDest;
     use crate::effect::shortcut::target_filtered;
     use crate::mana::r;
-    let _ = ZoneDest::Exile; let _ = target_filtered;
     CardDefinition {
         name: "Archaic's Agony",
         cost: cost(&[generic(4), r()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Noop,
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::ConvergedValue,
+        },
         ..Default::default()
     }
 }
@@ -3030,13 +3035,27 @@ pub fn improvisation_capstone() -> CardDefinition {
     }
 }
 
+/// Applied Geometry — {2}{G}{U}, Sorcery. Create a 0/0 green and blue
+/// Fractal creature token. Put six +1/+1 counters on it.
 pub fn applied_geometry() -> CardDefinition {
-    use crate::card::{CounterType, CreatureType};
-    use crate::effect::shortcut::target_filtered;
+    use crate::card::CounterType;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Applied Geometry",
         cost: cost(&[generic(2), g(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(6),
+            },
+        ]),
         ..Default::default()
     }
 }
