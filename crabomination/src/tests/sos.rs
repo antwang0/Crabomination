@@ -7534,3 +7534,36 @@ fn elder_gargaroth_is_6_6_with_keywords() {
     assert!(card.keywords.contains(&Keyword::Trample));
     assert!(!card.triggered_abilities.is_empty());
 }
+
+// ── Stun counter untap suppression (CR 122.1c) ────────────────────────────
+
+#[test]
+fn stun_counter_prevents_untap_on_untap_step() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == creature).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == creature).unwrap()
+        .add_counters(CounterType::Stun, 1);
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert!(c.tapped, "Creature with stun counter should stay tapped after untap step");
+    assert_eq!(c.counter_count(CounterType::Stun), 0, "Stun counter should be removed");
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert!(!c.tapped, "Creature should untap normally after stun counter is gone");
+}
+
+// ── Hand-size cleanup (CR 514.1) ───────────────────────────────────────────
+
+#[test]
+fn cleanup_discards_down_to_seven() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    assert_eq!(g.players[0].hand.len(), 10);
+    let gy_before = g.players[0].graveyard.len();
+    g.do_cleanup();
+    assert_eq!(g.players[0].hand.len(), 7, "Should discard down to 7");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "3 cards should go to graveyard");
+}

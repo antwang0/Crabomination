@@ -433,7 +433,21 @@ impl GameState {
         // un-tap a stolen permanent on the wrong player's turn).
         for card in &mut self.battlefield {
             if card.controller == p {
-                card.tapped = false;
+                // CR 122.1c: If a permanent with a stun counter would
+                // become untapped, remove one stun counter instead.
+                let stun = card
+                    .counters
+                    .get(&crate::card::CounterType::Stun)
+                    .copied()
+                    .unwrap_or(0);
+                if stun > 0 && card.tapped {
+                    *card
+                        .counters
+                        .entry(crate::card::CounterType::Stun)
+                        .or_insert(0) -= 1;
+                } else {
+                    card.tapped = false;
+                }
                 card.summoning_sick = false;
             }
         }
@@ -484,6 +498,14 @@ impl GameState {
         // Clear all damage from creatures
         for card in &mut self.battlefield {
             card.damage = 0;
+        }
+        // CR 514.1: Discard down to maximum hand size (7) if over.
+        let p = self.active_player_idx;
+        let max_hand_size = 7usize;
+        while self.players[p].hand.len() > max_hand_size {
+            if let Some(card) = self.players[p].hand.pop() {
+                self.players[p].graveyard.push(card);
+            }
         }
         // Empty mana pools
         for player in &mut self.players {

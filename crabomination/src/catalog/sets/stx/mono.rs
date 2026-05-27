@@ -514,3 +514,4 @@ pub fn multiple_choice() -> CardDefinition {
         opening_hand: None,
     }
 }
+
