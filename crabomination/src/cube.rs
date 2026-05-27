@@ -309,6 +309,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── New cube cards ──
         guardian_scalelord,
         descendant_of_storms,
+        elite_spellbinder,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -438,6 +439,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         landscape_painter,
         skycoach_conductor,
         spellbook_seeker,
+        // ── cube instants ──
+        gush,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -857,6 +860,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         emeritus_of_abundance,
         infirmary_healer,
         vastlands_scavenger,
+        // ── New cube cards ──
+        explore,
+        elder_gargaroth,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

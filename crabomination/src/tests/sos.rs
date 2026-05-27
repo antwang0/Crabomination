@@ -7449,3 +7449,43 @@ fn molten_note_card_has_x_in_cost() {
     let card = catalog::molten_note();
     assert!(card.cost.has_x());
 }
+
+// ── Explore + extra land plays ────────────────────────────────────────────
+
+#[test]
+fn explore_grants_extra_land_play_and_draws() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::explore());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Add a forest to hand + library cards.
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, mode: None, x_value: None,
+    })
+    .expect("Explore castable");
+    drain_stack(&mut g);
+
+    // Should have drawn 1 card (net = hand_before - 1 (Explore) + 1 (draw) = same).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Should be able to play 2 lands now (1 normal + 1 extra).
+    assert_eq!(g.players[0].extra_land_plays, 1);
+    assert!(g.players[0].can_play_land());
+}
+
+#[test]
+fn extra_land_play_allows_two_lands() {
+    let mut g = two_player_game();
+    g.players[0].extra_land_plays = 1;
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+
+    g.perform_action(GameAction::PlayLand(f1)).expect("first land");
+    assert!(g.players[0].can_play_land(), "should still be able to play another");
+    g.perform_action(GameAction::PlayLand(f2)).expect("second land");
+    assert!(!g.players[0].can_play_land(), "used all land plays");
+}

@@ -728,6 +728,12 @@ pub enum Effect {
         life_per_revealed: u32,
     },
 
+    /// Grant the controller one additional land play this turn. Used by
+    /// Explore, Dryad of the Ilysian Grove, Oracle of Mul Daya, and similar
+    /// "you may play an additional land" effects. Bumps
+    /// `Player.extra_land_plays` by `count`.
+    GrantExtraLandPlay { who: PlayerRef, count: Value },
+
     /// "As [this] enters, choose a creature type." Used by Cavern of Souls.
     /// Asks the controller via the `ChooseCreatureType` decision and stores
     /// the chosen type on the source permanent's `chosen_creature_type`
@@ -942,6 +948,9 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::GrantSorceriesAsFlash { who } => player_has_target(who),
+            Effect::GrantExtraLandPlay { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
             Effect::RevealUntilFind { who, to, cap, .. } => {
                 player_has_target(who)
                     || zonedest_has_target(to)

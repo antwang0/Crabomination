@@ -1555,4 +1555,87 @@ pub fn descendant_of_storms() -> CardDefinition {
     }
 }
 
+/// Elite Spellbinder — {1}{W}{W}, 3/1 Human Cleric with Flying and Flash.
+///
+/// Approximation: body-only. The full Oracle text ("When this creature
+/// enters, look at target opponent's hand, exile a nonland card from it;
+/// that card costs {2} more to cast") is omitted — the engine has no
+/// look-at-opponent-hand primitive and no per-card cost-tax static tied
+/// to an exiled card. The 3/1 Flying Flash body is the load-bearing part
+/// for the cube (efficient tempo creature).
+pub fn elite_spellbinder() -> CardDefinition {
+    CardDefinition {
+        name: "Elite Spellbinder",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Flash],
+        ..Default::default()
+    }
+}
 
+/// Elder Gargaroth — {3}{G}{G}, 6/6 Beast with Vigilance, Reach, and
+/// Trample.
+///
+/// "Whenever this creature attacks or blocks, choose one — Create a 3/3
+/// green Beast creature token; or You gain 3 life; or Draw a card."
+///
+/// Approximation: the trigger fires only on attack (the engine has no
+/// `Blocks` event kind); the three modes are wired via `ChooseMode`.
+/// AutoDecider picks mode 0 (create a 3/3 Beast token).
+pub fn elder_gargaroth() -> CardDefinition {
+    let beast_token = crate::card::TokenDefinition {
+        name: "Beast".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Elder Gargaroth",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                // Mode 0: Create a 3/3 green Beast creature token.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: beast_token,
+                },
+                // Mode 1: You gain 3 life.
+                Effect::GainLife {
+                    who: Selector::You,
+                    amount: Value::Const(3),
+                },
+                // Mode 2: Draw a card.
+                Effect::Draw {
+                    who: Selector::You,
+                    amount: Value::Const(1),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}

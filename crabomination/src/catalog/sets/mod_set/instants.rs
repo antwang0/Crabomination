@@ -1130,3 +1130,23 @@ pub fn turnabout() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gush — {4}{U} Instant. Draw two cards.
+///
+/// Approximation: wired at its full mana cost. The "you may return two
+/// Islands you control to their owner's hand rather than pay this spell's
+/// mana cost" alternative cost is omitted (the engine's `AlternativeCost`
+/// path only supports exile-from-hand, not bounce-lands-as-cost). The
+/// base effect — {4}{U}: draw 2 — is fully functional.
+pub fn gush() -> CardDefinition {
+    CardDefinition {
+        name: "Gush",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}

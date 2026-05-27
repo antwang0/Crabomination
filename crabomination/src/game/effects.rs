@@ -1267,6 +1267,14 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantExtraLandPlay { who, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                for p in self.resolve_players(who, ctx) {
+                    self.players[p].extra_land_plays += n;
+                }
+                Ok(())
+            }
+
             Effect::NameCreatureType { what } => {
                 // Cavern of Souls "as it enters, choose a creature type".
                 // The chooser is the source's controller. Suspend with a

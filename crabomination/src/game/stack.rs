@@ -438,6 +438,7 @@ impl GameState {
             }
         }
         self.players[p].lands_played_this_turn = 0;
+        self.players[p].extra_land_plays = 0;
         self.players[p].spells_cast_this_turn = 0;
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters
