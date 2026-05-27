@@ -228,6 +228,10 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         }
     }
 
+    if p.ward_cost > 0 {
+        lines.push(format!("Ward {{{}}}", p.ward_cost));
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }

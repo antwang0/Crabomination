@@ -714,6 +714,7 @@ impl GameState {
             }
         }
         self.players[p].lands_played_this_turn = 0;
+        self.players[p].extra_land_plays = 0;
         self.players[p].spells_cast_this_turn = 0;
         // Reset Infusion / "if you gained life this turn" tracking for the
         // active player at the start of their turn. Other players' counters
@@ -815,6 +816,14 @@ impl GameState {
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
+        // CR 514.1: Discard down to maximum hand size (7) if over.
+        let active = self.active_player_idx;
+        let max_hand_size = 7usize;
+        while self.players[active].hand.len() > max_hand_size {
+            if let Some(card) = self.players[active].hand.pop() {
+                self.players[active].graveyard.push(card);
+            }
+        }
         // Empty mana pools
         for player in &mut self.players {
             player.mana_pool.empty();

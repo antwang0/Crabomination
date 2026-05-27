@@ -105,6 +105,7 @@ impl College {
                 ark_of_hunger,
                 wilt_in_the_heat,
                 improvisation_capstone,
+                molten_note,
             ],
             // ↑ Fields of Strife is the school land, included via school_land();
             //   keep it out of the multi pool to avoid double-counting at cap time.
@@ -137,7 +138,7 @@ impl College {
             ],
             // ↑ Paradox Gardens is the school land.
 
-            // Silverquill (W/B).
+            // Silverquill (W/B). + Fix What's Broken (gy recursion).
             College::Silverquill => vec![
                 imperious_inkmage,
                 inkling_mascot,
@@ -146,6 +147,7 @@ impl College {
                 stirring_honormancer,
                 // Batch 2 additions:
                 social_snub,
+                fix_whats_broken,
             ],
             // ↑ Forum of Amity is the school land.
 
@@ -383,6 +385,9 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             flow_state,
             muses_encouragement,
             textbook_tabulator,
+            // Ward-unlocked MDFCs:
+            campus_composer,
+            emeritus_of_ideation,
         ],
         // Black — added Rabid Attack (+1/+0 friendly pump),
         // Decorum Dissertation (Lesson: draw 2 lose 2),
@@ -405,6 +410,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             withering_curse,
             moseo_veins_new_dean,
             ral_zarek_guest_lecturer,
+            // Ward-unlocked MDFCs:
+            grave_researcher,
         ],
         // Red — added Tablet of Discovery (mill+R mana), Garrison
         // Excavator (Spirit-token graveyard payoff), Living History
@@ -428,6 +435,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             unsubtle_mockery,
             // Batch 2 additions:
             mica_reader_of_ruins,
+            // Ward-unlocked MDFCs:
+            strife_scholar,
         ],
         // Green — added Burrog Barrage (conditional pump + power damage),
         // Chelonian Tackle (+0/+10 + power damage), Snarl Song (Converge

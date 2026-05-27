@@ -1283,6 +1283,9 @@ impl GameState {
         // Validate target.
         if let Some(ref tgt) = target {
             self.check_target_legality(tgt, p)?;
+            // Ward enforcement happens via push_ward_triggers_for_cast
+            // after finalize_cast, not as a synchronous cost payment.
+            let _ = tgt; let _ = p;
         }
 
         // Pay the flashback cost.
@@ -1981,6 +1984,11 @@ impl GameState {
     /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
     /// or has Protection from the caster's color identity. For player targets,
     /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
+    ///
+    /// **Ward** — if the target permanent has `Keyword::Ward(n)` and the caster
+    /// is an opponent, the caster must have `{n}` generic mana available.
+    /// This check is read-only; use `pay_ward_cost` after a successful check
+    /// to actually deduct the mana.
     pub(crate) fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
         self.check_target_legality_with_source(target, caster, None)
     }
@@ -2000,9 +2008,6 @@ impl GameState {
         let cid = match target {
             Target::Player(p) => {
                 if *p != caster && self.player_has_static_hexproof(*p) {
-                    // No specific card to attach — reuse the permanent-shaped
-                    // Hexproof error variant with a placeholder CardId so the
-                    // UI/server still recognizes "this is a hexproof rejection".
                     return Err(GameError::TargetHasHexproof(crate::card::CardId(0)));
                 }
                 return Ok(());
@@ -2027,6 +2032,12 @@ impl GameState {
         }
         if card.has_keyword(&Keyword::Hexproof) && card.controller != caster {
             return Err(GameError::TargetHasHexproof(*cid));
+        }
+        if card.controller != caster
+            && let Some(n) = card.ward_cost()
+            && self.players[caster].mana_pool.total() < n
+        {
+            return Err(GameError::TargetHasWard(*cid));
         }
         Ok(())
     }
@@ -2606,6 +2617,9 @@ impl GameState {
         // and self-targeting abilities don't pass a target so they bypass.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
+            // Ward enforcement happens via push_ward_triggers_for_cast
+            // after finalize_cast, not as a synchronous cost payment.
+            let _ = tgt; let _ = p;
         }
 
         // Enforce the ability's own target selection requirement (e.g.

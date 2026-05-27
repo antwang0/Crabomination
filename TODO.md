@@ -5492,6 +5492,69 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   - **Rules tests**: CR 120.3 planeswalker damage, CR 704.5q counter
     cancellation, CR 704.5j legend rule.
   - All 1158 lib tests pass.
+- ✅ **Push XVII — modern_decks (2026-05-27)**: Ward enforcement +
+  extra land plays + attack trigger dispatch + 16 new cards + 32 tests.
+  Engine: Ward {N} enforced at targeting time (check + mana payment);
+  `Player.extra_land_plays` + `Effect::GrantExtraLandPlay` for
+  Explore-style "play an additional land" effects; `YourControl`-scoped
+  `EventKind::Attacks` triggers from non-attacking permanents (Sparring
+  Regimen). Server: `PermanentView.ward_cost` surfaced to client. UI:
+  Ward cost in permanent tooltips. Card promotions: Beledros Witherbloom
+  (mass untap), Lorehold Apprentice (magecraft damage), Sparring Regimen
+  (attack trigger), Decisive Denial (fight mode), Inkshape Demonstrator /
+  Fractal Tender / Thornfist Striker (Ward enforced). New cards: 4 SOS
+  MDFCs (Campus Composer, Emeritus of Ideation, Grave Researcher, Strife
+  Scholar), Fix What's Broken, Molten Note, Guardian Scalelord, Descendant
+  of Storms, Explore, Elite Spellbinder, Gush, Elder Gargaroth. Comp rules:
+  305.7 (additional land plays), 702.21 (Ward), 704.5 (SBA verification).
+  All 1068 lib tests pass.
+
+  ### Things noticed but not tackled this run
+  - **Decisive Denial mode 1** uses `EachPermanent(Creature + ControlledByYou)`
+    for the attacker selector — it should pick exactly one creature, not all.
+    Multi-target prompts are still blocked.
+  - **Fix What's Broken** collapses X=2 instead of letting the player choose X.
+    Needs an "X life as additional cost" primitive.
+  - **Grave Researcher back-face (Reanimate)** life-loss uses `ManaValueOf`
+    targeting the same slot as the reanimated creature — may evaluate to 0 if
+    the creature moved zones. Needs MV snapshot before the zone move.
+  - **Copy-spell primitive** still blocks ~15 SOS cards (Choreographed Sparks,
+    Mica, Prismari the Inspiration, Silverquill the Disputant, etc.).
+  - **Cast-from-exile pipeline** still blocks ~10 SOS cards (Archaic's Agony,
+    Flashback card, Elemental Mascot, The Dawning Archaic, etc.).
+
+- ✅ **Push XVII.1 — modern_decks (2026-05-27)**: Stun counter untap
+  suppression + hand-size cleanup + Intervention Pact + clippy fixes.
+  Engine: CR 122.1c (stun counters prevent untapping in both `do_untap`
+  and `Effect::Untap` — one counter removed instead of untapping);
+  CR 514.1 (active player discards down to 7 at cleanup). New card:
+  Intervention Pact ({0} Instant, gain 5 life + pact upkeep trigger).
+  Clippy: doc-list-item warnings reduced from 10 to 2. All 1071 tests.
+
+  ### Things noticed but not tackled
+  - **Stun counter from Effect::AddCounter** should also prevent the
+    permanent from untapping on the very next untap step — currently
+    only stun counters that exist at untap time are checked, so a
+    counter added mid-turn is effective. This is correct behavior but
+    worth documenting.
+  - **Maximum hand size modification** — some cards (Reliquary Tower,
+    Spellbook, Wisdom of Ages) grant "no maximum hand size". The
+    cleanup discard-to-7 logic should check for a `no_max_hand_size`
+    flag on the player (currently hardcoded to 7).
+  - **Pact auto-pay** should check if the player can actually pay the
+    mana before auto-paying. Currently if they can't afford it, they
+    lose the game — this is correct MTG behavior but confusing for
+    new players. A warning/confirmation would be nice.
+  - **Back to Basics** (nonbasic lands don't untap) — would be easy
+    to implement now that stun counter untap suppression is wired.
+    Just add a static ability that prevents untapping (or grant stun
+    counters to nonbasics at upkeep).
+  - **Prepare mechanic** (SOS colorless) not implemented — Biblioplex
+    Tomekeeper, Skycoach Waypoint.
+  - **Vehicle/Crew** not implemented — Strixhaven Skycoach.
+  - **Prowess keyword** tagged but not wired (Spectacle Mage).
+  - **Elder Gargaroth** attack trigger should also fire on blocks — engine
+    needs a `Blocks` event kind.
 
 - ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
   card promotions. Tests at 1025 (+13 net):

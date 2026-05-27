@@ -1,6 +1,6 @@
 use super::*;
 use crate::card::Keyword;
-use crate::effect::{Effect, EventKind, Selector, Value};
+use crate::effect::{Effect, EventKind, EventScope, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 
 impl GameState {
@@ -135,12 +135,42 @@ impl GameState {
                 triggers.push((id, sac_effect, p, None));
             }
         }
+        // Walk all battlefield permanents for YourControl-scoped Attacks
+        // triggers (e.g. Sparring Regimen). These fire once per attacker
+        // declared by the trigger's controller. The trigger source is the
+        // *attacker* (not the listening permanent) so `Selector::TriggerSource`
+        // references the attacking creature.
+        let attacker_ids: Vec<(CardId, usize)> = self
+            .attacking
+            .iter()
+            .map(|a| {
+                let ctrl = self
+                    .battlefield
+                    .iter()
+                    .find(|c| c.id == a.attacker)
+                    .map(|c| c.controller)
+                    .unwrap_or(p);
+                (a.attacker, ctrl)
+            })
+            .collect();
+        for perm in &self.battlefield {
+            for t in &perm.definition.triggered_abilities {
+                if t.event.kind == EventKind::Attacks
+                    && matches!(t.event.scope, EventScope::YourControl)
+                {
+                    for &(atk_id, atk_ctrl) in &attacker_ids {
+                        if atk_ctrl == perm.controller {
+                            triggers.push((atk_id, t.effect.clone(), perm.controller, t.event.filter.clone()));
+                        }
+                    }
+                }
+            }
+        }
+
         for (source, effect, controller, filter) in triggers {
             // CR 603.2 + CR 506.5: evaluate the trigger's optional filter
             // predicate at fire-time, which for Attacks is "after the
-            // entire declare attackers step batch is resolved". This lets
-            // `Predicate::EntityMatches { what: This, filter: IsAttackingAlone }`
-            // and similar batched-attack riders gate correctly.
+            // entire declare attackers step batch is resolved".
             if let Some(predicate) = filter {
                 let ctx = crate::game::effects::EffectContext {
                     controller,

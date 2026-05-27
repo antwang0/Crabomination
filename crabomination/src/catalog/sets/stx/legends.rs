@@ -88,8 +88,8 @@ pub fn galazeth_prismari() -> CardDefinition {
 /// Now wired: the activated ability uses `life_cost: 10` +
 /// `sorcery_speed: true` + `Effect::Untap` over each land you control.
 pub fn beledros_witherbloom() -> CardDefinition {
-    use crate::card::SelectionRequirement;
-    use crate::effect::ActivatedAbility;
+    use crate::card::{ActivatedAbility, SelectionRequirement};
+    use crate::effect::Selector;
     use crate::mana::ManaCost;
     CardDefinition {
         name: "Beledros Witherbloom",
@@ -108,13 +108,12 @@ pub fn beledros_witherbloom() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::default(),
             effect: Effect::Untap {
-                what: crate::effect::Selector::EachPermanent(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
                 ),
                 up_to: None,
             },
-            once_per_turn: false,
+            once_per_turn: true,
             sorcery_speed: true,
             sac_cost: false,
             condition: None,

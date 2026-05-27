@@ -1269,3 +1269,55 @@ pub fn turnabout() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Gush — {4}{U} Instant. Draw two cards.
+///
+/// Approximation: wired at its full mana cost. The "you may return two
+/// Islands you control to their owner's hand rather than pay this spell's
+/// mana cost" alternative cost is omitted (the engine's `AlternativeCost`
+/// path only supports exile-from-hand, not bounce-lands-as-cost). The
+/// base effect — {4}{U}: draw 2 — is fully functional.
+pub fn gush() -> CardDefinition {
+    CardDefinition {
+        name: "Gush",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        ..Default::default()
+    }
+}
+
+/// Intervention Pact — {0} Instant. "The next time a source of your
+/// choice would deal damage to you this turn, prevent that damage.
+/// You gain life equal to the damage prevented this way. At the
+/// beginning of your next upkeep, pay {1}{W}{W}. If you don't, you
+/// lose the game."
+///
+/// Approximation: the damage-prevention rider is collapsed to "you
+/// gain 5 life" (a fixed value since the engine has no damage-
+/// prevention shield). The delayed upkeep payment is faithfully wired
+/// via `PayOrLoseGame`.
+pub fn intervention_pact() -> CardDefinition {
+    CardDefinition {
+        name: "Intervention Pact",
+        cost: ManaCost::new(vec![]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::PayOrLoseGame {
+                    mana_cost: cost(&[generic(1), w(), w()]),
+                    life_cost: 0,
+                }),
+            },
+        ]),
+        ..Default::default()
+    }
+}

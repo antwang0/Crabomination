@@ -1108,3 +1108,4 @@ pub fn environmental_sciences() -> CardDefinition {
         ..Default::default()
     }
 }
+

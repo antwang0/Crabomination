@@ -709,4 +709,6 @@ pub enum GameError {
     InsufficientLife,
     #[error("Flashback-tap cast invalid (missing keyword, wrong tap count, or invalid creature)")]
     FlashbackTapInvalid,
+    #[error("Card {0:?} has Ward — cannot pay the ward cost")]
+    TargetHasWard(CardId),
 }

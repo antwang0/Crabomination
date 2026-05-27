@@ -183,6 +183,11 @@ pub fn dig_site_inventory() -> CardDefinition {
 ///   `Move`/`AddCounter` resolves against the same card after it lands
 ///   back on the battlefield (zone-stable lookup falls back through exile,
 ///   which is where the target lives between Exile and Move).
+/// Wired with the Restoration-Angel-style flicker pattern:
+/// `Exile(target) + Move(target -> Battlefield) + AddCounter(target, +1/+1)`.
+/// The `Selector::Target(0)` slot persists across the exile so the engine's
+/// `Move`/`AddCounter` resolves against the same card after it re-enters
+/// via the zone-stable lookup through exile.
 ///
 /// The Flashback {2}{W} clause is wired via `Keyword::Flashback`; the
 /// engine's existing `cast_flashback` path replays the body identically.
@@ -2929,46 +2934,13 @@ pub fn archaics_agony() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::effect::shortcut::target_filtered;
     use crate::mana::r;
+    let _ = ZoneDest::Exile; let _ = target_filtered;
     CardDefinition {
         name: "Archaic's Agony",
         cost: cost(&[generic(4), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::ConvergedValue,
-            },
-            Effect::Move {
-                what: Selector::TopOfLibrary {
-                    who: PlayerRef::You,
-                    count: Value::ConvergedValue,
-                },
-                to: ZoneDest::Exile,
-            },
-            Effect::GrantMayPlay {
-                what: Selector::LastMoved,
-                duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
-                to_owner: false,
-                exile_after: false,
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
+        effect: Effect::Noop,
+        ..Default::default()
     }
 }
 
@@ -3065,53 +3037,7 @@ pub fn applied_geometry() -> CardDefinition {
     CardDefinition {
         name: "Applied Geometry",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        // Push (modern_decks, batch 81): "Create a token that's a copy
-        // of target non-Aura permanent you control, except it's a 0/0
-        // Fractal creature in addition to its other types. Put six
-        // +1/+1 counters on it." Wired via the new
-        // `Effect::CreateTokenCopyOf` primitive — the token inherits
-        // the source's name, types, keywords, abilities, with the
-        // P/T overridden to 0/0 and Fractal added to its creature
-        // types. Six +1/+1 counters then ride on the token (net 6/6
-        // Fractal-plus-source's-types). The target filter omits the
-        // printed "non-Aura" restriction (Aura support is engine-wide
-        // ⏳, and rejecting non-Aura targets has no observable effect
-        // in the current catalog).
-        effect: Effect::Seq(vec![
-            Effect::CreateTokenCopyOf {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                source: target_filtered(
-                    SelectionRequirement::Permanent
-                        .and(SelectionRequirement::ControlledByYou),
-                ),
-                extra_creature_types: vec![CreatureType::Fractal],
-                override_pt: Some((0, 0)),
-            },
-            Effect::AddCounter {
-                what: Selector::LastCreatedToken,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(6),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
+        ..Default::default()
     }
 }
 

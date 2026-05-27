@@ -37,6 +37,11 @@ pub struct Player {
     pub commanders: Vec<CardId>,
     /// How many lands this player has played on their current turn.
     pub lands_played_this_turn: u32,
+    /// Extra land plays granted this turn (Explore, Oracle of Mul Daya,
+    /// Dryad of the Ilysian Grove, etc.). Defaults to 0. The player can
+    /// play `1 + extra_land_plays` lands per turn total.
+    #[serde(default)]
+    pub extra_land_plays: u32,
     /// How many spells this player has cast this turn. Reset on
     /// `TurnStarted`. Powers Damping Sphere's "second-and-onward spells
     /// cost {1} more" static.
@@ -188,6 +193,7 @@ impl Player {
             command: Vec::new(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,
+            extra_land_plays: 0,
             spells_cast_this_turn: 0,
             life_gained_this_turn: 0,
             cards_drawn_this_turn: 0,
@@ -222,7 +228,7 @@ impl Player {
     /// `GameState::can_player_play_land(seat)` which sums
     /// `extra_land_plays_per_turn(seat)` into the cap.
     pub fn can_play_land(&self) -> bool {
-        self.lands_played_this_turn == 0
+        self.lands_played_this_turn < 1 + self.extra_land_plays
     }
 
     /// Draw the top card into hand.  Returns `None` if the library is empty.

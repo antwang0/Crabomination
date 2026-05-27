@@ -10485,66 +10485,6 @@ pub fn fervent_strike() -> CardDefinition {
     }
 }
 
-// ── Elemental Summoning (Prismari Lesson body) ─────────────────────────────
-
-// ── Humiliate (STX Silverquill {1}{W}{B} Sorcery) ──────────────────────────
-
-// ── Elite Spellbinder (STX Silverquill rare creature) ──────────────────────
-
-/// Elite Spellbinder — {1}{W}{B}, 3/1 Human Cleric (STX 2021).
-/// "Flying / When this creature enters, look at target opponent's hand.
-/// You may exile a nonland card from it. For as long as that card
-/// remains exiled, its owner can cast it, and that player may spend
-/// mana as though it were mana of any color to cast that spell. The
-/// spell costs {2} more to cast for as long as it remains exiled."
-///
-/// Push (modern_decks, NEW, `stx::extras`): 3/1 Flying body for 3 mana
-/// — fast aggressive evasion creature. ETB hand-strip is wired via
-/// `Effect::DiscardChosen { filter: Nonland }` against the chosen
-/// opponent — the engine "discards" (i.e. removes from hand) a nonland
-/// card. The "exile + may cast + +{2} cost" rider is omitted (no
-/// "may cast from exile under owner's control" primitive yet); we
-/// approximate by sending the card to graveyard via the standard
-/// DiscardChosen path. The body's tempo-disruption is the headline
-/// play pattern.
-/// Tests: `elite_spellbinder_is_a_three_mana_three_one_flying_human`,
-/// `elite_spellbinder_etb_strips_opp_nonland`.
-pub fn elite_spellbinder() -> CardDefinition {
-    CardDefinition {
-        name: "Elite Spellbinder",
-        cost: cost(&[generic(1), w(), b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
-                from: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Nonland,
-            },
-        }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-    }
-}
-
 // ── Waker of Waves (STX Quandrix rare creature) ────────────────────────────
 
 /// Waker of Waves — {3}{U}{U}, 5/5 Elemental (STX 2021, Quandrix rare).

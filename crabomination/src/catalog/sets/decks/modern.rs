@@ -8705,20 +8705,6 @@ pub fn korvold_fae_cursed_king() -> CardDefinition {
     }
 }
 
-/// Explore — {1}{G} Sorcery. Draw a card. You may play an additional land
-/// this turn.
-///
-/// Approximation: Draw 1 only (additional land drop not yet modeled).
-pub fn explore() -> CardDefinition {
-    CardDefinition {
-        name: "Explore",
-        cost: cost(&[generic(1), g()]),
-        card_types: vec![CardType::Sorcery],
-        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ..Default::default()
-    }
-}
-
 /// Lord Xander, the Collector — {3}{U}{B}{R} Legendary Creature — Vampire
 /// Demon Noble. 6/6 Flying.
 /// **When this enters**: Target opponent discards three cards.
@@ -9887,47 +9873,6 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
     }
 }
 
-/// Descendant of Storms — {2}{W}, 2/2 Spirit Warrior.
-/// Flying. When this creature attacks, create a 1/1 white Spirit token
-/// with flying.
-pub fn descendant_of_storms() -> CardDefinition {
-    CardDefinition {
-        name: "Descendant of Storms",
-        cost: cost(&[generic(2), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: crate::card::TokenDefinition {
-                    name: "Spirit".into(),
-                    power: 1,
-                    toughness: 1,
-                    keywords: vec![Keyword::Flying],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::White],
-                    supertypes: vec![],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Spirit],
-                        ..Default::default()
-                    },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
-                },
-            },
-        }],
-        ..Default::default()
-    }
-}
-
 // Hymn to Tourach already in catalog.
 
 /// Sinkhole — {B}{B} Sorcery. Destroy target land.
@@ -9965,60 +9910,6 @@ pub fn keen_eyed_curator() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
-    }
-}
-
-/// Intervention Pact — {0} Instant.
-/// "Gain 3 life and prevent the next 3 damage that would be dealt to
-/// target player this turn. At the beginning of your next upkeep, pay
-/// {1}{W}{W}. If you don't, you lose the game."
-///
-/// Approximation: models gain 3 life + delayed PayOrLoseGame upkeep cost.
-/// The damage-prevention shield is omitted (no damage-prevention primitive).
-/// Intervention Pact — {0} Instant. Prevent the next 3 damage that would
-/// be dealt to any target this turn. At the beginning of your next upkeep,
-/// pay {1}{W}{W}. If you don't, you lose the game.
-///
-/// Approximation: gain 3 life (damage prevention collapsed) + pact upkeep.
-pub fn intervention_pact() -> CardDefinition {
-    use crate::effect::DelayedTriggerKind;
-    CardDefinition {
-        name: "Intervention Pact",
-        cost: ManaCost::default(),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-            Effect::DelayUntil {
-                kind: DelayedTriggerKind::YourNextUpkeep,
-                body: Box::new(Effect::PayOrLoseGame {
-                    mana_cost: cost(&[generic(1), w(), w()]),
-                    life_cost: 0,
-                }),
-            },
-        ]),
-        ..Default::default()
-    }
-}
-
-/// Gush — {4}{U} Instant.
-/// "Draw 2 cards. You may return two Islands you control to their owner's
-/// hand rather than pay this spell's mana cost."
-///
-/// Approximation: modeled at the {4}{U} cost with Draw 2. The alt cost
-/// (return two Islands) is omitted (no bounce-as-alt-cost primitive).
-pub fn gush() -> CardDefinition {
-    CardDefinition {
-        name: "Gush",
-        cost: cost(&[generic(4), u()]),
-        card_types: vec![CardType::Instant],
-        effect: Effect::Draw {
-            who: Selector::You,
-            amount: Value::Const(2),
-        },
         ..Default::default()
     }
 }
@@ -10198,57 +10089,6 @@ pub fn basking_rootwalla() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
-        }],
-        ..Default::default()
-    }
-}
-
-/// Elder Gargaroth — {3}{G}{G} Creature 6/6 Beast.
-/// Vigilance, reach, trample.
-/// Whenever this creature attacks or blocks, choose one:
-/// - Create a 3/3 green Beast creature token.
-/// - You gain 3 life.
-/// - Draw a card.
-pub fn elder_gargaroth() -> CardDefinition {
-    CardDefinition {
-        name: "Elder Gargaroth",
-        cost: cost(&[generic(3), g(), g()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Beast],
-            ..Default::default()
-        },
-        power: 6,
-        toughness: 6,
-        keywords: vec![Keyword::Vigilance, Keyword::Reach, Keyword::Trample],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::ChooseMode(vec![
-                Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: TokenDefinition {
-                        name: "Beast".into(),
-                        power: 3,
-                        toughness: 3,
-                        keywords: vec![],
-                        card_types: vec![CardType::Creature],
-                        colors: vec![Color::Green],
-                        supertypes: vec![],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Beast],
-                            ..Default::default()
-                        },
-                        activated_abilities: vec![],
-                        triggered_abilities: vec![],
-                    },
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(3),
-                },
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-            ]),
         }],
         ..Default::default()
     }

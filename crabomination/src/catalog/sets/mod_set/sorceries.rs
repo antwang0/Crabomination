@@ -869,3 +869,40 @@ pub fn awaken_the_honored_dead() -> CardDefinition {
 }
 
 
+
+// ── Explore ───────────────────────────────────────────────────────────────
+
+/// Explore — {G} Sorcery. "You may play an additional land this turn.
+/// Draw a card."
+pub fn explore() -> CardDefinition {
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        name: "Explore",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::GrantExtraLandPlay {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+            },
+            Effect::Draw {
+                who: crate::effect::Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}

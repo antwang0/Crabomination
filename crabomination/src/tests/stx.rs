@@ -67871,3 +67871,139 @@ fn tangletrap_destroys_artifact() {
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == artifact));
 }
+
+// ── Beledros Witherbloom mass-untap ───────────────────────────────────────
+
+#[test]
+fn beledros_has_mass_untap_activated_ability() {
+    let card = catalog::beledros_witherbloom();
+    assert_eq!(card.activated_abilities.len(), 1);
+    assert_eq!(card.activated_abilities[0].life_cost, 10);
+    assert!(card.activated_abilities[0].once_per_turn);
+    assert!(card.activated_abilities[0].sorcery_speed);
+}
+
+// ── Sparring Regimen attack trigger ───────────────────────────────────────
+
+#[test]
+fn sparring_regimen_etb_creates_spirit_token() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::sparring_regimen());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"));
+}
+
+#[test]
+fn sparring_regimen_attack_trigger_adds_counter() {
+    let mut g = two_player_game();
+    let _sr = g.add_card_to_battlefield(0, catalog::sparring_regimen());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Remove summoning sickness.
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap().summoning_sick = false;
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("attack");
+    drain_stack(&mut g);
+
+    let b = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(b.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "attacker should have gotten a +1/+1 counter");
+}
+
+// ── Lorehold Apprentice magecraft ─────────────────────────────────────────
+
+#[test]
+fn lorehold_apprentice_has_magecraft_trigger() {
+    let card = catalog::lorehold_apprentice();
+    assert!(!card.triggered_abilities.is_empty());
+}
+
+// ── Storm-Kiln Artist ─────────────────────────────────────────────────────
+
+#[test]
+fn storm_kiln_artist_magecraft_creates_treasure_and_deals_damage() {
+    let mut g = two_player_game();
+    let _ska = g.add_card_to_battlefield(0, catalog::storm_kiln_artist());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // P1 lost 3 (bolt) + 1 (magecraft) = 4.
+    assert_eq!(g.players[1].life, p1_life - 4);
+    // Treasure token should be on the battlefield.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "should have created a Treasure token");
+}
+
+// ── Decisive Denial mode 1 (fight) ────────────────────────────────────────
+
+#[test]
+fn decisive_denial_has_two_modes() {
+    let card = catalog::decisive_denial();
+    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
+        assert_eq!(modes.len(), 2, "should have 2 modes");
+    } else {
+        panic!("should be modal");
+    }
+}
+
+#[test]
+fn decisive_denial_mode_0_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    // P0 casts an instant, P1 tries to counter it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    // P0 passes, P1 gets priority.
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let denial = g.add_card_to_hand(1, catalog::decisive_denial());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+
+    // Mode 0: counter the bolt.
+    g.perform_action(GameAction::CastSpell {
+        card_id: denial,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("denial castable");
+    drain_stack(&mut g);
+
+    // Bolt should be countered (in graveyard).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "bolt should be in graveyard (countered)");
+}

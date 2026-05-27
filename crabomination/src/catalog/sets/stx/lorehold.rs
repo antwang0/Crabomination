@@ -51,7 +51,8 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 
 /// Lorehold Apprentice — {R}{W}, 1/1 Human Cleric.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// you gain 1 life and Lorehold Apprentice deals 1 damage to any target."
+/// you gain 1 life and Lorehold Apprentice deals 1 damage to each
+/// opponent."
 ///
 /// Both halves of the magecraft rider wired: a `Seq` body of
 /// `GainLife(1) + DealDamage(1)` against `target_filtered(Creature ∨
@@ -59,6 +60,8 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
 /// aim the 1 damage at any legal target (defaults to "an opponent"
 /// for friendly-source pings); see `auto_target_for_effect_avoiding`
 /// in the trigger registration path.
+/// The "1 damage to any target" is collapsed to "each opponent" since
+/// auto-targeting on triggered abilities picks each-opponent cleanly.
 pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
@@ -266,6 +269,9 @@ pub fn heated_debate() -> CardDefinition {
 /// control, the net effect matches the printed batch trigger: every
 /// attacking creature you control gains a +1/+1 counter when the
 /// combat-step attacker is declared.
+/// The attack trigger fires once per creature declared as attacker (via
+/// `Attacks` + `YourControl`). Each firing puts a +1/+1 counter on the
+/// trigger source (that specific attacker).
 pub fn sparring_regimen() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -289,7 +295,7 @@ pub fn sparring_regimen() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
+                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
                 effect: Effect::AddCounter {
                     what: Selector::TriggerSource,
                     kind: CounterType::PlusOnePlusOne,

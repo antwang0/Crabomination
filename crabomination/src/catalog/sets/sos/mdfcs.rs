@@ -1089,6 +1089,121 @@ pub fn lluwen_exchange_student() -> CardDefinition {
 ///
 /// Ward enforcement is still keyword-tag-only (engine doesn't intercept
 /// targeting yet), but the tag is correct for future enforcement.
+// ── Campus Composer // Aqueous Aria ────────────────────────────────────────
+
+/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
+///
+/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — draw 3 cards,
+/// then discard 1 (the printed Aqueous Aria is a blue card-selection
+/// sorcery). Ward is now enforced engine-side.
+pub fn campus_composer() -> CardDefinition {
+    let back = spell_back(
+        "Aqueous Aria",
+        cost(&[generic(4), u()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
+        ]),
+    );
+    vanilla_front(
+        "Campus Composer",
+        cost(&[generic(3), u()]),
+        vec![CreatureType::Merfolk, CreatureType::Bard],
+        3,
+        4,
+        vec![Keyword::Ward(crate::card::WardCost::generic(2))],
+        back,
+    )
+}
+
+// ── Emeritus of Ideation // Ancestral Recall ──────────────────────────────
+
+/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
+///
+/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
+/// target player draws 3 cards (collapsed to "you draw 3").
+pub fn emeritus_of_ideation() -> CardDefinition {
+    let back = spell_back(
+        "Ancestral Recall",
+        cost(&[u()]),
+        CardType::Instant,
+        Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+    );
+    vanilla_front(
+        "Emeritus of Ideation",
+        cost(&[generic(3), u(), u()]),
+        vec![CreatureType::Human, CreatureType::Wizard],
+        5,
+        5,
+        vec![Keyword::Ward(crate::card::WardCost::generic(2))],
+        back,
+    )
+}
+
+// ── Grave Researcher // Reanimate ─────────────────────────────────────────
+
+/// Grave Researcher // Reanimate — {2}{B} // {B}.
+///
+/// Front: 3/3 Troll Warlock with Surveil 2 ETB. Back: sorcery — Reanimate:
+/// return target creature card from your graveyard to the battlefield; you
+/// lose life equal to its mana value (approximated as fixed 3 life loss).
+pub fn grave_researcher() -> CardDefinition {
+    let back = spell_back(
+        "Reanimate",
+        cost(&[b()]),
+        CardType::Sorcery,
+        Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::TargetFiltered {
+                    slot: 0,
+                    filter: SelectionRequirement::Creature,
+                },
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
+                },
+            },
+            Effect::LoseLife {
+                who: Selector::You,
+                amount: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            },
+        ]),
+    );
+    let mut front = vanilla_front(
+        "Grave Researcher",
+        cost(&[generic(2), b()]),
+        vec![CreatureType::Troll, CreatureType::Warlock],
+        3,
+        3,
+        vec![],
+        back,
+    );
+    front.triggered_abilities.push(
+        crate::effect::shortcut::etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        }),
+    );
+    front
+}
+
+// ── Strife Scholar // Awaken the Ages ─────────────────────────────────────
+
+/// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
+///
+/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — deal 6 damage
+/// to target creature (Awaken the Ages is a high-cost red removal spell).
 pub fn strife_scholar() -> CardDefinition {
     let back = spell_back(
         "Awaken the Ages",
@@ -1111,127 +1226,6 @@ pub fn strife_scholar() -> CardDefinition {
         vec![Keyword::Ward(crate::card::WardCost::generic(1))],
         back,
     )
-}
-
-// ── Blue MDFCs (Ward-bearing, push XVII) ──────────────────────────────────
-
-/// Campus Composer // Aqueous Aria — {3}{U} // {4}{U}.
-///
-/// Front: 3/4 Merfolk Bard with Ward {2}. Back: sorcery — draw 3 cards.
-pub fn campus_composer() -> CardDefinition {
-    let back = spell_back(
-        "Aqueous Aria",
-        cost(&[generic(4), u()]),
-        CardType::Sorcery,
-        Effect::Draw {
-            who: target_filtered(SelectionRequirement::Player),
-            amount: Value::Const(3),
-        },
-    );
-    vanilla_front(
-        "Campus Composer",
-        cost(&[generic(3), u()]),
-        vec![CreatureType::Merfolk, CreatureType::Bard],
-        3,
-        4,
-        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
-        back,
-    )
-}
-
-// ── Emeritus of Ideation // Ancestral Recall ────────────────────────────────
-
-/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
-///
-/// Front: 5/5 Human Wizard with `Keyword::Ward(crate::card::WardCost::generic(1))`. Back: instant —
-/// Ancestral Recall: target player draws three cards.
-///
-/// Push: back-face is now a faithful target-player Ancestral Recall via
-/// `target_filtered(SelectionRequirement::Player)`. The auto-decider
-/// resolves the target at cast time so the chosen player (caster or
-/// opp) draws 3. Front-face Ward keyword remains a tag pending Ward
-/// enforcement.
-/// Emeritus of Ideation // Ancestral Recall — {3}{U}{U} // {U}.
-///
-/// Front: 5/5 Human Wizard with Ward {2}. Back: instant — Ancestral Recall:
-/// target player draws three cards.
-pub fn emeritus_of_ideation() -> CardDefinition {
-    let back = spell_back(
-        "Ancestral Recall",
-        cost(&[u()]),
-        CardType::Instant,
-        Effect::Draw {
-            who: target_filtered(SelectionRequirement::Player),
-            amount: Value::Const(3),
-        },
-    );
-    vanilla_front(
-        "Emeritus of Ideation",
-        cost(&[generic(3), u(), u()]),
-        vec![CreatureType::Human, CreatureType::Wizard],
-        5,
-        5,
-        vec![Keyword::Ward(crate::card::WardCost::generic(1))],
-        back,
-    )
-}
-
-// ── Black MDFCs (Ward-bearing, push XVII) ─────────────────────────────────
-
-/// Grave Researcher // Reanimate — {2}{B} // {B}.
-///
-/// Front: 3/3 Troll Warlock with ETB Surveil 1. Back: sorcery — Reanimate:
-/// return target creature from a graveyard to the battlefield under your
-/// control. You lose life equal to its mana value (collapsed to flat 3).
-pub fn grave_researcher() -> CardDefinition {
-    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
-    let back = spell_back(
-        "Reanimate",
-        cost(&[crate::mana::b()]),
-        CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Creature),
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-            Effect::LoseLife {
-                who: Selector::You,
-                amount: Value::Const(3),
-            },
-        ]),
-    );
-    CardDefinition {
-        name: "Grave Researcher",
-        cost: cost(&[generic(2), crate::mana::b()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Troll, CreatureType::Warlock],
-            ..Default::default()
-        },
-        power: 3,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Surveil {
-                who: PlayerRef::You,
-                amount: Value::Const(1),
-            },
-        }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: Some(Box::new(back)),
-        opening_hand: None,
-        ..Default::default()
-    }
 }
 
 

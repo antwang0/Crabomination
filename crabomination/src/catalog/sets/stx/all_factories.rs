@@ -2490,7 +2490,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::extras::fervent_strike,
         super::prismari::elemental_summoning,
         super::silverquill::humiliate,
-        super::extras::elite_spellbinder,
+        super::super::mod_set::elite_spellbinder,
         super::extras::waker_of_waves,
         super::extras::discover_the_formula,
         super::extras::mortician_beetle,

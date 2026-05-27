@@ -943,6 +943,16 @@ impl CardInstance {
         self.definition.is_creature() && !self.tapped
     }
 
+    pub fn ward_cost(&self) -> Option<u32> {
+        self.definition.keywords.iter().find_map(|kw| {
+            if let Keyword::Ward(WardCost::Mana(cost)) = kw {
+                Some(cost.cmc())
+            } else {
+                None
+            }
+        })
+    }
+
     pub fn clear_end_of_turn_effects(&mut self) {
         self.power_bonus = 0;
         self.toughness_bonus = 0;

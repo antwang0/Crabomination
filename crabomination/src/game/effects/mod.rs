@@ -2833,6 +2833,14 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::GrantExtraLandPlay { who, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if let Some(target) = self.resolve_player(who, ctx) {
+                    self.players[target].extra_land_plays =
+                        self.players[target].extra_land_plays.saturating_add(n);
+                }
+                Ok(())
+            }
         }
     }
 

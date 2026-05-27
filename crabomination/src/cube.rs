@@ -324,6 +324,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         day_of_judgment,
         enlightened_tutor,
         healing_salve,
+        intervention_pact,
         raise_the_alarm,
         spectral_procession,
         lay_down_arms,
@@ -375,6 +376,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         decree_of_justice,
         guardian_scalelord,
         intervention_pact,
+        // ── New cube cards ──
+        guardian_scalelord,
+        descendant_of_storms,
         elite_spellbinder,
     ];
     if pair_contains(pair, Color::Green) {
@@ -545,6 +549,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         vapor_snag,
         // ── modern_decks-17 ──
         snapcaster_mage,
+        // ── cube instants ──
+        gush,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(gaeas_skyfolk);
@@ -958,6 +964,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         exquisite_firecraft,
         sulfuric_vortex,
         kari_zev_skyship_raider,
+        // ── New cube cards ──
+        greasewrench_goblin,
     ];
     if pair_contains(pair, Color::White) {
         v.push(lightning_helix);
@@ -1138,6 +1146,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         vengevine,
         // ── modern_decks-18 ──
         scavenging_ooze,
+        // ── New cube cards ──
+        explore,
+        elder_gargaroth,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);

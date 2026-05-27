@@ -137,6 +137,9 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// the attacker to the auto-targeted creature (slot 0, filtered to your
 /// creature for mode 1) and the defender to the first opponent creature
 /// found by auto-targeting.
+/// Both modes wired. Mode 1 uses `Effect::Fight` with the attacker as
+/// a creature you control (auto-targeted) and the defender as a creature
+/// an opponent controls (auto-targeted).
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -164,13 +167,10 @@ pub fn decisive_denial() -> CardDefinition {
             // separate targets; we collapse the "your creature" half to
             // auto-selected since the engine only supports one target.
             Effect::Fight {
-                attacker: Selector::Take {
-                    inner: Box::new(Selector::EachPermanent(
-                        SelectionRequirement::Creature
-                            .and(SelectionRequirement::ControlledByYou),
-                    )),
-                    count: Box::new(Value::Const(1)),
-                },
+                attacker: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
                 defender: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByOpponent),

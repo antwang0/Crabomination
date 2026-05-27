@@ -12833,3 +12833,477 @@ fn collective_defiance_mode_zero_deals_four_to_creature() {
     assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(),
         "2/2 bear should die from 4 damage");
 }
+
+// ── Ward enforcement tests ────────────────────────────────────────────────
+
+#[test]
+fn ward_blocks_targeting_when_caster_cannot_pay() {
+    let mut g = two_player_game();
+    // Put a Ward {2} creature under P1's control.
+    let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
+    // P0 tries to bolt it but has no mana for the ward cost.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(warded)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "should fail — can't pay Ward cost");
+}
+
+#[test]
+fn ward_allows_targeting_when_caster_can_pay() {
+    let mut g = two_player_game();
+    let warded = g.add_card_to_battlefield(1, catalog::campus_composer());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // 1 R for bolt cost + 2 extra for Ward {2}.
+    g.players[0].mana_pool.add(Color::Red, 3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(warded)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("should succeed — enough mana for Ward cost");
+    // After cast, P0's pool should have 0 mana (1 for bolt + 2 for ward).
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
+
+#[test]
+fn ward_does_not_apply_to_own_creatures() {
+    let mut g = two_player_game();
+    // P0 owns the Ward creature and targets it with a pump spell.
+    let warded = g.add_card_to_battlefield(0, catalog::campus_composer());
+    let pump = g.add_card_to_hand(0, catalog::giant_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: pump,
+        target: Some(Target::Permanent(warded)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("should succeed — Ward doesn't apply to own creatures");
+}
+
+// ── New MDFC card tests ───────────────────────────────────────────────────
+
+#[test]
+fn campus_composer_is_3_4_merfolk_bard_with_ward() {
+    let card = catalog::campus_composer();
+    assert_eq!(card.name, "Campus Composer");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.has_creature_type(crate::card::CreatureType::Merfolk));
+    assert!(card.has_creature_type(crate::card::CreatureType::Bard));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
+    assert!(card.back_face.is_some());
+}
+
+#[test]
+fn campus_composer_back_face_draws_and_discards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::campus_composer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    // Add library cards so draw doesn't deck.
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("back face castable");
+    drain_stack(&mut g);
+
+    // Draw 3 - discard 1 = net +2 (minus the cast card itself).
+    let hand_after = g.players[0].hand.len();
+    assert!(hand_after >= hand_before, "should have more cards in hand");
+}
+
+#[test]
+fn emeritus_of_ideation_is_5_5_with_ward_and_ancestral_recall_back() {
+    let card = catalog::emeritus_of_ideation();
+    assert_eq!(card.name, "Emeritus of Ideation");
+    assert_eq!(card.power, 5);
+    assert_eq!(card.toughness, 5);
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(2))));
+    let back = card.back_face.as_ref().expect("should have back face");
+    assert_eq!(back.name, "Ancestral Recall");
+    assert!(back.card_types.contains(&CardType::Instant));
+}
+
+#[test]
+fn emeritus_of_ideation_back_face_draws_three_v2() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::emeritus_of_ideation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Ancestral Recall castable for {U}");
+    drain_stack(&mut g);
+
+    // Drew 3, played 1 = net +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+}
+
+#[test]
+fn grave_researcher_has_surveil_etb() {
+    let card = catalog::grave_researcher();
+    assert_eq!(card.name, "Grave Researcher");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 3);
+    assert!(card.has_creature_type(crate::card::CreatureType::Troll));
+    assert!(!card.triggered_abilities.is_empty(), "should have ETB trigger");
+    assert!(card.back_face.is_some(), "should have Reanimate back face");
+}
+
+#[test]
+fn grave_researcher_back_face_is_reanimate() {
+    let card = catalog::grave_researcher();
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Reanimate");
+    assert!(back.card_types.contains(&CardType::Sorcery));
+}
+
+#[test]
+fn strife_scholar_is_3_2_orc_sorcerer_with_ward() {
+    let card = catalog::strife_scholar();
+    assert_eq!(card.name, "Strife Scholar");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 2);
+    assert!(card.has_creature_type(crate::card::CreatureType::Orc));
+    assert!(card.keywords.contains(&Keyword::Ward(crate::card::WardCost::generic(1))));
+    let back = card.back_face.as_ref().unwrap();
+    assert_eq!(back.name, "Awaken the Ages");
+}
+
+// ── Fix What's Broken ─────────────────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_card_shape() {
+    let card = catalog::fix_whats_broken();
+    assert_eq!(card.name, "Fix What's Broken");
+    assert!(card.card_types.contains(&CardType::Sorcery));
+}
+
+// ── Molten Note ───────────────────────────────────────────────────────────
+
+#[test]
+fn molten_note_has_flashback_v2() {
+    let card = catalog::molten_note();
+    assert_eq!(card.name, "Molten Note");
+    assert!(card.has_flashback().is_some());
+}
+
+#[test]
+fn molten_note_deals_x_damage_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::molten_note());
+    // X=3, cost = {3}{R}{W}
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(3),
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Bear (2/2) should be dead from 3 damage.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear));
+}
+
+// ── Beledros Witherbloom mass-untap ───────────────────────────────────────
+
+#[test]
+fn beledros_witherbloom_mass_untap_activation() {
+    let mut g = two_player_game();
+    let _bel = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    // Add some tapped lands.
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield.iter_mut().filter(|c| c.id == f1 || c.id == f2).for_each(|c| c.tapped = true);
+    g.players[0].life = 20;
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: _bel,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("should activate with 10 life");
+    drain_stack(&mut g);
+
+    // Lands should be untapped.
+    assert!(!g.battlefield.iter().find(|c| c.id == f1).unwrap().tapped);
+    assert!(!g.battlefield.iter().find(|c| c.id == f2).unwrap().tapped);
+    // Life should drop by 10.
+    assert_eq!(g.players[0].life, 10);
+}
+
+#[test]
+fn beledros_witherbloom_mass_untap_fails_low_life() {
+    let mut g = two_player_game();
+    let bel = g.add_card_to_battlefield(0, catalog::beledros_witherbloom());
+    g.players[0].life = 5;
+
+    let result = g.perform_action(GameAction::ActivateAbility {
+        card_id: bel,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    });
+    assert!(result.is_err(), "should fail — not enough life");
+}
+
+// ── Lorehold Apprentice magecraft damage ──────────────────────────────────
+
+#[test]
+fn lorehold_apprentice_magecraft_gains_life_and_deals_damage() {
+    let mut g = two_player_game();
+    let _app = g.add_card_to_battlefield(0, catalog::lorehold_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // P0 gained 1 life from magecraft.
+    assert_eq!(g.players[0].life, p0_life + 1);
+    // P1 took 3 (bolt) + 1 (magecraft) = 4 damage.
+    assert_eq!(g.players[1].life, p1_life - 4);
+}
+
+// ── New cube creature tests ───────────────────────────────────────────────
+
+#[test]
+fn guardian_scalelord_is_3_4_flying_dragon() {
+    let card = catalog::guardian_scalelord();
+    assert_eq!(card.name, "Guardian Scalelord");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 4);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.has_creature_type(crate::card::CreatureType::Dragon));
+    assert!(!card.triggered_abilities.is_empty());
+}
+
+#[test]
+fn descendant_of_storms_dies_creates_spirit_token() {
+    let mut g = two_player_game();
+    let desc = g.add_card_to_battlefield(0, catalog::descendant_of_storms());
+    // P0 kills their own creature with a bolt.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(desc)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt castable");
+    drain_stack(&mut g);
+
+    // Descendant should be dead, Spirit token should exist.
+    assert!(!g.battlefield.iter().any(|c| c.id == desc));
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Spirit"),
+        "should create a Spirit token on death");
+}
+
+// ── Additional card shape tests ───────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_loses_life_and_returns_from_gy() {
+    let mut g = two_player_game();
+    // Put a 2-mana creature in P0's graveyard.
+    let _bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let card = g.players[0].hand.pop().unwrap();
+    g.players[0].graveyard.push(card);
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Should have lost 2 life (the hardcoded X=2 approximation).
+    assert_eq!(g.players[0].life, life_before - 2);
+}
+
+#[test]
+fn molten_note_card_has_x_in_cost() {
+    let card = catalog::molten_note();
+    assert!(card.cost.has_x());
+}
+
+// ── Explore + extra land plays ────────────────────────────────────────────
+
+#[test]
+fn explore_grants_extra_land_play_and_draws() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::explore());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Add a forest to hand + library cards.
+    let forest = g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Explore castable");
+    drain_stack(&mut g);
+
+    // Should have drawn 1 card (net = hand_before - 1 (Explore) + 1 (draw) = same).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    // Should be able to play 2 lands now (1 normal + 1 extra).
+    assert_eq!(g.players[0].extra_land_plays, 1);
+    assert!(g.players[0].can_play_land());
+}
+
+#[test]
+fn extra_land_play_allows_two_lands() {
+    let mut g = two_player_game();
+    g.players[0].extra_land_plays = 1;
+    let f1 = g.add_card_to_hand(0, catalog::forest());
+    let f2 = g.add_card_to_hand(0, catalog::forest());
+
+    g.perform_action(GameAction::PlayLand(f1)).expect("first land");
+    assert!(g.players[0].can_play_land(), "should still be able to play another");
+    g.perform_action(GameAction::PlayLand(f2)).expect("second land");
+    assert!(!g.players[0].can_play_land(), "used all land plays");
+}
+
+// ── Subagent cube card tests ──────────────────────────────────────────────
+
+#[test]
+fn elite_spellbinder_is_3_1_flying_flash() {
+    let card = catalog::elite_spellbinder();
+    assert_eq!(card.name, "Elite Spellbinder");
+    assert_eq!(card.power, 3);
+    assert_eq!(card.toughness, 1);
+    assert!(card.keywords.contains(&Keyword::Flying));
+    assert!(card.keywords.contains(&Keyword::Flash));
+}
+
+#[test]
+fn gush_draws_two_cards() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::gush());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("castable");
+    drain_stack(&mut g);
+
+    // Drew 2, played 1 = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn elder_gargaroth_is_6_6_with_keywords() {
+    let card = catalog::elder_gargaroth();
+    assert_eq!(card.name, "Elder Gargaroth");
+    assert_eq!(card.power, 6);
+    assert_eq!(card.toughness, 6);
+    assert!(card.keywords.contains(&Keyword::Vigilance));
+    assert!(card.keywords.contains(&Keyword::Reach));
+    assert!(card.keywords.contains(&Keyword::Trample));
+    assert!(!card.triggered_abilities.is_empty());
+}
+
+// ── Stun counter untap suppression (CR 122.1c) ────────────────────────────
+
+#[test]
+fn stun_counter_prevents_untap_on_untap_step() {
+    let mut g = two_player_game();
+    let creature = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == creature).unwrap().tapped = true;
+    g.battlefield.iter_mut().find(|c| c.id == creature).unwrap()
+        .add_counters(CounterType::Stun, 1);
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert!(c.tapped, "Creature with stun counter should stay tapped after untap step");
+    assert_eq!(c.counter_count(CounterType::Stun), 0, "Stun counter should be removed");
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == creature).unwrap();
+    assert!(!c.tapped, "Creature should untap normally after stun counter is gone");
+}
+
+// ── Hand-size cleanup (CR 514.1) ───────────────────────────────────────────
+
+#[test]
+fn cleanup_discards_down_to_seven() {
+    let mut g = two_player_game();
+    for _ in 0..10 {
+        g.add_card_to_hand(0, catalog::lightning_bolt());
+    }
+    assert_eq!(g.players[0].hand.len(), 10);
+    let gy_before = g.players[0].graveyard.len();
+    g.do_cleanup();
+    assert_eq!(g.players[0].hand.len(), 7, "Should discard down to 7");
+    assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "3 cards should go to graveyard");
+}
+
+// ── Cube: Intervention Pact ────────────────────────────────────────────────
+
+#[test]
+fn intervention_pact_gains_five_life_and_has_pact_trigger() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::intervention_pact());
+    let life_before = g.players[0].life;
+    // Costs {0} — no mana needed.
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Intervention Pact castable for 0");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 5, "Should gain 5 life");
+    // A delayed trigger should be registered for the pact payment.
+    assert!(!g.delayed_triggers.is_empty(), "Pact delayed trigger should be registered");
+}
