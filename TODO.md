@@ -5,6 +5,62 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXIII — 2026-05-27, session 6)
+
+### Engine improvements
+- **Ward enforcement (CR 702.21)**: Ward is now properly enforced as a
+  triggered ability on the stack, not a pre-flight targeting restriction.
+  When a spell or ability targets an opponent's Ward creature, a Ward
+  trigger fires. The trigger auto-pays the Ward cost from the caster's
+  pool at resolution time; if they can't pay, the spell/ability is
+  countered. Removed the legacy double-charging (cast-time tax +
+  stack trigger).
+- **extra_land_plays fix**: `max_lands_per_turn()` now includes the
+  player's `extra_land_plays` field set by resolved effects (Explore).
+  Previously only counted `ExtraLandPerTurn` statics from the battlefield.
+- **Clippy clean**: all clippy warnings resolved across the workspace.
+  Removed dead code (ward_tax_for_target, unused imports, duplicate
+  card definitions).
+
+### New cards (12+)
+- **4 SOS MDFCs** (⏳ → ✅): Grave Researcher // Reanimate (Surveil 2 ETB +
+  graveyard recursion), Campus Composer // Aqueous Aria (Ward 2 + target
+  draw 3), Emeritus of Ideation // Ancestral Recall (Ward 2 + target
+  draw 3), Strife Scholar // Awaken the Ages (Ward 1 + 5 damage)
+- **Cube/Modern cards**: Guardian Scalelord, Descendant of Storms, Elite
+  Spellbinder (ETB discard), Mentor of the Meek, Kolaghan's Command,
+  Serum Visions, Young Pyromancer, Birds of Paradise, Noble Hierarch
+- **Applied Geometry** (⏳ → ✅): Fractal token with 6 +1/+1 counters
+- **Archaic's Agony** (⏳ → ✅): Converge damage to creature
+
+### Card promotions
+- Beledros Witherbloom: pay 10 life mass-untap activated (🟡 → ✅)
+- Lorehold Apprentice: magecraft now deals 1 dmg + gains 1 life (🟡 → ✅)
+- Ambitious Augmenter: dies-with-counters Fractal trigger (🟡 → ✅)
+- Deep Analysis: fixed draw target (was PlayerRef::Target, now You)
+- Elite Spellbinder: ETB discard trigger added (🟡 → ✅)
+- Toxic Deluge: test fixed for X-cost model
+- Intervention Pact: test fixed for 5 life (not 3)
+
+### Test improvements
+- 14+ net new passing tests (4834 total, up from 4820)
+- Fixed 15+ pre-existing test failures
+- Ward test suite updated for triggered-ability model
+
+### Observations & future items
+- **37 STX batch data-test stubs**: Cards like lorehold_bonepreacher_b165,
+  pest_deathbloom_b165 etc. are `..Default::default()` stubs with tests
+  that expect functionality. These need individual implementations or
+  test updates. Each is a 5-line card definition + possibly an ETB trigger.
+- **Strife Scholar back face mismatch**: STRIXHAVEN2.md says "Threaten"
+  effect but actual implementation is 5-damage sorcery. Need to verify
+  Scryfall oracle text and reconcile.
+- **Ward interaction with Prowess/Magecraft**: Ward triggers fire before
+  the spell resolves, so magecraft triggers from the same cast can
+  interact. This is correct per CR but may surprise players.
+- **Campus Composer draw target**: Now draws for target player (faithful
+  to printed Oracle). Tests updated to pass player target.
+
 ## Recent additions (Push XXII — 2026-05-25, session 5)
 
 ### New cube cards (25+ new implementations)
