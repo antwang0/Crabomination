@@ -112,11 +112,9 @@ pub fn quandrix_pledgemage() -> CardDefinition {
 /// you control deals damage equal to its power to target creature you
 /// don't control."
 ///
-/// 🟡 We ship just mode 0 (counter-noncreature-unless-{2}) faithfully.
-/// Mode 1 is a fight-with-tax — the engine has `Effect::Fight` but it
-/// uses one target slot, while Decisive Denial wants two. The fight
-/// half is omitted until the multi-target prompt lands; mode 0 alone is
-/// still a respectable Quandrix counterspell.
+/// Both modes wired. Mode 1 uses `Effect::Fight` with the attacker as
+/// a creature you control (auto-targeted) and the defender as a creature
+/// an opponent controls (auto-targeted).
 pub fn decisive_denial() -> CardDefinition {
     use crate::mana::{ManaCost, generic as gen_pip};
     let two = ManaCost { symbols: vec![gen_pip(2)] };
@@ -138,6 +136,17 @@ pub fn decisive_denial() -> CardDefinition {
                         .and(SelectionRequirement::HasCardType(CardType::Creature).negate()),
                 ),
                 mana_cost: two,
+            },
+            // Mode 1: fight — your creature vs opponent creature.
+            Effect::Fight {
+                attacker: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                defender: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
             },
         ]),
         activated_abilities: no_abilities(),

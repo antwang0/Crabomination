@@ -279,6 +279,10 @@ pub struct PermanentView {
     /// Loyalty abilities (only populated for planeswalkers).
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbilityView>,
+    /// Ward cost (0 if no Ward). Surfaced so the client can show the
+    /// extra targeting tax opponents must pay.
+    #[serde(default)]
+    pub ward_cost: u32,
 }
 
 impl PermanentView {

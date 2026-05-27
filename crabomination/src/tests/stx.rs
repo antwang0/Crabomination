@@ -937,3 +937,50 @@ fn storm_kiln_artist_magecraft_creates_treasure_and_deals_damage() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
         "should have created a Treasure token");
 }
+
+// ── Decisive Denial mode 1 (fight) ────────────────────────────────────────
+
+#[test]
+fn decisive_denial_has_two_modes() {
+    let card = catalog::decisive_denial();
+    if let crate::effect::Effect::ChooseMode(modes) = &card.effect {
+        assert_eq!(modes.len(), 2, "should have 2 modes");
+    } else {
+        panic!("should be modal");
+    }
+}
+
+#[test]
+fn decisive_denial_mode_0_counters_noncreature_spell() {
+    let mut g = two_player_game();
+    // P0 casts an instant, P1 tries to counter it.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    // P0 passes, P1 gets priority.
+    g.perform_action(GameAction::PassPriority).unwrap();
+
+    let denial = g.add_card_to_hand(1, catalog::decisive_denial());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+
+    // Mode 0: counter the bolt.
+    g.perform_action(GameAction::CastSpell {
+        card_id: denial,
+        target: Some(Target::Permanent(bolt)),
+        mode: Some(0),
+        x_value: None,
+    })
+    .expect("denial castable");
+    drain_stack(&mut g);
+
+    // Bolt should be countered (in graveyard).
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "bolt should be in graveyard (countered)");
+}
