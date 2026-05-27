@@ -7567,3 +7567,20 @@ fn cleanup_discards_down_to_seven() {
     assert_eq!(g.players[0].hand.len(), 7, "Should discard down to 7");
     assert_eq!(g.players[0].graveyard.len(), gy_before + 3, "3 cards should go to graveyard");
 }
+
+// ── Cube: Intervention Pact ────────────────────────────────────────────────
+
+#[test]
+fn intervention_pact_gains_five_life_and_has_pact_trigger() {
+    let mut g = two_player_game();
+    let spell = g.add_card_to_hand(0, catalog::intervention_pact());
+    let life_before = g.players[0].life;
+    // Costs {0} — no mana needed.
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: None, mode: None, x_value: None,
+    }).expect("Intervention Pact castable for 0");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 5, "Should gain 5 life");
+    // A delayed trigger should be registered for the pact payment.
+    assert!(!g.delayed_triggers.is_empty(), "Pact delayed trigger should be registered");
+}

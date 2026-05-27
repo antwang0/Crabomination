@@ -269,6 +269,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         day_of_judgment,
         enlightened_tutor,
         healing_salve,
+        intervention_pact,
         raise_the_alarm,
         spectral_procession,
         lay_down_arms,
