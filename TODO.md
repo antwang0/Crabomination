@@ -7,6 +7,43 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions
 
+- ✅ **Push XVII — modern_decks (2026-05-27)**: Ward enforcement +
+  extra land plays + attack trigger dispatch + 16 new cards + 32 tests.
+  Engine: Ward {N} enforced at targeting time (check + mana payment);
+  `Player.extra_land_plays` + `Effect::GrantExtraLandPlay` for
+  Explore-style "play an additional land" effects; `YourControl`-scoped
+  `EventKind::Attacks` triggers from non-attacking permanents (Sparring
+  Regimen). Server: `PermanentView.ward_cost` surfaced to client. UI:
+  Ward cost in permanent tooltips. Card promotions: Beledros Witherbloom
+  (mass untap), Lorehold Apprentice (magecraft damage), Sparring Regimen
+  (attack trigger), Decisive Denial (fight mode), Inkshape Demonstrator /
+  Fractal Tender / Thornfist Striker (Ward enforced). New cards: 4 SOS
+  MDFCs (Campus Composer, Emeritus of Ideation, Grave Researcher, Strife
+  Scholar), Fix What's Broken, Molten Note, Guardian Scalelord, Descendant
+  of Storms, Explore, Elite Spellbinder, Gush, Elder Gargaroth. Comp rules:
+  305.7 (additional land plays), 702.21 (Ward), 704.5 (SBA verification).
+  All 1068 lib tests pass.
+
+  ### Things noticed but not tackled this run
+  - **Decisive Denial mode 1** uses `EachPermanent(Creature + ControlledByYou)`
+    for the attacker selector — it should pick exactly one creature, not all.
+    Multi-target prompts are still blocked.
+  - **Fix What's Broken** collapses X=2 instead of letting the player choose X.
+    Needs an "X life as additional cost" primitive.
+  - **Grave Researcher back-face (Reanimate)** life-loss uses `ManaValueOf`
+    targeting the same slot as the reanimated creature — may evaluate to 0 if
+    the creature moved zones. Needs MV snapshot before the zone move.
+  - **Copy-spell primitive** still blocks ~15 SOS cards (Choreographed Sparks,
+    Mica, Prismari the Inspiration, Silverquill the Disputant, etc.).
+  - **Cast-from-exile pipeline** still blocks ~10 SOS cards (Archaic's Agony,
+    Flashback card, Elemental Mascot, The Dawning Archaic, etc.).
+  - **Prepare mechanic** (SOS colorless) not implemented — Biblioplex
+    Tomekeeper, Skycoach Waypoint.
+  - **Vehicle/Crew** not implemented — Strixhaven Skycoach.
+  - **Prowess keyword** tagged but not wired (Spectacle Mage).
+  - **Elder Gargaroth** attack trigger should also fire on blocks — engine
+    needs a `Blocks` event kind.
+
 - ✅ **SOS push XVI (2026-05-01)**: 5 engine primitives + 10 SOS/STX
   card promotions. Tests at 1025 (+13 net):
   - **`Predicate::CastSpellHasX`** — cast-time introspection on the
