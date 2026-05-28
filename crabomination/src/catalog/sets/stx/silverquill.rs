@@ -21637,3 +21637,287 @@ pub fn shadewing_laureate() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Batch 169 (modern_decks) — Silverquill expansion (8 cards) ────────────
+//
+// Eight more Silverquill cards exercising drain templates, inkling-tribal,
+// finality-counter granters, and a new "spectral" mode. Each card ships
+// with a functionality test in tests::stx.
+
+/// Silverquill Spectralist (b169) — {1}{W}{B} 2/2 Inkling Wizard.
+/// Flying + Lifelink. ETB Surveil 1.
+pub fn silverquill_spectralist_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Spectralist (b169)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Finalizer (b169) — {2}{W}{B} Sorcery.
+/// Drain 2, then put a finality counter on target creature.
+/// Combines the staple drain template with the new CR 122.1h finality
+/// counter mechanic for hard-removal-on-next-death.
+pub fn silverquill_finalizer_b169() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Silverquill Finalizer (b169)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::Finality,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Banshee (b169) — {2}{B} 3/2 Inkling Spirit. Flying.
+/// When this creature dies, each opponent loses 1 life.
+pub fn inkling_banshee_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Banshee (b169)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::dies_lose_life_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Verdict (b169) — {3}{W}{B} Instant.
+/// Exile target creature, you gain 3 life.
+pub fn silverquill_verdict_b169() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Silverquill Verdict (b169)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Exile,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Quill-Captain (b169) — {3}{W}{B} 3/3 Inkling Soldier Flying.
+/// Whenever this creature attacks, put a +1/+1 counter on it.
+pub fn inkling_quill_captain_b169() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Inkling Quill-Captain (b169)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Edict (b169) — {2}{B} Sorcery.
+/// Target opponent sacrifices a creature, you gain 2 life.
+pub fn silverquill_edict_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Edict (b169)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Bookmage (b169) — {1}{W} 2/2 Human Wizard.
+/// Magecraft: scry 1, then draw a card.
+pub fn silverquill_bookmage_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Bookmage (b169)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Standard-Bearer (b169) — {4}{W}{B} 4/4 Inkling Knight.
+/// Flying + Lifelink. Other Inkling creatures you control have lifelink.
+pub fn inkling_standard_bearer_b169() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    CardDefinition {
+        name: "Inkling Standard-Bearer (b169)",
+        cost: cost(&[generic(4), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control have lifelink.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                keyword: Keyword::Lifelink,
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}

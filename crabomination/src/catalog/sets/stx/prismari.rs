@@ -15099,6 +15099,257 @@ pub fn prismari_skyrider_b167() -> CardDefinition {
     }
 }
 
+// ── Batch 169 (modern_decks) — Prismari expansion (8 cards) ───────────────
+
+/// Prismari Inferno (b169) — {3}{U}{R} Sorcery.
+/// Deals 4 damage to any target. Treasure rider: create a Treasure token.
+pub fn prismari_inferno_b169() -> CardDefinition {
+    use crate::effect::shortcut::mint_treasures;
+    CardDefinition {
+        name: "Prismari Inferno (b169)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            mint_treasures(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Stormcaller (b169) — {2}{U}{R} 3/3 Elemental Wizard.
+/// Magecraft: this creature gets +1/+0 EOT and gains haste EOT.
+pub fn prismari_stormcaller_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormcaller (b169)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Flamejet (b169) — {1}{R} Instant.
+/// Deals 2 damage to any target.
+pub fn prismari_flamejet_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flamejet (b169)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Foamcrasher (b169) — {2}{U}{R} 4/3 Elemental.
+/// Whenever you cast an instant or sorcery, this creature gets +1/+0 EOT.
+pub fn prismari_foamcrasher_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Foamcrasher (b169)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Scrycaster (b169) — {1}{U} 1/2 Human Wizard.
+/// Magecraft: scry 1.
+pub fn prismari_scrycaster_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Scrycaster (b169)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Aerokineticist (b169) — {3}{U}{R} 3/3 Elemental Wizard Flying.
+/// Magecraft: deal 1 damage to each opponent.
+pub fn prismari_aerokineticist_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Aerokineticist (b169)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Drakelord (b169) — {4}{U}{R} 4/4 Dragon Flying Haste.
+/// ETB: Treasure rider — create a Treasure token.
+pub fn prismari_drakelord_b169() -> CardDefinition {
+    use crate::effect::shortcut::mint_treasures;
+    CardDefinition {
+        name: "Prismari Drakelord (b169)",
+        cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(mint_treasures(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Spellcrafter (b169) — {1}{R} 2/1 Human Wizard.
+/// Magecraft: loot — discard 1, draw 1.
+pub fn prismari_spellcrafter_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellcrafter (b169)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Prismari Volley (b167) — {U}{R} Instant.
 /// Deals 2 damage to any target + Scry 1.
 pub fn prismari_volley_b167() -> CardDefinition {

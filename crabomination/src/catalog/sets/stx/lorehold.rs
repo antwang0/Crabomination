@@ -16,9 +16,9 @@ use crate::card::{
 };
 use crate::effect::shortcut::{
     dies_mint_token, dies_ping_any, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
-    magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_self_pump,
-    mint_lorehold_spirits, on_attack_drain, on_attack_gain_life, on_attack_ping_any,
-    target_filtered,
+    magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_scry,
+    magecraft_self_pump, mint_lorehold_spirits, on_attack_drain, on_attack_gain_life,
+    on_attack_ping_any, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, r, w, Color, ManaCost};
@@ -20045,6 +20045,235 @@ pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
 }
 
 // ── Returned Pastcaller ───────────────────────────────────────────────────
+
+// ── Batch 169 (modern_decks) — Lorehold expansion (8 cards) ───────────────
+
+/// Lorehold Sparkblade (b169) — {2}{R}{W} 3/3 Human Warrior.
+/// Magecraft: this creature gets +1/+1 EOT.
+pub fn lorehold_sparkblade_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkblade (b169)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Spiritforge (b169) — {3}{R}{W} 3/3 Human Cleric Vigilance.
+/// ETB: create a 2/2 R/W Spirit token with reach.
+pub fn lorehold_spiritforge_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritforge (b169)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Reciter (b169) — {1}{R} 2/1 Human Cleric.
+/// Magecraft: target creature an opponent controls gets -1/-0 EOT.
+pub fn lorehold_reciter_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Reciter (b169)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            power: Value::Const(-1),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Reverence (b169) — {1}{R}{W} Sorcery.
+/// Create two 2/2 R/W Spirit tokens with reach.
+pub fn lorehold_reverence_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Reverence (b169)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: mint_lorehold_spirits(2),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Lectern (b169) — {3} Artifact.
+/// Whenever you cast an instant or sorcery spell, you may pay {1} to scry 1.
+/// Approximation: magecraft scry 1 unconditionally (no engine "may pay {1}").
+pub fn lorehold_lectern_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Lectern (b169)",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Quartermaster (b169) — {2}{R} 2/3 Dwarf Warrior.
+/// Whenever this creature attacks, deal 1 damage to any target.
+pub fn lorehold_quartermaster_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Quartermaster (b169)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Flameglyph (b169) — {1}{R} Instant.
+/// Deal 3 damage to target creature.
+pub fn lorehold_flameglyph_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Flameglyph (b169)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Aurochs (b169) — {3}{R}{W} 4/4 Beast Spirit Trample.
+/// Vanilla R/W finisher.
+pub fn lorehold_aurochs_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Aurochs (b169)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
 
 /// Returned Pastcaller — {4}{W}, 4/4 Spirit Cleric. Flying.
 /// ETB: "Return target instant or sorcery card from your graveyard to

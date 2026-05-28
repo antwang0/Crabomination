@@ -16037,6 +16037,260 @@ pub fn fractal_crusher_b167() -> CardDefinition {
     }
 }
 
+// ── Batch 169 (modern_decks) — Quandrix expansion (8 cards) ───────────────
+
+/// Quandrix Echofin (b169) — {1}{G}{U} 2/2 Fractal Fish.
+/// Whenever you cast an instant or sorcery, put a +1/+1 counter on this.
+pub fn quandrix_echofin_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Echofin (b169)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Pluralize (b169) — {3}{G}{U} Instant.
+/// Put two +1/+1 counters on target creature you control.
+pub fn quandrix_pluralize_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Pluralize (b169)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Splitscholar (b169) — {2}{G}{U} 2/3 Elf Wizard.
+/// ETB: Draw a card.
+pub fn quandrix_splitscholar_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Splitscholar (b169)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Tideforge (b169) — {3}{G}{U} 3/4 Fractal Wizard.
+/// Magecraft: put a +1/+1 counter on target creature you control.
+pub fn quandrix_tideforge_b169_v2() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tideforge II (b169)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Echocaster (b169) — {1}{U} 1/3 Elf Wizard.
+/// Magecraft: draw a card.
+pub fn quandrix_echocaster_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Echocaster (b169)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Plantarchitect (b169) — {2}{G} 2/3 Elf Druid.
+/// Magecraft: this creature gets +1/+1 EOT.
+pub fn quandrix_plantarchitect_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Plantarchitect (b169)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Bigwave (b169) — {3}{G}{U} Sorcery.
+/// Draw 3 cards, then put two +1/+1 counters on target creature you control.
+pub fn quandrix_bigwave_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Bigwave (b169)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Fractal Whale (b169) — {4}{G}{U} 5/5 Fractal Whale Trample.
+/// Vanilla finisher.
+pub fn quandrix_fractal_whale_b169() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractal Whale (b169)",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Whale],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Quandrix Echodraw (b167) — {2}{U} Sorcery.
 /// Draw 2 cards.
 pub fn quandrix_echodraw_b167() -> CardDefinition {
