@@ -258,6 +258,17 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.has_minus_one_counters {
         lines.push(String::from("(weakened: -1/-1 counters)"));
     }
+    // Surface CR 122.1b keyword counters — one line per active counter
+    // type (flying, first strike, deathtouch, trample, lifelink, haste,
+    // vigilance, reach). Push (modern_decks batch 187): added.
+    for (kw, n) in &p.keyword_counters {
+        let label = format!("{:?}", kw);
+        if *n == 1 {
+            lines.push(format!("({} counter granting {})", label.to_lowercase(), label));
+        } else {
+            lines.push(format!("({n} {} counters)", label.to_lowercase()));
+        }
+    }
 
     if p.tapped {
         lines.push(String::from("(tapped)"));
@@ -335,6 +346,7 @@ mod tests {
             has_plus_one_counters: false,
             has_minus_one_counters: false,
             total_counter_count: 0,
+            keyword_counters: vec![],
         }
     }
 
@@ -374,6 +386,26 @@ mod tests {
         let body = build_tooltip_body(&p);
         if let Some(s) = body {
             assert!(!s.contains("marked:"), "non-creature should never surface damage: {s}");
+        }
+    }
+
+    #[test]
+    fn keyword_counter_surfaces_in_tooltip() {
+        use crabomination::card::Keyword;
+        let mut p = make_permanent_view(0, 2);
+        p.keyword_counters = vec![(Keyword::Flying, 1)];
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        // Surface a flying counter.
+        assert!(body.to_lowercase().contains("flying"), "got: {body}");
+    }
+
+    #[test]
+    fn no_keyword_counter_no_keyword_line() {
+        let p = make_permanent_view(0, 2);
+        let body = build_tooltip_body(&p);
+        if let Some(s) = body {
+            assert!(!s.to_lowercase().contains("counter granting"),
+                "no keyword counters: {s}");
         }
     }
 

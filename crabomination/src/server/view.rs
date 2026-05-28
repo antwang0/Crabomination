@@ -256,6 +256,11 @@ fn project_permanent(
         has_plus_one_counters: card.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0,
         has_minus_one_counters: card.counter_count(crate::card::CounterType::MinusOneMinusOne) > 0,
         total_counter_count: card.counters.values().sum(),
+        keyword_counters: card.keyword_counters
+            .iter()
+            .filter(|(_, n)| **n > 0)
+            .map(|(k, n)| (k.clone(), *n))
+            .collect(),
     }
 }
 

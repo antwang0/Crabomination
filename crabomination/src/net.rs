@@ -463,6 +463,14 @@ pub struct PermanentView {
     /// by `project_permanent`. Push (modern_decks): added in batch 174.
     #[serde(default)]
     pub total_counter_count: u32,
+    /// Per-keyword counter map for CR 122.1b keyword counters
+    /// (flying, first strike, deathtouch, trample, lifelink, haste,
+    /// vigilance, reach, …). Surfaced so a client tooltip can render
+    /// "+1 flying counter", "+2 first strike counters" etc. alongside
+    /// the existing +1/+1 / shield / finality / stun highlights.
+    /// Populated by `project_permanent`. Push (modern_decks, batch 187).
+    #[serde(default)]
+    pub keyword_counters: Vec<(Keyword, u32)>,
 }
 
 impl PermanentView {
