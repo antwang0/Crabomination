@@ -22422,6 +22422,53 @@ pub fn inkling_stylekeeper_b177() -> CardDefinition {
     }
 }
 
+// ── Batch 186 (modern_decks) — multi-counter and effect cards ─────────────
+
+/// Silverquill Glyphmaker (b186) — {1}{W}{B} 1/2 Inkling Wizard Flying.
+/// Whenever you cast an instant or sorcery, target creature gets a +1/+1
+/// counter and a flying counter (combined CR 122.1b + standard +1/+1).
+pub fn silverquill_glyphmaker_b186() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Silverquill Glyphmaker (b186)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 184 (modern_decks) — more keyword counter cards ─────────────────
 
 /// Silverquill Wordsharpener (b184) — {1}{W}{B} Sorcery.

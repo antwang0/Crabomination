@@ -15761,6 +15761,40 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 185 (modern_decks) — Prismari keyword counter expansion ────────
+
+/// Prismari Sparkbloomer (b185) — {3}{R} 3/3 Elemental.
+/// ETB: put a haste counter on this creature.
+pub fn prismari_sparkbloomer_b185() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkbloomer (b185)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddKeywordCounter {
+            what: Selector::This,
+            keyword: Keyword::Haste,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 182 (modern_decks) — closer to a balanced Prismari cube ────────
 
 /// Prismari Mage-Mentor (b182) — {U}{R} 2/2 Elemental Wizard.

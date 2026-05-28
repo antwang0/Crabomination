@@ -3604,5 +3604,11 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::witherbloom::witherbloom_lifebondseal_b184,
         super::lorehold::lorehold_battlerune_b184,
         super::lorehold::lorehold_wardseal_b184,
+        // ── batch 185 (modern_decks): self-keyword-counter ETB / token mints ──
+        super::quandrix::quandrix_skyfractal_b185,
+        super::prismari::prismari_sparkbloomer_b185,
+        super::witherbloom::witherbloom_venomspur_b185,
+        // ── batch 186 (modern_decks): multi-counter magecraft engines ──
+        super::silverquill::silverquill_glyphmaker_b186,
     ]
 }

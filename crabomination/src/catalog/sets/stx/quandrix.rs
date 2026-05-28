@@ -16737,6 +16737,50 @@ pub fn quandrix_beastform_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 185 (modern_decks) — Quandrix keyword counter expansion ─────────
+
+/// Quandrix Skyfractal (b185) — {2}{G} Sorcery.
+/// Create a 0/0 Fractal with one flying counter and two +1/+1 counters.
+pub fn quandrix_skyfractal_b185() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Skyfractal (b185)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::LastCreatedToken,
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 182 (modern_decks) — closer to a balanced Quandrix cube ─────────
 
 /// Quandrix Streamwarden (b182) — {2}{G}{U} 2/3 Merfolk Druid.

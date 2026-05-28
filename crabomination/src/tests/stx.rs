@@ -71084,6 +71084,81 @@ fn silverquill_aegis_b176_grants_shield_counter() {
 // ─────────────────────────────────────────────────────────────────────────
 
 // ─────────────────────────────────────────────────────────────────────────
+// Batch 186 (modern_decks) — multi-counter magecraft engines
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_glyphmaker_b186_grants_plus_one_and_flying_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_glyphmaker_b186());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 185 (modern_decks) — self-ETB keyword counter + Fractal mints
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_skyfractal_b185_mints_flying_fractal_with_two_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_skyfractal_b185());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal" && c.controller == 0)
+        .expect("fractal token");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2);
+    assert!(fractal.has_keyword(&Keyword::Flying),
+        "CR 122.1b: flying counter grants Flying to the Fractal");
+}
+
+#[test]
+fn prismari_sparkbloomer_b185_etb_grants_haste_via_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_sparkbloomer_b185());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Prismari Sparkbloomer (b185)")
+        .expect("sparkbloomer on bf");
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn witherbloom_venomspur_b185_etb_grants_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_venomspur_b185());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Witherbloom Venomspur (b185)")
+        .expect("venomspur on bf");
+    assert!(c.has_keyword(&Keyword::Deathtouch));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Batch 184 (modern_decks) — more keyword counter granters
 // ─────────────────────────────────────────────────────────────────────────
 

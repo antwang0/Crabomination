@@ -20084,6 +20084,43 @@ pub fn witherbloom_pestharvest_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 185 (modern_decks) — Witherbloom self-ETB keyword counter ──────
+
+/// Witherbloom Venomspur (b185) — {2}{B} 2/2 Human Druid.
+/// ETB: put a deathtouch counter on this creature.
+pub fn witherbloom_venomspur_b185() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Venomspur (b185)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: Selector::This,
+            keyword: Keyword::Deathtouch,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 184 (modern_decks) — more keyword counter cards ─────────────────
 
 /// Witherbloom Trampleblossom (b184) — {2}{G} Sorcery.
