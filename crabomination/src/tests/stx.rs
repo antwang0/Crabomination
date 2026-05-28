@@ -73330,6 +73330,375 @@ fn silverquill_wardrune_b202_pumps_toughness_with_vigilance() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Batch 203 (modern_decks) — Compact cross-school round.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_cantor_b203_etb_scrys() {
+    let def = catalog::silverquill_cantor_b203();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn inkling_whisperer_b203_is_a_flying_inkling() {
+    let def = catalog::inkling_whisperer_b203();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
+#[test]
+fn silverquill_censurer_b203_is_a_lifelink_drain_body() {
+    let def = catalog::silverquill_censurer_b203();
+    assert!(def.keywords.contains(&Keyword::Lifelink));
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn silverquill_edict_b203_forces_opp_sac() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_edict_b203());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_none(), "edict took the bear");
+}
+
+#[test]
+fn silverquill_lay_faith_b203_gains_four_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_lay_faith_b203());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 4);
+}
+
+#[test]
+fn silverquill_hospitaller_b203_is_a_lifelink_vigilance_finisher() {
+    let def = catalog::silverquill_hospitaller_b203();
+    assert!(def.keywords.contains(&Keyword::Lifelink));
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(def.power, 4);
+}
+
+#[test]
+fn inkling_sheriff_b203_is_a_flying_vigilance_lifelink_top_end() {
+    let def = catalog::inkling_sheriff_b203();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert!(def.keywords.contains(&Keyword::Lifelink));
+}
+
+#[test]
+fn silverquill_mausoleum_b203_drains_via_activation() {
+    let def = catalog::silverquill_mausoleum_b203();
+    assert_eq!(def.activated_abilities.len(), 1);
+}
+
+#[test]
+fn witherbloom_apprentice_ii_b203_drains_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_apprentice_ii_b203());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // Bolt 3 + magecraft 1.
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn pest_tendril_b203_drains_four() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_tendril_b203());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 4);
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn pest_sapper_b203_loses_opp_two_on_death() {
+    let mut g = two_player_game();
+    let sapper = g.add_card_to_battlefield(0, catalog::pest_sapper_b203());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(sapper)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2);
+}
+
+#[test]
+fn witherbloom_pestlord_b203_is_four_five_trample() {
+    let def = catalog::witherbloom_pestlord_b203();
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 5);
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn pest_patriarch_b203_etb_mints_pest() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::pest_patriarch_b203());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Pest").count();
+    assert_eq!(pests, 1);
+}
+
+#[test]
+fn lorehold_apprentice_b203_pings_on_is_cast() {
+    let def = catalog::lorehold_apprentice_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_soulbinder_b203_has_attack_mint_trigger() {
+    let def = catalog::lorehold_soulbinder_b203();
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_spirit_sage_b203_etb_mints_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_spirit_sage_b203());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1);
+}
+
+#[test]
+fn lorehold_strike_b203_deals_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_strike_b203());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 3);
+}
+
+#[test]
+fn lorehold_ancestor_b203_is_four_four_trample() {
+    let def = catalog::lorehold_ancestor_b203();
+    assert_eq!(def.power, 4);
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn lorehold_spirit_squire_b203_etb_gains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_spirit_squire_b203());
+    g.players[0].mana_pool.add(Color::White, 1);
+    let p0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 2);
+}
+
+#[test]
+fn prismari_apprentice_ii_b203_loots_on_is_cast() {
+    let def = catalog::prismari_apprentice_ii_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn prismari_cantrip_b203_draws_then_discards() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_hand(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::prismari_cantrip_b203());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw - 1 discard = -1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+#[test]
+fn prismari_counter_b203_counters_spell() {
+    let def = catalog::prismari_counter_b203();
+    assert_eq!(def.cost.cmc(), 2);
+}
+
+#[test]
+fn prismari_flame_b203_deals_four() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_flame_b203());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn prismari_squallcaller_ii_b203_etb_scrys() {
+    let def = catalog::prismari_squallcaller_ii_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn prismari_mage_b203_pumps_self_on_is_cast() {
+    let def = catalog::prismari_mage_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn quandrix_apprentice_ii_b203_pumps_friendly() {
+    let def = catalog::quandrix_apprentice_ii_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn quandrix_naturist_b203_is_three_two_trample() {
+    let def = catalog::quandrix_naturist_b203();
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert_eq!(def.power, 3);
+}
+
+#[test]
+fn quandrix_charmer_b203_etb_smooths_and_cantrips() {
+    let def = catalog::quandrix_charmer_b203();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn quandrix_surge_b203_puts_three_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_surge_b203());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+#[test]
+fn quandrix_streamer_b203_etb_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_streamer_b203());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_verdant_b203_is_vigilance_reach_wall() {
+    let def = catalog::quandrix_verdant_b203();
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn inkling_mentor_b203_drains_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inkling_mentor_b203());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn inkling_sage_apprentice_b203_gains_one_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inkling_sage_apprentice_b203());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 1);
+}
+
+#[test]
+fn witherbloom_apprentice_iii_b203_self_pumps_on_is_cast() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::witherbloom_apprentice_iii_b203());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(app).expect("alive");
+    assert_eq!(view.power, 3, "+1/+1 EOT magecraft self-pump");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // CR rule lock-in tests — batch 202 round
 // ─────────────────────────────────────────────────────────────────────────
 
