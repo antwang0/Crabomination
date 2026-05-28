@@ -3846,7 +3846,7 @@ fn symmathematics_does_not_double_on_creature_cast() {
 }
 
 
-/// Environmental Sciences ({1}{G}) gains 4 life and tutors a basic land to
+/// Environmental Sciences ({2}) gains 2 life and tutors a basic land to
 /// hand. AutoDecider declines `SearchLibrary` by default so we feed a
 /// ScriptedDecider with the Forest's CardId to exercise the search half.
 #[test]
@@ -3859,8 +3859,7 @@ fn environmental_sciences_gains_four_life_and_tutors_a_basic_land() {
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
 
     let id = g.add_card_to_hand(0, catalog::environmental_sciences());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
 
     let hand_before = g.players[0].hand.len();
     let life_before = g.players[0].life;
@@ -3871,9 +3870,9 @@ fn environmental_sciences_gains_four_life_and_tutors_a_basic_land() {
     .expect("Environmental Sciences castable for {1}{G}");
     drain_stack(&mut g);
 
-    // Life +4.
-    assert_eq!(g.players[0].life, life_before + 4,
-        "Should gain 4 life from Environmental Sciences");
+    // Life +2.
+    assert_eq!(g.players[0].life, life_before + 2,
+        "Should gain 2 life from Environmental Sciences");
     // Hand: -1 (cast) + 1 (tutored Forest) = 0 net.
     assert_eq!(g.players[0].hand.len(), hand_before,
         "Hand size unchanged (cast -1 + tutor +1)");
@@ -3892,8 +3891,7 @@ fn environmental_sciences_gains_life_even_if_search_declined() {
     g.add_card_to_library(0, catalog::forest());
 
     let id = g.add_card_to_hand(0, catalog::environmental_sciences());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(2);
 
     let life_before = g.players[0].life;
     g.perform_action(GameAction::CastSpell {
@@ -3902,7 +3900,7 @@ fn environmental_sciences_gains_life_even_if_search_declined() {
     .expect("Environmental Sciences castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before + 4,
+    assert_eq!(g.players[0].life, life_before + 2,
         "Life still bumps even when AutoDecider declines the tutor");
 }
 
@@ -11148,7 +11146,7 @@ fn elemental_summoning_mints_a_four_four_elemental() {
     let id = g.add_card_to_hand(0, catalog::elemental_summoning());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
