@@ -5,6 +5,57 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXVI — 2026-05-28, session 10, batches 169-171)
+
+### Engine improvements
+- **`CounterType::Shield` (CR 122.1c)**: previously a noop counter
+  type; now creates a destroy-replacement + damage-prevention pair.
+  Wired at `effects/mod.rs::Effect::Destroy` (pop a shield instead of
+  destroying) and `effects/movement.rs::deal_damage_to_from`
+  (pop a shield instead of marking damage). Each shield counter
+  protects against one destroy OR one damage event. Tests:
+  `cr_122_1c_shield_counter_prevents_destroy_and_pops`,
+  `cr_122_1c_shield_counter_prevents_destroy_effect_and_pops`,
+  `cr_122_1c_no_shield_counter_means_normal_damage`.
+- **CR 704.5n — Equipment unattach**: SBA pass now walks Equipment on
+  the battlefield and clears `attached_to` if the linked card is no
+  longer a creature on the battlefield. The Equipment stays in play,
+  matching the printed rule. Test:
+  `cr_704_5n_equipment_unattaches_when_creature_dies`.
+- **`fire_combat_damage_to_player_triggers` — YourControl scope**: combat
+  triggers can now use `EventScope::YourControl` for "whenever a creature
+  you control deals combat damage to a player" listeners. Walks the
+  battlefield in phase 1.5 (between attacker SelfSource/AnyPlayer
+  triggers and graveyard FromYourGraveyard triggers).
+- **`PermanentView.has_shield_counters`**: new boolean view field
+  paired with the existing finality / stun fields. Clients can badge
+  the permanent with a "🛡" icon. Populated by `project_permanent`.
+
+### New cards (65 across batches 169-171)
+Batch 169 (40): 8 cards each in Silverquill, Witherbloom, Lorehold,
+Prismari, Quandrix. Drain templates, magecraft engines, tribal payoffs,
+shield-counter granters.
+Batch 170 (8): shield-counter exercise cards across all schools —
+Lorehold Shieldbearer/Aegisblade, Silverquill Aegismage/Wardward,
+Witherbloom Vitalist/Drainer, Prismari Forgesmith, Quandrix Hydromancer.
+Batch 171 (11): mixed shapes — combat-damage triggers (Echocrasher,
+Lifeleech), sacrifice-cost activations (Sapsprite), magecraft
+variants (Quillsmith, Fractalmancer), and vanilla bodies.
+
+### Observations & future items from this session
+- **Keyword counters (CR 122.1b)** remain ⏳ — would need a layer-6
+  injection at compute_battlefield time to grant keywords based on
+  per-counter-type tags. Diminishing returns since no card in the
+  catalog uses keyword counters today.
+- **Shield-counter UI badge** — `has_shield_counters` field is populated
+  but the Bevy client hasn't bound it to a renderer. Next-up client
+  work: badge icon next to the existing stun + finality counter.
+- **CR 704.5q — Bounded counter caps**: still ⏳ — engine has the
+  `max_counters_of_kind` field on CardDefinition but no
+  `StaticEffect::CapCounters(N)` primitive that would let a card
+  dynamically set the cap on another permanent. No catalog card uses
+  this today.
+
 ## Recent additions (Push XXV — 2026-05-28, session 9, batches 166 + 167)
 
 ### Engine improvements
@@ -609,9 +660,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (p) **704.5m — Aura attachment** — ✅ (the `orphaned_auras` walk at
   `stack.rs:1017` filters auras where `attached_to` is `None` or
   points to a non-battlefield CardId; Pacifism-class tested).
-  (q) **704.5n — Equipment / Fortification attachment** — 🟡 (engine prunes `attached_to` when the host leaves bf
-  via `remove_from_combat`-adjacent paths, but the "remains on bf
-  unattached" half is wired; no Fortification card in the catalog).
+  (q) **704.5n — Equipment / Fortification attachment** — ✅ (push
+  XXVI: SBA pass at `stack.rs::check_state_based_actions` walks
+  Equipment with `attached_to == Some(id)` and clears the link if the
+  referenced card is no longer a creature on the battlefield. The
+  Equipment stays on the battlefield, matching the printed rule.
+  Fortification is the same shape but no card in the catalog uses it.
+  Test: `cr_704_5n_equipment_unattaches_when_creature_dies`).
   (r) **704.5p — Battle/creature attached** — ⏳ (no Battle card type in
   the catalog; tracked in TODO.md "Engine — Battle permanent type
   (CR 110.4) ⏳").

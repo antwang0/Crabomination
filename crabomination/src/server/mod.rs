@@ -99,8 +99,20 @@ pub enum SeatOccupant {
 /// Run a match to completion on the current thread. Returns when the game
 /// ends, all human seat channels have been dropped, or — if every seat is a
 /// bot — when the game ends.
-pub fn run_match(state: GameState, occupants: Vec<SeatOccupant>) {
-    run_match_full(state, occupants, vec![], None);
+/// Summary of a completed match returned by `run_match_full` (and its
+/// siblings). Captures end-of-game metrics that callers — typically
+/// the binary's match-stats recorder — fold into rolling aggregates.
+/// Each field is zero / `None` if the match aborted before reaching the
+/// relevant data point.
+#[derive(Debug, Clone, Default)]
+pub struct MatchOutcome {
+    /// Final `turn_number` value observed at match end. Useful for
+    /// "avg turns per match" operator metrics.
+    pub final_turn: u32,
+}
+
+pub fn run_match(state: GameState, occupants: Vec<SeatOccupant>) -> MatchOutcome {
+    run_match_full(state, occupants, vec![], None)
 }
 
 /// Variant of [`run_match`] that also broadcasts every event/view to a list
@@ -112,8 +124,8 @@ pub fn run_match_spectated(
     state: GameState,
     occupants: Vec<SeatOccupant>,
     spectators: Vec<SeatChannel>,
-) {
-    run_match_full(state, occupants, spectators, None);
+) -> MatchOutcome {
+    run_match_full(state, occupants, spectators, None)
 }
 
 /// Run a match with an optional snapshot sink. After every accepted
@@ -125,7 +137,7 @@ pub fn run_match_full(
     occupants: Vec<SeatOccupant>,
     spectators: Vec<SeatChannel>,
     snapshot_sink: Option<SnapshotSink>,
-) {
+) -> MatchOutcome {
     let n = occupants.len();
     assert_eq!(n, state.players.len(), "occupant count must match player count");
 
@@ -217,11 +229,11 @@ pub fn run_match_full(
             &mut last_progress_at,
         ) {
             broadcast_match_over(&state, &seat_tx, &spectator_tx);
-            return;
+            return MatchOutcome { final_turn: state.turn_number };
         }
 
         if human_seat_count == 0 && spectator_count == 0 {
-            return;
+            return MatchOutcome { final_turn: state.turn_number };
         }
 
         // In a humanless (spectator-only) match, poll with a timeout
@@ -237,12 +249,12 @@ pub fn run_match_full(
                     }
                     None
                 }
-                Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                Err(mpsc::RecvTimeoutError::Disconnected) => return MatchOutcome { final_turn: state.turn_number },
             }
         } else {
             match merged_rx.recv() {
                 Ok(msg) => Some(msg),
-                Err(_) => return,
+                Err(_) => return MatchOutcome { final_turn: state.turn_number },
             }
         };
         let Some((seat, msg)) = next else { continue };
@@ -261,7 +273,7 @@ pub fn run_match_full(
                 }
                 if state.is_game_over() {
                     broadcast_match_over(&state, &seat_tx, &spectator_tx);
-                    return;
+                    return MatchOutcome { final_turn: state.turn_number };
                 }
             }
             ClientMsg::Debug(debug) => {

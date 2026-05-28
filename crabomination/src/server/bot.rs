@@ -171,10 +171,32 @@ impl Bot for RandomBot {
                             if c.has_keyword(&Keyword::Indestructible) {
                                 return true;
                             }
+                            // Shield counter on the attacker — the first
+                            // damage is prevented, so a basic ground-trade
+                            // is safe (push XXVI bot improvement).
+                            if c.counter_count(crate::card::CounterType::Shield) > 0 {
+                                return true;
+                            }
                             // Lifelink: even if we trade, we gain life —
                             // worth swinging when we can race.
                             if c.has_keyword(&Keyword::Lifelink) {
                                 return true;
+                            }
+                            // First strike + bigger power than blockers'
+                            // toughness — we kill the blocker before it
+                            // strikes back. Safe attack (push XXVI).
+                            if c.has_keyword(&Keyword::FirstStrike)
+                                || c.has_keyword(&Keyword::DoubleStrike)
+                            {
+                                let max_blocker_toughness: i32 = opp_blockers
+                                    .iter()
+                                    .filter(|b| !b.has_keyword(&Keyword::Flying) || flying)
+                                    .map(|b| b.toughness())
+                                    .max()
+                                    .unwrap_or(0);
+                                if c.power() > max_blocker_toughness {
+                                    return true;
+                                }
                             }
                             // Hold back if a deathtouch blocker exists
                             // and we don't outsize the biggest blocker.

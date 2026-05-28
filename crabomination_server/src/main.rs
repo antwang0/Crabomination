@@ -146,6 +146,12 @@ struct MatchStats {
     /// the running cube-vs-demo split in the rolling summary line. Push
     /// (claude/modern_decks batch 162).
     format_buckets: [u64; FORMAT_BUCKET_COUNT],
+    /// Cumulative turn count across all matches — divided by total
+    /// matches in the summary line. Operators see at a glance whether
+    /// games are concession-heavy (low avg turn count) or grindy
+    /// (high avg turn count) without sampling individual match logs.
+    /// Push (claude/modern_decks batch 172).
+    total_turns: u64,
 }
 
 /// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
@@ -185,6 +191,20 @@ impl MatchStats {
         self.pair_matches += 1;
         self.observe_duration(d);
         self.observe_format(f);
+    }
+    /// Bump the cumulative turn counter — called at match completion
+    /// from the record paths if the caller has a final turn number.
+    /// Defensive against double-counting since this is invoked exactly
+    /// once per `record_*` (the caller passes the final turn).
+    fn observe_turns(&mut self, turns: u32) {
+        self.total_turns = self.total_turns.saturating_add(turns as u64);
+    }
+    /// Average turn count across all completed matches. Returns 0
+    /// pre-warmup. Used by `format_match_stats` for the operator
+    /// rolling-summary line.
+    fn avg_turns(&self) -> u64 {
+        let n = self.total_matches();
+        if n == 0 { 0 } else { self.total_turns / n }
     }
     /// Increment the per-format match count. Used by both `record_bot`
     /// and `record_pair` so the per-format histogram covers every
@@ -316,12 +336,13 @@ fn match_stats() -> &'static std::sync::Mutex<MatchStats> {
 fn format_match_stats(s: &MatchStats) -> String {
     let n = s.total_matches();
     let mut out = format!(
-        "served {} match{}: {} bot, {} pair; avg duration {}",
+        "served {} match{}: {} bot, {} pair; avg duration {}; avg turns {}",
         n,
         if n == 1 { "" } else { "es" },
         s.bot_matches,
         s.pair_matches,
         format_duration(s.avg_duration()),
+        s.avg_turns(),
     );
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
@@ -642,7 +663,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         Err(e) => { eprintln!("tcp_seat failed for {peer}: {e}"); return; }
     };
     let started = Instant::now();
-    run_match(
+    let outcome = run_match(
         format.build(),
         vec![
             SeatOccupant::Human(seat),
@@ -653,13 +674,15 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_bot(duration, format);
+        s.observe_turns(outcome.final_turn);
         *s
     };
     eprintln!(
-        "bot match ended ({}, format={}, duration={}) — {}",
+        "bot match ended ({}, format={}, duration={}, turns={}) — {}",
         peer,
         format.label(),
         format_duration(duration),
+        outcome.final_turn,
         format_match_stats(&stats_snapshot),
     );
 }
@@ -691,7 +714,7 @@ fn run_pair_match(
         }
     };
     let started = Instant::now();
-    run_match(
+    let outcome = run_match(
         format.build(),
         vec![SeatOccupant::Human(a_seat), SeatOccupant::Human(b_seat)],
     );
@@ -699,14 +722,16 @@ fn run_pair_match(
     let stats_snapshot = {
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_pair(duration, format);
+        s.observe_turns(outcome.final_turn);
         *s
     };
     eprintln!(
-        "pair match ended ({} ↔ {}, format={}, duration={}) — {}",
+        "pair match ended ({} ↔ {}, format={}, duration={}, turns={}) — {}",
         a_peer,
         b_peer,
         format.label(),
         format_duration(duration),
+        outcome.final_turn,
         format_match_stats(&stats_snapshot),
     );
 }
@@ -1043,6 +1068,23 @@ mod tests {
         s.record_pair(Duration::from_secs(120), Format::Demo);
         assert_eq!(s.min_duration, Some(Duration::from_secs(30)));
         assert_eq!(s.max_duration, Some(Duration::from_secs(300)));
+    }
+
+    #[test]
+    fn match_stats_avg_turns_averages_observed_turns() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(10);
+        s.record_pair(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(20);
+        // 30 turns / 2 matches = 15
+        assert_eq!(s.avg_turns(), 15);
+    }
+
+    #[test]
+    fn match_stats_avg_turns_zero_before_any_record() {
+        let s = MatchStats::default();
+        assert_eq!(s.avg_turns(), 0);
     }
 
     #[test]

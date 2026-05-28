@@ -232,6 +232,21 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(format!("Ward {{{}}}", p.ward_cost));
     }
 
+    // Counter-state highlights — surface the high-signal CR 122.1
+    // counter states (shield/finality) that have engine effects
+    // beyond their printed +1/+1 cousins. Helps the player see "this
+    // creature absorbs one damage/destroy" or "this creature exiles
+    // on death" without scrolling the counters list.
+    if p.has_shield_counters {
+        lines.push(String::from("(shielded: next damage/destroy is absorbed)"));
+    }
+    if p.has_finality_counters {
+        lines.push(String::from("(finality: exiles instead of going to graveyard)"));
+    }
+    if p.has_stun_counters {
+        lines.push(String::from("(stunned: next untap is skipped)"));
+    }
+
     if p.tapped {
         lines.push(String::from("(tapped)"));
     }
@@ -297,6 +312,8 @@ mod tests {
             abilities: vec![],
             loyalty_abilities: vec![],
             has_stun_counters: false,
+            has_finality_counters: false,
+            has_shield_counters: false,
             pt_modified: false,
             mana_cost_display: String::new(),
             creature_types: vec![],
