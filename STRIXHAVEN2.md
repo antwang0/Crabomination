@@ -19,15 +19,34 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2841 (incl. synthesised variants — batches 155–194 add 599 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2894 (incl. synthesised variants — batches 155–197 add 652 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (claude/modern_decks, batches 192-194, claude/modern_decks): 74
-additional STX cards across all five colleges, plus a new
-Effect::RemoveKeywordCounter engine variant (CR 122.1b counterpart),
-PermanentView.{shield,stun,finality}_counter_count for explicit
-counter-count tooltip rendering, and MatchOutcome.{winner,
-final_life_totals} for richer match-end analytics.
+Push (claude/modern_decks, batches 192-197, claude/modern_decks): 127
+additional STX cards across all five colleges, plus:
+- `Effect::RemoveKeywordCounter` engine variant (CR 122.1b
+  counterpart to AddKeywordCounter)
+- `target_any()` shortcut helper for "creature/player/planeswalker"
+- PermanentView.{shield,stun,finality}_counter_count for explicit
+  counter-count tooltip rendering
+- MatchOutcome.{winner, final_life_totals} for richer match-end
+  analytics
+- MatchStats.{wins, draws} + format_match_stats win/draw/unresolved
+  rendering in operator log lines
+- 5 new CR rule lock-in tests (122.5, 122.2, 117.5, 122.1b)
+- 2 new CR 704 SBA tests (704.5d token cleanup, 704.5i PW loyalty 0)
+- Re-enabled previously-ignored academic_dispute test under its new
+  oracle (+2/+0 + reach EOT, no fight effect)
+- UI: game-over modal now renders final life totals as a subtitle
+
+**Batch 197 (11 cards)** — polish round: 3 Witherbloom, 2 each
+across Lorehold / Silverquill / Prismari / Quandrix. One-drops and
+4/4 vanilla beaters.
+
+**Batch 196 (21 cards)** — more cross-school variety: Witherbloom
+(5), Lorehold (4), Silverquill (4), Prismari (4), Quandrix (4).
+
+**Batch 195 (21 cards)** — more cross-school deep cuts (5+4+4+4+4).
 
 **Batch 194 (22 cards)** — compact cross-school fillers:
 - Witherbloom (5): Pestswarmer (ETB 2 Pests), Smolderscholar

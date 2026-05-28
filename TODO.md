@@ -5,9 +5,9 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
-## Recent additions (Push XXXI — 2026-05-28, session 15, batches 192-194)
+## Recent additions (Push XXXI — 2026-05-28, session 15, batches 192-197)
 
-### New cards (74 across batches 192-194)
+### New cards (127 across batches 192-197)
 - **Batch 192 (26 cards)** — Witherbloom B/G deep cuts focused on
   Pest tribal, drain payoffs, magecraft scalers, and keyword counter
   combos. Includes Stripblossom — the catalog exerciser for the new
@@ -16,6 +16,12 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   Lorehold (7), Prismari (7), Quandrix (6).
 - **Batch 194 (22 cards)** — compact cross-school fillers: Witherbloom
   (5), Silverquill (5), Lorehold (4), Prismari (4), Quandrix (4).
+- **Batch 195 (21 cards)** — more cross-school deep cuts: 5 Witherbloom,
+  4 each across Lorehold/Silverquill/Prismari/Quandrix.
+- **Batch 196 (21 cards)** — more variety: 5 Witherbloom, 4 each across
+  Lorehold/Silverquill/Prismari/Quandrix.
+- **Batch 197 (11 cards)** — polish round: 3 Witherbloom, 2 each across
+  Lorehold/Silverquill/Prismari/Quandrix.
 
 ### Engine improvements
 - **`Effect::RemoveKeywordCounter { what, keyword, amount }`** — CR
@@ -24,6 +30,10 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   other source) when the last counter is removed. Catalog exerciser
   ships in `witherbloom_stripblossom_b192`. Resolves the previous
   ⏳ note "RemoveKeywordCounter not yet implemented".
+- **`shortcut::target_any()`** — canonical "Creature ∨ Player ∨
+  Planeswalker" target filter (Lightning-Bolt shape). Future cards
+  can drop in `target_any()` instead of the verbose 3-way or-chain.
+  Existing call sites unchanged.
 
 ### UI / view-projection improvements
 - **`PermanentView.{shield,stun,finality}_counter_count: u32`** —
@@ -31,6 +41,9 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   booleans) so the client tooltip can render "(shielded ×3:
   absorbs 3 events)" and "(stunned ×2: skips 2 untap steps)"
   instead of opaque badges.
+- **Game-over modal final life totals** — the modal now shows
+  "You: 1 life — Opp: -3 life" under the win/loss/draw line so the
+  player sees how close the result was at a glance.
 
 ### Server improvements
 - **`MatchOutcome.winner: Option<Option<usize>>`** + **
@@ -39,8 +52,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   addition to `final_turn`. Populated at every exit path via a
   new `capture_outcome` helper so watchdog/disconnect paths
   produce the same outcome shape.
+- **`MatchStats.{wins, draws}`** + **`format_match_stats`
+  win/draw/unresolved rendering** in the operator log line. The
+  unresolved-count is computed as `total_matches - wins - draws`
+  so a delta between total and (wins + draws) tells the operator
+  how many matches the watchdog killed. Surfaces "stuck"
+  matches at a glance.
 
-### CR rule lock-in tests (5 new)
+### CR rule lock-in tests (7 new)
 - `cr_122_5_optional_move_declined_keeps_counters_in_place` +
   `cr_122_5_declined_move_leaves_destination_untouched` — pin the
   counter-move early-return path via Tester of the Tangential.
@@ -52,6 +71,17 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   ordering between damage and priority.
 - `cr_122_1b_remove_keyword_counter_drops_keyword` +
   `cr_122_1b_remove_one_of_two_keyword_counters_keeps_keyword`.
+- `cr_704_5d_token_in_graveyard_ceases_to_exist` — pins CR 704.5d
+  token cleanup SBA via an end-to-end Pestlord II → bolt → Pest
+  death flow. Token does NOT land in the graveyard.
+- `cr_704_5i_planeswalker_with_zero_loyalty_dies` — pins CR 704.5i
+  via Professor Dellian Fel with Loyalty counter manually zeroed
+  → SBA puts the PW in the graveyard.
+
+### Re-enabled tests
+- `academic_dispute_pumps_friendly_and_grants_reach` — previously
+  ignored under the stale "fight effect" oracle; now exercises the
+  current "+2/+0 + reach EOT" body. 0 ignored tests after this push.
 
 ### Observations & future items from this session
 - **`Effect::RemoveKeywordCounter` for tribal-strip flavour**: any
