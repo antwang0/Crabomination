@@ -5,6 +5,47 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXII — 2026-05-28, session 16, batches 198-200)
+
+### New cards (78 across batches 198-200)
+- **Batch 198 (40 cards)** — 8 per school across all five colleges
+  (Silverquill, Witherbloom, Lorehold, Prismari, Quandrix). Wide
+  cross-school spread using existing primitives.
+- **Batch 199 (25 cards)** — 5 per school. Slightly more nuanced
+  cards (Silverquill Smiter destroys power 4+, Lorehold Recurrence
+  Regrowth-style gy → hand, Prismari Surge pump + grant Trample,
+  Quandrix Pulse cantrip + counter, Inkling Beacon Flying Lifelink).
+- **Batch 200 (13 cards)** — round-200 mini-batch: Silverquill
+  Indrain (drain 4), Witherbloom Decay, Lorehold Smite (tapped
+  creature destroy), Prismari Notebook (scry 3 + draw), Quandrix
+  Anchorvine (4/4 Vigilance Fractal).
+
+### Engine / server / UI improvements
+- **Server (`crabomination_server/main.rs`)**: `MatchStats.seat_wins:
+  [u64; 4]` per-seat win histogram, rendered as `seat_wins=N/N/...`
+  in `format_match_stats` (only up to the highest non-zero seat,
+  so 1v1 doesn't surface padding zeros). Catches turn-order bias
+  in long bot-vs-bot ladders. 2 new tests:
+  `observe_winner_per_seat_clamps_at_seat_bucket_count`,
+  `format_match_stats_includes_seat_wins_when_present`.
+- **UI (`counter_tooltip.rs`)**: "Type: <subtypes>" line in the
+  alt-tooltip for creatures so tribal context (Inkling Wizard,
+  Pest, Spirit Warrior) shows at a glance. 2 new tooltip tests.
+
+### CR rule lock-in tests (6 new)
+- `cr_105_2_hybrid_pip_contributes_both_colors` — hybrid pip
+  contributes both color halves to `cost.colors()`.
+- `cr_105_2c_generic_only_cost_is_colorless` — generic-only cost
+  reports zero distinct colors.
+- `cr_105_2b_three_pips_register_as_multicolored` — three colored
+  pips register as multicolored.
+- `cr_121_5_scry_does_not_count_as_drawing` — scry doesn't bump
+  `cards_drawn_this_turn`.
+- `cr_119_4_loss_clamps_at_zero_or_below` — life loss clamps
+  without panicking on overflow.
+- `cr_122_1c_shield_pops_then_second_damage_connects` — shield
+  counter pops after first damage; second damage connects.
+
 ## Recent additions (Push XXXI — 2026-05-28, session 15, batches 192-197)
 
 ### New cards (127 across batches 192-197)
@@ -7829,22 +7870,22 @@ A → B → C → D → E
 These cards are in the cube or demo decks and need only existing primitives —
 no new engine features required:
 
-| Card | Missing Piece | Effort |
-|---|---|---|
-| Grim Lavamancer | Exile-2-from-GY additional cost | Low |
-| Bloodtithe Harvester | Sac-Blood ping (sac_cost activation) | Low |
-| Dread Return | Flashback sac-3-creatures cost | Medium |
-| Swan Song | Correct Bird token controller | Low |
-| Frantic Search | Untap cap (up to 3) | Low |
-| Windfall | Dynamic draw-equal-to-max-discarded | Medium |
-| Balefire Dragon | Dynamic "that much damage" (use creature's power) | Medium |
-| Dark Confidant | CMC-dependent life loss | High (needs card-CMC Value) |
-| Rofellos | Forest-count mana scaling | Medium |
-| Tidehollow Sculler | Exile-until-LTB primitive | High |
-| Ichorid | Graveyard-color trigger filter | Medium |
-| Coalition Relic | Charge-counter burst | Medium |
-| Tezzeret, Cruel Captain | Artifact-creature static pump | Low |
-| Karn, Scion of Urza | Artifact-count scaling Construct | Medium |
+| Card | Missing Piece | Effort | Status |
+|---|---|---|---|
+| Grim Lavamancer | Exile-2-from-GY additional cost | Low | ⏳ |
+| Bloodtithe Harvester | Sac-Blood ping (sac_cost activation) | Low | ⏳ |
+| Dread Return | Flashback sac-3-creatures cost | Medium | ⏳ |
+| Swan Song | Correct Bird token controller | Low | ✅ (done in earlier push — `PlayerRef::ControllerOf(Target(0))`) |
+| Frantic Search | Untap cap (up to 3) | Low | ✅ (done in earlier push — `up_to: Some(Value::Const(3))`) |
+| Windfall | Dynamic draw-equal-to-max-discarded | Medium | ⏳ |
+| Balefire Dragon | Dynamic "that much damage" (use creature's power) | Medium | ⏳ |
+| Dark Confidant | CMC-dependent life loss | High (needs card-CMC Value) | ⏳ |
+| Rofellos | Forest-count mana scaling | Medium | ✅ (done — `Times(Const(2), CountOf(Forest))`) |
+| Tidehollow Sculler | Exile-until-LTB primitive | High | ⏳ |
+| Ichorid | Graveyard-color trigger filter | Medium | ⏳ |
+| Coalition Relic | Charge-counter burst | Medium | ⏳ |
+| Tezzeret, Cruel Captain | Artifact-creature static pump | Low | ✅ (done — `crabomination/src/catalog/sets/decks/modern.rs:6365`) |
+| Karn, Scion of Urza | Artifact-count scaling Construct | Medium | ⏳ |
 
 ## New TODO suggestions (push modern_decks)
 

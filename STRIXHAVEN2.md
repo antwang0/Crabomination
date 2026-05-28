@@ -19,8 +19,36 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2894 (incl. synthesised variants — batches 155–197 add 652 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2972 (incl. synthesised variants — batches 155–200 add 730 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (claude/modern_decks, batches 198-200, claude/modern_decks): 78
+additional STX cards across all five colleges, plus:
+- **Batch 198 (40 cards)** — 8 per school. Wide cross-school
+  spread using existing primitives (etb_*, magecraft_*, dies_*,
+  on_attack_*, etc.). Cards include drain/edict/pump/scry/
+  draw/token mint/keyword grant patterns.
+- **Batch 199 (25 cards)** — 5 per school. Slightly more nuanced
+  cards (Silverquill Smiter destroys power 4+, Lorehold Recurrence
+  Regrowth-style gy → hand, Prismari Surge pump + grant Trample,
+  Quandrix Pulse cantrip + counter, Inkling Beacon Flying Lifelink).
+- **Batch 200 (13 cards)** — round-200 mini-batch: Silverquill
+  Indrain (drain 4), Witherbloom Decay (destroy), Lorehold Smite
+  (destroy tapped), Prismari Notebook (scry 3 + draw), Quandrix
+  Anchorvine (4/4 Vigilance Fractal), and others.
+
+Engine / server / UI improvements landed:
+- **Server**: `MatchStats.seat_wins: [u64; 4]` per-seat win histogram,
+  rendered in `format_match_stats` as `seat_wins=N/N/...`. Surfaces
+  turn-order bias in long bot-vs-bot ladders.
+- **UI** (`counter_tooltip.rs`): "Type: <subtypes>" line in the
+  alt-tooltip for creatures so tribal context (Inkling Wizard,
+  Pest, Spirit Warrior) shows at a glance.
+- **6 new CR rule lock-in tests**: CR 105.2 (hybrid pip color
+  attribution + monocolored vs multicolored), CR 121.5 (scry
+  doesn't count as drawing), CR 119.4 (life-loss clamps without
+  panic), CR 122.1c (shield counter pops then second damage
+  connects).
 
 Push (claude/modern_decks, batches 192-197, claude/modern_decks): 127
 additional STX cards across all five colleges, plus:
