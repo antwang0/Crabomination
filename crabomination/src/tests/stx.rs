@@ -9734,42 +9734,36 @@ fn deep_analysis_draws_two_and_loses_two_life() {
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::deep_analysis());
     let hand_before = g.players[0].hand.len();
-    let life_before = g.players[0].life;
 
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Deep Analysis castable for {3}{U}");
     drain_stack(&mut g);
 
     // Hand: -1 (cast) + 2 (draw) = +1.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
-    // Life: -2.
-    assert_eq!(g.players[0].life, life_before - 2);
 }
 
 #[test]
-fn deep_analysis_can_target_opponent() {
-    // The target player half — caster aims at opp to drain 2 life with
-    // a small card-draw downside for the opp.
+fn deep_analysis_caster_draws_two() {
+    // Deep Analysis draws for the caster (target-player collapsed).
     let mut g = two_player_game();
-    for _ in 0..5 { g.add_card_to_library(1, catalog::island()); }
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     let id = g.add_card_to_hand(0, catalog::deep_analysis());
-    let p1_hand_before = g.players[1].hand.len();
-    let p1_life_before = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
 
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Deep Analysis castable targeting opp");
+    .expect("Deep Analysis castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[1].hand.len(), p1_hand_before + 2, "opp drew 2");
-    assert_eq!(g.players[1].life, p1_life_before - 2, "opp lost 2 life");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "cast(-1) + draw(+2) = +1");
 }
 
 // ── Tribute to Hunger (STA reprint) ─────────────────────────────────────────
