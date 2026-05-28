@@ -19,8 +19,92 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2767 (incl. synthesised variants — batches 155–191 add 525 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2841 (incl. synthesised variants — batches 155–194 add 599 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (claude/modern_decks, batches 192-194, claude/modern_decks): 74
+additional STX cards across all five colleges, plus a new
+Effect::RemoveKeywordCounter engine variant (CR 122.1b counterpart),
+PermanentView.{shield,stun,finality}_counter_count for explicit
+counter-count tooltip rendering, and MatchOutcome.{winner,
+final_life_totals} for richer match-end analytics.
+
+**Batch 194 (22 cards)** — compact cross-school fillers:
+- Witherbloom (5): Pestswarmer (ETB 2 Pests), Smolderscholar
+  (magecraft drain target), Lifeshare (gain 3), Sapsage (ETB +3
+  life + magecraft +1), Tombsworn (4/3 vanilla).
+- Silverquill (5): Wardstamp (+0/+2 + vigilance EOT), Tutorquill
+  (4/3 flying lifelink), Drainscholar (ETB drain 2 + magecraft
+  drain 1), Glyphstudent (2/2 vigilance), Exilescribe (opp
+  discards 1, you draw 1).
+- Lorehold (4): Boltscribe (on-attack ping 1), Vanguard II (2/2
+  first strike spirit), Bolt (3-damage any-target instant),
+  Mausolescholar (on-attack mint Spirit).
+- Prismari (4): Sparkboost (+2/+0 EOT), Tinkerlord (4/4 ETB
+  Treasure), Magmacrafter (magecraft ping), Drakeforge (4/4 flying
+  haste Drake).
+- Quandrix (4): Cantrip II (instant draw 2), Fractalmage (ETB
+  Fractal+2), Treeshepherd (3/3 vanilla), Multiprover (magecraft
+  scry+draw).
+
+**Batch 193 (26 cards)** — cross-school spread of deep cuts:
+- Silverquill (6): Inkbreaker (on-attack lifegain), Sealkeeper
+  (vigilance cleric), Drainwight (magecraft drain vampire),
+  Inkflood (drain 2 + draw 1), Inklingbond (2/2 flying inkling
+  cleric), Pridescholar (ETB +2 life).
+- Lorehold (7): Stoneward (1/3 vigilance), Ravenrider (3/2 haste),
+  Boltstudent (2-damage instant), Spiritsummoner (ETB 2 Spirits),
+  Pyrescholar (magecraft ping), Sparkscholar (magecraft +1/+0),
+  Soulsign (target gains lifelink + vigilance).
+- Prismari (7): Pyromancer (magecraft ping each opp), Cantrap
+  (instant draw 1), Floodlord (on-attack loot flyer), Wavewright
+  (ETB scry + draw), Magmaforge (burn 3 + Treasure), Sparkscribe
+  (magecraft scry), Burnbloom (ETB ping 2).
+- Quandrix (6): Counterleaf (magecraft scry), Vinescholar (vanilla
+  2/2 for {1}{G}), Fractalstamp (sorcery: mint Fractal+2),
+  Drawmage (magecraft draw), Treesage (5/5 trample for {3}{G}{G}),
+  Skybinder (2/3 flying wizard).
+
+**Batch 192 (26 cards)** — Witherbloom B/G deep cuts focused on
+the school theme — Pest tribal payoffs, drain effects, magecraft
+scalers, Vampire/Plant bodies, curse-style removal, and keyword
+counter combos. Includes the new Witherbloom Stripblossom
+exerciser for `Effect::RemoveKeywordCounter`.
+
+Engine improvements landed in this push:
+- **`Effect::RemoveKeywordCounter { what, keyword, amount }`** —
+  CR 122.1b counterpart to AddKeywordCounter. Clamped removal at
+  the source's actual count; drops the granted keyword (assuming
+  no other source) when the last counter is removed. Witherbloom
+  Stripblossom (b192) ships as the catalog exerciser. Tests:
+  `cr_122_1b_remove_keyword_counter_drops_keyword`,
+  `cr_122_1b_remove_one_of_two_keyword_counters_keeps_keyword`,
+  `witherbloom_stripblossom_b192_removes_trample_counter`.
+
+UI / view-projection improvements:
+- **`PermanentView.shield_counter_count: u32`,
+  `stun_counter_count: u32`, `finality_counter_count: u32`** —
+  explicit counts (in addition to the existing booleans) so the
+  client tooltip can render "(shielded ×3: absorbs 3 events)" and
+  "(stunned ×2: skips 2 untap steps)" instead of opaque badges.
+
+Server improvements:
+- **`MatchOutcome.winner: Option<Option<usize>>`** + **
+  `final_life_totals: Vec<i32>`** — captures the winning seat (or
+  None for a draw) and per-seat end-of-game life totals, in
+  addition to the existing `final_turn`. Populated at every
+  exit path of `run_match_full` via the new `capture_outcome`
+  helper so watchdog/disconnect paths produce the same shape.
+
+CR rule lock-in tests added in this push:
+- `cr_122_5_optional_move_declined_keeps_counters_in_place` +
+  `cr_122_5_declined_move_leaves_destination_untouched`.
+- `cr_122_2_counters_cease_to_exist_on_zone_change` (documents
+  current engine behavior — counters persist for the
+  Felisa-style pattern; strict CR 122.2 clearing is still ⏳).
+- `cr_117_5_sba_kills_before_next_priority_window`.
+- `cr_122_1b_remove_keyword_counter_drops_keyword` +
+  `cr_122_1b_remove_one_of_two_keyword_counters_keeps_keyword`.
 
 Push (modern_decks, batches 187-191, claude/modern_decks): 95 more
 STX cards across all five colleges, plus a new PermanentView field

@@ -5,6 +5,66 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXI — 2026-05-28, session 15, batches 192-194)
+
+### New cards (74 across batches 192-194)
+- **Batch 192 (26 cards)** — Witherbloom B/G deep cuts focused on
+  Pest tribal, drain payoffs, magecraft scalers, and keyword counter
+  combos. Includes Stripblossom — the catalog exerciser for the new
+  `Effect::RemoveKeywordCounter` engine variant.
+- **Batch 193 (26 cards)** — cross-school deep cuts: Silverquill (6),
+  Lorehold (7), Prismari (7), Quandrix (6).
+- **Batch 194 (22 cards)** — compact cross-school fillers: Witherbloom
+  (5), Silverquill (5), Lorehold (4), Prismari (4), Quandrix (4).
+
+### Engine improvements
+- **`Effect::RemoveKeywordCounter { what, keyword, amount }`** — CR
+  122.1b counterpart to AddKeywordCounter. Clamped removal at the
+  source's actual count; drops the granted keyword (assuming no
+  other source) when the last counter is removed. Catalog exerciser
+  ships in `witherbloom_stripblossom_b192`. Resolves the previous
+  ⏳ note "RemoveKeywordCounter not yet implemented".
+
+### UI / view-projection improvements
+- **`PermanentView.{shield,stun,finality}_counter_count: u32`** —
+  explicit counter counts (in addition to the existing has_*
+  booleans) so the client tooltip can render "(shielded ×3:
+  absorbs 3 events)" and "(stunned ×2: skips 2 untap steps)"
+  instead of opaque badges.
+
+### Server improvements
+- **`MatchOutcome.winner: Option<Option<usize>>`** + **
+  `final_life_totals: Vec<i32>`** — captures the winning seat (or
+  None for a draw) and per-seat end-of-game life totals, in
+  addition to `final_turn`. Populated at every exit path via a
+  new `capture_outcome` helper so watchdog/disconnect paths
+  produce the same outcome shape.
+
+### CR rule lock-in tests (5 new)
+- `cr_122_5_optional_move_declined_keeps_counters_in_place` +
+  `cr_122_5_declined_move_leaves_destination_untouched` — pin the
+  counter-move early-return path via Tester of the Tangential.
+- `cr_122_2_counters_cease_to_exist_on_zone_change` — documents
+  current engine behavior (counters persist for Felisa-style
+  patterns); flip the assertion when strict CR 122.2 clearing
+  lands.
+- `cr_117_5_sba_kills_before_next_priority_window` — pins SBA
+  ordering between damage and priority.
+- `cr_122_1b_remove_keyword_counter_drops_keyword` +
+  `cr_122_1b_remove_one_of_two_keyword_counters_keeps_keyword`.
+
+### Observations & future items from this session
+- **`Effect::RemoveKeywordCounter` for tribal-strip flavour**: any
+  card that should strip Trample/Flying/Lifelink off an opp creature
+  can now compose against this primitive. STX has no in-set printing
+  but the engine support is here for future synthesised variants.
+- **Strict CR 122.2 zone-change counter clearing**: still ⏳.
+  Counters currently persist across zone changes (intentional for
+  Felisa-style "dies with counters, re-emerge with same counters"
+  patterns). When strict clearing lands, the
+  `cr_122_2_counters_cease_to_exist_on_zone_change` test should be
+  flipped to assert 0.
+
 ## Recent additions (Push XXX — 2026-05-28, session 14, batches 187-191)
 
 ### New cards (95 across batches 187-191)

@@ -17883,3 +17883,138 @@ pub fn quandrix_skybinder_b193() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 194 (modern_decks) — Quandrix G/U compact additions ─────────────
+
+/// Quandrix Cantrip II (b194) — {1}{U} Instant. Draw 2 cards.
+pub fn quandrix_cantrip_ii_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Cantrip II (b194)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalmage (b194) — {2}{G}{U} 2/4 Wizard.
+/// ETB: create a 2/2 Fractal with two +1/+1 counters.
+pub fn quandrix_fractalmage_b194() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Fractalmage (b194)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Treeshepherd (b194) — {2}{G} 3/3 Plant Druid.
+/// Simple curve filler — above-rate 3/3 for {2}{G}.
+pub fn quandrix_treeshepherd_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Treeshepherd (b194)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Multiprover (b194) — {2}{U} 2/2 Wizard.
+/// Magecraft: scry 1 and draw 1.
+pub fn quandrix_multiprover_b194() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry_and_draw;
+    CardDefinition {
+        name: "Quandrix Multiprover (b194)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

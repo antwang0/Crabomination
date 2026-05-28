@@ -21866,3 +21866,134 @@ pub fn lorehold_soulsign_b193() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 194 (modern_decks) — Lorehold R/W compact additions ─────────────
+
+/// Lorehold Boltscribe (b194) — {2}{R} 3/2 Human Wizard.
+/// On attack: deal 1 damage to any target.
+pub fn lorehold_boltscribe_b194() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_ping_any;
+    CardDefinition {
+        name: "Lorehold Boltscribe (b194)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Vanguard II (b194) — {1}{W} 2/2 Spirit Soldier First Strike.
+/// Cheap Spirit aggro body.
+pub fn lorehold_vanguard_ii_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vanguard II (b194)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Bolt (b194) — {R} Instant. Deal 3 damage to any target.
+pub fn lorehold_bolt_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bolt (b194)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Mausolescholar (b194) — {1}{R}{W} 2/2 Cleric.
+/// On attack: create a Lorehold Spirit (2/2).
+pub fn lorehold_mausolescholar_b194() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_mint_lorehold_spirit;
+    CardDefinition {
+        name: "Lorehold Mausolescholar (b194)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_mint_lorehold_spirit()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

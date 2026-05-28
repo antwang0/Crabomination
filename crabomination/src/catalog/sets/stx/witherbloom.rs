@@ -21999,3 +21999,158 @@ pub fn witherbloom_saplinger_b192() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 194 (modern_decks) — Witherbloom B/G compact additions ──────────
+
+/// Witherbloom Pestswarmer (b194) — {3}{B}{G} 3/4 Plant Warlock.
+/// ETB: create 2 Pest tokens.
+pub fn witherbloom_pestswarmer_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestswarmer (b194)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Smolderscholar (b194) — {1}{B} 1/2 Human Warlock.
+/// Magecraft: drain target opponent for 1 (collapses to drain each opp).
+pub fn witherbloom_smolderscholar_b194() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_drain;
+    CardDefinition {
+        name: "Witherbloom Smolderscholar (b194)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifeshare (b194) — {1}{G} Sorcery.
+/// Gain 3 life.
+pub fn witherbloom_lifeshare_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifeshare (b194)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapsage (b194) — {2}{G}{G} 3/3 Plant Druid.
+/// ETB: gain 3 life. Magecraft: gain 1 life.
+pub fn witherbloom_sapsage_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapsage (b194)",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3), magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Tombsworn (b194) — {3}{B} 4/3 Vampire Warlock.
+/// Vanilla 4/3 for {3}{B}: above-rate body.
+pub fn witherbloom_tombsworn_b194() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Tombsworn (b194)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
