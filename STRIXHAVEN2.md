@@ -22,6 +22,48 @@ Two adjacent catalogs:
 | STX (327 cards) | 2578 (incl. synthesised variants — batches 155–168 add 336 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
+Push (modern_decks, batches 169-172, claude/modern_decks): 69 additional
+new STX cards across all five colleges, plus engine improvements:
+
+**Batch 169 (40 cards, 8 per college)** — drain templates, magecraft
+engines, tribal payoffs, finality-counter granters. Each card ships
+with a functionality test.
+
+**Batch 170 (8 cards)** — first-wave exercises of the newly wired
+`CounterType::Shield` (CR 122.1c). Each college gets one shield-counter
+card: Lorehold Shieldbearer (ETB shield)+Aegisblade (sorcery), Silverquill
+Aegismage (ETB shield friendly)+Wardward (instant 2 shields), Witherbloom
+Vitalist (ETB shield + magecraft gain-life), Prismari Forgesmith (ETB
+shield + magecraft Treasure), Quandrix Hydromancer (ETB shield + magecraft
+draw).
+
+**Batch 171 (11 cards)** — mixed shapes: combat-damage triggers
+(Echocrasher, Lifeleech), sacrifice-cost activations (Sapsprite),
+magecraft variants (Quillsmith, Fractalmancer), and vanilla bodies.
+
+**Batch 172 (10 cards)** — additional drain/magecraft/treasure cards
+plus a counter-unless-paid counter-spell (Quandrix Sumcheck).
+
+Engine improvements landed in this push:
+- **`CounterType::Shield` (CR 122.1c)** now creates a destroy-
+  replacement + damage-prevention pair. Tests:
+  `cr_122_1c_shield_counter_prevents_destroy_and_pops`, etc.
+- **CR 704.5n — Equipment unattach**: SBA pass clears `attached_to`
+  when the linked card is no longer a creature on the battlefield;
+  the Equipment stays in play.
+- **`fire_combat_damage_to_player_triggers` — YourControl scope**:
+  combat triggers can now use `YourControl` for "whenever a creature
+  you control deals combat damage" listeners.
+- **`PermanentView.has_shield_counters`**: new field paired with
+  `has_finality_counters` for client badge rendering.
+- **`MatchOutcome.final_turn`** + `MatchStats.observe_turns`: server
+  now logs final turn count per match + cumulative avg-turns metric.
+- **Bot AI**: attack heuristic now swings shielded creatures (first
+  damage absorbed → safe) and first-strikers that out-power blockers.
+- **Counter-state UI badges**: alt-tooltip surfaces "(shielded)",
+  "(finality)", "(stunned)" highlights so players see the engine
+  state without scrolling counters.
+
 Push (modern_decks, batch 168, claude/modern_decks): 3 more Silverquill
 premium cards exercising new engine features:
 - Silverquill Banisher (sorcery): first card using the new
