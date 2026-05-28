@@ -5,7 +5,18 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
-## Recent additions (Push XXXIII — 2026-05-28, session 17, batch 202)
+## Recent additions (Push XXXIII — 2026-05-28, session 17, batches 202-204)
+
+### New cards (130 across batches 202-204)
+- **Batch 204 (21 cards)** — cross-school round 4: Silverquill (5),
+  Witherbloom (5), Lorehold (5), Prismari (3), Quandrix (3). Curve
+  fillers and premium top-ends (Inkling Champion 3/3 flying vigilance,
+  Pest Devourer II 4/4 deathtouch, Prismari Stormrider 4/4 flying haste).
+  11 functionality tests.
+- **Batch 203 (34 cards)** — compact cross-school round:
+  Silverquill (10), Witherbloom (7), Lorehold (6), Prismari (6),
+  Quandrix (6). Mid-curve apprentices, drain spells, mint-spirits,
+  cantrips. 34 functionality tests.
 
 ### New cards (75 across batch 202)
 - **Batch 202 (75 cards)** — nuanced expansion focused on Silverquill
