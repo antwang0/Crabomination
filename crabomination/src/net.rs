@@ -445,6 +445,24 @@ pub struct PermanentView {
     /// (crown icon, gold name border).
     #[serde(default)]
     pub is_legendary: bool,
+    /// True when the permanent has one or more +1/+1 counters. Surfaced
+    /// so clients can badge boosted creatures with a "+1/+1" overlay
+    /// without scanning the full `counters` vec. Populated by
+    /// `project_permanent`. Push (modern_decks): added in batch 174.
+    #[serde(default)]
+    pub has_plus_one_counters: bool,
+    /// True when the permanent has one or more -1/-1 counters. Surfaced
+    /// so clients can badge damaged creatures with a "-1/-1" overlay
+    /// without scanning the full `counters` vec. Populated by
+    /// `project_permanent`. Push (modern_decks): added in batch 174.
+    #[serde(default)]
+    pub has_minus_one_counters: bool,
+    /// Total number of counters on this permanent (sum across all
+    /// counter types). Surfaced for client UIs that want a single
+    /// counter-count badge (e.g. on planeswalkers and Sagas). Populated
+    /// by `project_permanent`. Push (modern_decks): added in batch 174.
+    #[serde(default)]
+    pub total_counter_count: u32,
 }
 
 impl PermanentView {

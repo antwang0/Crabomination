@@ -5,6 +5,74 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXVII — 2026-05-28, session 11, batches 174-179)
+
+### Engine improvements
+- **`add_finality_to_target_creature()` and `add_shield_to_target_creature()`
+  effect shortcuts**: collapse the boilerplate `Effect::AddCounter {
+  what: target_filtered(Creature), kind: Finality/Shield, amount: 1 }`
+  call into one-line helpers. Used by Silverquill Doomgrant (b176),
+  Silverquill Aegis (b176), Witherbloom Doomsign (b176). These mirror
+  the existing `magecraft_add_finality_self` / `magecraft_add_shield_self`
+  but for printed grants targeting a creature.
+
+### Server/view improvements
+- **`PermanentView.has_plus_one_counters`** / **`has_minus_one_counters`**
+  / **`total_counter_count`**: three new boolean/count fields on the
+  permanent view. The boolean flags let the client surface "(boosted:
+  +1/+1 counters)" and "(weakened: -1/-1 counters)" highlights in the
+  tooltip without scanning the full `counters` vec; the total count is
+  a UI hint for planeswalker / Saga overlays. Populated by
+  `project_permanent`.
+
+### UI improvements
+- **counter_tooltip**: appends "(boosted)" / "(weakened)" lines when
+  the permanent carries +1/+1 / -1/-1 counters. Cleans up the existing
+  shield / finality / stun highlight block.
+
+### New cards (71 across batches 174-179)
+- Batch 174 (30 cards): 6 Silverquill + 7 Witherbloom + 6 Lorehold +
+  5 Prismari + 6 Quandrix. Mixes magecraft variants, on-attack drains,
+  ETB drains/scrys, token-minters, and a CounterUnlessPaid counterspell.
+- Batch 175 (19 cards): 7 Silverquill + 3 Witherbloom + 3 Lorehold +
+  3 Prismari + 3 Quandrix. Power-≥4 exile, anthem +1/+1 to Spirits,
+  on-attack loot, 3-damage burn, each-opp ping, 4-damage + draw, ETB
+  2-Treasures, magecraft target pump, 3-counter Fractal mint, ETB-draw.
+- Batch 176 (3 cards): finality/shield counter granters that exercise
+  the new `add_*_to_target_creature` effect shortcuts.
+- Batch 177 (8 cards): Inkling +1/+0 anthem, magecraft drain, ETB drain,
+  magecraft target pump, magecraft each-opp ping, ETB scry-2 + draw,
+  4-counter Fractal mint, haste flying elemental with magecraft ping.
+- Batch 178 (7 cards): drain/draw cantrip, magecraft gain life, ETB
+  gain life Reach, 3-mana instant drain, sorcery-speed Spark activated
+  ability, ETB draw, magecraft scry+draw.
+- Batch 179 (3 cards): Inkling tribal — black tutor spell, on-attack
+  drain Inkling Flying body, and a 1-mana Inkling Flying soldier.
+
+### CR rule lock-in tests (3 new)
+- `cr_121_5_reveal_until_find_does_not_count_as_draw` (CR 121.5 —
+  RevealUntilFind puts into hand, not draws, so CardDrawn doesn't fire).
+- `cr_506_4_destroyed_attacker_is_removed_from_combat` (CR 506.4 —
+  destroying an attacker mid-combat prunes it from the attack list).
+- `cr_119_7_drain_loses_life_from_each_opp_and_gains_life_for_caster`
+  (CR 119.7 — drain shape: each opp -N, you +N).
+
+### Observations & future items from this session
+- **`CounterType::Keyword(Keyword)`** (CR 122.1b) — still ⏳. Adding it
+  would require Hash/Eq on the inner Keyword enum (currently only Eq +
+  PartialEq), plus a layer-6 injection step in `compute_battlefield`
+  that walks the counter map and synthesises an `AddKeyword` for each
+  unique keyword counter type on the permanent. ~50 lines + tests for
+  the join-with-base-keyword path.
+- **Bot AI doesn't model magecraft pump / drain triggers** when
+  considering whether to cast an instant. The existing tactic only
+  looks at the immediate burn/draw value; a cast-spell-cycle that
+  triggers +1/+1 to a 4-power attacker is missed. Future work: a
+  trigger-tracker that the bot consults when scoring spell casts.
+- **Lesson sideboard** (Learn mechanic) — still approximated as Draw 1.
+  Could land as a separate `LessonsSideboard` field on `Player` with
+  a `Learn` decision prompt and an `Effect::PutInLearnedZone` body.
+
 ## Recent additions (Push XXVI — 2026-05-28, session 10, batches 169-171)
 
 ### Engine improvements

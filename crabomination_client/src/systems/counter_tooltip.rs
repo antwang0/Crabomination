@@ -246,6 +246,18 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.has_stun_counters {
         lines.push(String::from("(stunned: next untap is skipped)"));
     }
+    // Surface +1/+1 and -1/-1 counter highlights — the most common
+    // counter shapes carry a P/T delta that's often more important than
+    // the printed body. Push (modern_decks batch 174): added the
+    // has_plus_one_counters / has_minus_one_counters helpers on
+    // PermanentView so the client doesn't have to scan the `counters`
+    // vec; surface them here.
+    if p.has_plus_one_counters {
+        lines.push(String::from("(boosted: +1/+1 counters)"));
+    }
+    if p.has_minus_one_counters {
+        lines.push(String::from("(weakened: -1/-1 counters)"));
+    }
 
     if p.tapped {
         lines.push(String::from("(tapped)"));
@@ -320,6 +332,9 @@ mod tests {
             ward_cost: 0,
             mana_value: 0,
             is_legendary: false,
+            has_plus_one_counters: false,
+            has_minus_one_counters: false,
+            total_counter_count: 0,
         }
     }
 

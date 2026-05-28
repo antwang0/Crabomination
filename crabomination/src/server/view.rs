@@ -253,6 +253,9 @@ fn project_permanent(
         }).unwrap_or(0),
         mana_value: card.definition.cost.cmc(),
         is_legendary: card.definition.supertypes.contains(&crate::card::Supertype::Legendary),
+        has_plus_one_counters: card.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0,
+        has_minus_one_counters: card.counter_count(crate::card::CounterType::MinusOneMinusOne) > 0,
+        total_counter_count: card.counters.values().sum(),
     }
 }
 

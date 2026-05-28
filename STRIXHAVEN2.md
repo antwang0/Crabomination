@@ -19,10 +19,77 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2578 (incl. synthesised variants — batches 155–168 add 336 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2649 (incl. synthesised variants — batches 155–179 add 407 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batches 169-172, claude/modern_decks): 69 additional
+Push (modern_decks, batches 174-179, claude/modern_decks): 71 additional
+new STX cards across all five colleges, plus engine + UI + server
+improvements:
+
+**Batch 174 (30 cards)** — first batch of additional cards across all
+schools: 6 Silverquill, 7 Witherbloom, 6 Lorehold, 5 Prismari, 6
+Quandrix. Mixes magecraft variants, on-attack drains, ETB drains/scrys,
+token-minters, and a CounterUnlessPaid counterspell.
+
+**Batch 175 (19 cards)** — second wave: 7 Silverquill (including a
+power-≥4 exile, finality/shield-via-counter cards), 3 Witherbloom
+(including a per-creature-died Pest minter), 3 Lorehold (anthem +1/+1
+to Spirits, on-attack loot, 3-damage burn), 3 Prismari (each-opp ping,
+4-damage instant + draw, ETB 2-Treasures), 3 Quandrix (magecraft target
+pump, 3-counter Fractal mint, ETB-draw).
+
+**Batch 176 (3 cards + engine work)** — exercises new
+`add_finality_to_target_creature` and `add_shield_to_target_creature`
+helper effects. Silverquill Doomgrant (finality grant), Silverquill
+Aegis (shield grant), Witherbloom Doomsign (finality + ping combo
+flow). Each card ships with a functionality test that exercises the
+counter wire, plus a end-to-end test for the doomgrant → next-death →
+exile flow per CR 122.1h.
+
+**Batch 177 (8 cards)** — more variety across schools: 3 Silverquill
+(Inkling +1/+0 anthem, magecraft drain, ETB drain 2), 2 Lorehold
+(magecraft target +1/+1, magecraft each-opp ping), 2 Quandrix (ETB
+scry-2 + draw, ETB 4-counter Fractal mint), 1 Prismari (haste flying
+elemental with magecraft ping).
+
+**Batch 178 (7 cards)** — drain/draw cantrip, magecraft gain life,
+ETB gain life Reach, 3-mana instant drain, sorcery-speed Spark
+activated ability, ETB draw, magecraft scry+draw.
+
+**Batch 179 (3 cards)** — Inkling tribal expansion: black tutor
+spell, on-attack drain Inkling Flying body, and a 1-mana Inkling
+Flying soldier.
+
+Engine improvements landed in this push:
+- **`add_finality_to_target_creature()` / `add_shield_to_target_creature()`**
+  effect shortcuts that wire the CR 122.1c/h grant patterns to printed
+  cards beyond the magecraft-self variants. Cards: Silverquill
+  Doomgrant (b176), Silverquill Aegis (b176), Witherbloom Doomsign
+  (b176).
+
+Server/view improvements landed in this push:
+- **`PermanentView.has_plus_one_counters`** / **`has_minus_one_counters`** /
+  **`total_counter_count`**: three new view fields that surface the
+  most common counter-state highlights without scanning the full
+  `counters` vec. Lets the client badge boosted/weakened creatures and
+  show a total-counter overlay on planeswalkers/Sagas.
+
+Client/UI improvements landed in this push:
+- **counter_tooltip** now surfaces "(boosted: +1/+1 counters)" and
+  "(weakened: -1/-1 counters)" lines next to the existing shield /
+  finality / stun highlights, leveraging the new PermanentView fields.
+
+CR rule lock-in tests added in this push:
+- `cr_121_5_reveal_until_find_does_not_count_as_draw` — verifies that
+  RevealUntilFind doesn't fire CardDrawn (CR 121.5 — "put into hand"
+  is not "draws").
+- `cr_506_4_destroyed_attacker_is_removed_from_combat` — verifies that
+  destroying an attacker mid-combat removes it from `attacking_ids()`
+  per CR 506.4.
+- `cr_119_7_drain_loses_life_from_each_opp_and_gains_life_for_caster` —
+  pins the canonical Drain shape (each opp -N, you +N) per CR 119.7.
+
+Previous push (modern_decks, batches 169-172, claude/modern_decks): 69 additional
 new STX cards across all five colleges, plus engine improvements:
 
 **Batch 169 (40 cards, 8 per college)** — drain templates, magecraft

@@ -4146,6 +4146,33 @@ pub mod shortcut {
         })
     }
 
+    /// Add a finality counter to a target creature you control. Used as
+    /// the resolution body of cards that grant the finality "exile on
+    /// death" rider to a target (Doom Whisperer-style enabler — though
+    /// Doom Whisperer's printed line is "you may put a -1/-1 counter on
+    /// it", this helper supports the "+finality counter" branch). Push
+    /// (modern_decks batch 175).
+    pub fn add_finality_to_target_creature() -> Effect {
+        use crate::card::CounterType;
+        Effect::AddCounter {
+            what: target_filtered(crate::card::SelectionRequirement::Creature),
+            kind: CounterType::Finality,
+            amount: Value::Const(1),
+        }
+    }
+
+    /// Add a shield counter to a target creature. Used by cards that
+    /// grant the CR 122.1c "shield" protection to a creature (Aegisblade,
+    /// Wardward analogs). Push (modern_decks batch 175).
+    pub fn add_shield_to_target_creature() -> Effect {
+        use crate::card::CounterType;
+        Effect::AddCounter {
+            what: target_filtered(crate::card::SelectionRequirement::Creature),
+            kind: CounterType::Shield,
+            amount: Value::Const(1),
+        }
+    }
+
     /// Predicate shortcut: "You have at least `n` cards matching
     /// `filter` in your graveyard." Wraps the canonical spell-mastery
     /// / delirium-threshold / Murderous-Cut-style gate pattern:
