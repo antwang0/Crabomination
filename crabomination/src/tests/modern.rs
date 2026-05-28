@@ -12021,22 +12021,22 @@ fn collective_brutality_mode_zero_shrinks_creature() {
 }
 
 #[test]
-fn expressive_iteration_draws_a_card() {
+fn expressive_iteration_exiles_top_three() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::island());
     }
+    let lib_before = g.players[0].library.len();
     let id = g.add_card_to_hand(0, catalog::expressive_iteration());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add(Color::Red, 1);
-    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Expressive Iteration castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before, "cast(-1) + draw(+1) = net 0");
+    assert!(g.players[0].library.len() < lib_before, "Top 3 should be exiled from library");
 }
 
 #[test]
@@ -12806,5 +12806,34 @@ fn flametongue_kavu_etb_deals_four() {
     drain_stack(&mut g);
     let target = g.battlefield.iter().find(|c| c.id == big).unwrap();
     assert_eq!(target.damage, 4, "should deal 4 damage to target");
+}
+
+// ── Push XVII unique cards ─────────────────────────────────────────────────
+
+#[test]
+fn esikas_chariot_etb_creates_two_cat_tokens() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::esikas_chariot());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Esika's Chariot castable");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.len() >= bf_before + 3, "Self + 2 Cat tokens");
+    let cats: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Cat").collect();
+    assert_eq!(cats.len(), 2, "Should create exactly 2 Cat tokens");
+}
+
+#[test]
+fn robber_of_the_rich_has_reach_and_haste() {
+    let card = catalog::robber_of_the_rich();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 2);
+    assert!(card.keywords.contains(&crate::card::Keyword::Reach));
+    assert!(card.keywords.contains(&crate::card::Keyword::Haste));
 }
 

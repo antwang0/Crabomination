@@ -11396,3 +11396,59 @@ pub fn bonecrusher_giant() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Esika's Chariot — {3}{G} Legendary Artifact — Vehicle 4/4.
+/// When this enters, create two 2/2 green Cat creature tokens.
+/// Crew 2. (Vehicle/Crew omitted — acts as ETB token producer.)
+pub fn esikas_chariot() -> CardDefinition {
+    use crate::card::{Supertype, TokenDefinition};
+    CardDefinition {
+        name: "Esika's Chariot",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Artifact],
+        supertypes: vec![Supertype::Legendary],
+        power: 4,
+        toughness: 4,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: TokenDefinition {
+                    name: "Cat".into(),
+                    power: 2,
+                    toughness: 2,
+                    keywords: vec![],
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Green],
+                    supertypes: vec![],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Cat],
+                        ..Default::default()
+                    },
+                    activated_abilities: vec![],
+                    triggered_abilities: vec![],
+                },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Robber of the Rich — {1}{R} Creature — Human Archer Rogue 2/2.
+/// Reach, Haste. (Cast-from-opponent's-library ability omitted.)
+pub fn robber_of_the_rich() -> CardDefinition {
+    CardDefinition {
+        name: "Robber of the Rich",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Archer, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Reach, Keyword::Haste],
+        ..Default::default()
+    }
+}

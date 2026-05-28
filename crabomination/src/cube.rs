@@ -923,6 +923,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         goblin_rabblemaster,
         // ── modern_decks batch 103 (cube expansion) ──
         death_greeters_champion,
+        robber_of_the_rich,
         detectives_phoenix,
         // ── modern_decks-15 ──
         strangle,
@@ -1147,8 +1148,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-18 ──
         scavenging_ooze,
         // ── New cube cards ──
-        explore,
-        elder_gargaroth,
+        esikas_chariot,
     ];
     if pair_contains(pair, Color::White) {
         v.push(watchwolf);
