@@ -3682,5 +3682,21 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_beastcaller_b189,
         super::quandrix::quandrix_cantrip_b189,
         super::quandrix::quandrix_vinescaler_ii_b189,
+        // ── batch 190 (modern_decks): keyword counter combo cards ──
+        super::silverquill::silverquill_doublecurse_b190,
+        super::silverquill::silverquill_wardseal_b190,
+        super::silverquill::silverquill_lifeward_b190,
+        super::witherbloom::witherbloom_doublegrowth_b190,
+        super::witherbloom::witherbloom_venomgift_b190,
+        super::witherbloom::witherbloom_reachsage_b190,
+        super::lorehold::lorehold_doubleblast_b190,
+        super::lorehold::lorehold_bondseal_b190,
+        super::lorehold::lorehold_phoenixmage_b190,
+        super::prismari::prismari_doublecharge_b190,
+        super::prismari::prismari_skydiver_b190,
+        super::prismari::prismari_sparkforge_ii_b190,
+        super::quandrix::quandrix_doublegrowth_b190,
+        super::quandrix::quandrix_riftleaper_b190,
+        super::quandrix::quandrix_sapleader_b190,
     ]
 }

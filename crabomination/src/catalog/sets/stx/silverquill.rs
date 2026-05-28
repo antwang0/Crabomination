@@ -23331,6 +23331,104 @@ pub fn inkling_spellguard_b187() -> CardDefinition {
     }
 }
 
+// ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
+
+/// Silverquill Doublecurse (b190) — {1}{B} Sorcery.
+/// Target creature gets a deathtouch counter and a flying counter.
+pub fn silverquill_doublecurse_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Doublecurse (b190)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Deathtouch,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Wardseal (b190) — {1}{W} Sorcery.
+/// Put a vigilance counter on target creature you control.
+pub fn silverquill_wardseal_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Wardseal (b190)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Vigilance,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Lifeward (b190) — {W}{B} Instant.
+/// Target creature gets a lifelink counter.
+pub fn silverquill_lifeward_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lifeward (b190)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Lifelink,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 189 (modern_decks) — Silverquill drain + Inkling tribal ─────────
 
 /// Silverquill Drainmaster II (b189) — {2}{B}{B} 3/3 Vampire Warlock.

@@ -16821,6 +16821,115 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     }
 }
 
+// ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
+
+/// Quandrix Doublegrowth (b190) — {1}{G}{U} Sorcery.
+/// Target creature gets a trample counter and a flying counter.
+pub fn quandrix_doublegrowth_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Doublegrowth (b190)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Riftleaper (b190) — {2}{U} 2/2 Fractal Wizard.
+/// ETB self-flying counter.
+pub fn quandrix_riftleaper_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Riftleaper (b190)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: Selector::This,
+            keyword: Keyword::Flying,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Sapleader (b190) — {3}{G}{U} 4/4 Fractal.
+/// ETB +1/+1 counter on self + reach counter on self.
+pub fn quandrix_sapleader_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sapleader (b190)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::This,
+                keyword: Keyword::Reach,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 189 (modern_decks) — additional Quandrix cards ──────────────────
 
 /// Quandrix Beastcaller (b189) — {2}{G} 2/3 Fractal Druid.

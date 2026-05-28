@@ -20121,6 +20121,110 @@ pub fn witherbloom_venomspur_b185() -> CardDefinition {
     }
 }
 
+// ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
+
+/// Witherbloom Doublegrowth (b190) — {2}{G} Sorcery.
+/// Target creature gets a trample counter and a +1/+1 counter.
+pub fn witherbloom_doublegrowth_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Doublegrowth (b190)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Trample,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Venomgift (b190) — {B} Instant.
+/// Put a deathtouch counter on target creature.
+pub fn witherbloom_venomgift_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Venomgift (b190)",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Deathtouch,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reachsage (b190) — {1}{G}{G} 2/3 Plant Druid Reach.
+/// ETB: gain 2 life.
+pub fn witherbloom_reachsage_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reachsage (b190)",
+        cost: cost(&[generic(1), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 189 (modern_decks) — additional Witherbloom cards ──────────────
 
 /// Witherbloom Devourer (b189) — {2}{B}{G} 3/2 Beast Trample.

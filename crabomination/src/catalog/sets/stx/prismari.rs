@@ -15761,6 +15761,108 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
+
+/// Prismari Doublecharge (b190) — {1}{U}{R} Sorcery.
+/// Target creature gets a haste counter and a flying counter.
+pub fn prismari_doublecharge_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Doublecharge (b190)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Skydiver (b190) — {2}{R} 2/2 Elemental.
+/// ETB self-flying counter (puts a flying counter on this creature).
+pub fn prismari_skydiver_b190() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Prismari Skydiver (b190)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: Selector::This,
+            keyword: Keyword::Flying,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Sparkforge II (b190) — {1}{U}{R} Sorcery.
+/// 2 damage to creature/PW + scry 1.
+pub fn prismari_sparkforge_ii_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkforge II (b190)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 189 (modern_decks) — additional Prismari cards ──────────────────
 
 /// Prismari Magmamancer (b189) — {2}{R}{R} 3/2 Wizard Prowess.

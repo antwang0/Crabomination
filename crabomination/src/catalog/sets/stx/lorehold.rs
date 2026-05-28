@@ -20679,6 +20679,113 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
+
+/// Lorehold Doubleblast (b190) — {2}{R} Sorcery.
+/// Target creature gets a first strike counter and a haste counter.
+pub fn lorehold_doubleblast_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Doubleblast (b190)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::FirstStrike,
+                amount: Value::Const(1),
+            },
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Haste,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Bondseal (b190) — {1}{W} Sorcery.
+/// Target creature gets a vigilance counter and a +1/+1 counter.
+pub fn lorehold_bondseal_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bondseal (b190)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::AddKeywordCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Vigilance,
+                amount: Value::Const(1),
+            },
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Phoenixmage (b190) — {2}{R} 3/2 Phoenix.
+/// ETB self-haste counter (flies through self-keyword wire) — flavor: a
+/// Phoenix that hastes itself.
+pub fn lorehold_phoenixmage_b190() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Phoenixmage (b190)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phoenix],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: Selector::This,
+            keyword: Keyword::Haste,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 189 (modern_decks) — additional Lorehold cards ──────────────────
 
 /// Lorehold Voltmage (b189) — {2}{R} 2/2 Spirit Wizard.

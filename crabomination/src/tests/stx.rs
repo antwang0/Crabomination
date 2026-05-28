@@ -72717,6 +72717,251 @@ fn quandrix_latticebreaker_b188_draws_three_cards() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Batch 190 (modern_decks) — keyword counter combo cards.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_doublecurse_b190_grants_deathtouch_and_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_doublecurse_b190());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::Deathtouch));
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn silverquill_wardseal_b190_grants_vigilance() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_wardseal_b190());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn silverquill_lifeward_b190_grants_lifelink() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_lifeward_b190());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Lifelink));
+}
+
+#[test]
+fn witherbloom_doublegrowth_b190_grants_trample_and_plus_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_doublegrowth_b190());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample));
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn witherbloom_venomgift_b190_grants_deathtouch() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_venomgift_b190());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Deathtouch));
+}
+
+#[test]
+fn witherbloom_reachsage_b190_etb_gains_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_reachsage_b190());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 2);
+}
+
+#[test]
+fn lorehold_doubleblast_b190_grants_first_strike_and_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_doubleblast_b190());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::FirstStrike));
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn lorehold_bondseal_b190_grants_vigilance_and_plus_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_bondseal_b190());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::Vigilance));
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn lorehold_phoenixmage_b190_etb_haste_self_via_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_phoenixmage_b190());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Lorehold Phoenixmage (b190)").unwrap();
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn prismari_doublecharge_b190_grants_haste_and_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_doublecharge_b190());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::Haste));
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn prismari_skydiver_b190_etb_grants_flying_via_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_skydiver_b190());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Prismari Skydiver (b190)").unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn prismari_sparkforge_ii_b190_burns_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let beast = g.add_card_to_battlefield(1, catalog::quandrix_vinescaler_ii_b189());
+    let id = g.add_card_to_hand(0, catalog::prismari_sparkforge_ii_b190());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(beast)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(beast).unwrap().damage, 2);
+}
+
+#[test]
+fn quandrix_doublegrowth_b190_grants_trample_and_flying() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_doublegrowth_b190());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample));
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn quandrix_riftleaper_b190_etb_grants_flying_via_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_riftleaper_b190());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Quandrix Riftleaper (b190)").unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn quandrix_sapleader_b190_etb_with_counter_and_reach_via_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_sapleader_b190());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Quandrix Sapleader (b190)").unwrap();
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    assert!(c.has_keyword(&Keyword::Reach));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Batch 189 (modern_decks) — aggressive curve fillers.
 // ─────────────────────────────────────────────────────────────────────────
 
