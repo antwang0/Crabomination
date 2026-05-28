@@ -203,6 +203,18 @@ impl Bot for RandomBot {
                             if has_ground_deathtouch && !flying {
                                 return false;
                             }
+                            // Finality counter on the attacker — if it
+                            // dies it'll exile instead of returning to
+                            // the graveyard (CR 122.1h). Don't suicide
+                            // a finality-counter creature into ground
+                            // blockers that can kill it.
+                            // Push (claude/modern_decks, batches 192-197).
+                            if c.counter_count(crate::card::CounterType::Finality) > 0
+                                && !flying
+                                && max_ground_blocker_power >= c.toughness()
+                            {
+                                return false;
+                            }
                             // Hold back if our toughness is <= biggest
                             // blocker power and we wouldn't kill them
                             // (basic suicide filter).
