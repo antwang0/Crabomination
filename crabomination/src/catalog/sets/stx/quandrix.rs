@@ -16821,6 +16821,120 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     }
 }
 
+// ── Batch 191 (modern_decks) — multi-action cards + Fractal tribal ────────
+
+/// Quandrix Sumtotal (b191) — {3}{G}{U} Sorcery.
+/// Mints a 4/4 Fractal token + you draw 1.
+pub fn quandrix_sumtotal_b191() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Quandrix Sumtotal (b191)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Sparkbloomer (b191) — {1}{G}{U} 2/2 Fractal Druid.
+/// Magecraft self-pump +1/+1 EOT.
+pub fn quandrix_sparkbloomer_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sparkbloomer (b191)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Vinegrower (b191) — {G}{U} 1/3 Fractal Druid.
+/// ETB +1/+1 counter on self.
+pub fn quandrix_vinegrower_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Vinegrower (b191)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
 
 /// Quandrix Doublegrowth (b190) — {1}{G}{U} Sorcery.

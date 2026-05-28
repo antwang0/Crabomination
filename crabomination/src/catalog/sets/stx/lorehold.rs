@@ -20679,6 +20679,95 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 191 (modern_decks) — multi-action cards + Spirit tribal ─────────
+
+/// Lorehold Echobringer (b191) — {3}{R}{W} Sorcery.
+/// Mints 2 Lorehold Spirits + deals 2 to any target.
+pub fn lorehold_echobringer_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echobringer (b191)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            mint_lorehold_spirits(2),
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Sparrowscholar (b191) — {1}{W} 1/2 Spirit Cleric.
+/// Magecraft Scry 1 + draw 0 (placeholder for the simple body).
+pub fn lorehold_sparrowscholar_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparrowscholar (b191)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Embershield (b191) — {2}{W} 2/3 Spirit Soldier Vigilance.
+/// First Strike.
+pub fn lorehold_embershield_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embershield (b191)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
 
 /// Lorehold Doubleblast (b190) — {2}{R} Sorcery.

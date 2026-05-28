@@ -23331,6 +23331,102 @@ pub fn inkling_spellguard_b187() -> CardDefinition {
     }
 }
 
+// ── Batch 191 (modern_decks) — multi-action cards + Inkling tribal ────────
+
+/// Silverquill Inkdrain (b191) — {2}{W}{B} Sorcery.
+/// Drain 3 + draw 1 + create 1 Inkling.
+pub fn silverquill_inkdrain_b191() -> CardDefinition {
+    use crate::catalog::sets::sos::inkling_token;
+    CardDefinition {
+        name: "Silverquill Inkdrain (b191)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(3),
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: inkling_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Highscribe (b191) — {2}{W}{B} 3/3 Inkling Cleric Flying.
+/// ETB scry 2 + magecraft gain 1 life.
+pub fn inkling_highscribe_b191() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry;
+    let _ = etb_scry;
+    CardDefinition {
+        name: "Inkling Highscribe (b191)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Vampirebond (b191) — {B}{B} 2/2 Vampire Warlock Lifelink.
+pub fn silverquill_vampirebond_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Vampirebond (b191)",
+        cost: cost(&[b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
 
 /// Silverquill Doublecurse (b190) — {1}{B} Sorcery.

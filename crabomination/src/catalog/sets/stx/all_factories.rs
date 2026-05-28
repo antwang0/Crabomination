@@ -3698,5 +3698,21 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_doublegrowth_b190,
         super::quandrix::quandrix_riftleaper_b190,
         super::quandrix::quandrix_sapleader_b190,
+        // ── batch 191 (modern_decks): multi-action + tribal ──
+        super::silverquill::silverquill_inkdrain_b191,
+        super::silverquill::inkling_highscribe_b191,
+        super::silverquill::silverquill_vampirebond_b191,
+        super::witherbloom::witherbloom_doublestrike_b191,
+        super::witherbloom::pest_druid_b191,
+        super::witherbloom::witherbloom_greenward_b191,
+        super::lorehold::lorehold_echobringer_b191,
+        super::lorehold::lorehold_sparrowscholar_b191,
+        super::lorehold::lorehold_embershield_b191,
+        super::prismari::prismari_stormwave_b191,
+        super::prismari::prismari_wavetamer_b191,
+        super::prismari::prismari_tinkermage_b191,
+        super::quandrix::quandrix_sumtotal_b191,
+        super::quandrix::quandrix_sparkbloomer_b191,
+        super::quandrix::quandrix_vinegrower_b191,
     ]
 }

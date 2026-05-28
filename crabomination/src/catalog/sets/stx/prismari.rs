@@ -15761,6 +15761,103 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 191 (modern_decks) — multi-action cards + Treasure tribal ───────
+
+/// Prismari Stormwave (b191) — {2}{U}{R} Sorcery.
+/// Mints a Treasure + draws 1 + 2 damage to a creature.
+pub fn prismari_stormwave_b191() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Stormwave (b191)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Wavetamer (b191) — {1}{U} 1/3 Wizard.
+/// Magecraft Loot.
+pub fn prismari_wavetamer_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Wavetamer (b191)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Tinkermage (b191) — {U}{R} 2/2 Human Artificer.
+/// ETB mint a Treasure.
+pub fn prismari_tinkermage_b191() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    use crate::effect::shortcut::etb_mint_token;
+    CardDefinition {
+        name: "Prismari Tinkermage (b191)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(treasure_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
 
 /// Prismari Doublecharge (b190) — {1}{U}{R} Sorcery.

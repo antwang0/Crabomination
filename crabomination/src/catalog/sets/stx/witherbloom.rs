@@ -20121,6 +20121,120 @@ pub fn witherbloom_venomspur_b185() -> CardDefinition {
     }
 }
 
+// ── Batch 191 (modern_decks) — multi-action cards + Pest tribal ───────────
+
+/// Witherbloom Doublestrike (b191) — {2}{B}{G} Sorcery.
+/// Drain 2 + mint 2 Pest tokens.
+pub fn witherbloom_doublestrike_b191() -> CardDefinition {
+    use crate::effect::shortcut::drain;
+    CardDefinition {
+        name: "Witherbloom Doublestrike (b191)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(2),
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Druid (b191) — {1}{G} 1/2 Pest Druid.
+/// `{T}: Add {B} or {G}` (approximated as AnyOneColor).
+pub fn pest_druid_b191() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Pest Druid (b191)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            sac_cost: false,
+            life_cost: 0,
+            once_per_turn: false,
+            sorcery_speed: false,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            },
+            condition: None,
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Greenward (b191) — {1}{G} 1/3 Plant Druid.
+/// Reach + Vigilance.
+pub fn witherbloom_greenward_b191() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Greenward (b191)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 190 (modern_decks) — keyword counter granters ──────────────────
 
 /// Witherbloom Doublegrowth (b190) — {2}{G} Sorcery.
