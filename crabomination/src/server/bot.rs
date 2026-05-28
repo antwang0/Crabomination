@@ -103,10 +103,95 @@ impl Bot for RandomBot {
                     // changed control (Threaten / Mind Control / etc.) are
                     // attacked WITH by the new controller, not the original
                     // owner.
-                    let mut attackers: Vec<crate::card::CardId> = state
+                    //
+                    // Bot AI improvement (push XXV): hold back attackers
+                    // that would suicide into deathtouch blockers when
+                    // there's no upside. The heuristic computes:
+                    //   * lethal_swing: whether sum of attackers' powers
+                    //     already meets opponent's life total.
+                    // When NOT lethal:
+                    //   * skip attackers whose toughness is <= the maximum
+                    //     opponent blocker power AND there's at least one
+                    //     opponent blocker with deathtouch + reach/flying
+                    //     parity (i.e. a blocker can be assigned).
+                    // This keeps small attackers from auto-dying to
+                    // Witherbloom Crawler / Sapworm / Toxicultivator and
+                    // similar deathtouch defenders.
+                    use crate::card::Keyword;
+                    let opp_seat = target_player;
+                    let opp_life = state.players[opp_seat].life;
+                    let raw_attackers: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
                         .filter(|c| c.controller == seat && c.can_attack())
+                        .collect();
+                    let total_raw_power: i32 = raw_attackers.iter().map(|c| c.power()).sum();
+                    let lethal_swing = total_raw_power >= opp_life;
+                    let opp_blockers: Vec<&crate::card::CardInstance> = state
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == opp_seat && c.can_block())
+                        .collect();
+                    let has_ground_deathtouch = opp_blockers
+                        .iter()
+                        .any(|b| b.has_keyword(&Keyword::Deathtouch) && !b.has_keyword(&Keyword::Flying));
+                    let max_ground_blocker_power: i32 = opp_blockers
+                        .iter()
+                        .filter(|b| !b.has_keyword(&Keyword::Flying))
+                        .map(|b| b.power())
+                        .max()
+                        .unwrap_or(0);
+                    let mut attackers: Vec<crate::card::CardId> = raw_attackers
+                        .into_iter()
+                        .filter(|c| {
+                            // Always attack on lethal swings — the bot
+                            // would rather suicide than miss a kill.
+                            if lethal_swing {
+                                return true;
+                            }
+                            let flying = c.has_keyword(&Keyword::Flying);
+                            // Evasive attackers (flying) — only block-
+                            // worried if there's a flying opp blocker.
+                            // Skip the deathtouch / ground-power filter
+                            // for them; assume they're safe.
+                            if flying {
+                                let opp_has_flying_blocker = opp_blockers.iter()
+                                    .any(|b| b.has_keyword(&Keyword::Flying)
+                                          || b.has_keyword(&Keyword::Reach));
+                                if !opp_has_flying_blocker {
+                                    return true; // free swing
+                                }
+                            }
+                            // Trample: tougher creatures still come in
+                            // (we'll get some damage through chumps).
+                            if c.has_keyword(&Keyword::Trample) {
+                                return true;
+                            }
+                            // Indestructible: safe to swing (won't die).
+                            if c.has_keyword(&Keyword::Indestructible) {
+                                return true;
+                            }
+                            // Lifelink: even if we trade, we gain life —
+                            // worth swinging when we can race.
+                            if c.has_keyword(&Keyword::Lifelink) {
+                                return true;
+                            }
+                            // Hold back if a deathtouch blocker exists
+                            // and we don't outsize the biggest blocker.
+                            if has_ground_deathtouch && !flying {
+                                return false;
+                            }
+                            // Hold back if our toughness is <= biggest
+                            // blocker power and we wouldn't kill them
+                            // (basic suicide filter).
+                            if !flying
+                                && max_ground_blocker_power >= c.toughness()
+                                && c.power() <= max_ground_blocker_power
+                            {
+                                return false;
+                            }
+                            true
+                        })
                         .map(|c| c.id)
                         .collect();
                     // Find opponent planeswalkers in loyalty-ascending
