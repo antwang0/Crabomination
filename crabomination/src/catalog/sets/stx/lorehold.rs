@@ -20314,6 +20314,37 @@ pub fn lorehold_skirmisher_b171() -> CardDefinition {
 
 // ── Batch 172 (modern_decks) — Lorehold expansion ─────────────────────────
 
+// ── Batch 173 (modern_decks) — Shield/finality magecraft variants ─────────
+
+/// Lorehold Wardseeker (b173) — {2}{R}{W} 2/2 Spirit Warrior.
+/// Magecraft: put a shield counter on this creature.
+pub fn lorehold_wardseeker_b173() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_shield_self;
+    CardDefinition {
+        name: "Lorehold Wardseeker (b173)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_shield_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Lorehold Embersmith (b172) — {2}{R} 3/2 Dwarf Soldier.
 /// Magecraft: deal 1 damage to target opp.
 pub fn lorehold_embersmith_b172() -> CardDefinition {

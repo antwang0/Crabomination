@@ -4120,6 +4120,32 @@ pub mod shortcut {
         })
     }
 
+    /// Magecraft shortcut: "Whenever you cast or copy an instant or
+    /// sorcery spell, put a shield counter on this creature." Combos
+    /// with the CR 122.1c shield-counter wire (each shield blocks one
+    /// damage or one destroy and pops). Push (modern_decks batch 173).
+    pub fn magecraft_add_shield_self() -> TriggeredAbility {
+        use crate::card::CounterType;
+        magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Shield,
+            amount: Value::Const(1),
+        })
+    }
+
+    /// Magecraft shortcut: "Whenever you cast or copy an instant or
+    /// sorcery spell, put a finality counter on this creature." Combos
+    /// with the CR 122.1h finality wire (the creature exiles instead of
+    /// going to graveyard on next death). Push (modern_decks batch 173).
+    pub fn magecraft_add_finality_self() -> TriggeredAbility {
+        use crate::card::CounterType;
+        magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Finality,
+            amount: Value::Const(1),
+        })
+    }
+
     /// Predicate shortcut: "You have at least `n` cards matching
     /// `filter` in your graveyard." Wraps the canonical spell-mastery
     /// / delirium-threshold / Murderous-Cut-style gate pattern:

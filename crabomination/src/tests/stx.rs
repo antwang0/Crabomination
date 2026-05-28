@@ -69997,6 +69997,55 @@ fn quandrix_foragelord_b172_gains_life_on_is_cast() {
     assert_eq!(g.players[0].life, p0_life + 1);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 173 (modern_decks) — Shield/finality magecraft variants
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_wardseeker_b173_gains_shield_on_is_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_wardseeker_b173());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("wardseeker alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
+#[test]
+fn silverquill_wardlord_b173_gains_shield_on_is_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_wardlord_b173());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("wardlord alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
+#[test]
+fn silverquill_doomspeaker_b173_gains_finality_on_is_cast() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_doomspeaker_b173());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("doomspeaker alive");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+}
+
 #[test]
 fn quandrix_sumcheck_b172_counters_unless_paid_two() {
     let mut g = two_player_game();

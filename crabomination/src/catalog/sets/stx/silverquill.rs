@@ -21987,6 +21987,66 @@ pub fn inkling_vanguard_ii_b171() -> CardDefinition {
 
 // ── Batch 172 (modern_decks) — Silverquill expansion ──────────────────────
 
+// ── Batch 173 (modern_decks) — Shield/finality magecraft variants ─────────
+
+/// Silverquill Wardlord (b173) — {1}{W}{B} 2/3 Inkling Cleric.
+/// Magecraft: put a shield counter on this creature.
+pub fn silverquill_wardlord_b173() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_shield_self;
+    CardDefinition {
+        name: "Silverquill Wardlord (b173)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_shield_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Doomspeaker (b173) — {1}{B} 1/2 Vampire Warlock.
+/// Magecraft: put a finality counter on this creature.
+pub fn silverquill_doomspeaker_b173() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_finality_self;
+    CardDefinition {
+        name: "Silverquill Doomspeaker (b173)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_finality_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Silverquill Sentinel (b172) — {1}{W} 2/2 Inkling Soldier Vigilance.
 /// Simple defender body.
 pub fn silverquill_sentinel_b172() -> CardDefinition {

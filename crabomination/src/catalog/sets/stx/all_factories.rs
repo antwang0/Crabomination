@@ -3495,6 +3495,10 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_bonfire_b172,
         super::quandrix::quandrix_foragelord_b172,
         super::quandrix::quandrix_sumcheck_b172,
+        // ── batch 173 (modern_decks): shield/finality magecraft ──
+        super::lorehold::lorehold_wardseeker_b173,
+        super::silverquill::silverquill_wardlord_b173,
+        super::silverquill::silverquill_doomspeaker_b173,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,
