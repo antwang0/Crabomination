@@ -2627,6 +2627,18 @@ pub mod shortcut {
     pub fn target_filtered(filter: SelectionRequirement) -> Selector {
         Selector::TargetFiltered { slot: 0, filter }
     }
+    /// "Any target" — creature, player, or planeswalker. The canonical
+    /// burn-spell target filter (Lightning Bolt, Shock, Lightning
+    /// Strike), pulled out into a helper so cards don't have to spell
+    /// out the 3-way `or` inline. Push (claude/modern_decks, batches
+    /// 192-197).
+    pub fn target_any() -> Selector {
+        target_filtered(
+            SelectionRequirement::Creature
+                .or(SelectionRequirement::Player)
+                .or(SelectionRequirement::Planeswalker),
+        )
+    }
     pub fn trigger_source() -> Selector { Selector::TriggerSource }
 
     pub fn each_creature() -> Selector {
