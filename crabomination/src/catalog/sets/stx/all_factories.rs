@@ -3484,6 +3484,17 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_tideflame_b171,
         super::quandrix::quandrix_echocrasher_b171,
         super::quandrix::quandrix_fractalmancer_b171,
+        // ── batch 172 (modern_decks): expanded variety ──
+        super::silverquill::silverquill_sentinel_b172,
+        super::silverquill::silverquill_inkmage_b172,
+        super::silverquill::inkling_skywatch_b172,
+        super::witherbloom::witherbloom_pestkin_b172,
+        super::witherbloom::witherbloom_heartfeeder_b172,
+        super::lorehold::lorehold_embersmith_b172,
+        super::prismari::prismari_wavecaster_b172,
+        super::prismari::prismari_bonfire_b172,
+        super::quandrix::quandrix_foragelord_b172,
+        super::quandrix::quandrix_sumcheck_b172,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

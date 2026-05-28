@@ -19664,6 +19664,64 @@ pub fn witherbloom_lifeleech_b171() -> CardDefinition {
     }
 }
 
+// ── Batch 172 (modern_decks) — Witherbloom expansion ──────────────────────
+
+/// Witherbloom Pestkin (b172) — {B}{G} 2/2 Pest.
+/// Vanilla cheap Pest.
+pub fn witherbloom_pestkin_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestkin (b172)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Witherbloom Heartfeeder (b172) — {3}{B}{G} 3/3 Demon.
+/// When this creature dies, drain 2.
+pub fn witherbloom_heartfeeder_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Heartfeeder (b172)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Witherbloom Sapsprite (b171) — {G} 1/1 Plant.
 /// {1}{B}{G}, sac this: each opp loses 2 life, you gain 2 life.
 pub fn witherbloom_sapsprite_b171() -> CardDefinition {

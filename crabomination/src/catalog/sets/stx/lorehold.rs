@@ -20312,6 +20312,36 @@ pub fn lorehold_skirmisher_b171() -> CardDefinition {
     }
 }
 
+// ── Batch 172 (modern_decks) — Lorehold expansion ─────────────────────────
+
+/// Lorehold Embersmith (b172) — {2}{R} 3/2 Dwarf Soldier.
+/// Magecraft: deal 1 damage to target opp.
+pub fn lorehold_embersmith_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Embersmith (b172)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Lorehold Pyresage (b171) — {2}{R}{W} 2/4 Human Cleric.
 /// Magecraft: deal 1 damage to any target.
 pub fn lorehold_pyresage_b171() -> CardDefinition {

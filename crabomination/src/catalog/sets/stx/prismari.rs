@@ -15360,6 +15360,72 @@ pub fn prismari_sparkforge_b171() -> CardDefinition {
     }
 }
 
+// ── Batch 172 (modern_decks) — Prismari expansion ─────────────────────────
+
+/// Prismari Wavecaster (b172) — {1}{U} 2/2 Merfolk Wizard.
+/// Magecraft: Scry 1.
+pub fn prismari_wavecaster_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Wavecaster (b172)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![crate::effect::shortcut::magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Bonfire (b172) — {2}{R} Sorcery.
+/// Deal 3 damage to any target. Treasure rider.
+pub fn prismari_bonfire_b172() -> CardDefinition {
+    use crate::effect::shortcut::mint_treasures;
+    CardDefinition {
+        name: "Prismari Bonfire (b172)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            mint_treasures(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Prismari Tideflame (b171) — {3}{U}{R} Instant.
 /// Bounce target creature, then deal 2 damage to target opp.
 /// Two-target multi-slot shape.

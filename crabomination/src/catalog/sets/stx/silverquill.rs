@@ -21985,6 +21985,92 @@ pub fn inkling_vanguard_ii_b171() -> CardDefinition {
     }
 }
 
+// ── Batch 172 (modern_decks) — Silverquill expansion ──────────────────────
+
+/// Silverquill Sentinel (b172) — {1}{W} 2/2 Inkling Soldier Vigilance.
+/// Simple defender body.
+pub fn silverquill_sentinel_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sentinel (b172)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Inkmage (b172) — {2}{B} 2/3 Vampire Warlock.
+/// ETB: target opp loses 2 life, you gain 2 life.
+pub fn silverquill_inkmage_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkmage (b172)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(drain(2))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Skywatch (b172) — {2}{W}{B} 2/2 Inkling Cleric Flying + Vigilance.
+/// Combat-damage trigger: gain 1 life.
+pub fn inkling_skywatch_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Skywatch (b172)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Silverquill Tombwarden (b171) — {3}{W}{B} 3/5 Vampire Cleric Lifelink.
 /// Whenever another creature you control dies, you gain 1 life.
 pub fn silverquill_tombwarden_b171() -> CardDefinition {

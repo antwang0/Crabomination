@@ -16306,6 +16306,65 @@ pub fn quandrix_echocrasher_b171() -> CardDefinition {
     }
 }
 
+// ── Batch 172 (modern_decks) — Quandrix expansion ─────────────────────────
+
+/// Quandrix Foragelord (b172) — {2}{G} 3/3 Elf Druid.
+/// Magecraft: gain 1 life.
+pub fn quandrix_foragelord_b172() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_gain_life;
+    CardDefinition {
+        name: "Quandrix Foragelord (b172)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Sumcheck (b172) — {1}{G}{U} Instant.
+/// Counter target spell unless its controller pays {2}.
+pub fn quandrix_sumcheck_b172() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sumcheck (b172)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Quandrix Fractalmancer (b171) — {2}{G}{U} 3/3 Human Druid Wizard.
 /// Magecraft: scry 1 + draw a card.
 pub fn quandrix_fractalmancer_b171() -> CardDefinition {

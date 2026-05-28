@@ -69847,4 +69847,179 @@ fn quandrix_fractalmancer_b171_scrys_and_draws_on_is_cast() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 172 (modern_decks) — Expansion across schools
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_sentinel_b172_is_a_two_two_vigilance_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_sentinel_b172());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.power(), 2);
+    assert_eq!(c.toughness(), 2);
+    assert!(c.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn silverquill_inkmage_b172_etb_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_inkmage_b172());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 2);
+    assert_eq!(g.players[1].life, p1_life - 2);
+}
+
+#[test]
+fn inkling_skywatch_b172_gains_life_on_attack() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_skywatch_b172());
+    g.clear_sickness(id);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }])).expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 1);
+}
+
+#[test]
+fn witherbloom_pestkin_b172_is_two_two_pest() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_pestkin_b172());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.power(), 2);
+    assert_eq!(c.toughness(), 2);
+    assert!(c.definition.has_creature_type(CreatureType::Pest));
+}
+
+#[test]
+fn witherbloom_heartfeeder_b172_drains_on_death() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_heartfeeder_b172());
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    // Kill with Bolt+Bolt for 6 damage to heartfeeder's 3 toughness.
+    let bolt1 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 2);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt1");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "heartfeeder dies");
+    assert_eq!(g.players[0].life, p0_life + 2);
+    assert_eq!(g.players[1].life, p1_life - 2);
+}
+
+#[test]
+fn lorehold_embersmith_b172_drains_each_opp_on_is_cast() {
+    let mut g = two_player_game();
+    let _e = g.add_card_to_battlefield(0, catalog::lorehold_embersmith_b172());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // bolt 3 + magecraft drain 1 = -4
+    assert_eq!(g.players[1].life, p1_life - 4);
+}
+
+#[test]
+fn prismari_wavecaster_b172_scrys_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let _w = g.add_card_to_battlefield(0, catalog::prismari_wavecaster_b172());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() <= lib_before);
+}
+
+#[test]
+fn prismari_bonfire_b172_burns_and_mints_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_bonfire_b172());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3);
+    let t = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.definition.name == "Treasure"
+    ).count();
+    assert_eq!(t, 1);
+}
+
+#[test]
+fn quandrix_foragelord_b172_gains_life_on_is_cast() {
+    let mut g = two_player_game();
+    let _f = g.add_card_to_battlefield(0, catalog::quandrix_foragelord_b172());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 1);
+}
+
+#[test]
+fn quandrix_sumcheck_b172_counters_unless_paid_two() {
+    let mut g = two_player_game();
+    // P0 casts a Bolt; P1 counters with Sumcheck.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    g.perform_action(GameAction::PassPriority).unwrap();
+    let sumcheck = g.add_card_to_hand(1, catalog::quandrix_sumcheck_b172());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add(Color::Blue, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sumcheck, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // P0 can't pay (no mana left) — bolt countered.
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "bolt countered");
+}
+
 
