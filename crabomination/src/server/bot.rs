@@ -441,8 +441,27 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
     }
 
     if !castable.is_empty() {
+        // Magecraft-aware bias: if the bot controls a permanent with a
+        // magecraft trigger and at least one instant or sorcery is in
+        // the castable set, prefer the IS subset so the trigger fires.
+        // Falls back to uniform-random sampling when no magecraft body
+        // is in play. Push (claude/modern_decks batch 202).
+        let has_magecraft = state.battlefield.iter().any(|c| {
+            c.controller == seat
+                && c.definition.triggered_abilities.iter().any(is_magecraft_trigger)
+        });
+        let pool: Vec<GameAction> = if has_magecraft {
+            let only_is: Vec<GameAction> = castable
+                .iter()
+                .filter(|a| matches!(a, GameAction::CastSpell { card_id, .. } if is_instant_or_sorcery_in_hand(state, seat, *card_id)))
+                .cloned()
+                .collect();
+            if only_is.is_empty() { castable } else { only_is }
+        } else {
+            castable
+        };
         let mut r = rng();
-        return castable[r.random_range(0..castable.len())].clone();
+        return pool[r.random_range(0..pool.len())].clone();
     }
 
     // Activate planeswalker loyalty abilities the bot controls. Pick the
@@ -829,6 +848,33 @@ pub fn choose_target(state: &GameState, def: &CardDefinition, caster: usize) -> 
     state.auto_target_for_effect(&def.effect, caster)
 }
 
+/// True when `ta` is the canonical Strixhaven magecraft trigger:
+/// SpellCast scope=YourControl with the IS-only predicate. Used by
+/// the bot's spell-bias heuristic so a controlled magecraft permanent
+/// nudges the bot toward casting an IS spell to fire the trigger.
+fn is_magecraft_trigger(ta: &crate::card::TriggeredAbility) -> bool {
+    use crate::card::{EventKind, EventScope};
+    matches!(ta.event.kind, EventKind::SpellCast)
+        && matches!(ta.event.scope, EventScope::YourControl)
+        && ta.event.filter.is_some()
+}
+
+/// True when the card with id `cid` in `seat`'s hand is an instant or
+/// sorcery. Cheap helper for the magecraft-bias path; falls back to
+/// false on missing cards.
+fn is_instant_or_sorcery_in_hand(state: &GameState, seat: usize, cid: CardId) -> bool {
+    use crate::card::CardType;
+    state.players[seat]
+        .hand
+        .iter()
+        .find(|c| c.id == cid)
+        .map(|c| {
+            c.definition.card_types.contains(&CardType::Instant)
+                || c.definition.card_types.contains(&CardType::Sorcery)
+        })
+        .unwrap_or(false)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -903,6 +949,40 @@ mod tests {
             }
             other => panic!("expected ActivateLoyaltyAbility, got {:?}", other),
         }
+    }
+
+    /// Magecraft-aware spell bias: when the bot controls a magecraft
+    /// permanent and has both an IS spell and a creature spell in hand,
+    /// it should prefer the IS spell to fire the magecraft trigger.
+    /// Push (claude/modern_decks batch 202).
+    #[test]
+    fn bot_prefers_is_spell_when_magecraft_in_play() {
+        let mut g = two_player_game();
+        // Drop Witherbloom Apprentice (a magecraft permanent) on board.
+        g.add_card_to_battlefield(0, catalog::witherbloom_apprentice());
+        // Hand has both Lightning Bolt (instant) and Grizzly Bears
+        // (creature). The bot must prefer the bolt.
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let _bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let mut bot = RandomBot::new();
+        // Drive the bot until it produces a CastSpell — could pass
+        // through PlayLand / mana abilities first if seeded with hand-
+        // played lands, but in this synthetic state the next non-mana
+        // action is the spell.
+        for _ in 0..16 {
+            let action = bot.next_action(&g, 0).expect("bot should act");
+            if let GameAction::CastSpell { card_id, .. } = action {
+                assert_eq!(card_id, bolt,
+                    "magecraft-bias should pick the instant over the creature");
+                return;
+            }
+            // Drive the engine forward so non-cast actions don't loop.
+            let _ = g.perform_action(action);
+        }
+        panic!("bot never produced a CastSpell action");
     }
 
     /// Color-choice mana abilities (Ornithopter of Paradise's `{T}: Add one
