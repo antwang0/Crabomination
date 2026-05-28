@@ -17794,3 +17794,70 @@ pub fn prismari_notebook_b200() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 201 (modern_decks) — Prismari nuanced round ────────────────────
+
+/// Prismari Stormcrash (b201) — {2}{U}{R} Instant.
+/// Deal 3 damage to any target and draw 1 card.
+pub fn prismari_stormcrash_b201() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    use crate::effect::shortcut::draw;
+    CardDefinition {
+        name: "Prismari Stormcrash (b201)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+            draw(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkkeeper (b201) — {U}{R} 2/2 Elemental Wizard.
+/// Magecraft: deal 1 damage to any target.
+pub fn prismari_sparkkeeper_b201() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Sparkkeeper (b201)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

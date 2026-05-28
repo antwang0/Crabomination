@@ -23099,3 +23099,74 @@ pub fn witherbloom_bloomguard_b200() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 201 (modern_decks) — Witherbloom nuanced round ─────────────────
+
+/// Witherbloom Bonemeal (b201) — {1}{B}{G} Sorcery.
+/// Mint a Pest token and put a +1/+1 counter on target creature you control.
+pub fn witherbloom_bonemeal_b201() -> CardDefinition {
+    use crate::effect::shortcut::mint_pests;
+    CardDefinition {
+        name: "Witherbloom Bonemeal (b201)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            mint_pests(1),
+            Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Reaper (b201) — {2}{B} 2/3 Vampire Warlock.
+/// Dies-drain (each opp loses 1, you gain 1).
+pub fn witherbloom_reaper_b201() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reaper (b201)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

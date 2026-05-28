@@ -24931,3 +24931,72 @@ pub fn inkling_wraith_b200() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 201 (modern_decks) — Silverquill nuanced round ─────────────────
+
+/// Inkling Skybinder (b201) — {1}{W}{B} 2/2 Inkling Wizard Flying.
+/// On attack: target opponent loses 1 life.
+pub fn inkling_skybinder_b201() -> CardDefinition {
+    use crate::effect::shortcut::on_attack;
+    CardDefinition {
+        name: "Inkling Skybinder (b201)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack(Effect::LoseLife {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Whitewash (b201) — {2}{W} Sorcery.
+/// Exile all creatures with power 3 or greater.
+pub fn silverquill_whitewash_b201() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Whitewash (b201)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Exile {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -76245,6 +76245,141 @@ fn quandrix_anchorvine_b200_is_four_four_vigilance_fractal() {
     assert!(def.subtypes.creature_types.contains(&CreatureType::Fractal));
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 201 (modern_decks) — Nuanced round.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn inkling_skybinder_b201_on_attack_drains_one() {
+    let def = catalog::inkling_skybinder_b201();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn silverquill_whitewash_b201_exiles_big_creatures() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::lorehold_champion_b198()); // 4/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::silverquill_whitewash_b201());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(big).is_none(), "4-power exiled");
+    assert!(g.battlefield_find(small).is_some(), "2-power survives");
+}
+
+#[test]
+fn witherbloom_bonemeal_b201_mints_pest_and_counters() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_bonemeal_b201());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let bear_card = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 1);
+    let pest = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Pest");
+    assert!(pest.is_some(), "pest minted");
+}
+
+#[test]
+fn witherbloom_reaper_b201_dies_drains_one() {
+    let def = catalog::witherbloom_reaper_b201();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_vanguard_b201_pumps_on_attack() {
+    let def = catalog::lorehold_vanguard_b201();
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_wildfire_b201_deals_three_to_each_creature() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 — dies
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 — dies
+    let id = g.add_card_to_hand(0, catalog::lorehold_wildfire_b201());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "own bear dies");
+    assert!(g.battlefield_find(opp).is_none(), "opp bear dies");
+}
+
+#[test]
+fn prismari_stormcrash_b201_deals_three_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::prismari_stormcrash_b201());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life = g.players[1].life;
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3);
+    // -1 cast + 1 draw = 0 net hand.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn prismari_sparkkeeper_b201_magecraft_pings_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_sparkkeeper_b201());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "bolt 3 + ping 1");
+}
+
+#[test]
+fn quandrix_cropping_b201_pumps_each_friendly_with_two_counters() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_cropping_b201());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(b1).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.battlefield_find(b2).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+#[test]
+fn quandrix_crystalshard_b201_is_defender_with_scry_etb() {
+    let def = catalog::quandrix_crystalshard_b201();
+    assert!(def.keywords.contains(&Keyword::Defender));
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
 /// CR 122.1c — Shield counter pops on the first damage event; subsequent
 /// damage is unprevented. Lock-in via a fresh source: a creature with one
 /// shield counter takes a Bolt → shield pops, second Bolt → 3 damage

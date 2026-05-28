@@ -3928,5 +3928,16 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_notebook_b200,
         super::quandrix::quandrix_watergrower_b200,
         super::quandrix::quandrix_anchorvine_b200,
+        // ── batch 201 (modern_decks): nuanced round ──
+        super::silverquill::inkling_skybinder_b201,
+        super::silverquill::silverquill_whitewash_b201,
+        super::witherbloom::witherbloom_bonemeal_b201,
+        super::witherbloom::witherbloom_reaper_b201,
+        super::lorehold::lorehold_vanguard_b201,
+        super::lorehold::lorehold_wildfire_b201,
+        super::prismari::prismari_stormcrash_b201,
+        super::prismari::prismari_sparkkeeper_b201,
+        super::quandrix::quandrix_cropping_b201,
+        super::quandrix::quandrix_crystalshard_b201,
     ]
 }
