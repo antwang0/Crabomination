@@ -24841,3 +24841,93 @@ pub fn silverquill_smiter_b199() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 200 (modern_decks) — Silverquill round 200 ─────────────────────
+
+/// Silverquill Quietkeeper (b200) — {W}{B} 2/2 Inkling Cleric Vigilance.
+pub fn silverquill_quietkeeper_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quietkeeper (b200)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Indrain (b200) — {2}{B}{B} Sorcery. Drain 4.
+pub fn silverquill_indrain_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Indrain (b200)",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Wraith (b200) — {3}{W}{B} 4/2 Inkling Spirit Flying Haste.
+/// Aggressive evasive haster.
+pub fn inkling_wraith_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Wraith (b200)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -18795,3 +18795,65 @@ pub fn quandrix_fractalpath_b199() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 200 (modern_decks) — Quandrix round 200 ───────────────────────
+
+/// Quandrix Watergrower (b200) — {2}{U} 2/3 Merfolk Druid.
+pub fn quandrix_watergrower_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Watergrower (b200)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Anchorvine (b200) — {3}{G}{U} 4/4 Plant Fractal Vigilance.
+pub fn quandrix_anchorvine_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Anchorvine (b200)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

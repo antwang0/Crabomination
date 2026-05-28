@@ -17704,3 +17704,93 @@ pub fn prismari_wavemaster_b199() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 200 (modern_decks) — Prismari round 200 ───────────────────────
+
+/// Prismari Sparkbolt (b200) — {R} Instant. Deal 2 damage to target creature.
+pub fn prismari_sparkbolt_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkbolt (b200)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magmamage (b200) — {2}{R} 3/2 Elemental Wizard.
+pub fn prismari_magmamage_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Magmamage (b200)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Notebook (b200) — {1}{U} Sorcery. Scry 3, then Draw 1.
+pub fn prismari_notebook_b200() -> CardDefinition {
+    use crate::effect::shortcut::draw;
+    CardDefinition {
+        name: "Prismari Notebook (b200)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) }, draw(1)]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -76101,6 +76101,150 @@ fn quandrix_fractalpath_b199_mints_fractal_with_counters() {
     assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 200 (modern_decks) — Round-200 mini-batch.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_quietkeeper_b200_is_inkling_vigilance() {
+    let def = catalog::silverquill_quietkeeper_b200();
+    assert_eq!(def.cost.cmc(), 2);
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
+#[test]
+fn silverquill_indrain_b200_drains_four() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_indrain_b200());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 4);
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn inkling_wraith_b200_has_flying_haste() {
+    let def = catalog::inkling_wraith_b200();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn witherbloom_slither_b200_has_deathtouch() {
+    let def = catalog::witherbloom_slither_b200();
+    assert!(def.keywords.contains(&Keyword::Deathtouch));
+}
+
+#[test]
+fn witherbloom_decay_b200_destroys_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_decay_b200());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+}
+
+#[test]
+fn witherbloom_bloomguard_b200_is_four_four_for_four() {
+    let def = catalog::witherbloom_bloomguard_b200();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn lorehold_sparkguard_b200_is_three_two_for_three() {
+    let def = catalog::lorehold_sparkguard_b200();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+}
+
+#[test]
+fn lorehold_smite_b200_destroys_tapped_creature() {
+    use crate::card::CardId;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Tap the bear manually.
+    {
+        let c: &mut crate::card::CardInstance = g.battlefield.iter_mut().find(|c| c.id == bear).unwrap();
+        c.tapped = true;
+    }
+    let _ = CardId(0);
+    let id = g.add_card_to_hand(0, catalog::lorehold_smite_b200());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "tapped bear destroyed");
+}
+
+#[test]
+fn prismari_sparkbolt_b200_deals_two_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_sparkbolt_b200());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "2/2 dies to 2 damage");
+}
+
+#[test]
+fn prismari_magmamage_b200_is_three_two() {
+    let def = catalog::prismari_magmamage_b200();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+}
+
+#[test]
+fn prismari_notebook_b200_scrys_three_draws_one() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::prismari_notebook_b200());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before, "-1 cast + 1 draw = 0 net");
+}
+
+#[test]
+fn quandrix_watergrower_b200_is_two_three_merfolk() {
+    let def = catalog::quandrix_watergrower_b200();
+    assert_eq!(def.cost.cmc(), 3);
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Merfolk));
+}
+
+#[test]
+fn quandrix_anchorvine_b200_is_four_four_vigilance_fractal() {
+    let def = catalog::quandrix_anchorvine_b200();
+    assert_eq!(def.power, 4);
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Fractal));
+}
+
 /// CR 122.1c — Shield counter pops on the first damage event; subsequent
 /// damage is unprevented. Lock-in via a fresh source: a creature with one
 /// shield counter takes a Bolt → shield pops, second Bolt → 3 damage

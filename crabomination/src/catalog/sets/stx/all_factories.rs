@@ -3914,5 +3914,19 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_pulse_b199,
         super::quandrix::quandrix_geomancer_b199,
         super::quandrix::quandrix_fractalpath_b199,
+        // ── batch 200 (modern_decks): round-200 mini-batch ──
+        super::silverquill::silverquill_quietkeeper_b200,
+        super::silverquill::silverquill_indrain_b200,
+        super::silverquill::inkling_wraith_b200,
+        super::witherbloom::witherbloom_slither_b200,
+        super::witherbloom::witherbloom_decay_b200,
+        super::witherbloom::witherbloom_bloomguard_b200,
+        super::lorehold::lorehold_sparkguard_b200,
+        super::lorehold::lorehold_smite_b200,
+        super::prismari::prismari_sparkbolt_b200,
+        super::prismari::prismari_magmamage_b200,
+        super::prismari::prismari_notebook_b200,
+        super::quandrix::quandrix_watergrower_b200,
+        super::quandrix::quandrix_anchorvine_b200,
     ]
 }

@@ -23008,3 +23008,94 @@ pub fn witherbloom_reverence_b199() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 200 (modern_decks) — Witherbloom round 200 ────────────────────
+
+/// Witherbloom Slither (b200) — {1}{G} 1/3 Snake Druid Deathtouch.
+pub fn witherbloom_slither_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Slither (b200)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Snake, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Decay (b200) — {3}{B} Sorcery. Destroy target creature.
+pub fn witherbloom_decay_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Decay (b200)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Creature),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloomguard (b200) — {2}{G}{G} 4/4 Beast.
+pub fn witherbloom_bloomguard_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloomguard (b200)",
+        cost: cost(&[generic(2), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

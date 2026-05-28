@@ -22754,3 +22754,67 @@ pub fn lorehold_aegis_b199() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 200 (modern_decks) — Lorehold round 200 ───────────────────────
+
+/// Lorehold Sparkguard (b200) — {2}{R} 3/2 Spirit Soldier.
+pub fn lorehold_sparkguard_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkguard (b200)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Smite (b200) — {1}{W} Sorcery.
+/// Destroy target tapped creature.
+pub fn lorehold_smite_b200() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Smite (b200)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
