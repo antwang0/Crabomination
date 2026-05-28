@@ -25,8 +25,8 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    drain, drain_and_surveil, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
-    magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, magecraft_scry,
+    drain, drain_and_scry, drain_and_surveil, etb, etb_drain, etb_gain_life, etb_mint_token,
+    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_scry, magecraft_self_pump,
     on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
@@ -24986,6 +24986,868 @@ pub fn silverquill_whitewash_b201() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(3)),
             ),
         },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ── Batch 202 (modern_decks) — Silverquill expansion ─────────────────────
+
+/// Inkling Bloodbearer (b202) — {2}{W}{B} 3/3 Inkling Vampire Flying.
+/// ETB: each opponent loses 2 life and you gain 2 life. Race-breaker
+/// evasive drain body.
+pub fn inkling_bloodbearer_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Bloodbearer (b202)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Vampire],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Excoriator (b202) — {3}{B} Instant.
+/// Destroy target creature with power 4 or less.
+pub fn silverquill_excoriator_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Excoriator (b202)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::PowerAtMost(4)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Bookbinder II (b202) — {1}{W} 1/3 Inkling Cleric.
+/// Magecraft: scry 1, then draw a card. Spell-heavy engine.
+pub fn inkling_bookbinder_ii_b202() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry_and_draw;
+    CardDefinition {
+        name: "Inkling Bookbinder II (b202)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Crestwalker (b202) — {2}{W}{B} 3/2 Vampire Knight.
+/// First strike, lifelink. Premium evasive race-breaker.
+pub fn silverquill_crestwalker_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Crestwalker (b202)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillforge (b202) — {3}{W}{B} Sorcery.
+/// Create two 1/1 W/B Inkling tokens with flying, then each opponent
+/// loses 3 life. Heavy-hitting double-body + drain finisher.
+pub fn silverquill_quillforge_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Quillforge (b202)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: inkling_token(),
+            },
+            drain(3),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Quillward (b202) — {W} 1/1 Inkling Cleric.
+/// ETB: put a flying counter on target creature you control.
+/// CR 122.1b keyword counter grant + Inkling tribal slot.
+pub fn inkling_quillward_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Quillward (b202)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Flying,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Dirge (b202) — {1}{B} Sorcery.
+/// Each opponent loses 2 life. You gain 2 life. Then surveil 1.
+pub fn silverquill_dirge_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Dirge (b202)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain_and_surveil(2, 1),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Heartcaller (b202) — {2}{B} 2/2 Inkling Cleric.
+/// Whenever another Inkling you control dies, you gain 2 life.
+/// Aristocrat-style payoff scaled to the tribe.
+pub fn inkling_heartcaller_b202() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Predicate};
+    CardDefinition {
+        name: "Inkling Heartcaller (b202)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Inkling),
+                }),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkblade (b202) — {1}{W} Instant.
+/// Target creature gets +2/+0 EOT and gains first strike EOT.
+pub fn silverquill_inkblade_b202() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Silverquill Inkblade (b202)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(2, 0, Keyword::FirstStrike),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Glyphlord (b202) — {3}{W}{B} 3/4 Inkling Wizard Flying.
+/// Magecraft: target creature you control gets a +1/+1 counter and
+/// gains lifelink until end of turn. Spell-engine tribal scaler.
+pub fn inkling_glyphlord_b202() -> CardDefinition {
+    use crate::effect::shortcut::cast_is_instant_or_sorcery;
+    CardDefinition {
+        name: "Inkling Glyphlord (b202)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(cast_is_instant_or_sorcery()),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GrantKeyword {
+                    what: target_filtered(
+                        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                    ),
+                    keyword: Keyword::Lifelink,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkmaster (b202) — {2}{W} 2/3 Human Wizard Vigilance.
+/// Whenever you gain life, put a +1/+1 counter on this creature.
+/// Heliod-template life-gain payoff in white.
+pub fn silverquill_inkmaster_b202() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec};
+    CardDefinition {
+        name: "Silverquill Inkmaster (b202)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Edictsong (b202) — {2}{W}{B} Sorcery.
+/// Each opponent sacrifices a creature, then you gain 2 life and
+/// draw a card. Mass edict + value.
+pub fn silverquill_edictsong_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Edictsong (b202)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Sacrifice {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                count: Value::Const(1),
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Plumegrower (b202) — {1}{B} 1/2 Inkling Cleric.
+/// ETB: each opponent loses 1 life, you gain 1 life, scry 1. Compact
+/// drain + smoothing one-drop.
+pub fn inkling_plumegrower_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Plumegrower (b202)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(drain_and_scry(1, 1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Quillstrike (b202) — {W} Instant.
+/// Target creature gets +1/+0 EOT and gains lifelink EOT.
+/// 1-mana combat trick + race-stabiliser.
+pub fn silverquill_quillstrike_b202() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Silverquill Quillstrike (b202)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(1, 0, Keyword::Lifelink),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Lifecaller (b202) — {3}{W}{B} 3/3 Inkling Cleric Flying
+/// Lifelink. ETB: target creature card from your graveyard returns
+/// to your hand. Value evasive body.
+pub fn inkling_lifecaller_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Lifecaller (b202)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature,
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pendant (b202) — {3} Artifact.
+/// Whenever you cast or copy an instant or sorcery, target creature
+/// you control gets +1/+0 EOT. Magecraft-anthem in artifact form.
+pub fn silverquill_pendant_b202() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_target_pump;
+    CardDefinition {
+        name: "Silverquill Pendant (b202)",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_target_pump(
+            target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            1, 0,
+        )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Vellumguard (b202) — {2}{W} 1/4 Inkling Cleric Defender.
+/// Vigilance + lifelink — wall-style stabiliser that gains life from
+/// any attack on the ground.
+pub fn silverquill_vellumguard_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Vellumguard (b202)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Defender, Keyword::Vigilance, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Recap (b202) — {3}{W}{B} Sorcery.
+/// Return up to two target creature or planeswalker cards with mana
+/// value 3 or less from your graveyard to your hand. Mass recursion.
+pub fn silverquill_recap_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Recap (b202)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        // Approximation: single-target return-creature from gy. The
+        // engine has no native multi-target two-card selector for
+        // graveyard cards yet (multi-pick UI is engine-wide ⏳); the
+        // headline play pattern is preserved as "return a value
+        // creature from your gy → hand" for 5 mana.
+        effect: Effect::Move {
+            what: Selector::one_of(Selector::CardsInZone {
+                who: PlayerRef::You,
+                zone: Zone::Graveyard,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            }),
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Drainling (b202) — {W}{B} 2/1 Inkling Cleric Lifelink.
+/// On attack: each opponent loses 1 life. Compact aggressive lifelinker.
+pub fn inkling_drainling_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Drainling (b202)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sumptuous (b202) — {3}{W} Sorcery.
+/// Create three 1/1 W/B Inkling tokens with flying. Big mass mint.
+pub fn silverquill_sumptuous_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Sumptuous (b202)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            definition: inkling_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Cantrix (b202) — {1}{W}{B} 2/2 Inkling Wizard Flying.
+/// Magecraft: scry 1. Spell-heavy smoothing engine on a flyer.
+pub fn inkling_cantrix_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Cantrix (b202)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pinionbreaker (b202) — {3}{B} Instant.
+/// Destroy target creature with flying. Anti-flier removal at 4 mana.
+pub fn silverquill_pinionbreaker_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pinionbreaker (b202)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasKeyword(Keyword::Flying)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Augur (b202) — {2}{W} 2/2 Inkling Wizard.
+/// ETB: scry 2, then draw a card. Premium selection body.
+pub fn inkling_augur_b202() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry_and_draw;
+    CardDefinition {
+        name: "Inkling Augur (b202)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry_and_draw(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Drainscholar II (b202) — {2}{B} 3/2 Vampire Warlock.
+/// ETB: each opponent loses 2 life, you gain 2 life. Aggressive vamp.
+pub fn silverquill_drainscholar_ii_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drainscholar II (b202)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Wardrune (b202) — {1}{W} Instant.
+/// Target creature gets +0/+3 EOT and gains vigilance EOT.
+/// Defensive combat trick.
+pub fn silverquill_wardrune_b202() -> CardDefinition {
+    use crate::effect::shortcut::pump_and_grant_keyword;
+    CardDefinition {
+        name: "Silverquill Wardrune (b202)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: pump_and_grant_keyword(0, 3, Keyword::Vigilance),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
