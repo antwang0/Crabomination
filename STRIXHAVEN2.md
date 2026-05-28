@@ -19,13 +19,30 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2737 (incl. synthesised variants — batches 155–189 add 495 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2767 (incl. synthesised variants — batches 155–191 add 525 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (modern_decks, batches 187-189, claude/modern_decks): 65 more
+Push (modern_decks, batches 187-191, claude/modern_decks): 95 more
 STX cards across all five colleges, plus a new PermanentView field
 for keyword counters and server-side MatchStats.max_turns. CR 121.2
 / 405.5 / 614.6 rule lock-in tests added.
+
+**Batch 191 (15 cards)** — multi-action / tribal expansion:
+Silverquill Inkdrain (drain+draw+mint Inkling); Inkling Highscribe
+(scry + magecraft); Vampirebond (2/2 Lifelink). Witherbloom
+Doublestrike (drain+2 Pests); Pest Druid (mana dork); Greenward
+(Reach+Vigilance). Lorehold Echobringer (2 Spirits + burn);
+Sparrowscholar; Embershield (vig+first strike). Prismari Stormwave
+(Treasure+draw+burn); Wavetamer (magecraft loot); Tinkermage (ETB
+Treasure). Quandrix Sumtotal (4/4 Fractal+draw); Sparkbloomer (self
+pump); Vinegrower (ETB +1/+1).
+
+**Batch 190 (15 cards)** — keyword counter combo cards: each school
+gets 3 cards combining two CR 122.1b keyword counter grants or
+mixing a +1/+1 counter with a keyword counter. Exercises the new
+PermanentView.keyword_counters wire.
+
+
 
 **Batch 189 (15 cards)** — aggressive curve fillers across schools:
 Silverquill Drainmaster II / Inkling Vassalking / Exilewright;

@@ -5,9 +5,9 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
-## Recent additions (Push XXX — 2026-05-28, session 14, batches 187-189)
+## Recent additions (Push XXX — 2026-05-28, session 14, batches 187-191)
 
-### New cards (65 across batches 187-189)
+### New cards (95 across batches 187-191)
 - Batch 187 (35 cards): 7 per school exercising keyword counter
   granters (CR 122.1b), Pest/Inkling/Spirit/Fractal tribal payoffs,
   and magecraft templates.
@@ -17,6 +17,13 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
   Vassalking, Exilewright; Devourer, Spellblossom, Pest Crawler;
   Voltmage, Fireseal, Crusader; Magmamancer, Treasurewright,
   Hailstrike; Beastcaller, Cantrip, Vinescaler II.
+- Batch 190 (15 cards): keyword counter combo cards — each school
+  gets 3 cards combining two CR 122.1b keyword counter grants or
+  mixing a +1/+1 counter with a keyword counter.
+- Batch 191 (15 cards): multi-action + tribal — Inkdrain, Highscribe,
+  Vampirebond; Doublestrike, Pest Druid, Greenward; Echobringer,
+  Sparrowscholar, Embershield; Stormwave, Wavetamer, Tinkermage;
+  Sumtotal, Sparkbloomer, Vinegrower.
 
 ### Engine improvements
 - **`PermanentView.keyword_counters: Vec<(Keyword, u32)>`** — surfaces
