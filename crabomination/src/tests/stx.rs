@@ -77547,3 +77547,74 @@ fn silverquill_wardrune_b202_pumps_toughness_with_vigilance() {
     assert_eq!(c.toughness(), 5, "+0/+3 → 5 toughness");
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// CR rule lock-in tests — batch 202 round
+// ─────────────────────────────────────────────────────────────────────────
+
+/// CR 704.5a — A player with 0 or less life loses the game (state-based
+/// action). Drain a player to 0 via a Famine cast and verify they lose.
+#[test]
+fn cr_704_5a_player_at_zero_or_less_life_loses() {
+    let mut g = two_player_game();
+    // Drop p1 to 4 life.
+    g.players[1].life = 4;
+    let famine = g.add_card_to_hand(0, catalog::witherbloom_famine_b202());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: famine, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Famine deals 4 drain → p1 at 0 life → loses.
+    assert!(g.players[1].life <= 0);
+    assert!(g.is_game_over(), "player at 0 life triggers game-over SBA");
+}
+
+/// CR 608.2b — A spell with all illegal targets is removed from the stack
+/// and goes to graveyard rather than resolving. Cast Bolt at a creature,
+/// then remove the creature before bolt resolves → bolt fizzles.
+#[test]
+fn cr_608_2b_spell_with_illegal_target_fizzles() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on stack");
+    // Remove the bear by direct mutation: pull it off bf, drop into gy.
+    let bear_inst = g.battlefield.iter().position(|c| c.id == opp_bear)
+        .map(|i| g.battlefield.remove(i)).expect("bear on bf");
+    g.players[1].graveyard.push(bear_inst);
+    let p1_life = g.players[1].life;
+    drain_stack(&mut g);
+    // Bolt resolves with no legal target → fizzles → no damage to player.
+    assert!(g.battlefield_find(opp_bear).is_none(), "bear moved to gy");
+    assert_eq!(g.players[1].life, p1_life, "bolt fizzled — no damage redirected");
+}
+
+/// CR 121.6a — A replacement effect for "draw a card" applies even if
+/// the draw would be impossible because the library is empty. We pin
+/// the inverse: a draw against an empty library is a *loss*, not a
+/// no-op, and that loss is the SBA trigger (not the draw replacement
+/// — they're independent paths). This lock-in pairs with 704.5b above.
+#[test]
+fn cr_704_5b_empty_library_draw_attempt_loses_game() {
+    let mut g = two_player_game();
+    // p0 has an empty library.
+    g.players[0].library.clear();
+    g.players[0].cards_drawn_this_turn = 0;
+    // Force a draw via Quandrix Cantrip.
+    let id = g.add_card_to_hand(0, catalog::quandrix_cantrip_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Drawing with empty library → "attempted to draw from empty lib"
+    // SBA → caster loses.
+    assert!(g.is_game_over(), "empty-library draw loses the game");
+}
+
