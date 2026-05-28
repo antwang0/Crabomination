@@ -4007,5 +4007,18 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_surge_ii_b202,
         super::prismari::prismari_volcanist_b202,
         super::prismari::prismari_spiketide_b202,
+        // ── batch 202: Quandrix expansion ──
+        super::quandrix::quandrix_conjurer_b202,
+        super::quandrix::quandrix_fractalweaver_b202,
+        super::quandrix::quandrix_cantrip_b202,
+        super::quandrix::quandrix_grizzler_b202,
+        super::quandrix::quandrix_sumtotal_b202,
+        super::quandrix::quandrix_skydiver_b202,
+        super::quandrix::quandrix_sparkbender_b202,
+        super::quandrix::quandrix_vinemage_b202,
+        super::quandrix::quandrix_fractalspawn_b202,
+        super::quandrix::quandrix_symmetry_b202,
+        super::quandrix::quandrix_streampath_b202,
+        super::quandrix::quandrix_geomant_b202,
     ]
 }

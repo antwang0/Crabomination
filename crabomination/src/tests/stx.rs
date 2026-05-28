@@ -77341,6 +77341,195 @@ fn prismari_spiketide_b202_draws_three_and_discards_two() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 202 (modern_decks) — Quandrix expansion.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_conjurer_b202_scrys_and_draws_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::quandrix_conjurer_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // -1 cast (bolt) + 1 draw (magecraft) = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_fractalweaver_b202_mints_fractal_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::quandrix_fractalweaver_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().any(|c| c.is_token
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
+    assert!(fractal, "Fractal minted");
+}
+
+#[test]
+fn quandrix_cantrip_b202_draws_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::quandrix_cantrip_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 2 draw = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn quandrix_grizzler_b202_is_three_three_vigilance() {
+    let def = catalog::quandrix_grizzler_b202();
+    assert!(def.keywords.contains(&Keyword::Vigilance));
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+}
+
+#[test]
+fn quandrix_sumtotal_b202_puts_x_counters_for_each_creature() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_sumtotal_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(b1).expect("bear alive");
+    // 3 creatures on bf at spell-resolve = 3 counters.
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+#[test]
+fn quandrix_skydiver_b202_is_flying_hexproof() {
+    let def = catalog::quandrix_skydiver_b202();
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Hexproof));
+}
+
+#[test]
+fn quandrix_sparkbender_b202_counters_target_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    g.priority.player_with_priority = 0;
+    let counter = g.add_card_to_hand(0, catalog::quandrix_sparkbender_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: counter, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("counter");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "bolt was countered");
+}
+
+#[test]
+fn quandrix_vinemage_b202_etb_pumps_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_vinemage_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn quandrix_fractalspawn_b202_etb_mints_two_counter_fractal() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_fractalspawn_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|c| c.is_token
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
+    assert!(fractal.is_some(), "Fractal minted");
+    assert_eq!(fractal.unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+#[test]
+fn quandrix_symmetry_b202_mints_fractal_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_symmetry_b202());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: Some(4),
+    }).expect("castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|c| c.is_token
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
+    assert!(fractal.is_some(), "Fractal minted");
+    assert_eq!(fractal.unwrap().counter_count(CounterType::PlusOnePlusOne), 4);
+}
+
+#[test]
+fn quandrix_streampath_b202_bounces_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_streampath_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_none(), "opp bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == opp_bear), "bear in opp hand");
+    // -1 cast + 1 draw = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn quandrix_geomant_b202_activates_for_counter() {
+    let def = catalog::quandrix_geomant_b202();
+    assert_eq!(def.activated_abilities.len(), 1);
+}
+
 #[test]
 fn silverquill_wardrune_b202_pumps_toughness_with_vigilance() {
     let mut g = two_player_game();
