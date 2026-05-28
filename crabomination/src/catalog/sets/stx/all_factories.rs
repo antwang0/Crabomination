@@ -3981,5 +3981,18 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::witherbloom::witherbloom_briarcaller_b202,
         super::witherbloom::witherbloom_rotcaller_b202,
         super::witherbloom::witherbloom_verdance_b202,
+        // ── batch 202: Lorehold expansion ──
+        super::lorehold::lorehold_reanimator_b202,
+        super::lorehold::lorehold_pyromancer_b202,
+        super::lorehold::lorehold_charge_b202,
+        super::lorehold::lorehold_spirit_caller_b202,
+        super::lorehold::lorehold_bolt_ii_b202,
+        super::lorehold::lorehold_battlescholar_b202,
+        super::lorehold::lorehold_excavate_b202,
+        super::lorehold::lorehold_frontlord_b202,
+        super::lorehold::lorehold_cleanse_b202,
+        super::lorehold::lorehold_echoblade_b202,
+        super::lorehold::lorehold_lavascholar_b202,
+        super::lorehold::lorehold_ghostsmith_b202,
     ]
 }

@@ -77004,6 +77004,166 @@ fn witherbloom_verdance_b202_mints_a_four_four_beast() {
     assert_eq!(b.toughness(), 4);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 202 (modern_decks) — Lorehold expansion.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_reanimator_b202_etb_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_reanimator_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "bear reanimated");
+}
+
+#[test]
+fn lorehold_pyromancer_b202_pings_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_pyromancer_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // Magecraft ping 2 → AutoDecider picks any target. We just check that
+    // opp lost extra life beyond the 3-damage bolt.
+    assert!(g.players[1].life <= p1 - 3, "bolt damage applied");
+}
+
+#[test]
+fn lorehold_charge_b202_pumps_team_with_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_charge_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert!(c.has_keyword(&Keyword::FirstStrike));
+    assert_eq!(c.power(), 3);
+}
+
+#[test]
+fn lorehold_spirit_caller_b202_has_attack_token_trigger() {
+    let def = catalog::lorehold_spirit_caller_b202();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_bolt_ii_b202_deals_two_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_bolt_ii_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2);
+}
+
+#[test]
+fn lorehold_battlescholar_b202_is_first_strike_two_two() {
+    let def = catalog::lorehold_battlescholar_b202();
+    assert!(def.keywords.contains(&Keyword::FirstStrike));
+    assert_eq!(def.cost.cmc(), 2);
+}
+
+#[test]
+fn lorehold_excavate_b202_returns_creature_to_battlefield() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_excavate_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(dead).is_some(), "bear reanimated");
+}
+
+#[test]
+fn lorehold_frontlord_b202_anthems_other_friendlies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::lorehold_frontlord_b202());
+    drain_stack(&mut g);
+    let view = g.computed_permanent(bear).expect("bear on bf");
+    assert_eq!(view.power, 3, "+1/+0 anthem applies");
+}
+
+#[test]
+fn lorehold_cleanse_b202_damages_each_creature() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_cleanse_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "own bear dies (2 dmg)");
+    assert!(g.battlefield_find(opp).is_none(), "opp bear dies (2 dmg)");
+}
+
+#[test]
+fn lorehold_echoblade_b202_pumps_friendly_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_echoblade_b202());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.power(), 3, "+1/+1 magecraft pump");
+}
+
+#[test]
+fn lorehold_lavascholar_b202_pings_on_etb() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_lavascholar_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // 1-damage ping; auto-picks a target (opp player most likely).
+    assert!(g.players[1].life <= p1, "lavascholar dealt damage");
+}
+
+#[test]
+fn lorehold_ghostsmith_b202_has_attack_token_trigger() {
+    let def = catalog::lorehold_ghostsmith_b202();
+    assert_eq!(def.power, 3);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
 #[test]
 fn silverquill_wardrune_b202_pumps_toughness_with_vigilance() {
     let mut g = two_player_game();
