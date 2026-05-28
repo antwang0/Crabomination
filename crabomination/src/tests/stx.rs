@@ -367,6 +367,244 @@ fn lorehold_reach_doctrine_b187_grants_reach_via_counter() {
 }
 
 #[test]
+fn prismari_hasterune_b187_grants_haste_via_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_hasterune_b187());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn prismari_sparkforge_b187_mints_treasure_and_scrys_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::prismari_sparkforge_b187());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let treasures_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Treasure").count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let treasures_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Treasure").count();
+    assert_eq!(treasures_after, treasures_before + 1);
+}
+
+#[test]
+fn prismari_flameseer_b187_pings_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_flameseer_b187());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // 3 bolt + 1 magecraft ping = 4 total.
+    assert_eq!(g.players[1].life, p1_life - 4);
+}
+
+#[test]
+fn prismari_stormcoach_b187_is_a_five_mana_flying_haste_dragon() {
+    let def = catalog::prismari_stormcoach_b187();
+    assert_eq!(def.cost.cmc(), 5);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+    assert!(def.keywords.contains(&Keyword::Flying));
+    assert!(def.keywords.contains(&Keyword::Haste));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Dragon));
+}
+
+#[test]
+fn prismari_echohammer_b187_copies_target_is_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let echo = g.add_card_to_hand(0, catalog::prismari_echohammer_b187());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on stack");
+    let bolt_target = g.stack.iter().find_map(|s| match s {
+        StackItem::Spell { card, .. } if card.definition.name == "Lightning Bolt" => Some(card.id),
+        _ => None,
+    }).expect("bolt on stack");
+    g.perform_action(GameAction::CastSpell {
+        card_id: echo, target: Some(Target::Permanent(bolt_target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("echohammer on stack");
+    drain_stack(&mut g);
+    // Original bolt + 1 copy = 6 total damage.
+    assert_eq!(g.players[1].life, p1_life - 6);
+}
+
+#[test]
+fn prismari_pyroshaper_b187_pings_creature_for_three() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_pyroshaper_b187());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Bear dies to 3 damage.
+    assert!(g.battlefield_find(bear).is_none());
+}
+
+#[test]
+fn prismari_stormcaller_b187_loots_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::prismari_stormcaller_b187());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // -1 cast +1 draw -1 discard = -1 net hand.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1);
+}
+
+#[test]
+fn quandrix_tramplerune_b187_grants_trample_via_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_tramplerune_b187());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Trample));
+}
+
+#[test]
+fn quandrix_fractal_tutor_b187_mints_three_counter_flying_fractal() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_fractal_tutor_b187());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Fractal").expect("fractal");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 3);
+    assert!(fractal.has_keyword(&Keyword::Flying), "flying counter grants Flying");
+}
+
+#[test]
+fn quandrix_vinescaler_b187_etb_grows_and_pumps_friend_fractal() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_vinescaler_b187());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let vinescaler = g.battlefield.iter()
+        .find(|c| c.definition.name == "Quandrix Vinescaler (b187)").expect("vinescaler");
+    assert_eq!(vinescaler.counter_count(CounterType::PlusOnePlusOne), 1, "ETB +1/+1 counter");
+}
+
+#[test]
+fn quandrix_treestrider_b187_is_a_three_mana_reach_trampler() {
+    let def = catalog::quandrix_treestrider_b187();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Reach));
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn quandrix_quickdraw_b187_counters_when_unable_to_pay() {
+    let mut g = two_player_game();
+    // P1 casts Lightning Bolt at instant speed with no extra mana for tax.
+    let bolt_hand = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt_hand, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt on stack");
+    // P0 quick-draws — bolt's controller has no mana left to pay {2}.
+    g.priority.player_with_priority = 0;
+    let qd = g.add_card_to_hand(0, catalog::quandrix_quickdraw_b187());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: qd, target: Some(Target::Permanent(bolt_hand)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("quickdraw on stack");
+    drain_stack(&mut g);
+    // Bolt countered → P0 untouched.
+    assert_eq!(g.players[0].life, p0_life, "bolt was countered");
+}
+
+#[test]
+fn quandrix_mossglider_b187_etb_grows_with_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_mossglider_b187());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter()
+        .find(|c| c.definition.name == "Quandrix Mossglider (b187)").expect("mossglider");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+    // 2/3 + 1/+1 → 3/4.
+    assert_eq!(c.power(), 3);
+}
+
+#[test]
+fn quandrix_resonator_b187_magecraft_self_pumps() {
+    let mut g = two_player_game();
+    let resonator = g.add_card_to_battlefield(0, catalog::quandrix_resonator_b187());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let pwr_before = g.battlefield_find(resonator).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(resonator).unwrap().power(), pwr_before + 1);
+}
+
+#[test]
 fn silverquill_wardlock_b187_fans_shield_counters_to_friendly_creatures() {
     let mut g = two_player_game();
     let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());

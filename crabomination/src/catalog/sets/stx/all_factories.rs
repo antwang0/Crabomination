@@ -3634,5 +3634,21 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::lorehold::lorehold_pyrescribe_b187,
         super::lorehold::lorehold_ghostpaladin_b187,
         super::lorehold::lorehold_reach_doctrine_b187,
+        // ── batch 187 (modern_decks): Prismari expansion ──
+        super::prismari::prismari_hasterune_b187,
+        super::prismari::prismari_sparkforge_b187,
+        super::prismari::prismari_flameseer_b187,
+        super::prismari::prismari_stormcoach_b187,
+        super::prismari::prismari_echohammer_b187,
+        super::prismari::prismari_pyroshaper_b187,
+        super::prismari::prismari_stormcaller_b187,
+        // ── batch 187 (modern_decks): Quandrix expansion ──
+        super::quandrix::quandrix_tramplerune_b187,
+        super::quandrix::quandrix_fractal_tutor_b187,
+        super::quandrix::quandrix_vinescaler_b187,
+        super::quandrix::quandrix_treestrider_b187,
+        super::quandrix::quandrix_quickdraw_b187,
+        super::quandrix::quandrix_mossglider_b187,
+        super::quandrix::quandrix_resonator_b187,
     ]
 }

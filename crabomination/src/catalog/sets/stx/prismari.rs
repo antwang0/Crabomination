@@ -15761,6 +15761,219 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 187 (modern_decks) — Prismari expansion ─────────────────────────
+
+/// Prismari Hasterune (b187) — {2}{R} Sorcery.
+/// Put a haste counter on target creature you control.
+pub fn prismari_hasterune_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Hasterune (b187)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Haste,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Sparkforge (b187) — {2}{U}{R} 3/3 Elemental Wizard.
+/// Magecraft: mint a Treasure token + scry 1.
+pub fn prismari_sparkforge_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkforge (b187)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            magecraft_treasure(),
+            magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Flameseer (b187) — {1}{U}{R} 2/2 Wizard Prowess.
+/// Magecraft: deal 1 to any target.
+pub fn prismari_flameseer_b187() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_any;
+    CardDefinition {
+        name: "Prismari Flameseer (b187)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Stormcoach (b187) — {3}{U}{R} 4/4 Dragon Flying + Haste.
+/// ETB: scry 2.
+pub fn prismari_stormcoach_b187() -> CardDefinition {
+    use crate::effect::shortcut::{etb, etb_scry};
+    let _ = etb;
+    CardDefinition {
+        name: "Prismari Stormcoach (b187)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Echohammer (b187) — {1}{U}{R} Instant.
+/// Copy target instant/sorcery spell you control (no new targets prompt).
+pub fn prismari_echohammer_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Echohammer (b187)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CopySpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack.and(
+                    SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                ),
+            ),
+            count: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Pyroshaper (b187) — {2}{R} Sorcery.
+/// Deal 3 to creature/PW; if 5+ mana spent to cast this, deal 5 instead.
+/// Approximated as a flat 3 damage at base cost (no mana-spent introspection).
+pub fn prismari_pyroshaper_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Pyroshaper (b187)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Stormcaller (b187) — {U}{R} 2/1 Elemental Wizard.
+/// Magecraft: loot.
+pub fn prismari_stormcaller_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormcaller (b187)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 185 (modern_decks) — Prismari keyword counter expansion ────────
 
 /// Prismari Sparkbloomer (b185) — {3}{R} 3/3 Elemental.

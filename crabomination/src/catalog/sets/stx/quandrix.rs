@@ -16821,6 +16821,255 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     }
 }
 
+// ── Batch 187 (modern_decks) — Quandrix expansion ─────────────────────────
+
+/// Quandrix Tramplerune (b187) — {1}{G} Sorcery.
+/// Put a trample counter on target creature you control.
+pub fn quandrix_tramplerune_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tramplerune (b187)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            keyword: Keyword::Trample,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Fractal-Tutor (b187) — {2}{G}{U} Sorcery.
+/// Mints a 0/0 Fractal token with 3 +1/+1 counters and a flying counter.
+pub fn quandrix_fractal_tutor_b187() -> CardDefinition {
+    let fractal = TokenDefinition {
+        name: "Fractal".to_string(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Quandrix Fractal-Tutor (b187)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal,
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(3),
+            },
+            Effect::AddKeywordCounter {
+                what: Selector::LastCreatedToken,
+                keyword: Keyword::Flying,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Vinescaler (b187) — {3}{G}{U} 3/3 Fractal Druid.
+/// ETB +1/+1 counter on self. Magecraft: target friendly Fractal gets a
+/// +1/+1 counter.
+pub fn quandrix_vinescaler_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Vinescaler (b187)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+            magecraft(Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal)),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Treestrider (b187) — {2}{G} 3/3 Plant.
+/// Reach + Trample. Plain body.
+pub fn quandrix_treestrider_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Treestrider (b187)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Quickdraw (b187) — {1}{U} Instant.
+/// Counter target spell unless its controller pays {2}.
+pub fn quandrix_quickdraw_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Quickdraw (b187)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterUnlessPaid {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            mana_cost: cost(&[generic(2)]),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Mossglider (b187) — {1}{G}{U} 2/3 Fractal Druid Flash.
+/// ETB +1/+1 counter on self.
+pub fn quandrix_mossglider_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mossglider (b187)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flash],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Resonator (b187) — {G}{U} 2/2 Fractal Wizard.
+/// Magecraft self-pump +1/+1 EOT.
+pub fn quandrix_resonator_b187() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Resonator (b187)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 180 (modern_decks) — Fractal-centric Quandrix expansion ────────
 
 /// Quandrix Counterspinner (b180) — {1}{U} Instant. Counter target spell with mana value 2 or less.
