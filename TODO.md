@@ -5,6 +5,78 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXIII — 2026-05-28, session 17, batch 202)
+
+### New cards (75 across batch 202)
+- **Batch 202 (75 cards)** — nuanced expansion focused on Silverquill
+  (25), Witherbloom (14), Lorehold (12), Prismari (12), Quandrix (12).
+  Covers the full cross-school spread. Highlights: Inkling Heartcaller
+  (Inkling-tribal death trigger), Silverquill Inkmaster (Heliod-template
+  life-gain → self-counter), Silverquill Recap (first catalog use of
+  `Selector::take(.., 2)` on a graveyard CardsInZone selector — returns
+  TWO ≤3-MV creature cards from gy → hand), Quandrix Symmetry (X-cost
+  Fractal mint with X +1/+1 counters), Quandrix Sumtotal (CountOf
+  scaling). 78 new tests (75 functionality + 3 CR rules).
+
+### Engine improvements
+- **Catalog `Selector::take(.., 2)` for graveyard returns**: Silverquill
+  Recap exercises the existing multi-pick selector shape on a
+  `CardsInZone` graveyard pool — the first catalog use. The primitive
+  worked; the catalog wire was missing. Regression test
+  `silverquill_recap_b202_returns_two_low_mv_creatures_when_available`
+  pins the multi-card return path against snapshot/movement-effect
+  refactors.
+
+### Server improvements
+- **`MatchStats.{cumulative_win_life_delta, win_life_samples}`** +
+  `observe_win_life_delta(winner, &final_life_totals)` +
+  `avg_win_life_delta()`. Rendered in `format_match_stats` as
+  `avg_win_life_lead=N`. Surfaces whether long bot-vs-bot ladders
+  are "blowouts" (high delta) or "races" (near zero). Wired at
+  both bot and pair record paths. 5 new unit tests:
+  `observe_win_life_delta_accumulates_winners_lead`,
+  `observe_win_life_delta_clamps_negative_lead_to_zero`,
+  `observe_win_life_delta_handles_seat_out_of_range`,
+  `format_match_stats_includes_avg_win_life_lead_when_present`,
+  `format_match_stats_omits_avg_win_life_lead_when_no_samples`.
+
+### Bot AI improvements
+- **Magecraft-aware spell bias** in `RandomBot::main_phase_action`:
+  when the bot controls a permanent with a magecraft trigger and the
+  castable set contains at least one instant or sorcery, the IS subset
+  is sampled instead of the full set so the magecraft trigger fires.
+  Falls back to uniform sampling when no magecraft body is in play.
+  Resolves the "Bot AI doesn't model magecraft pump/drain triggers"
+  observation. Test: `bot_prefers_is_spell_when_magecraft_in_play`.
+
+### UI improvements
+- **`(attacking)` / `(blocking #N)` lines in `counter_tooltip.rs`**:
+  combat status surfaced in the alt-tooltip so the player can tell
+  which creatures are committed to combat. 3 new tooltip tests:
+  `attacking_status_surfaces_in_tooltip`,
+  `blocking_status_shows_attacker_id`,
+  `combat_status_hidden_when_idle`.
+
+### CR rule lock-in tests (3 new)
+- `cr_704_5a_player_at_zero_or_less_life_loses` — drain a player to 0
+  via Witherbloom Famine; verify SBA fires `is_game_over()`.
+- `cr_608_2b_spell_with_illegal_target_fizzles` — Bolt → Bear, remove
+  Bear before Bolt resolves; verify the spell fizzles (no damage
+  redirected to player).
+- `cr_704_5b_empty_library_draw_attempt_loses_game` — Quandrix Cantrip
+  on empty library → SBA loss.
+
+### Observations & future items from this session
+- **Choose-N modal commands**: Silverquill Quillforge mints Inklings
+  + drains; could use a "choose 2 of 3" promote-to-mode-pick UI for
+  the printed STX Command lineage. Still ⏳ as engine-wide gap.
+- **Hybrid mana payment**: still collapsed to one color across the
+  batch (Witherbloom Apprentice cost {B}{G} is fine but cards printed
+  with `{W/B}{W/B}` lose payment flexibility). Engine-wide gap.
+- **Lesson sideboard model**: Quandrix Cantrip is *not* a Lesson but
+  shares the IS-cantrip shape — Lessons themselves still gate on the
+  sideboard model.
+
 ## Recent additions (Push XXXII — 2026-05-28, session 16, batches 198-200)
 
 ### New cards (78 across batches 198-200)

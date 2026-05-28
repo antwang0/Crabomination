@@ -19,8 +19,90 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2972 (incl. synthesised variants — batches 155–200 add 730 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 3047 (incl. synthesised variants — batches 155–202 add 805 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (claude/modern_decks, batch 202, claude/modern_decks): 75
+additional STX cards across all five colleges, plus:
+- **Silverquill (25 cards)** — nuanced round: Inkling Bloodbearer
+  (3/3 flying ETB-drain), Silverquill Quillforge (mints 2 Inklings
+  + drain 3), Inkling Quillward (W) (CR 122.1b flying-counter
+  granter on a 1/1 body), Inkling Heartcaller (Inkling-tribal
+  death trigger via `HasCreatureType(Inkling)` predicate filter),
+  Silverquill Inkmaster (lifegain → +1/+1 self counter, Heliod
+  template), Silverquill Edictsong (mass edict + drain + draw),
+  Silverquill Recap (returns up to **two** ≤3-MV creatures via
+  the new `Selector::take(.., 2)` graveyard pull), Silverquill
+  Pendant (3 colorless artifact — magecraft-aware anthem).
+- **Witherbloom (14 cards)** — Pestcaller (ETB 2 Pests),
+  Witherbloom Sapdraw (drain 2 + cantrip), Pest Devourer
+  (Pest-tribal growth — +1/+1 counter on each other Pest death),
+  Witherbloom Vinepath (+2 counters + surveil), Pestshell
+  Crusader (3/3 trample drain Pest knight), Witherbloom Famine
+  (drain 4), Witherbloom Cultivator (tap for {G}), Witherbloom
+  Briarcaller (4/4 trample reach), Witherbloom Verdance (mints
+  a 4/4 Beast).
+- **Lorehold (12 cards)** — Lorehold Reanimator (ETB
+  ≤3-MV-creature back from gy), Lorehold Pyromancer (magecraft
+  ping 2), Lorehold Charge (team +1/+0 + first strike EOT),
+  Lorehold Spirit Caller (attack-mint Spirit), Lorehold Bolt II
+  (R-cost 2-dmg any-target), Lorehold Excavate (4-mana
+  reanimation), Lorehold Frontlord (4/4 anthem +1/+0 other
+  friendlies), Lorehold Cleanse (2 dmg each creature),
+  Lorehold Echoblade (magecraft +1/+1 target friendly),
+  Lorehold Lavascholar (ETB ping), Lorehold Ghostsmith
+  (attack-mint Spirit on 3/3 body).
+- **Prismari (12 cards)** — Prismari Treasurehunter (magecraft
+  mint Treasure), Prismari Bolt (R-cost 3-dmg any-target),
+  Prismari Drakebreeder (3/3 flying ETB scry-and-draw),
+  Prismari Spellcraft (scry-2 + draw-2), Prismari Sparkforger
+  (magecraft +1/+0 self EOT), Prismari Squallcaller (ETB tap
+  opp creature), Prismari Pyroartisan (magecraft 1-dmg each
+  opp), Prismari Tinkerer (colorless ETB Treasure body),
+  Prismari Soothsayer (magecraft loot), Prismari Surge II
+  (4-dmg + scry), Prismari Volcanist (4/4 haste trample),
+  Prismari Spiketide (draw 3 / discard 2).
+- **Quandrix (12 cards)** — Quandrix Conjurer (magecraft
+  scry-and-draw), Quandrix Fractalweaver (magecraft mint
+  +1/+1-counter Fractal), Quandrix Cantrip (instant draw 2),
+  Quandrix Grizzler (3/3 vigilance), Quandrix Sumtotal
+  (X = creature count counters), Quandrix Skydiver (flying +
+  hexproof), Quandrix Sparkbender (G-counter, plain counter
+  approximation), Quandrix Vinemage (ETB +1/+1 counter on
+  friendly), Quandrix Fractalspawn (ETB mint +2-counter
+  Fractal), Quandrix Symmetry (X-cost Fractal-with-X-counters),
+  Quandrix Streampath (bounce + cantrip), Quandrix Geomant
+  (mana-sink +1/+1 counter ability).
+
+Engine / server / UI improvements landed:
+- **Engine**: Silverquill Recap exercises the existing
+  `Selector::take(.., 2)` shape on a `Selector::CardsInZone`
+  graveyard pull — the first catalog use of multi-card take from
+  the graveyard zone. The pre-existing primitive worked; the
+  catalog wire was the missing piece. Now also covered by a
+  two-bear regression test in `tests::stx`.
+- **Server (`crabomination_server/main.rs`)**:
+  `MatchStats.{cumulative_win_life_delta, win_life_samples}` +
+  `observe_win_life_delta(winner, &final_life_totals)` +
+  `avg_win_life_delta()`. Rendered in `format_match_stats` as
+  `avg_win_life_lead=N` so operators can spot whether long bot-
+  vs-bot ladders are "blowouts" (high delta) or "races" (near
+  zero). 5 new server unit tests.
+- **Bot AI (`server/bot.rs`)**: magecraft-aware spell-bias
+  heuristic — when the bot controls a permanent with a magecraft
+  trigger and its castable set contains at least one instant or
+  sorcery, the IS subset is sampled instead of the full set so
+  the magecraft trigger fires. Falls back to uniform sampling
+  when no magecraft body is in play. Resolves the long-standing
+  TODO entry "Bot AI doesn't model magecraft pump/drain triggers
+  when considering whether to cast an instant". 1 new bot test.
+- **UI (`counter_tooltip.rs`)**: `(attacking)` and
+  `(blocking #N)` status lines surfaced in the alt-tooltip so
+  the player can tell at a glance which creatures are committed
+  to combat. 3 new tooltip tests.
+- **3 new CR rule lock-in tests**: CR 704.5a (player at 0 life
+  loses), CR 608.2b (spell with all-illegal targets fizzles),
+  CR 704.5b (empty-library draw loses game).
 
 Push (claude/modern_decks, batches 198-200, claude/modern_decks): 78
 additional STX cards across all five colleges, plus:
