@@ -69,14 +69,25 @@ Batch 166 (50 cards) and batch 167 (6 follow-up cards):
   Diminishing Returns from no support: cards like Adventurous Mind /
   Halana, Honored Pilot use these; the printed "+1/+1 counter and a
   flying counter" lands the P/T half but not the keyword half today.
-- **CounterType::Finality printed grant cards** — currently only
-  available via Silverquill Curse (b167). Real-card grants include
-  Vraska, Golgari Queen's "-3 destroy target nonland permanent.
-  Create a 1/1 Assassin..." line and Doom Whisperer ETB. Worth
-  porting at least one for the engine wire.
+- **CounterType::Finality printed grant cards** — currently available
+  via Silverquill Curse (b167), Witherbloom Hex (b167). Real-card
+  grants include Vraska, Golgari Queen's "-3 destroy target nonland
+  permanent. Create a 1/1 Assassin..." line and Doom Whisperer ETB.
+  Worth porting at least one for the engine wire.
 - **`PermanentView.has_finality_counters`** consumed by client UI —
   not yet bound in the Bevy renderer. Next-up client work: badge
   icon next to the existing stun counter indicator.
+- **`SelectionRequirement::ManaValueExactly`** landed in batch 168 —
+  Fix What's Broken approximation can now be promoted from
+  `ManaValueAtMost(2)` to the exact-match predicate once the X
+  threading lands. The CR ctx for X-cost spells still needs to flow
+  through `evaluate_requirement_on_card` for fully dynamic gates.
+- **Bot AI: still doesn't model blocker-trigger / damage-doubler
+  effects** when deciding to attack. The b168 suicide-avoidance
+  heuristic only looks at raw P/T and a handful of keywords; cards
+  like Marauding Raptor (-1/-1 to blockers) or static double-strike
+  granters would change the math. Future work: a real combat
+  evaluator that scores each (attacker, blocker) pair.
 
 ## Recent additions (Push XXIV — 2026-05-28, session 8)
 

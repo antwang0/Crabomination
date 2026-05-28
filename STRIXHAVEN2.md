@@ -19,8 +19,32 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2575 (incl. synthesised variants — batches 155–167 add 333 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2578 (incl. synthesised variants — batches 155–168 add 336 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batch 168, claude/modern_decks): 3 more Silverquill
+premium cards exercising new engine features:
+- Silverquill Banisher (sorcery): first card using the new
+  `SelectionRequirement::ManaValueExactly(n)` predicate (CMC exactly
+  3 gate, rejects MV=2/MV=5 targets).
+- Silverquill Penlord: creature-spell-cast triggered drain via
+  `EventKind::SpellCast`/`YourControl` filtered by
+  `EntityMatches(TriggerSource, Creature)` — separates from existing
+  Magecraft (which gates IS spells) and Spectacle Mage prowess (which
+  gates non-creature). Verified the trigger does NOT fire on instants.
+- Inkling Sage II: compact Flying+Lifelink Inkling.
+Engine improvement landed alongside:
+- **`SelectionRequirement::ManaValueExactly(n)`**: precise-CMC gate
+  composing naturally with And/Or for range filters. Resolves the
+  TODO from session 8 — Fix What's Broken's "with mana value equal
+  to X" was previously approximated to `ManaValueAtMost(2)`. Wired
+  in both `evaluate_requirement_on_card` paths in eval.rs.
+- **Bot AI suicide-avoidance**: smart attack heuristic holds back
+  ground attackers from suiciding into deathtouch defenders or
+  outsized blockers — only swings on lethal-swings, with evasion
+  (flying), trample, indestructible, or lifelink. Improves bot play
+  against Witherbloom Crawler / Sapworm / Pest swarm defensive
+  boards. All 5 bot-vs-bot tests still pass.
 
 Push (modern_decks, batch 167, claude/modern_decks): 26 additional new
 STX cards across all five colleges (6 Silverquill, 5 Witherbloom, 5
