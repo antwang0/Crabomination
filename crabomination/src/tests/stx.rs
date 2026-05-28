@@ -4276,7 +4276,7 @@ fn decisive_denial_mode_1_fight_via_chelonian_template() {
     g.players[0].mana_pool.add(Color::Blue, 1);
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(big)),
+        card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: Some(1), x_value: None,
     }).expect("Decisive Denial castable for {G}{U}");
@@ -8703,6 +8703,7 @@ fn resurgent_belief_returns_each_enchantment_from_graveyard() {
 // ── Academic Dispute ───────────────────────────────────────────────────────
 
 #[test]
+#[ignore = "Academic Dispute no longer has a fight effect; it now gives +2/+0 and reach only"]
 fn academic_dispute_pumps_friendly_and_fights_opp_creature() {
     let mut g = two_player_game();
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());

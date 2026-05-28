@@ -5,6 +5,24 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XVII-d — 2026-05-28, session 7)
+
+### New cards (4)
+- **Esika's Chariot** (G) — 4/4 Legendary Artifact, ETB two 2/2 Cat tokens
+- **Robber of the Rich** (R) — 2/2 Reach+Haste body-only
+
+### Test fixes (10 of 44 upstream failures resolved)
+- expressive_iteration, snapcaster_mage, rofellos, environmental_sciences (2),
+  deep_analysis (2), elemental_summoning, plus the MDFC/Ward test updates
+
+### Remaining test failures (34)
+Most are STX extras tests whose assertions don't match the upstream card
+definitions. Common patterns:
+- Cards that changed from target-player to caster-only draws
+- Cost mismatches (card cost changed in upstream factory)
+- New GrantMayPlay effects that tests haven't been updated for
+- Complex multi-step card interactions (Academic Dispute, Conspiracy Theorist)
+
 ## Recent additions (Push XXIII — 2026-05-27, session 6)
 
 ### Engine improvements
