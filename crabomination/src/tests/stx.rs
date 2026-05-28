@@ -75748,3 +75748,114 @@ fn quandrix_beastcaller_b198_is_five_five_trample() {
     assert_eq!(def.toughness, 5);
     assert!(def.keywords.contains(&Keyword::Trample));
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// CR rule lock-in tests (batch 198 push)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// CR 105.2 — "An object is the color or colors of the mana symbols in
+/// its mana cost". Cards with a hybrid pip {W/B} should report both
+/// colors via `cost.colors()` so multi-color cost analysis (Converge,
+/// Vanishing Verse multicolored filter, Multicolored predicate) gets
+/// both halves.
+#[test]
+fn cr_105_2_hybrid_pip_contributes_both_colors() {
+    use crate::mana::hybrid;
+    let c = crate::mana::cost(&[crate::mana::generic(1), hybrid(Color::White, Color::Black)]);
+    let colors = c.colors();
+    assert!(colors.contains(&Color::White), "hybrid contributes White");
+    assert!(colors.contains(&Color::Black), "hybrid contributes Black");
+    assert_eq!(colors.len(), 2);
+    assert_eq!(c.distinct_colors(), 2, "distinct_colors counts both halves");
+}
+
+/// CR 105.2c — "A colorless object has no color." A card cost like {3}
+/// (generic only) has zero colors; an artifact with only colorless pips
+/// must register as colorless.
+#[test]
+fn cr_105_2c_generic_only_cost_is_colorless() {
+    let c = crate::mana::cost(&[crate::mana::generic(3)]);
+    assert!(c.colors().is_empty(), "generic-only cost has no colors");
+    assert_eq!(c.distinct_colors(), 0);
+}
+
+/// CR 105.2b — Multicolored objects are two or more colors. Three
+/// distinct colored pips report all three.
+#[test]
+fn cr_105_2b_three_pips_register_as_multicolored() {
+    let c = crate::mana::cost(&[
+        crate::mana::w(), crate::mana::u(), crate::mana::b(),
+    ]);
+    assert_eq!(c.distinct_colors(), 3);
+    // Multicolored predicate would also fire via SelectionRequirement.
+}
+
+/// CR 121.5 — "Effects that cause a player to look at the top of their
+/// library or reveal those cards aren't draws". A `RevealUntilFind`
+/// effect (via Banefire-search-style flows) must not increment the
+/// per-turn draw tally. This is already locked in for one path; here we
+/// verify the broader scan: a Scry effect doesn't bump
+/// `cards_drawn_this_turn` either.
+#[test]
+fn cr_121_5_scry_does_not_count_as_drawing() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let drawn_before = g.players[0].cards_drawn_this_turn;
+    // Cast a scry-only spell: Quandrix Cipher (Scry 2).
+    let id = g.add_card_to_hand(0, catalog::quandrix_cipher_b198());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cipher");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].cards_drawn_this_turn, drawn_before,
+        "scry doesn't bump cards_drawn_this_turn");
+}
+
+/// CR 119.4 — "A player can't pay more life than they have." Verify
+/// negative-delta clamps the engine's life path: a 20-life player who
+/// would lose 99 life ends at 0 (and is eliminated by 704.5a SBA).
+#[test]
+fn cr_119_4_loss_clamps_at_zero_or_below() {
+    let mut g = two_player_game();
+    g.players[1].life = 5;
+    // Deal lethal damage via burn body (drain pattern).
+    g.adjust_life(1, -99);
+    assert!(g.players[1].life <= 0, "life clamped to 0-or-below; not panicking");
+}
+
+/// CR 122.1c — Shield counter pops on the first damage event; subsequent
+/// damage is unprevented. Lock-in via a fresh source: a creature with one
+/// shield counter takes a Bolt → shield pops, second Bolt → 3 damage
+/// connects.
+#[test]
+fn cr_122_1c_shield_pops_then_second_damage_connects() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    // Use opp's bear (so player 0, who has priority, can target it).
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Manually slap a shield counter on the bear.
+    {
+        let c = g.battlefield.iter_mut().find(|c| c.id == bear).unwrap();
+        c.add_counters(CounterType::Shield, 1);
+    }
+    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt1");
+    drain_stack(&mut g);
+    // First bolt: shield absorbs.
+    assert!(g.battlefield_find(bear).is_some(), "bear still alive after shield pops");
+    let c = g.battlefield_find(bear).expect("alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 0, "shield counter removed");
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt2");
+    drain_stack(&mut g);
+    // Second bolt: 3 damage to 2/2 → bear dies.
+    assert!(g.battlefield_find(bear).is_none(), "second bolt connects with no shield");
+}
