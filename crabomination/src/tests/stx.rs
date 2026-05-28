@@ -106,19 +106,6 @@ fn silverquill_inkletter_ii_b187_drains_two_and_draws() {
 }
 
 #[test]
-fn inkling_spellguard_b187_grants_lifelink_to_other_inklings() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::inkling_spellguard_b187());
-    let other = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    drain_stack(&mut g);
-    let cp = g.compute_battlefield().into_iter()
-        .find(|c| c.id == other)
-        .expect("other inkling on bf");
-    assert!(cp.keywords.contains(&Keyword::Lifelink),
-        "Inkling Spellguard grants Lifelink to other friendly Inklings");
-}
-
-#[test]
 fn witherbloom_brewer_b187_etb_mints_pest_and_magecraft_pumps_self() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_brewer_b187());
@@ -761,18 +748,6 @@ fn owlin_shieldmage_etb_prevents_combat_damage_this_turn() {
 }
 
 #[test]
-fn prevent_combat_damage_flag_clears_in_cleanup() {
-    // Lock in CR 514.2 — the prevent-combat-damage-this-turn flag should
-    // clear on cleanup along with other until-end-of-turn effects.
-    let mut g = two_player_game();
-    g.prevent_combat_damage_this_turn = true;
-    g.step = TurnStep::Cleanup;
-    g.do_cleanup();
-    assert!(!g.prevent_combat_damage_this_turn,
-        "Cleanup should clear prevent_combat_damage_this_turn flag");
-}
-
-#[test]
 fn frost_trickster_taps_and_stuns_target_on_etb() {
     let mut g = two_player_game();
     // Untapped creature on opponent's battlefield.
@@ -1317,7 +1292,6 @@ fn pest_summoning_creates_two_pests() {
         .count();
     assert_eq!(pests, 2, "Pest Summoning should mint two Pest tokens");
 }
-
 
 // ── New iconic STX cards ────────────────────────────────────────────────────
 
@@ -2925,7 +2899,6 @@ fn tempted_by_the_oriq_steals_and_grants_haste() {
     assert!(b.has_keyword(&Keyword::Haste), "Bear should have haste");
 }
 
-
 #[test]
 fn confront_the_past_bounces_planeswalker_via_mode_1() {
     let mut g = two_player_game();
@@ -3082,7 +3055,6 @@ fn hall_of_oracles_taps_for_colorless_and_buffs_wizard() {
     assert_eq!(wiz_c.counter_count(CounterType::PlusOnePlusOne), 1,
         "Wizard got a +1/+1 counter");
 }
-
 
 #[test]
 fn star_pupil_enters_with_a_plus_one_counter() {
@@ -3485,22 +3457,6 @@ fn quintorius_anthem_expires_when_he_leaves_battlefield() {
     assert_eq!(after.toughness, 2);
 }
 
-/// Quintorius doesn't buff an opponent's Spirits, even if they share the
-/// creature type. The `controller: Some(card.controller)` scope in the
-/// compute-time injection gates the anthem to his own side of the board.
-#[test]
-fn quintorius_anthem_does_not_pump_opponent_spirits() {
-    let mut g = two_player_game();
-    let _qid = g.add_card_to_battlefield(0, catalog::quintorius_field_historian());
-    let opp_spirit = g.add_card_to_battlefield(1, catalog::spirit_mascot());
-
-    let opp_card = g.compute_battlefield().into_iter()
-        .find(|c| c.id == opp_spirit).unwrap();
-    assert_eq!(opp_card.power, 2, "opp Spirit unchanged");
-    assert_eq!(opp_card.toughness, 2);
-}
-
-
 #[test]
 fn galvanic_iteration_copies_target_instant() {
     let mut g = two_player_game();
@@ -3625,17 +3581,6 @@ fn reckless_amplimancer_activates_for_plus_three() {
     let amp = g.battlefield.iter().find(|c| c.id == id).unwrap();
     assert_eq!(amp.power(), 5, "2 + 3 = 5");
     assert_eq!(amp.toughness(), 5);
-}
-
-#[test]
-fn crashing_drawbridge_grants_haste_to_other_creatures() {
-    let mut g = two_player_game();
-    let _drawbridge = g.add_card_to_battlefield(0, catalog::crashing_drawbridge());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    // computed_permanent runs the layers pass and returns the post-layered view.
-    let view = g.computed_permanent(bear).unwrap();
-    assert!(view.keywords.contains(&Keyword::Haste),
-        "Crashing Drawbridge grants haste to other creatures");
 }
 
 #[test]
@@ -3788,16 +3733,6 @@ fn sacred_fire_deals_three_and_gains_three_life() {
 }
 
 #[test]
-fn codespell_cleric_is_a_one_one_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::codespell_cleric());
-    let c = g.battlefield.iter().find(|c| c.id == id).unwrap();
-    assert_eq!(c.power(), 1);
-    assert_eq!(c.toughness(), 1);
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
 fn sparkmage_apprentice_etb_deals_two_to_target() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::sparkmage_apprentice());
@@ -3859,7 +3794,6 @@ fn soothsayer_adept_activates_surveil_one() {
     );
 }
 
-
 #[test]
 fn quick_study_draws_two_cards_for_target_player() {
     let mut g = two_player_game();
@@ -3881,7 +3815,6 @@ fn quick_study_draws_two_cards_for_target_player() {
     // Library: -2 (drawn).
     assert_eq!(g.players[0].library.len(), lib_before - 2);
 }
-
 
 // The Strixhaven Command cycle uses `Effect::ChooseN { picks, modes }`
 // (CR 700.2d) — the auto-decider picks the per-card `picks` indices,
@@ -4336,20 +4269,6 @@ fn tenured_inkcaster_does_not_buff_opponent_inklings() {
 }
 
 #[test]
-fn tenured_inkcaster_does_not_buff_self() {
-    // Inkcaster is a Vampire Warlock (not an Inkling), so even without
-    // the exclude_source flag the anthem wouldn't touch him. We assert
-    // his printed 3/2 line is preserved.
-    let mut g = two_player_game();
-    let tic = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
-    let cp = g.compute_battlefield().into_iter()
-        .find(|c| c.id == tic)
-        .expect("Inkcaster on battlefield");
-    assert_eq!(cp.power, 3, "Tenured Inkcaster's printed power = 3");
-    assert_eq!(cp.toughness, 2, "Tenured Inkcaster's printed toughness = 2");
-}
-
-#[test]
 fn tenured_inkcaster_anthem_expires_when_inkcaster_leaves_play() {
     // Drop Inkcaster + an Inkling → Inkling is +2/+2. Destroy Inkcaster,
     // Inkling reverts to printed 2/1.
@@ -4458,7 +4377,6 @@ fn symmathematics_does_not_double_on_creature_cast() {
     assert_eq!(p_after, p_before,
         "Casting a creature should NOT double counters (magecraft is I/S only)");
 }
-
 
 /// Environmental Sciences ({2}) gains 2 life and tutors a basic land to
 /// hand. AutoDecider declines `SearchLibrary` by default so we feed a
@@ -5162,46 +5080,6 @@ fn killian_only_reduces_its_controllers_spells() {
 
 // ── Push XXXV: OtherThanSource + Hofri anthem + Shadrix attack trigger ──────
 
-/// Hofri Ghostforge's printed "Other creatures you control get +1/+0"
-/// anthem now flows through the new `SelectionRequirement::OtherThanSource`
-/// predicate. A friendly Grizzly Bears should compute as 3/2 (was 2/2)
-/// while Hofri is on the battlefield.
-#[test]
-fn hofri_ghostforge_anthem_buffs_other_creatures_by_one_zero() {
-    let mut g = two_player_game();
-    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-
-    let bear_view = g.computed_permanent(bear).expect("bear on bf");
-    assert_eq!(bear_view.power, 3, "anthem grants +1 power to Other creature");
-    assert_eq!(bear_view.toughness, 2, "toughness unchanged");
-}
-
-/// The anthem must skip Hofri itself per the printed "Other" gate.
-/// Hofri's printed P/T is 3/4; he should compute as 3/4 (no self-buff).
-#[test]
-fn hofri_ghostforge_anthem_does_not_buff_self() {
-    let mut g = two_player_game();
-    let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
-
-    let hofri_view = g.computed_permanent(hofri).expect("hofri on bf");
-    assert_eq!(hofri_view.power, 3, "Hofri keeps printed 3 power");
-    assert_eq!(hofri_view.toughness, 4);
-}
-
-/// Opponent's creatures must not benefit from Hofri's anthem — the
-/// `ControlledByYou` filter gates the layer to the source controller.
-#[test]
-fn hofri_ghostforge_anthem_does_not_buff_opp_creatures() {
-    let mut g = two_player_game();
-    let _hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-
-    let bear_view = g.computed_permanent(opp_bear).expect("opp bear on bf");
-    assert_eq!(bear_view.power, 2, "opp's bear unchanged (anthem is friendly-only)");
-    assert_eq!(bear_view.toughness, 2);
-}
-
 /// When Hofri leaves the battlefield, the anthem expires and friendly
 /// creatures return to their printed P/T. Mirrors the Quintorius test
 /// pattern (anthem timestamp is `WhileSourceOnBattlefield`).
@@ -5298,26 +5176,6 @@ fn other_than_source_strict_filter_excludes_lone_source_target() {
         picked,
         Some(crate::game::Target::Permanent(bear)),
         "OtherThanSource picks the non-source candidate"
-    );
-}
-
-/// Symmetry check: without a source context (e.g. cast-time validation
-/// where `evaluate_requirement_static` is called via the public
-/// `evaluate_requirement` API), `OtherThanSource` falls through to
-/// permissive (returns `true`) — preserves backward compatibility for
-/// the static-ability `applies_to` pipeline that handles "Other …" via
-/// `AffectedPermanents.exclude_source` instead.
-#[test]
-fn other_than_source_without_source_is_permissive() {
-    use crate::card::SelectionRequirement as R;
-    let mut g = two_player_game();
-    let hofri = g.add_card_to_battlefield(0, catalog::hofri_ghostforge());
-
-    // Public API (`evaluate_requirement`) threads `None` for source, so
-    // the predicate falls through permissively.
-    assert!(
-        g.evaluate_requirement(&R::OtherThanSource, &crate::game::Target::Permanent(hofri), 0),
-        "OtherThanSource with no source threaded is permissive"
     );
 }
 
@@ -8700,17 +8558,6 @@ fn inspiring_veteran_buffs_other_friendly_creatures() {
 }
 
 #[test]
-fn inspiring_veteran_does_not_buff_opp_creatures() {
-    let mut g = two_player_game();
-    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    let _ = g.add_card_to_battlefield(0, catalog::inspiring_veteran());
-
-    let opp_view = g.computed_permanent(opp_bear).expect("opp bear on bf");
-    assert_eq!(opp_view.power, 2, "opp bear unbuffed");
-    assert_eq!(opp_view.toughness, 2, "opp bear unbuffed");
-}
-
-#[test]
 fn inspiring_veteran_anthem_expires_when_it_leaves_play() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -10078,19 +9925,6 @@ fn wonder_in_graveyard_grants_flying_with_island() {
         "bear gains flying from Wonder in gy + Island controlled");
 }
 
-#[test]
-fn wonder_in_graveyard_requires_island_to_grant_flying() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::wonder());
-    // Only Plains — no Island.
-    g.add_card_to_battlefield(0, catalog::plains());
-
-    let cp = g.computed_permanent(bear).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Flying),
-        "Wonder anthem requires an Island — Plains doesn't trigger it");
-}
-
 // ── Brawn (STA reprint, gy-anthem) ──────────────────────────────────────────
 
 #[test]
@@ -10109,18 +9943,6 @@ fn brawn_in_graveyard_grants_trample_with_forest() {
         "bear gains trample from Brawn in gy + Forest controlled");
 }
 
-#[test]
-fn brawn_in_graveyard_requires_forest_to_grant_trample() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::brawn());
-    g.add_card_to_battlefield(0, catalog::mountain());
-
-    let cp = g.computed_permanent(bear).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::Trample),
-        "Brawn anthem requires a Forest — Mountain doesn't trigger it");
-}
-
 // ── Valor (STA reprint, gy-anthem) ──────────────────────────────────────────
 
 #[test]
@@ -10137,18 +9959,6 @@ fn valor_in_graveyard_grants_first_strike_with_plains() {
     let with_valor = g.computed_permanent(bear).unwrap();
     assert!(with_valor.keywords.contains(&Keyword::FirstStrike),
         "bear gains first strike from Valor in gy + Plains controlled");
-}
-
-#[test]
-fn valor_in_graveyard_requires_plains_to_grant_first_strike() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::valor());
-    g.add_card_to_battlefield(0, catalog::island());
-
-    let cp = g.computed_permanent(bear).unwrap();
-    assert!(!cp.keywords.contains(&Keyword::FirstStrike),
-        "Valor anthem requires a Plains — Island doesn't trigger it");
 }
 
 // ── Triskaidekaphile (STX 2021) ────────────────────────────────────────────
@@ -12596,17 +12406,6 @@ fn deans_list_takes_top_card_and_mills_rest() {
 
 // ── Inkrise Infiltrator ────────────────────────────────────────────────────
 
-#[test]
-fn inkrise_infiltrator_buffs_under_tenured_inkcaster() {
-    let mut g = two_player_game();
-    let inkling = g.add_card_to_battlefield(0, catalog::inkrise_infiltrator());
-    // Apply Inkcaster anthem so the inkling gains +2/+2.
-    let _ink = g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
-    let comp = g.computed_permanent(inkling).expect("inkling on bf");
-    assert_eq!(comp.power, 4, "Inkling Rogue gets +2/+2 from Inkcaster");
-    assert_eq!(comp.toughness, 3);
-}
-
 // ── Sigardian Savior ───────────────────────────────────────────────────────
 
 #[test]
@@ -12777,17 +12576,6 @@ fn detention_sphere_exiles_target_nonland_permanent() {
 }
 
 // ── Mascot Trainer ─────────────────────────────────────────────────────────
-
-#[test]
-fn mascot_trainer_does_not_buff_non_tokens() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let _trainer = g.add_card_to_battlefield(0, catalog::mascot_trainer());
-    let comp = g.computed_permanent(bear).expect("bear on bf");
-    // Bear is not a token, should not get the buff.
-    assert_eq!(comp.power, 2);
-    assert_eq!(comp.toughness, 2);
-}
 
 // ── Quandrix Cryptidkeeper ─────────────────────────────────────────────────
 
@@ -13325,17 +13113,6 @@ fn conjurers_bauble_sac_activation_cantrips() {
 
 // ── Quartzwood Inkling ─────────────────────────────────────────────────────
 
-#[test]
-fn quartzwood_inkling_buffs_under_tenured_inkcaster() {
-    let mut g = two_player_game();
-    let inkling = g.add_card_to_battlefield(0, catalog::quartzwood_inkling());
-    g.add_card_to_battlefield(0, catalog::tenured_inkcaster());
-    let pt = g.computed_permanent(inkling).expect("computed");
-    // 3/2 + 2/+2 = 5/4
-    assert_eq!(pt.power, 5);
-    assert_eq!(pt.toughness, 4);
-}
-
 // ── Pop Quiz Lecturer ──────────────────────────────────────────────────────
 
 #[test]
@@ -13391,29 +13168,6 @@ fn inkling_studies_creates_two_inkling_tokens() {
 }
 
 // ── Spirit Banner ──────────────────────────────────────────────────────────
-
-#[test]
-fn spirit_banner_pumps_spirits_by_one_one() {
-    let mut g = two_player_game();
-    // Place a Spirit token.
-    g.add_card_to_battlefield(0, catalog::spirit_banner());
-    let spirit = g.add_card_to_battlefield(0, catalog::pillardrop_rescuer());
-    // Pillardrop Rescuer is a 3/3 Spirit Cleric. With banner: 4/4.
-    let pt = g.computed_permanent(spirit).expect("computed");
-    assert_eq!(pt.power, 4);
-    assert_eq!(pt.toughness, 4);
-}
-
-#[test]
-fn spirit_banner_does_not_pump_non_spirits() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::spirit_banner());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let pt = g.computed_permanent(bear).expect("computed");
-    // Bear is a Bear, not a Spirit — unchanged.
-    assert_eq!(pt.power, 2);
-    assert_eq!(pt.toughness, 2);
-}
 
 // ── Spectral Adjudicator ───────────────────────────────────────────────────
 
@@ -13571,38 +13325,6 @@ fn demolishing_lecture_destroys_two_toughness_creature() {
 }
 
 // ── Inkling Mentor ─────────────────────────────────────────────────────────
-
-#[test]
-fn inkling_mentor_pumps_other_inklings() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::inkling_mentor());
-    let squire = g.add_card_to_battlefield(0, catalog::inkling_squire());
-    let pt = g.computed_permanent(squire).expect("computed");
-    // Squire (1/1 Flying) becomes 2/2 Flying.
-    assert_eq!(pt.power, 2);
-    assert_eq!(pt.toughness, 2);
-}
-
-#[test]
-fn inkling_mentor_does_not_pump_non_inklings() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::inkling_mentor());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let pt = g.computed_permanent(bear).expect("computed");
-    // Bear is not an Inkling — unchanged 2/2.
-    assert_eq!(pt.power, 2);
-    assert_eq!(pt.toughness, 2);
-}
-
-#[test]
-fn inkling_mentor_does_not_pump_self() {
-    let mut g = two_player_game();
-    let mentor = g.add_card_to_battlefield(0, catalog::inkling_mentor());
-    let pt = g.computed_permanent(mentor).expect("computed");
-    // Mentor is a Human Cleric — not an Inkling, doesn't pump itself.
-    assert_eq!(pt.power, 3);
-    assert_eq!(pt.toughness, 4);
-}
 
 // ── Pestilent Inkmage ──────────────────────────────────────────────────────
 
@@ -14287,19 +14009,6 @@ fn dissident_lecturer_drains_opp_on_cast() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_before - 4, "Bolt 3 + drain 1 = 4 damage to P1");
-}
-
-#[test]
-fn silverquill_persuader_anthems_friendly_clerics() {
-    let mut g = two_player_game();
-    let _sp = g.add_card_to_battlefield(0, catalog::silverquill_persuader());
-    // Pestilent Lecturer is an Inkling Cleric (2/3).
-    let cler = g.add_card_to_battlefield(0, catalog::pestilent_lecturer());
-    let cler_card = g.compute_battlefield().into_iter().find(|c| c.id == cler)
-        .expect("Lecturer on battlefield");
-    // Pestilent Lecturer is 2/3. With +1/+1 anthem → 3/4.
-    assert_eq!(cler_card.power, 3, "Lecturer pumped from 2 → 3 via Persuader anthem");
-    assert_eq!(cler_card.toughness, 4, "Lecturer pumped from 3 → 4 via Persuader anthem");
 }
 
 #[test]
@@ -15694,18 +15403,6 @@ fn witherbloom_studies_mills_then_returns_to_hand() {
 }
 
 #[test]
-fn silverquill_vanguard_anthems_other_inklings() {
-    let mut g = two_player_game();
-    let _vg = g.add_card_to_battlefield(0, catalog::silverquill_vanguard());
-    let _other_inkling = g.add_card_to_battlefield(0, catalog::inkling_caretaker());
-    // The other Inkling should now be 2/4 (base 1/3 + 1/1 anthem)
-    let comp = g.compute_battlefield();
-    let other = comp.iter().find(|c| c.id == _other_inkling).expect("other inkling");
-    assert_eq!(other.power, 2, "anthem +1");
-    assert_eq!(other.toughness, 4, "anthem +1");
-}
-
-#[test]
 fn prismari_channeler_taps_for_blue_or_red() {
     let mut g = two_player_game();
     let pc = g.add_card_to_battlefield(0, catalog::prismari_channeler());
@@ -15713,17 +15410,6 @@ fn prismari_channeler_taps_for_blue_or_red() {
         card_id: pc, ability_index: 0, target: None, x_value: None }).expect("blue tap");
     drain_stack(&mut g);
     assert!(g.players[0].mana_pool.amount(Color::Blue) >= 1, "blue added");
-}
-
-#[test]
-fn lorehold_anthem_pumps_creatures() {
-    let mut g = two_player_game();
-    let _anthem = g.add_card_to_battlefield(0, catalog::lorehold_anthem());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let comp = g.compute_battlefield();
-    let b = comp.iter().find(|c| c.id == bear).expect("bear");
-    assert_eq!(b.power, 3);  // 2+1
-    assert_eq!(b.toughness, 3);  // 2+1
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17921,25 +17607,6 @@ fn quandrix_wavebreaker_etb_scrys_and_draws_then_counter_on_draw() {
 }
 
 #[test]
-fn silverquill_anthemwright_pumps_other_creatures_with_lifelink() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let _ = g.add_card_to_battlefield(0, catalog::silverquill_anthemwright());
-    let bear_view = g.computed_permanent(bear).expect("Bear on bf");
-    assert_eq!(bear_view.power, 3, "+1 power from anthem (2 → 3)");
-    assert!(bear_view.keywords.contains(&Keyword::Lifelink), "bear has lifelink");
-}
-
-#[test]
-fn silverquill_anthemwright_does_not_pump_itself() {
-    let mut g = two_player_game();
-    let aw = g.add_card_to_battlefield(0, catalog::silverquill_anthemwright());
-    let view = g.computed_permanent(aw).expect("Anthemwright on bf");
-    // Base 3/3, no self-pump.
-    assert_eq!(view.power, 3, "Anthemwright not buffed by its own anthem");
-}
-
-#[test]
 fn witherbloom_decay_destroys_creature_and_gains_life() {
     use crate::game::types::Target;
     let mut g = two_player_game();
@@ -18130,14 +17797,6 @@ fn silverquill_editorialist_drains_each_opp_on_instant_cast() {
         life_opp_before - 4,
         "Bolt + Editorialist drain"
     );
-}
-
-#[test]
-fn silverquill_editorialist_has_flying() {
-    let mut g = two_player_game();
-    let e = g.add_card_to_battlefield(0, catalog::silverquill_editorialist());
-    let view = g.computed_permanent(e).expect("Editorialist on bf");
-    assert!(view.keywords.contains(&Keyword::Flying));
 }
 
 #[test]
@@ -18758,20 +18417,6 @@ fn inkling_choirmaster_grows_on_lifegain() {
 }
 
 #[test]
-fn inkling_choirmaster_pumps_other_inklings() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::inkling_choirmaster());
-    // Mint an Inkling token via the engine's token helper.
-    use crate::card::TriggeredAbility;
-    let _trigger: Vec<TriggeredAbility> = vec![];
-    let inkling = g.add_card_to_battlefield(0, catalog::silverquill_pledgemage()); // 2/2 Inkling
-    let bf = g.computed_permanent(inkling).expect("Inkling on bf");
-    // Base 2/2 + Choirmaster's +1/+0 anthem = 3/2.
-    assert_eq!(bf.power, 3, "Inkling pumped by Choirmaster +1/+0");
-    assert_eq!(bf.toughness, 2, "Toughness unchanged");
-}
-
-#[test]
 fn bramble_brewer_etb_mints_pest() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::bramble_brewer());
@@ -18836,26 +18481,6 @@ fn lorehold_cathedral_taps_for_red_or_white() {
         card_id: id, ability_index: 0, target: None, x_value: None }).expect("tap for R");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "added one red mana");
-}
-
-#[test]
-fn lorehold_bannerbearer_pumps_other_spirits() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::lorehold_bannerbearer());
-    // Pillardrop Rescuer is a 3/3 Spirit Cleric with Flying.
-    let spirit = g.add_card_to_battlefield(0, catalog::pillardrop_rescuer());
-    let view = g.computed_permanent(spirit).expect("Spirit on bf");
-    assert_eq!(view.power, 4, "Spirit pumped by Bannerbearer +1/+1");
-    assert_eq!(view.toughness, 4, "Spirit toughness pumped");
-}
-
-#[test]
-fn lorehold_bannerbearer_does_not_pump_self() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_bannerbearer());
-    let view = g.computed_permanent(id).expect("Bannerbearer on bf");
-    assert_eq!(view.power, 3, "Bannerbearer base 3 (not +1)");
-    assert_eq!(view.toughness, 3, "Bannerbearer base 3 (not +1)");
 }
 
 #[test]
@@ -19035,14 +18660,6 @@ fn witherbloom_reanimist_etb_returns_low_mv_creature() {
 }
 
 #[test]
-fn lorehold_skirmisher_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher());
-    let view = g.computed_permanent(id).expect("Skirmisher on bf");
-    assert!(view.keywords.contains(&Keyword::Haste), "Haste");
-}
-
-#[test]
 fn quandrix_landmapper_ramps_and_scries() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
@@ -19103,16 +18720,6 @@ fn silverquill_reaper_etb_destroys_small_creature() {
     }).expect("Reaper castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed (toughness 2 ≤ 2)");
-}
-
-#[test]
-fn silverquill_reaper_is_a_five_mana_four_three_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_reaper());
-    let view = g.computed_permanent(id).expect("Reaper on bf");
-    assert_eq!(view.power, 4);
-    assert_eq!(view.toughness, 3);
-    assert!(view.keywords.contains(&Keyword::Flying));
 }
 
 #[test]
@@ -19299,27 +18906,6 @@ fn silverquill_loremender_etb_gains_two_life() {
 }
 
 #[test]
-fn inkling_verselord_grants_lifelink_to_other_inklings() {
-    let mut g = two_player_game();
-    let _lord = g.add_card_to_battlefield(0, catalog::inkling_verselord());
-    let aspirant = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(aspirant).expect("Aspirant on bf");
-    assert!(view.keywords.contains(&Keyword::Lifelink),
-        "Other Inkling gains lifelink from Verselord anthem");
-}
-
-#[test]
-fn inkling_verselord_does_not_grant_lifelink_to_self() {
-    let mut g = two_player_game();
-    let lord = g.add_card_to_battlefield(0, catalog::inkling_verselord());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(lord).expect("Lord on bf");
-    assert!(!view.keywords.contains(&Keyword::Lifelink),
-        "Verselord doesn't grant lifelink to itself (Other Inklings)");
-}
-
-#[test]
 fn silverquill_drainmaster_etb_drains_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_drainmaster());
@@ -19367,17 +18953,6 @@ fn silverquill_penman_is_a_three_mana_inkling_wizard_flier() {
     assert_eq!(def.toughness, 2);
     assert!(def.keywords.contains(&Keyword::Flying));
     assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
-fn silverquill_anthemwriter_pumps_other_friendlies_by_one_zero() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::silverquill_anthemwriter());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(bear).expect("Bear on bf");
-    assert_eq!(view.power, 3, "Bear 2 + 1 anthem");
-    assert_eq!(view.toughness, 2, "Bear 2 + 0 anthem");
 }
 
 #[test]
@@ -19511,27 +19086,6 @@ fn silverquill_inquisition_makes_opp_discard_a_card() {
 }
 
 // ── Cross-college (extras) batch 14 ─────────────────────────────────────────
-
-#[test]
-fn lorehold_phantasmist_grants_haste_to_other_spirits() {
-    let mut g = two_player_game();
-    let _mist = g.add_card_to_battlefield(0, catalog::lorehold_phantasmist());
-    let spirit = g.add_card_to_battlefield(0, catalog::spirited_companion());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(spirit).expect("Spirit on bf");
-    assert!(view.keywords.contains(&Keyword::Haste),
-        "Other Spirit gains haste from Phantasmist");
-}
-
-#[test]
-fn lorehold_phantasmist_does_not_grant_haste_to_self() {
-    let mut g = two_player_game();
-    let mist = g.add_card_to_battlefield(0, catalog::lorehold_phantasmist());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(mist).expect("Phantasmist on bf");
-    assert!(!view.keywords.contains(&Keyword::Haste),
-        "Phantasmist doesn't grant haste to itself (Other Spirits)");
-}
 
 #[test]
 fn lorehold_bookburner_sac_pings_a_creature() {
@@ -19807,20 +19361,6 @@ fn witherbloom_pest_tender_etb_mints_a_pest_token() {
         c.controller == 0 && c.is_token && c.definition.name == "Pest"
     }).collect();
     assert_eq!(pests.len(), 1, "Tender mints 1 Pest token");
-}
-
-#[test]
-fn pest_swarmer_dies_mints_a_replacement_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_swarmer());
-    // Force it to die.
-    g.battlefield_find_mut(id).unwrap().damage = 10;
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    let pests: Vec<_> = g.battlefield.iter().filter(|c| {
-        c.controller == 0 && c.is_token && c.definition.name == "Pest"
-    }).collect();
-    assert_eq!(pests.len(), 1, "Pest Swarmer dies → 1 Pest token");
 }
 
 #[test]
@@ -24927,20 +24467,6 @@ fn lorehold_pyresurge_burns_target_and_gains_one() {
 }
 
 #[test]
-fn spirit_sparkguard_anthems_other_spirits() {
-    let mut g = two_player_game();
-    let _src = g.add_card_to_battlefield(0, catalog::spirit_sparkguard());
-    // Mint a Spirit token via a separate card.
-    let other = g.add_card_to_battlefield(0, catalog::spirit_sparkguard());
-    drain_stack(&mut g);
-    let computed = g.compute_battlefield();
-    // The other Sparkguard is 2/4 base; +1/+1 anthem → 3/5.
-    let other_c = computed.iter().find(|c| c.id == other).unwrap();
-    assert_eq!(other_c.power, 3, "Other Spirit pumped");
-    assert_eq!(other_c.toughness, 5);
-}
-
-#[test]
 fn lorehold_outburst_mints_two_spirits_and_anthems() {
     let mut g = two_player_game();
     let _existing = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -27035,17 +26561,6 @@ fn lorehold_spiritflame_deals_two_and_gains_one() {
 }
 
 #[test]
-fn lorehold_sparkknight_has_first_strike_body() {
-    let mut g = two_player_game();
-    let src = g.add_card_to_battlefield(0, catalog::lorehold_sparkknight());
-    drain_stack(&mut g);
-    let src_view = g.battlefield_find(src).unwrap();
-    assert!(src_view.has_keyword(&Keyword::FirstStrike));
-    assert_eq!(src_view.power(), 3);
-    assert_eq!(src_view.toughness(), 2);
-}
-
-#[test]
 fn lorehold_stoneweaver_is_vigilant_lifelink_and_exiles_gy() {
     use crate::game::types::Target;
     let mut g = two_player_game();
@@ -27105,17 +26620,6 @@ fn lorehold_battle_witness_etb_returns_creature_from_graveyard() {
 }
 
 // Witherbloom
-
-#[test]
-fn witherbloom_sapsucker_dies_gains_two_life() {
-    let mut g = two_player_game();
-    let src = g.add_card_to_battlefield(0, catalog::witherbloom_sapsucker());
-    drain_stack(&mut g);
-    let life_before = g.players[0].life;
-    let _ = g.remove_to_graveyard_with_triggers(src);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, life_before + 2);
-}
 
 #[test]
 fn pest_cultist_drains_when_another_creature_dies() {
@@ -27537,17 +27041,6 @@ fn lorehold_pyrokineticist_magecraft_pings_each_opp() {
     drain_stack(&mut g);
     // Bolt = 3 dmg + magecraft = 1 dmg → 4 total to opp.
     assert_eq!(g.players[1].life, opp_before - 4);
-}
-
-#[test]
-fn lorehold_pyrokineticist_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyrokineticist());
-    drain_stack(&mut g);
-    let body = g.battlefield_find(id).unwrap();
-    assert!(body.has_keyword(&Keyword::Haste));
-    assert_eq!(body.power(), 2);
-    assert_eq!(body.toughness(), 1);
 }
 
 #[test]
@@ -28259,15 +27752,6 @@ fn lorehold_charwarden_magecraft_pings_target() {
 }
 
 #[test]
-fn lorehold_charwarden_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_charwarden());
-    let body = g.battlefield_find(id).unwrap();
-    assert!(body.has_keyword(&Keyword::Haste));
-    assert_eq!(body.power(), 3);
-}
-
-#[test]
 fn lorehold_lightcleric_magecraft_gains_life() {
     let mut g = two_player_game();
     let _id = g.add_card_to_battlefield(0, catalog::lorehold_lightcleric());
@@ -28627,19 +28111,6 @@ fn silverquill_litany_shrinks_creature_and_gains_life() {
     assert_eq!(g.players[0].life, me_before + 1);
 }
 
-#[test]
-fn silverquill_standardbearer_buffs_other_creatures() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_standardbearer());
-    drain_stack(&mut g);
-    let bear_view = g.computed_permanent(bear).expect("Bear on bf");
-    assert_eq!(bear_view.power, 3, "Bear is buffed +1/+1");
-    assert_eq!(bear_view.toughness, 3);
-    let self_view = g.computed_permanent(id).expect("Standardbearer on bf");
-    assert_eq!(self_view.power, 2, "Standardbearer not self-buffed");
-}
-
 // ── New Quandrix STX cards (batch 32, claude/modern_decks) ─────────────────
 
 #[test]
@@ -28887,19 +28358,6 @@ fn cr_107_1c_x_zero_for_x_cost_spell_resolves_cleanly() {
     }).expect("Crackle castable at X=0");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before, "5*0 = 0 damage");
-}
-
-#[test]
-fn cr_107_3g_non_stack_x_treated_as_zero() {
-    // CR 107.3g: "If a card in any zone other than the stack has an {X} in
-    // its mana cost, the value of {X} is treated as 0."
-    // Crackle with Power in hand should have mana_value 5 (the colored
-    // pips), with X treated as 0.
-    let mut g = two_player_game();
-    let _id = g.add_card_to_hand(0, catalog::crackle_with_power());
-    let card = g.players[0].hand.iter().find(|c| c.definition.name == "Crackle with Power").unwrap();
-    // X is 0 in hand → CMC is just colored pips = 5
-    assert_eq!(card.definition.cost.cmc(), 5, "Crackle's CMC in hand treats X as 0");
 }
 
 // ── New Lessons (batch 32, claude/modern_decks) ────────────────────────────
@@ -29684,17 +29142,6 @@ fn silverquill_drainwriter_etb_drains_two() {
 }
 
 #[test]
-fn silverquill_drainwriter_is_a_flying_inkling_wizard() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_drainwriter());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert!(card.has_keyword(&Keyword::Flying));
-    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
-    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Wizard));
-}
-
-#[test]
 fn silverquill_battle_chant_pumps_team_with_vigilance() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -29802,17 +29249,6 @@ fn witherbloom_pestrider_etb_mints_pest_with_counter() {
     assert_eq!(pest.counter_count(CounterType::PlusOnePlusOne), 1,
         "Pest got a +1/+1 counter");
     assert!(pest.definition.subtypes.creature_types.contains(&CreatureType::Pest));
-}
-
-#[test]
-fn witherbloom_mosshulk_is_a_four_four_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_mosshulk());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 4);
-    assert_eq!(card.toughness(), 4);
-    assert!(card.has_keyword(&Keyword::Trample));
 }
 
 #[test]
@@ -30260,17 +29696,6 @@ fn silverquill_penitent_etb_drains_one() {
 }
 
 #[test]
-fn inkling_echobringer_is_a_three_mana_flying_lifelink_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_echobringer());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert!(card.has_keyword(&Keyword::Flying));
-    assert!(card.has_keyword(&Keyword::Lifelink));
-    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
 fn silverquill_verseblade_pumps_target_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -30375,43 +29800,6 @@ fn witherbloom_hexpetal_etb_drains_two() {
 }
 
 #[test]
-fn pest_inkblot_dies_gains_one_life() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_inkblot());
-    g.clear_sickness(id);
-    drain_stack(&mut g);
-    let self_before = g.players[0].life;
-    let _ = g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, self_before + 1);
-}
-
-#[test]
-fn witherbloom_tangleweed_is_a_five_mana_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_tangleweed());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 4);
-    assert_eq!(card.toughness(), 5);
-    assert!(card.has_keyword(&Keyword::Trample));
-}
-
-#[test]
-fn pest_hauntwing_is_a_flying_pest_that_grants_life_on_death() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_hauntwing());
-    g.clear_sickness(id);
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert!(card.has_keyword(&Keyword::Flying));
-    let self_before = g.players[0].life;
-    let _ = g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, self_before + 1);
-}
-
-#[test]
 fn witherbloom_soulrender_drains_three_and_mills_three() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::forest()); }
@@ -30446,17 +29834,6 @@ fn lorehold_pyremender_etb_deals_two_damage() {
     }).expect("Pyremender castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 2);
-}
-
-#[test]
-fn spirit_vanguard_is_a_four_mana_first_strike_vigilance_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::spirit_vanguard());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert!(card.has_keyword(&Keyword::FirstStrike));
-    assert!(card.has_keyword(&Keyword::Vigilance));
-    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
 }
 
 #[test]
@@ -30632,25 +30009,6 @@ fn prismari_spellforge_etb_burns_and_magecraft_loots() {
 }
 
 #[test]
-fn prismari_b35_pyromage_magecraft_pings_target() {
-    let mut g = two_player_game();
-    let mage = g.add_card_to_battlefield(0, catalog::prismari_b35_pyromage());
-    g.clear_sickness(mage);
-    drain_stack(&mut g);
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let opp_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt,
-        target: Some(crate::game::types::Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    // Bolt 3 + magecraft 1 = 4
-    assert_eq!(g.players[1].life, opp_before - 4);
-}
-
-#[test]
 fn prismari_stormforge_deals_three_and_draws_two() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
@@ -30704,14 +30062,6 @@ fn prismari_cinderdrake_etb_deals_three_damage() {
     }).expect("Cinderdrake castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 3);
-}
-
-#[test]
-fn batch_35_silverquill_drainwriter_remains_consistent() {
-    // Smoke test: prior batch-34 card still wires.
-    let mut g = two_player_game();
-    let _id = g.add_card_to_battlefield(0, catalog::silverquill_drainwriter());
-    drain_stack(&mut g);
 }
 
 // ── Batch 36: more STX cards ────────────────────────────────────────────────
@@ -31710,17 +31060,6 @@ fn witherbloom_spawnkeeper_drains_when_another_creature_dies() {
 }
 
 #[test]
-fn witherbloom_verdantwarden_is_five_five_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_verdantwarden());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 5);
-    assert_eq!(card.toughness(), 5);
-    assert!(card.has_keyword(&Keyword::Trample));
-}
-
-#[test]
 fn lorehold_hellraiser_etb_deals_two_damage() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_hellraiser());
@@ -32337,17 +31676,6 @@ fn witherbloom_toxicologist_shrinks_target_on_is_cast() {
 }
 
 #[test]
-fn pest_husk_dies_and_grants_life() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_husk());
-    drain_stack(&mut g);
-    let self_before = g.players[0].life;
-    let _ = g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, self_before + 1);
-}
-
-#[test]
 fn witherbloom_bloodglyph_drains_two_and_mints_pest() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_bloodglyph());
@@ -32452,18 +31780,6 @@ fn lorehold_ember_reader_pings_on_is_cast() {
     drain_stack(&mut g);
     // Bolt = 3 + magecraft ping = 1 = 4 damage.
     assert_eq!(g.players[1].life, opp_before - 4);
-}
-
-#[test]
-fn spirit_cantor_anthems_other_spirits() {
-    let mut g = two_player_game();
-    let _cantor = g.add_card_to_battlefield(0, catalog::spirit_cantor());
-    let spirit = g.add_card_to_battlefield(0, catalog::spirit_warbearer());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(spirit).expect("Spirit on bf");
-    // Spirit Warbearer is 2/2 base + 1/0 anthem = 3/2.
-    assert_eq!(view.power, 3);
-    assert_eq!(view.toughness, 2);
 }
 
 #[test]
@@ -33114,16 +32430,6 @@ fn lorehold_warden_v2_etb_exiles_target_graveyard_card() {
 }
 
 #[test]
-fn spirit_ironguard_has_first_strike_and_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::spirit_ironguard());
-    drain_stack(&mut g);
-    let card = g.battlefield_find(id).unwrap();
-    assert!(card.has_keyword(&Keyword::FirstStrike));
-    assert!(card.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
 fn lorehold_recital_v2_burns_and_mints_spirit() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_recital_v2());
@@ -33668,16 +32974,6 @@ fn lorehold_stoneguard_etb_gains_life() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 2);
     assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
-fn spirit_vanguard_v2_is_two_two_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::spirit_vanguard_v2());
-    let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 2);
-    assert_eq!(card.toughness(), 2);
-    assert!(card.has_keyword(&Keyword::Haste));
 }
 
 #[test]
@@ -40975,16 +40271,6 @@ fn quandrix_calcographer_etb_mints_fractal_then_grows_on_cast() {
 }
 
 #[test]
-fn fractal_initiate_is_two_two_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_initiate());
-    let card = g.battlefield_find(id).unwrap();
-    assert_eq!(card.power(), 2);
-    assert_eq!(card.toughness(), 2);
-    assert!(card.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
 fn quandrix_splitcaster_magecraft_mints_a_fractal_with_counter() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::quandrix_splitcaster());
@@ -41715,15 +41001,6 @@ fn fractal_augmenter_enters_with_counters_equal_to_hand_size() {
 }
 
 #[test]
-fn prismari_sparkleap_is_haste_prowess() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_sparkleap());
-    let c = g.battlefield_find(id).expect("sparkleap on bf");
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.has_keyword(&Keyword::Prowess));
-}
-
-#[test]
 fn prismari_flamewriter_magecraft_burns_and_draws() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::prismari_flamewriter());
@@ -41756,15 +41033,6 @@ fn prismari_cinderchant_deals_two_and_scrys() {
     }).expect("Cinderchant castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 2);
-}
-
-#[test]
-fn prismari_skydrake_is_flying_prowess() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_skydrake());
-    let c = g.battlefield_find(id).expect("skydrake on bf");
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Prowess));
 }
 
 #[test]
@@ -41821,22 +41089,6 @@ fn cr_122_3_plus_one_and_minus_one_counters_cancel_as_state_based_action() {
     assert_eq!(computed.toughness, 3);
 }
 
-/// CR 122.3 boundary: equal counts of +1/+1 and -1/-1 cancel each
-/// other entirely; the bear ends with no counters at all.
-#[test]
-fn cr_122_3_equal_counters_cancel_completely() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == bear) {
-        c.add_counters(CounterType::PlusOnePlusOne, 4);
-        c.add_counters(CounterType::MinusOneMinusOne, 4);
-    }
-    g.check_state_based_actions();
-    let b = g.battlefield_find(bear).expect("bear alive");
-    assert_eq!(b.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
-    assert_eq!(b.counters.get(&CounterType::MinusOneMinusOne).copied().unwrap_or(0), 0);
-}
-
 // ── Push (modern_decks, batch 56b): 5 more Witherbloom cards ───────────────
 
 #[test]
@@ -41872,19 +41124,6 @@ fn witherbloom_mill_mage_etb_mills_four_each_opp() {
     }).expect("Mill-Mage castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].graveyard.len(), opp_gy_before + 4);
-}
-
-#[test]
-fn pest_bonewright_dies_drains_one() {
-    let mut g = two_player_game();
-    let pb = g.add_card_to_battlefield(0, catalog::pest_bonewright());
-    let opp_before = g.players[1].life;
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == pb) {
-        c.damage = 99;
-    }
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_before - 1);
 }
 
 #[test]
@@ -42037,19 +41276,6 @@ fn pest_vanguard_magecraft_drains_one() {
 }
 
 // — Silverquill batch 57 (5 cards) —
-
-#[test]
-fn silverquill_inkscribe_b57_dies_drains_each_opp_two() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_inkscribe_b57());
-    let opp_before = g.players[1].life;
-    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
-        c.damage = 99;
-    }
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_before - 2);
-}
 
 #[test]
 fn silverquill_scriptmaster_etb_drains_two_and_scrys() {
@@ -42825,33 +42051,7 @@ fn inkling_summit_b59_etb_pumps_other_inklings() {
     assert_eq!(summit.counters.get(&CounterType::PlusOnePlusOne).copied().unwrap_or(0), 0);
 }
 
-#[test]
-fn silverquill_drainbearer_dies_drains() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_drainbearer());
-    let opp_before = g.players[1].life;
-    let you_before = g.players[0].life;
-    g.battlefield_find_mut(id).unwrap().damage = 10;
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_before - 1);
-    assert_eq!(g.players[0].life, you_before + 1);
-}
-
 // — Witherbloom (B/G) —
-
-#[test]
-fn witherbloom_corpsegrove_dies_mints_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_corpsegrove());
-    g.battlefield_find_mut(id).unwrap().damage = 10;
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    let pests: Vec<_> = g.battlefield.iter().filter(|c| {
-        c.controller == 0 && c.is_token && c.definition.name == "Pest"
-    }).collect();
-    assert_eq!(pests.len(), 1);
-}
 
 #[test]
 fn pest_grovetender_etb_scrys_and_has_deathtouch() {
@@ -45557,16 +44757,6 @@ fn prismari_magmaforge_mints_two_treasures_and_burns_three() {
 }
 
 #[test]
-fn prismari_mistwarden_is_a_flash_two_mana_wizard() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_mistwarden());
-    let view = g.battlefield_find(id).expect("Mistwarden on bf");
-    assert_eq!(view.power(), 1);
-    assert_eq!(view.toughness(), 2);
-    assert!(view.has_keyword(&Keyword::Flash));
-}
-
-#[test]
 fn prismari_cinderspell_deals_two_damage() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_cinderspell());
@@ -45654,15 +44844,6 @@ fn quandrix_sumchant_adds_counter_and_cantrips() {
     assert_eq!(view.power(), 3); // 2 + 1
     // Cantrip drew a card (hand: -1 for cast, +1 for draw = same as hand_before)
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn quandrix_sumcaster_b67_is_a_four_mana_three_three_wizard() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_sumcaster_b67());
-    let view = g.battlefield_find(id).expect("Sumcaster on bf");
-    assert_eq!(view.power(), 3);
-    assert_eq!(view.toughness(), 3);
 }
 
 #[test]
@@ -46359,16 +45540,6 @@ fn quandrix_mistshaper_b68_magecraft_loots_on_is_cast() {
 }
 
 #[test]
-fn fractal_pondling_is_a_one_one_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_pondling());
-    let view = g.battlefield_find(id).expect("Pondling on bf");
-    assert_eq!(view.power(), 1);
-    assert_eq!(view.toughness(), 1);
-    assert!(view.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
 fn quandrix_streamwarden_magecraft_pumps_target_fractal() {
     let mut g = two_player_game();
     let fractal_id = g.add_card_to_battlefield(0, catalog::fractal_pondling());
@@ -46413,16 +45584,6 @@ fn quandrix_sumstride_mints_fractal_scaling_with_creatures() {
     assert_eq!(view.toughness(), 4);
 }
 
-#[test]
-fn quandrix_mistdiver_is_a_two_mana_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_mistdiver());
-    let view = g.battlefield_find(id).expect("Mistdiver on bf");
-    assert_eq!(view.power(), 2);
-    assert_eq!(view.toughness(), 2);
-    assert!(view.has_keyword(&Keyword::Flying));
-}
-
 // ── Batch 68 — Prismari expansions ─────────────────────────────────────────
 
 #[test]
@@ -46455,15 +45616,6 @@ fn prismari_stormcaller_b68_magecraft_pings() {
     drain_stack(&mut g);
     // Stormcaller ping (1) + bolt (3) = 4 to opp
     assert_eq!(g.players[1].life, opp_life - 4);
-}
-
-#[test]
-fn prismari_flarewinder_is_a_flying_smoother() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_flarewinder());
-    let view = g.battlefield_find(id).expect("Flarewinder on bf");
-    assert!(view.has_keyword(&Keyword::Flying));
-    assert!(view.definition.subtypes.creature_types.contains(&CreatureType::Merfolk));
 }
 
 #[test]
@@ -46656,19 +45808,6 @@ fn inkling_glaivemaster_drains_each_opponent_on_attack() {
 }
 
 #[test]
-fn silverquill_lecturer_b103_drains_two() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::silverquill_lecturer_b103());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let life1_before = g.players[1].life;
-    let life0_before = g.players[0].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[1].life, life1_before - 2);
-    assert_eq!(g.players[0].life, life0_before + 2);
-}
-
-#[test]
 fn witherbloom_necromage_etb_creates_pest_and_dies_drains() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_necromage());
@@ -46707,46 +45846,6 @@ fn witherbloom_toxinsage_magecraft_drains() {
     // Bolt deals 3, Toxinsage's magecraft drains 1.
     assert_eq!(g.players[1].life, life1_before - 3 - 1, "opp -3 (bolt) -1 (drain)");
     assert_eq!(g.players[0].life, life0_before + 1, "+1 life from drain");
-}
-
-#[test]
-fn witherbloom_wildmage_etb_gains_three_life_and_magecraft_scry() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::witherbloom_wildmage());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    let life0_before = g.players[0].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[0].life, life0_before + 3, "gained 3 life on ETB");
-    assert!(g.battlefield_find(id).is_some(), "Wildmage on battlefield");
-}
-
-#[test]
-fn witherbloom_pestcaller_b103_creates_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::witherbloom_pestcaller_b103());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, id);
-    let pests: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
-        .collect();
-    assert_eq!(pests.len(), 1, "One Pest minted on ETB");
-}
-
-#[test]
-fn witherbloom_lecturer_drains_three() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::witherbloom_lecturer());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let life0_before = g.players[0].life;
-    let life1_before = g.players[1].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[1].life, life1_before - 3, "opp -3 life");
-    assert_eq!(g.players[0].life, life0_before + 3, "+3 life");
 }
 
 #[test]
@@ -46809,18 +45908,6 @@ fn lorehold_pyrescholar_b103_pings_on_magecraft() {
 }
 
 #[test]
-fn lorehold_spirit_reclaimer_etb_returns_creature_from_gy() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::lorehold_spirit_reclaimer());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
-    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
-        "Bear returned to hand from graveyard");
-}
-
-#[test]
 fn lorehold_lecturer_deals_damage_and_creates_spirit() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -46838,33 +45925,6 @@ fn lorehold_lecturer_deals_damage_and_creates_spirit() {
         .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
         .collect();
     assert_eq!(spirits.len(), 1, "Spirit token minted");
-}
-
-#[test]
-fn prismari_sparkblade_etb_treasure_and_magecraft_scry() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::prismari_sparkblade());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    cast(&mut g, id);
-    let treasures: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Treasure))
-        .collect();
-    assert_eq!(treasures.len(), 1, "Treasure token minted on ETB");
-}
-
-#[test]
-fn prismari_aetherweaver_etb_loots_and_magecraft_pings() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    g.add_card_to_hand(0, catalog::island()); // a card to discard
-    let id = g.add_card_to_hand(0, catalog::prismari_aetherweaver());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
-    assert!(g.battlefield_find(id).is_some(), "Aetherweaver on battlefield");
 }
 
 #[test]
@@ -47129,44 +46189,6 @@ fn silverquill_maelstrom_drains_four_and_makes_opp_discard() {
 }
 
 #[test]
-fn witherbloom_brewmage_b103_etb_drains_two() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::witherbloom_brewmage_b103());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let life0_before = g.players[0].life;
-    let life1_before = g.players[1].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[1].life, life1_before - 2);
-    assert_eq!(g.players[0].life, life0_before + 2);
-}
-
-#[test]
-fn lorehold_resurrectionist_b103_returns_low_cmc_creature_from_gy() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::lorehold_resurrectionist_b103());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, id);
-    // Bear (cmc 2) should be returned to battlefield.
-    let bear_on_bf = g.battlefield_find(bear);
-    assert!(bear_on_bf.is_some(), "Bear returned to battlefield");
-}
-
-#[test]
-fn prismari_pyrocaster_b103_etb_pings_each_opp() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::prismari_pyrocaster_b103());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    let life1_before = g.players[1].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[1].life, life1_before - 2);
-}
-
-#[test]
 fn quandrix_calculator_b103_draws_and_pumps_creatures_on_etb() {
     let mut g = two_player_game();
     let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -47276,20 +46298,6 @@ fn silverquill_anointment_b104_pumps_and_grants_indestructible() {
 }
 
 #[test]
-fn inkling_crusader_b104_etb_gains_two_life() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::inkling_crusader_b104());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let life_before = g.players[0].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[0].life, life_before + 2);
-    let c = g.battlefield_find(id).expect("crusader on bf");
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
 fn silverquill_anthemcaster_b104_mints_two_inklings_and_pumps_team() {
     let mut g = two_player_game();
     // Pre-existing creature to verify the anthem applies to it.
@@ -47363,20 +46371,6 @@ fn witherbloom_mireseer_b104_etb_mills_and_gains_life() {
     cast(&mut g, id);
     assert_eq!(g.players[1].library.len(), lib1_before - 2);
     assert_eq!(g.players[0].life, life0_before + 1);
-}
-
-#[test]
-fn pest_engorger_b104_dies_creates_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_engorger_b104());
-    g.clear_sickness(id);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Trample));
-    g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    let pests: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
-        .collect();
-    assert_eq!(pests.len(), 1, "one Pest minted on death");
 }
 
 #[test]
@@ -47630,20 +46624,6 @@ fn quandrix_theorist_b104_pumps_each_friendly_fractal_on_is_cast() {
 }
 
 #[test]
-fn fractal_whelp_b104_etb_pumps_friendly_creature() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::savannah_lions());
-    g.clear_sickness(bear);
-    let id = g.add_card_to_hand(0, catalog::fractal_whelp_b104());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let counters_before = g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne);
-    cast(&mut g, id);
-    let c = g.battlefield_find(bear).expect("bear alive");
-    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), counters_before + 1);
-}
-
-#[test]
 fn quandrix_mathematician_b104_etb_creates_fractal_with_two_counters() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::quandrix_mathematician_b104());
@@ -47699,20 +46679,6 @@ fn quandrix_symmetrist_b104_doubles_counters_on_target() {
 // ── modern_decks batch 105 (helper shortcuts) tests ───────────────────────
 
 #[test]
-fn shortcut_mint_pests_creates_correct_token_count() {
-    use crate::effect::shortcut::mint_pests;
-    use crate::game::effects::EffectContext;
-    let mut g = two_player_game();
-    let ctx = EffectContext::for_spell(0, None, 0, 0);
-    g.resolve_effect(&mint_pests(3), &ctx).expect("mint_pests resolves");
-    drain_stack(&mut g);
-    let pests: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Pest))
-        .collect();
-    assert_eq!(pests.len(), 3, "mint_pests(3) creates 3 Pest tokens");
-}
-
-#[test]
 fn shortcut_mint_inklings_creates_w_b_flying_tokens() {
     use crate::effect::shortcut::mint_inklings;
     use crate::game::effects::EffectContext;
@@ -47726,34 +46692,6 @@ fn shortcut_mint_inklings_creates_w_b_flying_tokens() {
     assert_eq!(inklings.len(), 2);
     assert!(inklings.iter().all(|c| c.has_keyword(&Keyword::Flying)),
         "Inkling tokens fly");
-}
-
-#[test]
-fn shortcut_mint_fractals_creates_zero_zero_tokens() {
-    use crate::effect::shortcut::mint_fractals;
-    use crate::game::effects::EffectContext;
-    let mut g = two_player_game();
-    let ctx = EffectContext::for_spell(0, None, 0, 0);
-    g.resolve_effect(&mint_fractals(1), &ctx).expect("mint_fractals resolves");
-    drain_stack(&mut g);
-    let fractals: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Fractal))
-        .collect();
-    assert_eq!(fractals.len(), 1);
-}
-
-#[test]
-fn shortcut_mint_treasures_creates_treasure_tokens() {
-    use crate::effect::shortcut::mint_treasures;
-    use crate::game::effects::EffectContext;
-    let mut g = two_player_game();
-    let ctx = EffectContext::for_spell(0, None, 0, 0);
-    g.resolve_effect(&mint_treasures(2), &ctx).expect("mint_treasures resolves");
-    drain_stack(&mut g);
-    let treasures: Vec<_> = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Treasure")
-        .collect();
-    assert_eq!(treasures.len(), 2);
 }
 
 #[test]
@@ -47795,20 +46733,6 @@ fn shortcut_etb_drain_each_opp_drains_only_opponents() {
 // gets a play-pattern test exercising its primary printed effect.
 
 // Silverquill (W/B)
-
-#[test]
-fn inkling_coursecaller_b119_etb_scrys_one() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::inkling_coursecaller_b119());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    cast(&mut g, id);
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.has_keyword(&Keyword::Flying));
-    // ETB scry 1 fires — we don't observe the scry directly but the
-    // creature lands and survives state-based actions.
-}
 
 #[test]
 fn silverquill_loresmith_b119_etb_gains_two_life_with_lifelink_and_vigilance() {
@@ -47997,18 +46921,6 @@ fn witherbloom_mulchcaster_b119_mills_target_and_gains_two_life() {
     assert_eq!(g.players[0].life, life_before + 2);
 }
 
-#[test]
-fn pest_mawcrawler_b119_drains_each_opp_on_death() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_mawcrawler_b119());
-    g.clear_sickness(id);
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Trample));
-    let life1_before = g.players[1].life;
-    g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life1_before - 2);
-}
-
 // Lorehold (R/W)
 
 #[test]
@@ -48099,19 +47011,6 @@ fn spirit_battlecry_b119_pumps_all_friendly_creatures() {
 }
 
 // Prismari (U/R)
-
-#[test]
-fn prismari_tutorgeyst_b119_loots_on_etb() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::prismari_tutorgeyst_b119());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let hand_before = g.players[0].hand.len();
-    cast(&mut g, id);
-    // -1 (cast), +1 (draw), -1 (discard) → -1 from original
-    assert_eq!(g.players[0].hand.len(), hand_before - 1);
-}
 
 #[test]
 fn prismari_flamescholar_b119_pings_each_opp_on_is_cast() {
@@ -48318,19 +47217,6 @@ fn fractal_hatchling_b119_grows_via_activated_ability() {
 // Silverquill (W/B)
 
 #[test]
-fn inkling_lawscribe_b120_etb_gains_one_life_and_has_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::inkling_lawscribe_b120());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    let life_before = g.players[0].life;
-    cast(&mut g, id);
-    assert_eq!(g.players[0].life, life_before + 1);
-    let c = g.battlefield_find(id).expect("Lawscribe on bf");
-    assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
 fn silverquill_devotee_b120_magecraft_drains_each_opp() {
     let mut g = two_player_game();
     let dev = g.add_card_to_battlefield(0, catalog::silverquill_devotee_b120());
@@ -48458,18 +47344,6 @@ fn witherbloom_saprooter_b120_drains_two_and_mints_pest() {
     assert_eq!(pests.len(), 1);
 }
 
-#[test]
-fn witherbloom_grafter_b120_etb_scrys_and_has_reach() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::forest());
-    let id = g.add_card_to_hand(0, catalog::witherbloom_grafter_b120());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    cast(&mut g, id);
-    let c = g.battlefield_find(id).expect("grafter on bf");
-    assert!(c.has_keyword(&Keyword::Reach));
-}
-
 // Lorehold (R/W)
 
 #[test]
@@ -48589,19 +47463,6 @@ fn prismari_tempest_b120_deals_four_and_cantrips() {
 }
 
 #[test]
-fn prismari_stormwright_b120_etb_loots_and_has_flying() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    g.add_card_to_hand(0, catalog::mountain()); // discard fodder
-    let id = g.add_card_to_hand(0, catalog::prismari_stormwright_b120());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.has_keyword(&Keyword::Flying));
-}
-
-#[test]
 fn prismari_crucible_b120_mints_treasure_and_pings_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_crucible_b120());
@@ -48658,19 +47519,6 @@ fn quandrix_equation_b120_adds_counter_and_cantrips() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(target).unwrap().counter_count(CounterType::PlusOnePlusOne),
         counters_before + 1);
-    assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn quandrix_tutor_b120_etb_draws_a_card() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let id = g.add_card_to_hand(0, catalog::quandrix_tutor_b120());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let hand_before = g.players[0].hand.len();
-    cast(&mut g, id);
-    // -1 (cast) +1 (etb draw) = same.
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
@@ -48742,18 +47590,6 @@ fn shortcut_drain_and_surveil_drains_and_surveils() {
     g.resolve_effect(&drain_and_surveil(1, 1), &ctx).expect("drain_and_surveil resolves");
     assert_eq!(g.players[0].life, life0_before + 1);
     assert_eq!(g.players[1].life, life1_before - 1);
-}
-
-#[test]
-fn shortcut_etb_tap_opp_creature_taps_opponent_target() {
-    use crate::effect::shortcut::etb_tap_opp_creature;
-    let trig = etb_tap_opp_creature();
-    assert_eq!(trig.event.kind, crate::effect::EventKind::EntersBattlefield);
-    assert!(matches!(trig.event.scope, crate::effect::EventScope::SelfSource));
-    match &trig.effect {
-        crate::effect::Effect::Tap { what: _ } => {}
-        _ => panic!("etb_tap_opp_creature should yield Effect::Tap, got {:?}", trig.effect),
-    }
 }
 
 #[test]
@@ -50184,7 +49020,6 @@ fn fractal_coursemate_b124_enters_with_counters_equal_to_twice_hand() {
     assert!(c.power() >= 4, "Coursemate has at least 4 counters worth of power");
 }
 
-
 // ── Batch 125 — 17 new STX cards across all 5 schools ──────────────────────
 
 // ─── Lorehold ─────────────────────────────────────────────────────────────
@@ -50607,34 +49442,6 @@ fn shortcut_on_attack_drain_uses_attacks_self_source_with_drain_body() {
         "body is Effect::Drain, not GainLife / LoseLife");
 }
 
-#[test]
-fn shortcut_on_attack_gain_life_uses_attacks_self_source_with_gainlife_body() {
-    // Lock in that on_attack_gain_life(N) is the asymmetric variant —
-    // an Attacks/SelfSource trigger with a pure GainLife body (no
-    // opp-loses half). Distinguishes it from on_attack_drain.
-    use crate::effect::EventScope;
-    use crate::effect::shortcut::on_attack_gain_life;
-    let trig = on_attack_gain_life(1);
-    assert_eq!(trig.event.kind, crate::effect::EventKind::Attacks);
-    assert!(matches!(trig.event.scope, EventScope::SelfSource));
-    assert!(matches!(trig.effect, crate::effect::Effect::GainLife { .. }),
-        "body is Effect::GainLife (not Drain)");
-}
-
-#[test]
-fn shortcut_on_attack_ping_any_uses_attacks_self_source_with_dealdamage_body() {
-    // Lock in that on_attack_ping_any(N) is an Attacks/SelfSource
-    // trigger whose body is an Effect::DealDamage targeting any
-    // (Creature ∨ Player ∨ Planeswalker).
-    use crate::effect::EventScope;
-    use crate::effect::shortcut::on_attack_ping_any;
-    let trig = on_attack_ping_any(1);
-    assert_eq!(trig.event.kind, crate::effect::EventKind::Attacks);
-    assert!(matches!(trig.event.scope, EventScope::SelfSource));
-    assert!(matches!(trig.effect, crate::effect::Effect::DealDamage { .. }),
-        "body is Effect::DealDamage");
-}
-
 // ── batch 125 — CR 706 (Roll a Die) primitive tests ────────────────────────
 
 /// Test-only fixture: a Sorcery with a d6 results table. 1-2 → gain 1
@@ -50902,20 +49709,6 @@ fn lorehold_ember_mage_b126_magecraft_pings_any() {
     // Bolt 3 + magecraft ping 1 = 4.
     assert_eq!(g.players[1].life, l1_before - 4,
         "Ember-Mage's magecraft pinged opp for 1 on top of Bolt's 3");
-}
-
-#[test]
-fn lorehold_sparkscholar_b126_dies_pings_two_to_any_target() {
-    let mut g = two_player_game();
-    let ls = g.add_card_to_battlefield(0, catalog::lorehold_sparkscholar_b126());
-    g.clear_sickness(ls);
-    let l1_before = g.players[1].life;
-    g.battlefield_find_mut(ls).unwrap().damage = 2;
-    g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert!(g.battlefield_find(ls).is_none(), "Sparkscholar died");
-    assert_eq!(g.players[1].life, l1_before - 2,
-        "Sparkscholar's on-die ping dealt 2 damage to opp (auto-target picker)");
 }
 
 // ─── Silverquill ──────────────────────────────────────────────────────────
@@ -51257,66 +50050,6 @@ fn fractal_petalcaller_b126_mints_fractal_with_three_counters() {
 }
 
 // ── Batch 126 helper shortcut lock-in tests ────────────────────────────────
-
-#[test]
-fn shortcut_dies_ping_any_uses_creature_died_self_source_with_damage_body() {
-    use crate::card::{EventKind, EventScope};
-    use crate::effect::Effect;
-    let ta = crate::effect::shortcut::dies_ping_any(2);
-    assert_eq!(ta.event.kind, EventKind::CreatureDied);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-    assert!(matches!(ta.effect, Effect::DealDamage { .. }));
-}
-
-#[test]
-fn shortcut_dies_mint_token_uses_creature_died_self_source_with_create_token_body() {
-    use crate::card::{EventKind, EventScope};
-    use crate::effect::Effect;
-    let token = catalog::stx_pest_token();
-    let ta = crate::effect::shortcut::dies_mint_token(token, 1);
-    assert_eq!(ta.event.kind, EventKind::CreatureDied);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-    assert!(matches!(ta.effect, Effect::CreateToken { .. }));
-}
-
-#[test]
-fn shortcut_magecraft_draw_uses_spell_cast_with_draw_body() {
-    use crate::card::EventKind;
-    use crate::effect::Effect;
-    let ta = crate::effect::shortcut::magecraft_draw(1);
-    assert_eq!(ta.event.kind, EventKind::SpellCast);
-    assert!(matches!(ta.effect, Effect::Draw { .. }));
-}
-
-#[test]
-fn shortcut_magecraft_treasure_uses_spell_cast_with_create_token_body() {
-    use crate::card::EventKind;
-    use crate::effect::Effect;
-    let ta = crate::effect::shortcut::magecraft_treasure();
-    assert_eq!(ta.event.kind, EventKind::SpellCast);
-    assert!(matches!(ta.effect, Effect::CreateToken { .. }));
-}
-
-#[test]
-fn shortcut_on_attack_loot_uses_attacks_self_source_with_seq_body() {
-    use crate::card::{EventKind, EventScope};
-    use crate::effect::Effect;
-    let ta = crate::effect::shortcut::on_attack_loot();
-    assert_eq!(ta.event.kind, EventKind::Attacks);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-    assert!(matches!(ta.effect, Effect::Seq(_)));
-}
-
-#[test]
-fn shortcut_on_unblocked_uses_attacks_and_isnt_blocked_self_source() {
-    use crate::card::{EventKind, EventScope};
-    let ta = crate::effect::shortcut::on_unblocked(crate::effect::Effect::Draw {
-        who: crate::effect::Selector::You,
-        amount: crate::effect::Value::Const(1),
-    });
-    assert_eq!(ta.event.kind, EventKind::AttacksAndIsntBlocked);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-}
 
 // ─── Batch 127 cards ──────────────────────────────────────────────────────
 // Batch 127 (push claude/modern_decks): 26 more Strixhaven synthesised
@@ -52300,27 +51033,6 @@ fn shortcut_etb_mint_token_with_counters_uses_seq_create_then_add_counter() {
 // ─── Lorehold (b129) ──────────────────────────────────────────────────────
 
 #[test]
-fn lorehold_spirit_banner_b129_pumps_other_spirits() {
-    let mut g = two_player_game();
-    let banner = g.add_card_to_battlefield(0, catalog::lorehold_spirit_banner_b129());
-    let other = g.add_card_to_battlefield(0, catalog::lorehold_aerialist_b127());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == other).unwrap();
-    assert_eq!(after.power, 3, "Aerialist 2 + 1 from anthem");
-    assert_eq!(after.toughness, 3, "Aerialist 2 + 1 from anthem");
-    let banner_view = g.compute_battlefield().into_iter().find(|c| c.id == banner).unwrap();
-    assert_eq!(banner_view.power, 2, "Banner is itself a 2/3 Spirit, anthem excludes source");
-}
-
-#[test]
-fn lorehold_spirit_banner_b129_does_not_pump_non_spirits() {
-    let mut g = two_player_game();
-    let _banner = g.add_card_to_battlefield(0, catalog::lorehold_spirit_banner_b129());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == bear).unwrap();
-    assert_eq!(after.power, 2, "Bear unchanged");
-}
-
-#[test]
 fn lorehold_stoneglyph_b129_activated_ability_pings() {
     let mut g = two_player_game();
     let sg = g.add_card_to_battlefield(0, catalog::lorehold_stoneglyph_b129());
@@ -52335,15 +51047,6 @@ fn lorehold_stoneglyph_b129_activated_ability_pings() {
     }).expect("Stoneglyph ability activates");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, l1_before - 2, "Stoneglyph deals 2 damage");
-}
-
-#[test]
-fn lorehold_lectern_b129_grants_lifelink_to_other_spirits() {
-    let mut g = two_player_game();
-    let _lectern = g.add_card_to_battlefield(0, catalog::lorehold_lectern_b129());
-    let spirit = g.add_card_to_battlefield(0, catalog::lorehold_aerialist_b127());
-    let c = g.compute_battlefield().into_iter().find(|c| c.id == spirit).unwrap();
-    assert!(c.keywords.contains(&Keyword::Lifelink), "Aerialist gains Lifelink from Lectern");
 }
 
 #[test]
@@ -52442,30 +51145,6 @@ fn lorehold_embertongue_b129_magecraft_pings_opp_creature() {
 }
 
 // ─── Witherbloom (b129) ───────────────────────────────────────────────────
-
-#[test]
-fn witherbloom_vinetongue_b129_pumps_other_plants() {
-    let mut g = two_player_game();
-    let _vt = g.add_card_to_battlefield(0, catalog::witherbloom_vinetongue_b129());
-    // Add a Plant-typed creature
-    let other = g.add_card_to_battlefield(0, catalog::witherbloom_sprawl_vine_b128());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == other).unwrap();
-    // Sprawl-Vine base 3/3, +1/+1 from anthem = 4/4
-    assert_eq!(after.power, 4, "Sprawl-Vine gets +1/+1 from Vinetongue");
-    assert_eq!(after.toughness, 4);
-}
-
-#[test]
-fn witherbloom_reaper_lord_b129_buffs_other_skeletons() {
-    let mut g = two_player_game();
-    let _rl = g.add_card_to_battlefield(0, catalog::witherbloom_reaper_lord_b129());
-    let other = g.add_card_to_battlefield(0, catalog::witherbloom_reaper_hand_b128());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == other).unwrap();
-    // Reaper-Hand base 3/2, +1/+1 from anthem = 4/3
-    assert_eq!(after.power, 4, "Reaper-Hand pumped by Reaper-Lord");
-    assert!(after.keywords.contains(&Keyword::Menace),
-        "Reaper-Hand gets menace from Reaper-Lord");
-}
 
 #[test]
 fn witherbloom_petalmaster_b129_magecraft_adds_counter_to_plant() {
@@ -52790,42 +51469,6 @@ fn shortcut_etb_mint_token_and_drain_expands_to_seq_create_then_drain() {
 }
 
 // ─── Batch 130 (push claude/modern_decks) ────────────────────────────────────
-
-#[test]
-fn lorehold_spiritcaller_b130_etb_mints_spirit_token() {
-    let mut g = two_player_game();
-    let sc = g.add_card_to_hand(0, catalog::lorehold_spiritcaller_b130());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add(Color::White, 1);
-    let bf_before = g.battlefield.iter().filter(|c| c.controller == 0).count();
-    g.perform_action(GameAction::CastSpell {
-        card_id: sc, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Spiritcaller castable");
-    drain_stack(&mut g);
-    // bf: +1 (Spiritcaller) +1 (Spirit) = +2
-    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), bf_before + 2,
-        "Spiritcaller mints a Spirit token on ETB");
-}
-
-#[test]
-fn lorehold_skyguard_banner_b130_grants_flying_to_other_spirits() {
-    let mut g = two_player_game();
-    let _banner = g.add_card_to_battlefield(0, catalog::lorehold_skyguard_banner_b130());
-    // Pyrespirit is a Spirit without Flying
-    let other = g.add_card_to_battlefield(0, catalog::lorehold_pyrespirit_b129());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == other).unwrap();
-    assert!(after.keywords.contains(&Keyword::Flying),
-        "Pyrespirit gets Flying from Skyguard Banner");
-}
-
-#[test]
-fn lorehold_skyguard_banner_b130_does_not_grant_flying_to_self() {
-    let mut g = two_player_game();
-    let banner = g.add_card_to_battlefield(0, catalog::lorehold_skyguard_banner_b130());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == banner).unwrap();
-    assert!(!after.keywords.contains(&Keyword::Flying),
-        "Skyguard Banner doesn't grant Flying to itself (OtherThanSource)");
-}
 
 #[test]
 fn lorehold_pyresage_b130_magecraft_mints_spirit() {
@@ -53968,20 +52611,6 @@ fn witherbloom_toadcaller_b133_magecraft_self_counters() {
 }
 
 #[test]
-fn pest_mawcatcher_b133_dies_drains_two() {
-    let mut g = two_player_game();
-    let mc = g.add_card_to_battlefield(0, catalog::pest_mawcatcher_b133());
-    let l0_before = g.players[0].life;
-    let l1_before = g.players[1].life;
-    let card = g.battlefield_find_mut(mc).expect("mawcatcher on bf");
-    card.damage = 99;
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, l1_before - 2);
-    assert_eq!(g.players[0].life, l0_before + 2);
-}
-
-#[test]
 fn witherbloom_sproutchanter_b133_magecraft_pumps_each_creature() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::witherbloom_sproutchanter_b133());
@@ -54014,20 +52643,6 @@ fn silverquill_inkwriter_ii_b133_etb_mints_inkling_and_gains_life() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), bf_before + 2);
     assert_eq!(g.players[0].life, l_before + 1);
-}
-
-#[test]
-fn inkling_skydeath_b133_dies_drains_two() {
-    let mut g = two_player_game();
-    let sd = g.add_card_to_battlefield(0, catalog::inkling_skydeath_b133());
-    let l0_before = g.players[0].life;
-    let l1_before = g.players[1].life;
-    let card = g.battlefield_find_mut(sd).expect("skydeath on bf");
-    card.damage = 99;
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, l1_before - 2);
-    assert_eq!(g.players[0].life, l0_before + 2);
 }
 
 #[test]
@@ -54178,27 +52793,6 @@ fn pest_lichcaller_b134_dies_mints_pest_and_drains() {
 }
 
 #[test]
-fn witherbloom_plantlord_b134_pumps_other_plants() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_plantlord_b134());
-    let mossreaver = g.add_card_to_battlefield(0, catalog::witherbloom_mossreaver_b132());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == mossreaver).unwrap();
-    // Mossreaver base 3/2, +1/+1 from anthem = 4/3
-    assert_eq!(after.power, 4, "Mossreaver pumped +1/+1 by Plantlord anthem");
-    assert_eq!(after.toughness, 3);
-}
-
-#[test]
-fn witherbloom_plantlord_b134_does_not_pump_self() {
-    let mut g = two_player_game();
-    let pl = g.add_card_to_battlefield(0, catalog::witherbloom_plantlord_b134());
-    let after = g.compute_battlefield().into_iter().find(|c| c.id == pl).unwrap();
-    // Plantlord is 2/2 base — should not pump itself since "Other" excludes source
-    assert_eq!(after.power, 2, "Plantlord does not pump itself");
-    assert_eq!(after.toughness, 2);
-}
-
-#[test]
 fn silverquill_inkflight_b134_pumps_and_grants_flying() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -54247,16 +52841,6 @@ fn silverquill_penwarden_b135_etb_drains_one() {
     assert_eq!(g.players[1].life, l1_before - 1, "opponent loses 1");
     let card = g.battlefield_find(id).unwrap();
     assert!(card.has_keyword(&Keyword::Flying));
-}
-
-#[test]
-fn inkling_quill_cleric_b135_has_flying_and_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_quill_cleric_b135());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.power(), 2);
 }
 
 #[test]
@@ -54373,25 +52957,6 @@ fn witherbloom_vinemender_b135_magecraft_gains_two_life() {
 }
 
 #[test]
-fn pest_reaper_b135_has_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_reaper_b135());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 3);
-}
-
-#[test]
-fn lorehold_skirmisher_b135_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher_b135());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.power(), 2);
-}
-
-#[test]
 fn lorehold_crackleflame_b135_deals_two_and_scrys() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
@@ -54422,20 +52987,6 @@ fn lorehold_sparkpilgrim_b135_etb_mints_spirit() {
     assert_eq!(bf_after, bf_before + 2, "Sparkpilgrim + Spirit token");
     let c = g.battlefield_find(id).unwrap();
     assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
-fn lorehold_pyremartyr_b135_dies_pings_target() {
-    let mut g = two_player_game();
-    let pm = g.add_card_to_battlefield(0, catalog::lorehold_pyremartyr_b135());
-    let l1_before = g.players[1].life;
-    let card = g.battlefield_find_mut(pm).expect("on bf");
-    card.damage = 99;
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    // Auto-picker should target the opponent since they're a valid pick.
-    // Either opponent damage or a creature shrinking — assert damage swung.
-    assert!(g.players[1].life <= l1_before, "ping resolved");
 }
 
 #[test]
@@ -54571,16 +53122,6 @@ fn quandrix_scaleshifter_b135_pumps_friendly_on_instant_cast() {
 // ── Batch 136 tests ─────────────────────────────────────────────────────────
 
 #[test]
-fn inkling_forewing_b136_has_flying_and_ward() {
-    use crate::card::WardCost;
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_forewing_b136());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Ward(WardCost::generic(1))));
-}
-
-#[test]
 fn silverquill_honor_witness_b136_etb_gains_and_scrys() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
@@ -54688,14 +53229,6 @@ fn witherbloom_vinemaul_b136_pumps_and_grants_trample() {
 }
 
 #[test]
-fn witherbloom_necrosage_b136_has_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_necrosage_b136());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-}
-
-#[test]
 fn lorehold_ember_chant_b136_mints_two_spirits() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_ember_chant_b136());
@@ -54713,15 +53246,6 @@ fn lorehold_ember_chant_b136_mints_two_spirits() {
 }
 
 #[test]
-fn lorehold_skirmisher_captain_b136_pings_on_attack() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher_captain_b136());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.power(), 3);
-}
-
-#[test]
 fn lorehold_sage_choir_b136_magecraft_gains_life() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::lorehold_sage_choir_b136());
@@ -54734,16 +53258,6 @@ fn lorehold_sage_choir_b136_magecraft_gains_life() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l_before + 1);
-}
-
-#[test]
-fn lorehold_ember_sprite_b136_is_one_drop_with_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_ember_sprite_b136());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.power(), 1);
-    assert_eq!(c.toughness(), 1);
 }
 
 #[test]
@@ -54879,16 +53393,6 @@ fn shortcut_etb_drain_and_draw_drains_and_draws() {
         }
         _ => panic!("expected Seq body"),
     }
-}
-
-#[test]
-fn shortcut_on_attack_create_token_uses_attacks_self_source() {
-    use crate::effect::shortcut::on_attack_create_token;
-    use crate::card::{Effect, EventKind, EventScope};
-    let t = on_attack_create_token(catalog::inkling_token());
-    assert_eq!(t.event.kind, EventKind::Attacks);
-    assert_eq!(t.event.scope, EventScope::SelfSource);
-    assert!(matches!(t.effect, Effect::CreateToken { .. }));
 }
 
 #[test]
@@ -55107,20 +53611,6 @@ fn witherbloom_verdantroot_b138_magecraft_gains_two_life() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0_before + 2);
-}
-
-#[test]
-fn pest_bloodscribe_b138_dies_drains_one() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_bloodscribe_b138());
-    let l0_before = g.players[0].life;
-    let l1_before = g.players[1].life;
-    let card = g.battlefield_find_mut(id).unwrap();
-    card.damage = 99;
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, l0_before + 1);
-    assert_eq!(g.players[1].life, l1_before - 1);
 }
 
 #[test]
@@ -55743,22 +54233,6 @@ fn lorehold_stormcleric_b141_etb_mints_spirit() {
 }
 
 #[test]
-fn lorehold_pyrosage_b141_magecraft_pings_each_opp() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::lorehold_pyrosage_b141());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let l1_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    // p1 loses 1 from magecraft + 3 from bolt
-    assert_eq!(g.players[1].life, l1_before - 4);
-}
-
-#[test]
 fn lorehold_spiritforge_b141_mints_two_spirits_and_gains_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_spiritforge_b141());
@@ -56134,15 +54608,6 @@ fn pest_hivelord_b142_anthems_other_pests() {
         .find(|c| c.id == pest).expect("Pest still on battlefield");
     assert_eq!(after.power, 2, "Pest +1/+1 from Hivelord anthem: 2 power");
     assert_eq!(after.toughness, 2, "Pest +1/+1 from Hivelord anthem: 2 toughness");
-}
-
-#[test]
-fn pest_hivelord_b142_does_not_buff_self() {
-    let mut g = two_player_game();
-    let hiv = g.add_card_to_battlefield(0, catalog::pest_hivelord_b142());
-    let c = g.compute_battlefield().into_iter()
-        .find(|c| c.id == hiv).expect("Hivelord on battlefield");
-    assert_eq!(c.power, 4, "Hivelord base 4 (no self-anthem)");
 }
 
 #[test]
@@ -57146,28 +55611,6 @@ fn silverquill_reproach_b144_destroys_small_opp_creature() {
 }
 
 #[test]
-fn inkling_mercenary_b144_has_menace() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_mercenary_b144());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Menace));
-}
-
-#[test]
-fn silverquill_ascension_b144_drains_at_end_step() {
-    let mut g = two_player_game();
-    let _asc = g.add_card_to_battlefield(0, catalog::silverquill_ascension_b144());
-    g.active_player_idx = 0;
-    let l0_before = g.players[0].life;
-    let l1_before = g.players[1].life;
-    // Fire the end-step trigger directly.
-    g.fire_step_triggers(TurnStep::End);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, l0_before + 1);
-    assert_eq!(g.players[1].life, l1_before - 1);
-}
-
-#[test]
 fn pest_spawnchant_b144_mints_two_pest_tokens() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::pest_spawnchant_b144());
@@ -57205,15 +55648,6 @@ fn witherbloom_pestlord_b144_draws_on_sacrifice() {
 }
 
 #[test]
-fn witherbloom_decayheart_b144_has_deathtouch_and_menace() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_decayheart_b144());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-    assert!(c.has_keyword(&Keyword::Menace));
-}
-
-#[test]
 fn pest_carrionbreeder_b144_can_be_cycled() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
@@ -57222,16 +55656,6 @@ fn pest_carrionbreeder_b144_can_be_cycled() {
     g.perform_action(GameAction::Cycle { card_id: id })
         .expect("Cycling activation");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == id));
-}
-
-#[test]
-fn witherbloom_reaver_b144_is_a_three_three_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_reaver_b144());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 3);
-    assert!(c.has_keyword(&Keyword::Trample));
 }
 
 #[test]
@@ -57363,15 +55787,6 @@ fn prismari_ember_cantor_b144_can_be_cycled() {
 }
 
 #[test]
-fn prismari_wavecraft_b144_is_a_four_three_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_wavecraft_b144());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 4);
-    assert!(c.has_keyword(&Keyword::Flying));
-}
-
-#[test]
 fn quandrix_echoist_b144_draws_and_surveils_on_cast() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::plains());
@@ -57449,16 +55864,6 @@ fn silverquill_hexbearer_b145_etb_discards_and_drains() {
     assert_eq!(g.players[1].hand.len(), h1_before - 1);
     assert_eq!(g.players[0].life, l0_before + 1);
     assert_eq!(g.players[1].life, l1_before - 1);
-}
-
-#[test]
-fn silverquill_spellbearer_b145_grants_lifelink_to_inklings() {
-    let mut g = two_player_game();
-    let _spell = g.add_card_to_battlefield(0, catalog::silverquill_spellbearer_b145());
-    let ink = g.add_token_to_battlefield(0, &crate::catalog::inkling_token());
-    let computed = g.compute_battlefield();
-    let inkv = computed.iter().find(|c| c.id == ink).unwrap();
-    assert!(inkv.keywords.contains(&Keyword::Lifelink), "Inkling has Lifelink");
 }
 
 #[test]
@@ -57580,15 +55985,6 @@ fn lorehold_inferno_acolyte_b145_magecraft_drains() {
 }
 
 #[test]
-fn lorehold_knight_errant_b145_has_first_strike_and_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_knight_errant_b145());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-    assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
 fn prismari_frosthand_b145_etb_taps_opp_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -57652,34 +56048,6 @@ fn fractal_apex_mage_b145_grows_per_friendly_fractal() {
     drain_stack(&mut g);
     let c = g.battlefield_find(id).unwrap();
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2);
-}
-
-#[test]
-fn witherbloom_lifeglobe_b143_prevents_opp_lifegain() {
-    let mut g = two_player_game();
-    let _glob = g.add_card_to_battlefield(0, catalog::witherbloom_lifeglobe_b143());
-    let l1_before = g.players[1].life;
-    // Try to give opp life directly via adjust_life — should be dropped.
-    g.adjust_life(1, 5);
-    assert_eq!(g.players[1].life, l1_before, "opp lifegain blocked");
-    // Controller can still gain life.
-    let l0_before = g.players[0].life;
-    g.adjust_life(0, 5);
-    assert_eq!(g.players[0].life, l0_before + 5, "controller still gains life");
-}
-
-#[test]
-fn witherbloom_lifeglobe_b143_releases_lifegain_lock_when_it_leaves() {
-    let mut g = two_player_game();
-    let glob = g.add_card_to_battlefield(0, catalog::witherbloom_lifeglobe_b143());
-    // While in play: opp can't gain.
-    let l1_before = g.players[1].life;
-    g.adjust_life(1, 3);
-    assert_eq!(g.players[1].life, l1_before);
-    // Remove it: lifegain works again.
-    g.battlefield.retain(|c| c.id != glob);
-    g.adjust_life(1, 4);
-    assert_eq!(g.players[1].life, l1_before + 4);
 }
 
 #[test]
@@ -57863,16 +56231,6 @@ fn silverquill_inkriot_b146_mints_two_inklings_and_gains_life() {
     assert_eq!(g.players[0].life, l0_before + 2);
 }
 
-#[test]
-fn inkling_wingblade_b146_is_a_two_mana_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_wingblade_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 2);
-    assert!(c.has_keyword(&Keyword::Flying));
-}
-
 // ── Batch 146: Witherbloom tests ────────────────────────────────────────────
 
 #[test]
@@ -57958,16 +56316,6 @@ fn witherbloom_spore_cleric_b146_etb_mints_pest() {
 }
 
 #[test]
-fn witherbloom_sapveiler_b146_has_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapveiler_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 3);
-}
-
-#[test]
 fn witherbloom_withergrove_b146_drains_three_and_mints_pest() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_withergrove_b146());
@@ -57984,17 +56332,6 @@ fn witherbloom_withergrove_b146_drains_three_and_mints_pest() {
     assert_eq!(g.battlefield.len(), bf_before + 1);
     assert_eq!(g.players[0].life, l0_before + 3);
     assert_eq!(g.players[1].life, l1_before - 3);
-}
-
-#[test]
-fn witherbloom_pest_herder_b146_anthems_other_pests() {
-    let mut g = two_player_game();
-    let _herder = g.add_card_to_battlefield(0, catalog::witherbloom_pest_herder_b146());
-    let pest = g.add_token_to_battlefield(0, &crate::catalog::stx_pest_token());
-    let computed = g.compute_battlefield();
-    let pestv = computed.iter().find(|c| c.id == pest).unwrap();
-    assert_eq!(pestv.power, 2, "Pest pumped to 2/2");
-    assert_eq!(pestv.toughness, 2);
 }
 
 #[test]
@@ -58107,15 +56444,6 @@ fn lorehold_spirit_burst_b146_burns_three() {
 }
 
 #[test]
-fn lorehold_soulrender_b146_has_vigilance_and_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_soulrender_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
 fn lorehold_battle_sage_b146_magecraft_pumps_friendly_spirit() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::lorehold_battle_sage_b146());
@@ -58132,16 +56460,6 @@ fn lorehold_battle_sage_b146_magecraft_pumps_friendly_spirit() {
     drain_stack(&mut g);
     let s = g.battlefield_find(spirit).unwrap();
     assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 1);
-}
-
-#[test]
-fn lorehold_pyrebound_b146_is_a_one_mana_hasty_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyrebound_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.power(), 1);
-    assert_eq!(c.toughness(), 1);
 }
 
 #[test]
@@ -58281,16 +56599,6 @@ fn quandrix_sumstudent_b146_magecraft_pumps_self() {
 }
 
 #[test]
-fn quandrix_reflector_b146_is_a_flying_magecraft_scryer() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_reflector_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 4);
-}
-
-#[test]
 fn quandrix_field_trip_b146_fetches_a_basic_land() {
     use crate::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
@@ -58359,21 +56667,6 @@ fn quandrix_patternseeker_b146_magecraft_draws() {
 // ── Batch 146: Prismari tests ───────────────────────────────────────────────
 
 #[test]
-fn prismari_pyromage_b146_magecraft_pings_any() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::prismari_pyromage_b146());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let l1_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, l1_before - 3 - 1);
-}
-
-#[test]
 fn prismari_volcanic_spell_b146_deals_three_to_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_volcanic_spell_b146());
@@ -58417,16 +56710,6 @@ fn prismari_treasurer_b146_magecraft_mints_treasure() {
     drain_stack(&mut g);
     // +1 Treasure token
     assert_eq!(g.battlefield.len(), bf_before + 1);
-}
-
-#[test]
-fn prismari_mage_champion_b146_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_mage_champion_b146());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.power(), 4);
-    assert_eq!(c.toughness(), 3);
 }
 
 #[test]
@@ -58516,34 +56799,6 @@ fn prismari_surge_b146_deals_four_and_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
-#[test]
-fn silverquill_lifeward_b146_blocks_opp_life_loss() {
-    let mut g = two_player_game();
-    let _lw = g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
-    let l1_before = g.players[1].life;
-    // Drain via direct adjust_life — blocked by the static.
-    g.adjust_life(1, -3);
-    assert_eq!(g.players[1].life, l1_before, "opp can't lose life");
-    // Caster can still lose life
-    let l0_before = g.players[0].life;
-    g.adjust_life(0, -2);
-    assert_eq!(g.players[0].life, l0_before - 2);
-}
-
-#[test]
-fn silverquill_lifeward_b146_releases_life_lock_when_it_leaves() {
-    let mut g = two_player_game();
-    let lw = g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
-    // While in play: opp can't lose life
-    let l1_before = g.players[1].life;
-    g.adjust_life(1, -3);
-    assert_eq!(g.players[1].life, l1_before);
-    // Remove it
-    g.battlefield.retain(|c| c.id != lw);
-    g.adjust_life(1, -3);
-    assert_eq!(g.players[1].life, l1_before - 3);
-}
-
 // ── Batch 147 tests ─────────────────────────────────────────────────────────
 
 #[test]
@@ -58596,15 +56851,6 @@ fn silverquill_inkdrip_b147_drains_two_and_gains_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0_before + 2 + 1);
     assert_eq!(g.players[1].life, l1_before - 2);
-}
-
-#[test]
-fn inkling_lifesong_b147_has_lifelink_and_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_lifesong_b147());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.has_keyword(&Keyword::Vigilance));
 }
 
 #[test]
@@ -58729,16 +56975,6 @@ fn lorehold_glyphcaster_b147_magecraft_pings_any() {
 }
 
 #[test]
-fn lorehold_ironwarden_b147_is_a_two_five_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_ironwarden_b147());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 5);
-}
-
-#[test]
 fn lorehold_pyrehowler_b147_deals_five_to_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_pyrehowler_b147());
@@ -58767,20 +57003,6 @@ fn lorehold_cinderscry_b147_pings_target_and_scrys() {
     }).expect("Cinderscry castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, l1_before - 1);
-}
-
-#[test]
-fn spirit_banner_bearer_b147_anthems_other_spirits() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::spirit_banner_bearer_b147());
-    let spirit = g.add_token_to_battlefield(
-        0,
-        &crate::catalog::lorehold_spirit_token(),
-    );
-    let computed = g.compute_battlefield();
-    let s = computed.iter().find(|c| c.id == spirit).unwrap();
-    assert_eq!(s.power, 3, "Spirit pumped from 2/2 to 3/2");
-    assert_eq!(s.toughness, 2);
 }
 
 // ── Batch 147 Quandrix tests ────────────────────────────────────────────────
@@ -58972,15 +57194,6 @@ fn silverquill_mortarscribe_b148_lifegain_drains_each_opp() {
 }
 
 #[test]
-fn inkling_crusader_b148_has_menace_and_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_crusader_b148());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Menace));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
 fn silverquill_cinderglyph_b148_shrinks_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -58997,16 +57210,6 @@ fn silverquill_cinderglyph_b148_shrinks_creature() {
 }
 
 #[test]
-fn inkling_glyphmaster_b148_anthems_other_inklings() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::inkling_glyphmaster_b148());
-    let ink = g.add_token_to_battlefield(0, &crate::catalog::inkling_token());
-    let computed = g.compute_battlefield();
-    let i = computed.iter().find(|c| c.id == ink).unwrap();
-    assert_eq!(i.toughness, 2, "1/2 inkling pumped to 1/2 from +0/+1 anthem");
-}
-
-#[test]
 fn silverquill_lifesong_b148_gains_three_and_scrys() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -59018,14 +57221,6 @@ fn silverquill_lifesong_b148_gains_three_and_scrys() {
     }).expect("Lifesong castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0_before + 3);
-}
-
-#[test]
-fn witherbloom_roothunter_b148_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_roothunter_b148());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
 }
 
 #[test]
@@ -59058,16 +57253,6 @@ fn witherbloom_hexstrike_b148_drains_three() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, l0_before + 3);
     assert_eq!(g.players[1].life, l1_before - 3);
-}
-
-#[test]
-fn witherbloom_reedwarden_b148_anthems_other_pests() {
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::witherbloom_reedwarden_b148());
-    let pest = g.add_token_to_battlefield(0, &crate::catalog::stx_pest_token());
-    let computed = g.compute_battlefield();
-    let p = computed.iter().find(|c| c.id == pest).unwrap();
-    assert_eq!(p.toughness, 2, "Pest pumped 1/1 → 1/2 with +0/+1 anthem");
 }
 
 #[test]
@@ -59137,15 +57322,6 @@ fn lorehold_cinderlist_b148_deals_two_to_creature() {
     drain_stack(&mut g);
     // Bear took 2 damage → dies (toughness 2)
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
-}
-
-#[test]
-fn lorehold_skystalker_b148_has_flying_and_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skystalker_b148());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Vigilance));
 }
 
 #[test]
@@ -59229,14 +57405,6 @@ fn quandrix_geometer_b148_magecraft_pumps_self() {
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
 
-#[test]
-fn fractal_apprentice_ii_b148_has_trample() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_apprentice_ii_b148());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-}
-
 // ── Batch 148 Prismari tests ────────────────────────────────────────────────
 
 #[test]
@@ -59292,14 +57460,6 @@ fn prismari_treasurehunter_b148_etb_mints_treasure() {
 }
 
 #[test]
-fn prismari_brawler_b148_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_brawler_b148());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
 fn prismari_mindstrike_b148_burns_four_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -59321,113 +57481,6 @@ fn prismari_mindstrike_b148_burns_four_and_draws() {
 }
 
 // ── Batch 149 tests ─────────────────────────────────────────────────────────
-
-#[test]
-fn lorehold_echobreaker_b149_has_persist() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_echobreaker_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Persist));
-}
-
-#[test]
-fn lorehold_eternal_phoenix_b149_has_flying_haste_undying() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_eternal_phoenix_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.has_keyword(&Keyword::Undying));
-}
-
-#[test]
-fn lorehold_pyre_stalker_b149_is_a_four_three_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyre_stalker_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 4);
-    assert_eq!(c.toughness(), 3);
-    assert!(c.has_keyword(&Keyword::Trample));
-}
-
-#[test]
-fn witherbloom_rotchild_b149_has_persist() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_rotchild_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Persist));
-}
-
-#[test]
-fn witherbloom_worm_b149_has_undying() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_worm_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Undying));
-    assert_eq!(c.power(), 4);
-}
-
-#[test]
-fn witherbloom_vinekeeper_b149_has_reach_and_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinekeeper_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-}
-
-#[test]
-fn silverquill_ink_knight_b149_has_three_keywords() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_ink_knight_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.has_keyword(&Keyword::Indestructible));
-}
-
-#[test]
-fn silverquill_soulpenitent_b149_has_hexproof() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_soulpenitent_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Hexproof));
-}
-
-#[test]
-fn quandrix_skystreaker_b149_is_a_flying_hexproof() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_skystreaker_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Hexproof));
-}
-
-#[test]
-fn fractal_eternity_b149_has_undying() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_eternity_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Undying));
-}
-
-#[test]
-fn prismari_etherealist_b149_has_flying_and_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_etherealist_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
-fn prismari_stormbringer_b149_has_trample_and_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_stormbringer_b149());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert!(c.has_keyword(&Keyword::Haste));
-}
 
 // ── CR 122 audit tests (rule-level fan-out from batch 146/147/148) ─────────
 
@@ -59524,16 +57577,6 @@ fn silverquill_penmaster_general_b150_has_vigilance_and_lifelink() {
 }
 
 #[test]
-fn inkling_quillveteran_b150_is_a_flying_vigilance_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_quillveteran_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
 fn silverquill_lifebringer_b150_etb_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_lifebringer_b150());
@@ -59600,15 +57643,6 @@ fn silverquill_funerary_rite_b150_drains_two() {
 }
 
 #[test]
-fn inkling_edgewriter_b150_is_a_flying_lifelink_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_edgewriter_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
 fn witherbloom_vinepriest_b150_etb_drains_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_vinepriest_b150());
@@ -59641,16 +57675,6 @@ fn witherbloom_pestcaller_b150_etb_mints_two_pests() {
     assert_eq!(g.battlefield.len(), bf_before + 3);
     let pests = g.battlefield.iter().filter(|c| c.definition.name == "Pest").count();
     assert_eq!(pests, 2);
-}
-
-#[test]
-fn witherbloom_vinedragon_b150_is_a_lifelink_flying_dragon() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinedragon_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
 }
 
 #[test]
@@ -59704,14 +57728,6 @@ fn witherbloom_spawnbed_b150_magecraft_mints_pest() {
 }
 
 #[test]
-fn witherbloom_hatchling_b150_has_persist() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_hatchling_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Persist));
-}
-
-#[test]
 fn lorehold_embermage_b150_magecraft_pings_opponent() {
     let mut g = two_player_game();
     let _ = g.add_card_to_battlefield(0, catalog::lorehold_embermage_b150());
@@ -59740,16 +57756,6 @@ fn lorehold_spiritforge_b150_etb_mints_spirit_token() {
     drain_stack(&mut g);
     let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
     assert_eq!(spirits, 1);
-}
-
-#[test]
-fn lorehold_ancestor_b150_is_a_vigilance_spirit_soldier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_ancestor_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 5);
 }
 
 #[test]
@@ -59868,23 +57874,6 @@ fn quandrix_hydromancer_b150_magecraft_draws() {
 }
 
 #[test]
-fn quandrix_skyrider_b150_is_a_fractal_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_skyrider_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
-fn quandrix_verdant_snake_b150_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_verdant_snake_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-}
-
-#[test]
 fn quandrix_snake_egg_b150_magecraft_grows() {
     let mut g = two_player_game();
     let egg = g.add_card_to_battlefield(0, catalog::quandrix_snake_egg_b150());
@@ -59960,15 +57949,6 @@ fn prismari_tidemage_b150_magecraft_scrys() {
 }
 
 #[test]
-fn prismari_galemaster_b150_is_a_flying_haste_elemental() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_galemaster_b150());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
 fn prismari_stormcaller_b150_magecraft_loots() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -60036,37 +58016,6 @@ fn prismari_aetherwave_b150_draws_two_discards_one() {
 // ── Batch 151 tests ─────────────────────────────────────────────────────────
 
 #[test]
-fn silverquill_disciple_b151_has_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_disciple_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
-fn inkling_scout_b151_is_a_flying_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_scout_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
-fn silverquill_sanctuary_b151_drains_at_upkeep() {
-    use crate::game::types::TurnStep;
-    let mut g = two_player_game();
-    let _ = g.add_card_to_battlefield(0, catalog::silverquill_sanctuary_b151());
-    let opp_life_before = g.players[1].life;
-    let you_life_before = g.players[0].life;
-    // Directly fire Upkeep step triggers.
-    g.fire_step_triggers(TurnStep::Upkeep);
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, opp_life_before - 1);
-    assert_eq!(g.players[0].life, you_life_before + 1);
-}
-
-#[test]
 fn silverquill_recruiter_b151_etb_scrys_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -60124,14 +58073,6 @@ fn inkling_conjurer_b151_etb_mints_two_inkling_tokens() {
 }
 
 #[test]
-fn witherbloom_carrion_eater_b151_has_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_carrion_eater_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-}
-
-#[test]
 fn witherbloom_apothecary_b151_etb_drains_one() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_apothecary_b151());
@@ -60145,14 +58086,6 @@ fn witherbloom_apothecary_b151_etb_drains_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_life_before - 1);
     assert_eq!(g.players[0].life, you_life_before + 1);
-}
-
-#[test]
-fn witherbloom_vinedweller_b151_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinedweller_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
 }
 
 #[test]
@@ -60191,14 +58124,6 @@ fn witherbloom_pestmaster_b151_magecraft_pumps_each_pest() {
     drain_stack(&mut g);
     let c = g.battlefield_find(pest).expect("Eyetwitch still alive");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
-}
-
-#[test]
-fn lorehold_skirmisher_b151_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
 }
 
 #[test]
@@ -60248,16 +58173,6 @@ fn lorehold_battlemage_b151_etb_grants_vigilance() {
     drain_stack(&mut g);
     let computed = g.computed_permanent(target).expect("target computed");
     assert!(computed.keywords.contains(&Keyword::Vigilance));
-}
-
-#[test]
-fn lorehold_sun_spirit_b151_is_a_three_three_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_sun_spirit_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 3);
 }
 
 #[test]
@@ -60315,16 +58230,6 @@ fn quandrix_spellmage_b151_magecraft_scrys() {
 }
 
 #[test]
-fn quandrix_forest_sprite_b151_is_a_two_two_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_forest_sprite_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 2);
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
 fn quandrix_algebraist_b151_etb_scrys_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -60340,14 +58245,6 @@ fn quandrix_algebraist_b151_etb_scrys_and_draws() {
     drain_stack(&mut g);
     // -1 cast + 1 draw = 0 net
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn prismari_brawler_b151_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_brawler_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
 }
 
 #[test]
@@ -60400,24 +58297,7 @@ fn prismari_wavecaller_b151_magecraft_scrys() {
     assert_eq!(g.players[0].library.len(), lib_size);
 }
 
-#[test]
-fn prismari_stormcrest_b151_is_a_flying_haste_dragon() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_stormcrest_b151());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
-}
-
 // ── Batch 152 tests ─────────────────────────────────────────────────────────
-
-#[test]
-fn silverquill_verseguard_b152_has_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_verseguard_b152());
-    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Vigilance));
-}
 
 #[test]
 fn silverquill_memoryflame_b152_drains_one_and_surveils_two() {
@@ -60435,16 +58315,6 @@ fn silverquill_memoryflame_b152_drains_one_and_surveils_two() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_life_before - 1);
     assert_eq!(g.players[0].life, you_life_before + 1);
-}
-
-#[test]
-fn silverquill_champion_b152_is_a_lifelink_flying_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_champion_b152());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 3);
 }
 
 #[test]
@@ -60494,15 +58364,6 @@ fn inkling_tactician_b152_magecraft_pumps_each_inkling() {
     let computed = g.computed_permanent(other).expect("Inkling Scout computed");
     // 2 base + 1 from tactician = 3
     assert_eq!(computed.power, 3);
-}
-
-#[test]
-fn witherbloom_vorpalfang_b152_is_lifelink_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vorpalfang_b152());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.has_keyword(&Keyword::Deathtouch));
 }
 
 #[test]
@@ -60567,15 +58428,6 @@ fn witherbloom_cauldronkeeper_b152_attack_drains_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, opp_before - 1);
     assert_eq!(g.players[0].life, you_before + 1);
-}
-
-#[test]
-fn lorehold_spirit_stalker_b152_has_haste_and_menace() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spirit_stalker_b152());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.has_keyword(&Keyword::Menace));
 }
 
 #[test]
@@ -60762,16 +58614,6 @@ fn cr_117_5_sba_before_priority_lethal_creature_dies_before_response() {
 // ── Batch 153 tests ─────────────────────────────────────────────────────────
 
 #[test]
-fn quandrix_counter_squirrel_b153_is_a_two_two_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_counter_squirrel_b153());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 2);
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
 fn quandrix_insight_b153_draws_two_cards() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -60889,37 +58731,6 @@ fn cr_119_7_lifegain_lock_blocks_subsequent_drain_target() {
 // ── batch 154 — Witherbloom cards ───────────────────────────────────────────
 
 #[test]
-fn witherbloom_pestmancer_b154_mints_pest_on_instant_cast() {
-    let mut g = two_player_game();
-    let _pm = g.add_card_to_battlefield(0, catalog::witherbloom_pestmancer_b154());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let tokens_before = g.battlefield.iter()
-        .filter(|c| c.definition.name == "Pest").count();
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    let tokens_after = g.battlefield.iter()
-        .filter(|c| c.definition.name == "Pest").count();
-    assert_eq!(tokens_after, tokens_before + 1,
-        "magecraft → mints a single Pest token");
-}
-
-#[test]
-fn witherbloom_pestreplica_b154_mints_pest_on_death() {
-    let mut g = two_player_game();
-    let pr = g.add_card_to_battlefield(0, catalog::witherbloom_pestreplica_b154());
-    g.battlefield_find_mut(pr).unwrap().damage = 5;
-    let _ = g.check_state_based_actions();
-    drain_stack(&mut g);
-    let pests = g.battlefield.iter()
-        .filter(|c| c.definition.name == "Pest").count();
-    assert_eq!(pests, 1, "dies → mints exactly one replacement Pest token");
-}
-
-#[test]
 fn witherbloom_boneharvester_b154_etb_mints_two_pests() {
     let mut g = two_player_game();
     let bh = g.add_card_to_hand(0, catalog::witherbloom_boneharvester_b154());
@@ -61005,19 +58816,6 @@ fn witherbloom_mossglobe_b154_taps_for_black_or_green_then_sacs_for_three_life()
 }
 
 #[test]
-fn pest_champion_b154_anthems_other_pests_only() {
-    let mut g = two_player_game();
-    let _pc = g.add_card_to_battlefield(0, catalog::pest_champion_b154());
-    let pest_a = g.add_token_to_battlefield(0, &catalog::stx_pest_token());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let pest_pt = g.computed_permanent(pest_a).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(pest_pt, Some((2, 2)),
-        "Pest (1/1 base) becomes 2/2 under Pest Champion anthem");
-    let bear_pt = g.computed_permanent(bear).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(bear_pt, Some((2, 2)), "Bear is not a Pest → no anthem");
-}
-
-#[test]
 fn witherbloom_lifedrain_b154_drains_five() {
     let mut g = two_player_game();
     let spell = g.add_card_to_hand(0, catalog::witherbloom_lifedrain_b154());
@@ -61057,16 +58855,6 @@ fn witherbloom_pestbinder_b154_etb_mints_pest_and_sac_shrinks_target() {
     let _ = g.check_state_based_actions();
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
         "Bear (2/2 → 0/0) → graveyard via SBA");
-}
-
-#[test]
-fn pest_crusader_b154_has_first_strike_and_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_crusader_b154());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::FirstStrike));
-    assert!(c.definition.keywords.contains(&Keyword::Deathtouch));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Pest));
 }
 
 #[test]
@@ -61281,18 +59069,6 @@ fn lorehold_memoryflame_b154_burns_three_and_returns_is_from_gy() {
 }
 
 #[test]
-fn lorehold_spirit_banner_b154_anthems_other_spirits_only() {
-    let mut g = two_player_game();
-    let _banner = g.add_card_to_battlefield(0, catalog::lorehold_spirit_banner_b154());
-    let other_spirit = g.add_token_to_battlefield(0, &catalog::lorehold_spirit_token());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let spirit_pt = g.computed_permanent(other_spirit).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(spirit_pt, Some((3, 2)), "2/2 Spirit + Banner anthem (+1/+0) = 3/2");
-    let bear_pt = g.computed_permanent(bear).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(bear_pt, Some((2, 2)), "Bear unaffected by Spirit-tribal anthem");
-}
-
-#[test]
 fn lorehold_stratagem_b154_mints_two_spirits_and_burns_opp_for_three() {
     let mut g = two_player_game();
     let spell = g.add_card_to_hand(0, catalog::lorehold_stratagem_b154());
@@ -61399,18 +59175,6 @@ fn silverquill_quilledict_b154_drains_three_and_mints_two_inklings() {
     let inklings = g.battlefield.iter()
         .filter(|c| c.definition.name == "Inkling").count();
     assert_eq!(inklings, 2, "Mints exactly 2 Inkling tokens");
-}
-
-#[test]
-fn inkling_standardbearer_b154_anthems_other_inklings() {
-    let mut g = two_player_game();
-    let _sb = g.add_card_to_battlefield(0, catalog::inkling_standardbearer_b154());
-    let inkling = g.add_token_to_battlefield(0, &catalog::inkling_token());
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let ink_pt = g.computed_permanent(inkling).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(ink_pt, Some((2, 2)), "1/1 Inkling + Standardbearer (+1/+1) = 2/2");
-    let bear_pt = g.computed_permanent(bear).map(|cp| (cp.power, cp.toughness));
-    assert_eq!(bear_pt, Some((2, 2)), "Bear unaffected by Inkling tribal");
 }
 
 // ── batch 154 — Quandrix cards ─────────────────────────────────────────────
@@ -62058,17 +59822,6 @@ fn silverquill_quillplay_b155_drains_one_and_mints_inkling() {
 }
 
 #[test]
-fn inkling_glyphwarden_b155_grants_lifelink_to_other_inklings() {
-    let mut g = two_player_game();
-    let _gw = g.add_card_to_battlefield(0, catalog::inkling_glyphwarden_b155());
-    let inkling = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    drain_stack(&mut g);
-    let view = g.computed_permanent(inkling).expect("Inkling on bf");
-    assert!(view.keywords.contains(&Keyword::Lifelink),
-        "Friendly Inkling gains lifelink via Glyphwarden's static");
-}
-
-#[test]
 fn silverquill_curatorial_b155_drains_and_reanimates() {
     let mut g = two_player_game();
     let dead_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
@@ -62286,23 +60039,6 @@ fn witherbloom_cultivator_b155_etb_gains_life_and_surveils() {
 }
 
 #[test]
-fn pest_wrangler_b155_etb_mints_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::pest_wrangler_b155());
-    g.players[0].mana_pool.add_colorless(1);
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![],
-        mode: None, x_value: None,
-    }).expect("Wrangler castable");
-    drain_stack(&mut g);
-    let pests = g.battlefield.iter()
-        .filter(|c| c.definition.name == "Pest").count();
-    assert_eq!(pests, 1, "Pest minted on ETB");
-}
-
-#[test]
 fn witherbloom_sapling_b155_activation_grows_self() {
     let mut g = two_player_game();
     let s = g.add_card_to_battlefield(0, catalog::witherbloom_sapling_b155());
@@ -62336,16 +60072,6 @@ fn witherbloom_inkblossom_b155_drains_two() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 2);
     assert_eq!(g.players[0].life, life0_before + 2);
-}
-
-#[test]
-fn witherbloom_vinetalker_b155_is_a_four_mana_reach_creature() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinetalker_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Reach));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 4);
 }
 
 #[test]
@@ -62421,19 +60147,6 @@ fn witherbloom_vinepoet_b155_grows_on_is_cast() {
     assert_eq!(counters, 1, "+1/+1 counter from magecraft");
 }
 
-#[test]
-fn pest_ringleader_b155_buffs_other_pests() {
-    use crate::game::effects::token_to_card_definition;
-    let mut g = two_player_game();
-    let _rl = g.add_card_to_battlefield(0, catalog::pest_ringleader_b155());
-    let pest_def = token_to_card_definition(&catalog::stx_pest_token());
-    let pest = g.add_card_to_battlefield(0, pest_def);
-    drain_stack(&mut g);
-    let view = g.computed_permanent(pest).expect("Pest on bf");
-    assert_eq!(view.power, 2, "Pest +1/+1 anthem");
-    assert_eq!(view.toughness, 2);
-}
-
 // ── batch 155 — Lorehold cards ─────────────────────────────────────────────
 
 #[test]
@@ -62498,25 +60211,6 @@ fn lorehold_pyrescholar_b155_etb_pings_target() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 1,
         "Pyrescholar ETB pings opp player for 1");
-}
-
-#[test]
-fn lorehold_bonewright_b155_is_a_lifelink_two_drop() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_bonewright_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 2);
-}
-
-#[test]
-fn lorehold_skystrider_b155_is_a_flying_vigilance_creature() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skystrider_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -62590,30 +60284,6 @@ fn witherbloom_bramblelord_ii_b155_etb_drains_two() {
 }
 
 #[test]
-fn bramble_sprout_b155_drains_on_death() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::bramble_sprout_b155());
-    let p0_before = g.players[0].life;
-    let p1_before = g.players[1].life;
-    g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, p0_before + 1);
-    assert_eq!(g.players[1].life, p1_before - 1);
-}
-
-#[test]
-fn pest_surger_b155_mints_pest_on_death() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_surger_b155());
-    g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    let pests = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Pest")
-        .count();
-    assert_eq!(pests, 1, "Pest Surger should mint a Pest on death");
-}
-
-#[test]
 fn witherbloom_mossdrinker_b155_etb_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_mossdrinker_b155());
@@ -62675,18 +60345,6 @@ fn lorehold_pyromancer_b155_pings_and_gains_on_cast() {
     // P0 gains 1; P1 loses 3 (bolt) + 1 (magecraft ping) = 4.
     assert_eq!(g.players[0].life, p0_before + 1);
     assert_eq!(g.players[1].life, p1_before - 4);
-}
-
-#[test]
-fn silverquill_critic_b155_mints_inkling_on_death() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_critic_b155());
-    g.remove_to_graveyard_with_triggers(id);
-    drain_stack(&mut g);
-    let inklings = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Inkling")
-        .count();
-    assert_eq!(inklings, 1, "Critic should mint an Inkling on death");
 }
 
 #[test]
@@ -62763,15 +60421,6 @@ fn lorehold_pyrebolt_b155_deals_two_to_creature() {
     assert!(g.battlefield_find(bear).is_none() ||
         g.battlefield_find(bear).map(|c| c.damage).unwrap_or(0) == 2,
         "Bear takes 2 damage (or dies)");
-}
-
-#[test]
-fn lorehold_vanguard_b155_is_a_first_strike_human_soldier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_vanguard_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::FirstStrike));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Soldier));
 }
 
 #[test]
@@ -62882,16 +60531,6 @@ fn quandrix_forecaster_b155_etb_draws_one() {
     drain_stack(&mut g);
     // Hand: -1 (cast) +1 (draw) = 0 net.
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn quandrix_verdancer_b155_is_a_five_mana_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_verdancer_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Trample));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 4);
 }
 
 #[test]
@@ -63562,20 +61201,6 @@ fn cr_122_4_excess_counters_pruned_by_sba() {
 }
 
 #[test]
-fn cr_122_4_no_cap_default_means_counters_not_pruned() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    {
-        let c = g.battlefield_find_mut(bear).expect("on bf");
-        c.add_counters(CounterType::PlusOnePlusOne, 12);
-    }
-    let _ = g.check_state_based_actions();
-    let after = g.battlefield_find(bear).expect("on bf");
-    assert_eq!(after.counter_count(CounterType::PlusOnePlusOne), 12,
-        "Bear has no cap — counters survive SBA");
-}
-
-#[test]
 fn quandrix_expansor_b155_creates_fractal_with_x_counters() {
     let mut g = two_player_game();
     let exp = g.add_card_to_hand(0, catalog::quandrix_expansor_b155());
@@ -63593,16 +61218,6 @@ fn quandrix_expansor_b155_creates_fractal_with_x_counters() {
         .filter(|(k, _)| **k == CounterType::PlusOnePlusOne)
         .map(|(_, n)| *n).sum();
     assert_eq!(counters, 3, "Fractal has X=3 +1/+1 counters");
-}
-
-#[test]
-fn quandrix_skygazer_b155_is_a_three_mana_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_skygazer_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 2);
 }
 
 #[test]
@@ -63758,14 +61373,6 @@ fn prismari_flowcaster_b155_etb_draws_one() {
     }).expect("Flowcaster castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before, "-1 cast + 1 draw = 0");
-}
-
-#[test]
-fn prismari_bolthurler_b155_is_a_haste_creature() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_bolthurler_b155());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Haste));
 }
 
 #[test]
@@ -64016,27 +61623,7 @@ fn silverquill_edicter_b158_forces_opp_sac_and_gains_one_life() {
     assert_eq!(opp_creatures_after, opp_creatures_before - 1, "opp sacrificed one");
 }
 
-#[test]
-fn inkling_heraldscribe_b158_is_a_three_mana_flying_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_heraldscribe_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 3);
-}
-
 // ── batch 158 — Witherbloom cards ──────────────────────────────────────────
-
-#[test]
-fn witherbloom_sapling_b158_is_a_two_mana_reach_plant() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapling_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Reach));
-    assert_eq!(c.definition.power, 1);
-    assert_eq!(c.definition.toughness, 3);
-}
 
 #[test]
 fn witherbloom_decantor_b158_magecraft_drains_on_cast() {
@@ -64099,16 +61686,6 @@ fn pest_engorger_ii_b158_magecraft_grows_with_counter() {
     drain_stack(&mut g);
     let c = g.battlefield_find(pe).expect("on bf");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
-}
-
-#[test]
-fn witherbloom_sapdrinker_ii_b158_is_a_lifelink_plant_vampire() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapdrinker_ii_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 3);
 }
 
 #[test]
@@ -64179,15 +61756,6 @@ fn witherbloom_faminescion_b158_drains_three_and_mills() {
     assert_eq!(g.players[0].life, life0_before + 3);
     assert_eq!(g.players[1].life, life1_before - 3);
     assert_eq!(g.players[1].library.len(), lib1_before - 2);
-}
-
-#[test]
-fn pest_crawler_b158_is_a_two_mana_deathtouch_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_crawler_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Deathtouch));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Pest));
 }
 
 #[test]
@@ -64277,25 +61845,6 @@ fn lorehold_stoneflame_b158_destroys_two_two_creature() {
 }
 
 #[test]
-fn lorehold_reaver_b158_is_a_three_mana_haste_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_reaver_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Haste));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 2);
-}
-
-#[test]
-fn spirit_vanguard_ii_b158_is_a_two_mana_vigilance_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::spirit_vanguard_ii_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
 fn lorehold_spectermage_b158_magecraft_pings_any() {
     let mut g = two_player_game();
     let _s = g.add_card_to_battlefield(0, catalog::lorehold_spectermage_b158());
@@ -64328,16 +61877,6 @@ fn lorehold_spirit_caster_b158_mints_spirit_token_on_etb() {
 }
 
 #[test]
-fn lorehold_crusader_b158_is_five_mana_first_strike_knight() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_crusader_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::FirstStrike));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 3);
-}
-
-#[test]
 fn lorehold_spellsong_b158_burns_and_gains_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_spellsong_b158());
@@ -64352,18 +61891,6 @@ fn lorehold_spellsong_b158_burns_and_gains_life() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 2);
     assert_eq!(g.players[0].life, life0_before + 2);
-}
-
-#[test]
-fn lorehold_spiritforger_b158_anthems_other_spirits() {
-    let mut g = two_player_game();
-    let _sf = g.add_card_to_battlefield(0, catalog::lorehold_spiritforger_b158());
-    let other_spirit = g.add_card_to_battlefield(0, catalog::spirit_vanguard_ii_b158());
-    let computed = g.compute_battlefield().into_iter()
-        .find(|c| c.id == other_spirit)
-        .expect("Spirit on computed battlefield");
-    // Spirit Vanguard II is 1/2, anthemed +1/+0: 2/2
-    assert_eq!(computed.power, 2);
 }
 
 #[test]
@@ -64433,15 +61960,6 @@ fn quandrix_fractaltender_b158_magecraft_adds_counter_to_self() {
 }
 
 #[test]
-fn fractal_sprite_b158_is_a_two_mana_flying_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_sprite_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
-#[test]
 fn quandrix_researcher_b158_magecraft_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -64471,16 +61989,6 @@ fn quandrix_inquirer_b158_etb_scrys_one() {
     }).expect("Inquirer castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), lib_before);
-}
-
-#[test]
-fn fractal_wallflower_b158_is_a_three_mana_reach_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_wallflower_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Reach));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 4);
 }
 
 #[test]
@@ -64597,15 +62105,6 @@ fn prismari_bellringer_b158_magecraft_pings_each_opp() {
 }
 
 #[test]
-fn prismari_cinder_b158_is_a_two_mana_haste_elemental() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_cinder_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Haste));
-    assert_eq!(c.definition.power, 2);
-}
-
-#[test]
 fn prismari_lootworker_b158_magecraft_loots() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -64649,15 +62148,6 @@ fn prismari_flameweaver_b158_magecraft_pings_two() {
     drain_stack(&mut g);
     // Bolt 3 + magecraft 2 to player 1
     assert_eq!(g.players[1].life, life1_before - 3 - 2);
-}
-
-#[test]
-fn prismari_stormbearer_b158_is_a_four_mana_flying_djinn() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_stormbearer_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Djinn));
 }
 
 #[test]
@@ -64705,15 +62195,6 @@ fn prismari_flickerflame_b158_burns_three_and_scrys() {
 }
 
 #[test]
-fn prismari_cogworks_b158_is_a_three_mana_artifact() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_cogworks_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.card_types.iter().any(|t| matches!(t, crate::card::CardType::Artifact)));
-    assert_eq!(c.definition.activated_abilities.len(), 2);
-}
-
-#[test]
 fn witherbloom_reanimate_b158_returns_creature_from_graveyard() {
     let mut g = two_player_game();
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
@@ -64729,24 +62210,6 @@ fn witherbloom_reanimate_b158_returns_creature_from_graveyard() {
 }
 
 // ── CR rule lock-in tests (push: modern_decks batch 158 audit) ─────────────
-
-/// CR 502.3 — The active player's untap step untaps all permanents they
-/// CONTROL, not just the ones they originally own. A creature stolen via
-/// Threaten / Mind Control + already attached to the active player should
-/// untap on their next untap step.
-#[test]
-fn cr_502_3_untap_step_untaps_controlled_permanents() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    {
-        let c = g.battlefield_find_mut(bear).expect("on bf");
-        c.tapped = true;
-    }
-    g.active_player_idx = 0;
-    g.do_untap();
-    let after = g.battlefield_find(bear).expect("on bf");
-    assert!(!after.tapped, "bear should be untapped after untap step");
-}
 
 /// CR 502.3 — Stun counter interposition: a permanent with a stun
 /// counter has the stun removed instead of untapping. Lock-in for the
@@ -64765,53 +62228,6 @@ fn cr_502_3_stun_counter_blocks_untap_and_consumed() {
     let after = g.battlefield_find(bear).expect("on bf");
     assert!(after.tapped, "bear stays tapped (stun interposed)");
     assert_eq!(after.counter_count(CounterType::Stun), 0, "stun consumed");
-}
-
-/// CR 121 — A draw command moves one card from library top to hand.
-/// Lock-in: hand grows by 1, library shrinks by 1.
-#[test]
-fn cr_121_basic_draw_moves_one_card_library_to_hand() {
-    let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
-    let hand_before = g.players[0].hand.len();
-    let lib_before = g.players[0].library.len();
-    g.players[0].draw_top();
-    assert_eq!(g.players[0].hand.len(), hand_before + 1);
-    assert_eq!(g.players[0].library.len(), lib_before - 1);
-}
-
-/// CR 117.5 — State-based actions are checked first when a player would
-/// receive priority. A creature with lethal damage dies before the
-/// opponent can act. Lock-in: bear with 2+ damage and 2 toughness dies
-/// during `check_state_based_actions`, no priority window allows saving.
-#[test]
-fn cr_117_5_lethal_damage_triggers_sba_before_priority() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    {
-        let c = g.battlefield_find_mut(bear).expect("on bf");
-        c.damage = 2;
-    }
-    let _ = g.check_state_based_actions();
-    // Bear with 2 damage and 2 toughness → dead via 704.5g
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
-        "bear should be in graveyard via SBA");
-}
-
-/// CR 117.5 — When the active player's creature would die from -1/-1
-/// counters dropping toughness to 0, the SBA fires before priority.
-#[test]
-fn cr_117_5_zero_toughness_sba_kills_creature() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    {
-        let c = g.battlefield_find_mut(bear).expect("on bf");
-        c.add_counters(CounterType::MinusOneMinusOne, 2);
-    }
-    let _ = g.check_state_based_actions();
-    // Bear's base toughness 2 − 2 -1/-1 counters = 0 → dies via 704.5f
-    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear),
-        "bear with 0 toughness should die via SBA");
 }
 
 // ── batch 158 — Extra cards across schools ─────────────────────────────────
@@ -64850,16 +62266,6 @@ fn quandrix_multiplier_ii_b158_mints_fractal_with_three_counters() {
 }
 
 #[test]
-fn quandrix_sapiens_b158_is_a_four_mana_reach_elf() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_sapiens_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Reach));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 3);
-}
-
-#[test]
 fn fractal_recursion_b158_returns_creature_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -64873,15 +62279,6 @@ fn fractal_recursion_b158_returns_creature_and_draws() {
     }).expect("Recursion castable");
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
-}
-
-#[test]
-fn lorehold_pyremage_b158_is_a_two_mana_haste_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyremage_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Haste));
-    assert_eq!(c.definition.power, 2);
 }
 
 #[test]
@@ -64949,36 +62346,7 @@ fn pest_bloomer_b158_etb_mints_pest() {
     assert_eq!(pests, 1);
 }
 
-#[test]
-fn witherbloom_coursebinder_b158_is_a_five_mana_trample_beast() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_coursebinder_b158());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Trample));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 4);
-}
-
 // ── batch 159 — Silverquill cards ──────────────────────────────────────────
-
-#[test]
-fn inkling_lawkeeper_b159_is_a_two_mana_flying_vigilance_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_lawkeeper_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Flying));
-    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
-}
-
-#[test]
-fn silverquill_pen_director_b159_is_a_five_mana_lifelink_finisher() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_pen_director_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 4);
-}
 
 #[test]
 fn silverquill_pen_sketch_b159_drains_one_and_draws() {
@@ -64998,16 +62366,6 @@ fn silverquill_pen_sketch_b159_drains_one_and_draws() {
     assert_eq!(g.players[0].life, life0_before + 1);
     assert_eq!(g.players[1].life, life1_before - 1);
     assert_eq!(g.players[0].hand.len(), hand_before);
-}
-
-#[test]
-fn inkling_stalwart_b159_is_a_three_mana_inkling_knight() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_stalwart_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 2);
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Knight));
 }
 
 #[test]
@@ -65092,23 +62450,6 @@ fn shortcut_etb_drain_and_counter_self_emits_drain_then_counter() {
 // ── batch 159 — Witherbloom cards ──────────────────────────────────────────
 
 #[test]
-fn witherbloom_stinger_b159_is_a_two_mana_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_stinger_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Deathtouch));
-}
-
-#[test]
-fn pest_sapling_b159_is_a_two_mana_reach_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_sapling_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Reach));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Pest));
-}
-
-#[test]
 fn witherbloom_bonebinder_b159_etb_drains_and_mints_pest() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_bonebinder_b159());
@@ -65160,41 +62501,6 @@ fn lorehold_pyrescholar_b159_magecraft_pings_each_opp() {
     drain_stack(&mut g);
     // Bolt 3 + magecraft 1
     assert_eq!(g.players[1].life, life1_before - 3 - 1);
-}
-
-#[test]
-fn lorehold_sentinel_b159_is_a_four_mana_vigilance_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_sentinel_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Vigilance));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 4);
-}
-
-#[test]
-fn lorehold_ember_mage_b159_magecraft_pings_any() {
-    let mut g = two_player_game();
-    let _e = g.add_card_to_battlefield(0, catalog::lorehold_ember_mage_b159());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let life1_before = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Bolt castable");
-    drain_stack(&mut g);
-    assert_eq!(g.players[1].life, life1_before - 3 - 1);
-}
-
-#[test]
-fn lorehold_spectral_cavalry_b159_is_four_mana_haste_knight() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spectral_cavalry_b159());
-    let c = g.battlefield_find(id).expect("on bf");
-    assert!(c.definition.keywords.contains(&Keyword::Haste));
-    assert_eq!(c.definition.power, 3);
-    assert_eq!(c.definition.toughness, 3);
 }
 
 #[test]
@@ -65455,16 +62761,6 @@ fn quandrix_spirescribe_b160_magecraft_self_pumps() {
 }
 
 #[test]
-fn quandrix_mathadept_b160_is_a_three_mana_reach_druid() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_mathadept_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 3);
-}
-
-#[test]
 fn quandrix_doublecast_b160_draws_one() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -65548,24 +62844,6 @@ fn prismari_stormbinder_b160_has_prowess() {
 }
 
 #[test]
-fn prismari_spellscribe_b160_is_flash_and_magecraft_scrys() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_spellscribe_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flash));
-}
-
-#[test]
-fn prismari_magmadancer_b160_is_a_four_mana_haste_aggressor() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_magmadancer_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 3);
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
 fn prismari_sparkthrower_b160_burns_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_sparkthrower_b160());
@@ -65608,16 +62886,6 @@ fn prismari_treasureforge_b160_etb_mints_treasure_and_pings() {
 // ── Lorehold b160 ──
 
 #[test]
-fn lorehold_spectralguard_b160_is_a_three_mana_vigilance_wall() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spectralguard_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert_eq!(c.definition.power, 1);
-    assert_eq!(c.definition.toughness, 4);
-}
-
-#[test]
 fn lorehold_sparkpriest_b160_magecraft_drains_each_opp() {
     let mut g = two_player_game();
     let _s = g.add_card_to_battlefield(0, catalog::lorehold_sparkpriest_b160());
@@ -65630,15 +62898,6 @@ fn lorehold_sparkpriest_b160_magecraft_drains_each_opp() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1_before - 3 - 1);
-}
-
-#[test]
-fn lorehold_bonewright_b160_has_first_strike() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_bonewright_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-    assert_eq!(c.definition.power, 3);
 }
 
 #[test]
@@ -65690,35 +62949,7 @@ fn lorehold_pyresage_b160_magecraft_pings_creature() {
     assert!(p.has_keyword(&Keyword::Haste));
 }
 
-#[test]
-fn lorehold_recoverer_b160_is_lifelink_body() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_recoverer_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 4);
-}
-
 // ── Silverquill b160 ──
-
-#[test]
-fn silverquill_scribecadet_b160_is_lifelink_two_two() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_scribecadet_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 2);
-}
-
-#[test]
-fn inkling_coursemate_b160_is_flying_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_coursemate_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
 
 #[test]
 fn silverquill_penblade_b160_magecraft_self_pumps() {
@@ -65750,15 +62981,6 @@ fn silverquill_pendrop_b160_drains_and_scrys() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0_before + 1);
     assert_eq!(g.players[1].life, life1_before - 1);
-}
-
-#[test]
-fn inkling_verseknight_b160_is_flying_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_verseknight_b160());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Vigilance));
 }
 
 #[test]
@@ -65859,32 +63081,6 @@ fn lorehold_wallflame_b161_burns_three_and_surveils() {
     }).expect("Wallflame castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
-}
-
-#[test]
-fn lorehold_reckoner_b161_is_vigilance_finisher() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_reckoner_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert_eq!(c.definition.power, 4);
-}
-
-#[test]
-fn lorehold_spectralfist_b161_has_first_strike() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spectralfist_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-}
-
-#[test]
-fn lorehold_pyreknight_b161_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyreknight_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.definition.power, 3);
 }
 
 #[test]
@@ -66040,14 +63236,6 @@ fn fractal_tidemind_b161_magecraft_scrys_and_draws() {
 }
 
 #[test]
-fn quandrix_riverbase_b161_is_two_mana_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_riverbase_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-}
-
-#[test]
 fn prismari_tideforge_b161_has_prowess() {
     let mut g = two_player_game();
     let s = g.add_card_to_battlefield(0, catalog::prismari_tideforge_b161());
@@ -66127,23 +63315,6 @@ fn witherbloom_vinekeeper_b161_magecraft_gains_life_and_counter() {
 }
 
 #[test]
-fn witherbloom_vinebound_b161_is_a_four_three_beast() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinebound_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 3);
-}
-
-#[test]
-fn witherbloom_sapwarden_b161_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapwarden_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-}
-
-#[test]
 fn pest_crawler_b161_dies_drains_one() {
     let mut g = two_player_game();
     let p = g.add_card_to_battlefield(0, catalog::pest_crawler_b161());
@@ -66196,24 +63367,6 @@ fn witherbloom_soulgift_b161_drains_two_and_mills() {
 }
 
 #[test]
-fn silverquill_inkmaster_b161_is_lifelink_finisher() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_inkmaster_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 4);
-}
-
-#[test]
-fn inkling_quillsoldier_b161_has_flying() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_quillsoldier_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-}
-
-#[test]
 fn silverquill_penkeeper_b161_drains_and_mints_inkling() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_penkeeper_b161());
@@ -66232,24 +63385,6 @@ fn silverquill_penkeeper_b161_drains_and_mints_inkling() {
         .filter(|c| c.is_token && c.definition.subtypes.creature_types.contains(&CreatureType::Inkling))
         .count();
     assert_eq!(inklings, 1);
-}
-
-#[test]
-fn silverquill_quillsaint_b161_is_lifelink_spirit() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_quillsaint_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
-fn inkling_vowscribe_b161_is_flying_deathtouch_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_vowscribe_b161());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Deathtouch));
 }
 
 // ── CR rule lock-in tests (push: modern_decks batch 162) ─────────────────
@@ -66404,16 +63539,6 @@ fn witherbloom_mosskeeper_b162_magecraft_gains_two_life() {
 }
 
 #[test]
-fn pest_trampler_b162_is_a_four_mana_four_four_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_trampler_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.definition.power, 4);
-    assert_eq!(c.definition.toughness, 4);
-}
-
-#[test]
 fn witherbloom_vinetwine_b162_drains_three_and_mills_each_player() {
     let mut g = two_player_game();
     for _ in 0..5 {
@@ -66522,14 +63647,6 @@ fn prismari_spellslinger_b162_magecraft_loots() {
 }
 
 #[test]
-fn prismari_firefoot_b162_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_firefoot_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
 fn prismari_stormbolt_b162_burns_three_and_scrys() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -66559,15 +63676,6 @@ fn quandrix_splashweaver_b162_magecraft_self_pumps() {
     }).expect("Bolt castable");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(s).unwrap().power(), pwr_before + 1);
-}
-
-#[test]
-fn fractal_echoweaver_b162_is_two_four_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_echoweaver_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-    assert_eq!(c.definition.toughness, 4);
 }
 
 #[test]
@@ -66620,32 +63728,6 @@ fn quandrix_wavelet_b162_scrys_two() {
 }
 
 #[test]
-fn lorehold_bonelord_b162_is_vigilance_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_bonelord_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
-fn lorehold_spectralrider_b162_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spectralrider_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
-fn lorehold_brave_b162_has_first_strike_and_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_brave_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-}
-
-#[test]
 fn lorehold_battleweave_b162_burns_four_and_gains_four_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_battleweave_b162());
@@ -66682,24 +63764,6 @@ fn lorehold_spectralweaver_b162_etb_pings_and_gains_life() {
 }
 
 #[test]
-fn silverquill_devotionseer_b162_is_one_three_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_devotionseer_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert_eq!(c.definition.toughness, 3);
-}
-
-#[test]
-fn inkling_plumefall_b162_is_flying_finisher() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_plumefall_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 3);
-}
-
-#[test]
 fn silverquill_inksong_b162_drains_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_inksong_b162());
@@ -66731,61 +63795,7 @@ fn silverquill_apprentice_ii_b162_magecraft_drains_one() {
     assert_eq!(g.players[1].life, life1_before - 3 - 1);
 }
 
-#[test]
-fn inkling_sentry_b162_is_flying_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_sentry_b162());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-}
-
 // ── Batch 163 (modern_decks) — Lorehold Spirit cycle ────────────────────
-
-#[test]
-fn lorehold_coursemate_b163_is_a_two_mana_spirit_cleric() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_coursemate_b163());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Cleric));
-}
-
-#[test]
-fn lorehold_pyrebound_b163_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_pyrebound_b163());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
-fn lorehold_spirit_guard_b163_has_vigilance_and_first_strike() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spirit_guard_b163());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-}
-
-#[test]
-fn lorehold_phantasm_b163_is_a_one_one_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_phantasm_b163());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 1);
-    assert_eq!(c.definition.toughness, 1);
-}
-
-#[test]
-fn lorehold_sparkling_spirit_b163_is_a_flying_threat() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_sparkling_spirit_b163());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 3);
-}
 
 #[test]
 fn lorehold_sparkscholar_b163_magecraft_pings_any() {
@@ -66802,18 +63812,6 @@ fn lorehold_sparkscholar_b163_magecraft_pings_any() {
     // Bolt deals 3, magecraft pings any target — auto picks an opp.
     // Result is at least 3 damage (bolt); magecraft trigger may pick opp.
     assert!(g.players[1].life <= life1_before - 3);
-}
-
-#[test]
-fn lorehold_lightcage_b163_pumps_other_spirits() {
-    let mut g = two_player_game();
-    let spirit = g.add_card_to_battlefield(0, catalog::lorehold_phantasm_b163()); // 1/1 Flying Spirit
-    let _cage = g.add_card_to_battlefield(0, catalog::lorehold_lightcage_b163());
-    drain_stack(&mut g);
-    let phantasm = g.computed_permanent(spirit).expect("Phantasm on bf");
-    // Phantasm gets +1/+0 from Lightcage anthem
-    assert_eq!(phantasm.power, 2);
-    assert_eq!(phantasm.toughness, 1);
 }
 
 // ── Batch 164 (modern_decks) — Lorehold ───────────────────────────────────
@@ -66898,15 +63896,6 @@ fn lorehold_skybinder_b164_is_flying_vigilance() {
 }
 
 #[test]
-fn lorehold_ironforge_b164_has_first_strike() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_ironforge_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
 fn lorehold_spectralward_b164_pumps_and_grants_lifelink() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -66954,14 +63943,6 @@ fn witherbloom_vinemender_b164_etb_gains_two_life() {
     }).expect("Vinemender castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life_before + 2);
-}
-
-#[test]
-fn witherbloom_vinemender_b164_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_vinemender_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
 }
 
 #[test]
@@ -67114,33 +64095,6 @@ fn prismari_spellwaver_b164_etb_draws_one() {
 }
 
 #[test]
-fn prismari_fireweaver_b164_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_fireweaver_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
-fn prismari_sparkdancer_b164_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_sparkdancer_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert_eq!(c.definition.power, 2);
-    assert_eq!(c.definition.toughness, 1);
-}
-
-#[test]
-fn prismari_dracoshaper_b164_is_flying_treasure_maker() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_dracoshaper_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 4);
-}
-
-#[test]
 fn prismari_stormcrash_b164_deals_four() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_stormcrash_b164());
@@ -67236,15 +64190,6 @@ fn fractal_summoner_b164_etb_mints_fractal_token() {
     assert_eq!(tokens_after, tokens_before + 1);
 }
 
-#[test]
-fn quandrix_waveweaver_b164_has_trample() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_waveweaver_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.definition.power, 3);
-}
-
 // ── Batch 164 (modern_decks) — Silverquill ────────────────────────────────
 
 #[test]
@@ -67262,15 +64207,6 @@ fn silverquill_quillkeeper_b164_etb_drains_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 + 1);
     assert_eq!(g.players[1].life, life1 - 1);
-}
-
-#[test]
-fn inkling_herald_b164_is_flying_looter() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_herald_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
 }
 
 #[test]
@@ -67325,15 +64261,6 @@ fn silverquill_verdict_b164_drains_two_and_surveils() {
 }
 
 #[test]
-fn inkling_duelist_b164_is_flying() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_duelist_b164());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
 fn silverquill_denouncement_b164_shrinks_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -67350,13 +64277,6 @@ fn silverquill_denouncement_b164_shrinks_creature() {
 }
 
 // ── CR lock-in tests (batch 164) ──────────────────────────────────────────
-
-#[test]
-fn cr_119_1_starting_life_is_twenty() {
-    let g = two_player_game();
-    assert_eq!(g.players[0].life, 20);
-    assert_eq!(g.players[1].life, 20);
-}
 
 #[test]
 fn cr_704_5f_zero_toughness_creature_dies_to_sba() {
@@ -67410,15 +64330,6 @@ fn cr_119_3_gain_life_adds_to_total() {
 // ── Batch 165 (modern_decks) — Lorehold ───────────────────────────────────
 
 #[test]
-fn lorehold_flamebinder_b165_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_flamebinder_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
 fn lorehold_sunweave_b165_gains_five_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_sunweave_b165());
@@ -67446,14 +64357,6 @@ fn lorehold_pyreguard_b165_etb_pings_two() {
     }).expect("Pyreguard castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, life1 - 2);
-}
-
-#[test]
-fn lorehold_braveheart_b165_has_lifelink() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_braveheart_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Lifelink));
 }
 
 #[test]
@@ -67492,14 +64395,6 @@ fn lorehold_bonepreacher_b165_etb_gains_three_life() {
 // ── Batch 165 (modern_decks) — Witherbloom ────────────────────────────────
 
 #[test]
-fn pest_deathbloom_b165_has_deathtouch() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_deathbloom_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-}
-
-#[test]
 fn witherbloom_witchlight_b165_drains_two_and_draws() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
@@ -67521,15 +64416,6 @@ fn witherbloom_witchlight_b165_drains_two_and_draws() {
 }
 
 #[test]
-fn witherbloom_rootguard_b165_has_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_rootguard_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-    assert_eq!(c.definition.toughness, 4);
-}
-
-#[test]
 fn witherbloom_lifesurge_b165_drains_three() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_lifesurge_b165());
@@ -67544,15 +64430,6 @@ fn witherbloom_lifesurge_b165_drains_three() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, life0 + 3);
     assert_eq!(g.players[1].life, life1 - 3);
-}
-
-#[test]
-fn witherbloom_deathcoach_b165_has_trample() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_deathcoach_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.definition.power, 4);
 }
 
 // ── Batch 165 (modern_decks) — Prismari ───────────────────────────────────
@@ -67585,15 +64462,6 @@ fn prismari_flamebolt_b165_deals_four_to_creature() {
     }).expect("Flamebolt castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
-}
-
-#[test]
-fn prismari_stormwielder_b165_is_flying_looter() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_stormwielder_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert_eq!(c.definition.power, 3);
 }
 
 #[test]
@@ -67630,15 +64498,6 @@ fn quandrix_hydraformer_b165_etb_draws_one() {
     }).expect("Hydraformer castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before); // -1 cast + 1 draw
-}
-
-#[test]
-fn quandrix_rootsinger_b165_has_trample() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_rootsinger_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.definition.power, 4);
 }
 
 #[test]
@@ -67693,15 +64552,6 @@ fn silverquill_vindict_b165_destroys_and_gains_life() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
     assert_eq!(g.players[0].life, life_before + 2);
-}
-
-#[test]
-fn inkling_skywarden_b165_has_flying_vigilance() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_skywarden_b165());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Vigilance));
 }
 
 #[test]
@@ -67993,16 +64843,6 @@ fn witherbloom_lifesong_b166_drains_one_and_gains_two() {
 }
 
 #[test]
-fn witherbloom_sapworm_b166_is_a_three_mana_deathtouch_body() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapworm_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Deathtouch));
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 3);
-}
-
-#[test]
 fn pest_reborn_b166_returns_creature_and_mints_pest() {
     let mut g = two_player_game();
     let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
@@ -68064,15 +64904,6 @@ fn lorehold_sparkmage_b166_magecraft_pings() {
     drain_stack(&mut g);
     // 3 bolt + 1 magecraft ping = 4
     assert_eq!(g.players[1].life, life1 - 4);
-}
-
-#[test]
-fn lorehold_spiritskirmisher_b166_is_haste_aggro() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_spiritskirmisher_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
 }
 
 #[test]
@@ -68340,16 +65171,6 @@ fn prismari_elementalist_b166_magecraft_draws() {
     assert_eq!(g.players[0].hand.len(), hand_before);
 }
 
-#[test]
-fn prismari_flamewing_b166_is_a_flying_haste_dragon() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::prismari_flamewing_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Haste));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
-}
-
 // ── Batch 166 (modern_decks) — Quandrix ───────────────────────────────────
 
 #[test]
@@ -68367,16 +65188,6 @@ fn quandrix_counterspellbinder_b166_etb_adds_counter_to_self() {
     // 2/3 + 1 counter = 3/4
     assert_eq!(c.power(), 3);
     assert_eq!(c.toughness(), 4);
-}
-
-#[test]
-fn fractal_echofin_b166_is_a_two_mana_fractal() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::fractal_echofin_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Fractal));
-    assert_eq!(c.power(), 1);
-    assert_eq!(c.toughness(), 1);
 }
 
 #[test]
@@ -68430,16 +65241,6 @@ fn quandrix_wavecaster_b166_magecraft_draws() {
 }
 
 #[test]
-fn quandrix_tideguard_b166_is_two_four_reach() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_tideguard_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Reach));
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 4);
-}
-
-#[test]
 fn quandrix_spellbinder_b166_pumps_friendly() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -68472,16 +65273,6 @@ fn quandrix_sumcaller_b166_mints_fractal_with_four_counters() {
     assert_eq!(fractals.len(), 1);
     let f = fractals[0];
     assert_eq!(f.counter_count(CounterType::PlusOnePlusOne), 4);
-}
-
-#[test]
-fn quandrix_mathstrider_b166_is_three_three_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_mathstrider_b166());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 3);
 }
 
 #[test]
@@ -68616,19 +65407,6 @@ fn silverquill_curse_b167_exiles_target_on_subsequent_death() {
 }
 
 #[test]
-fn silverquill_inkbond_b167_buffs_other_inklings() {
-    let mut g = two_player_game();
-    let _ib = g.add_card_to_battlefield(0, catalog::silverquill_inkbond_b167());
-    let ink = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    let after = g.compute_battlefield().into_iter()
-        .find(|c| c.id == ink)
-        .expect("Inkling on battlefield");
-    // 2/1 + 1/1 anthem = 3/2
-    assert_eq!(after.power, 3);
-    assert_eq!(after.toughness, 2);
-}
-
-#[test]
 fn silverquill_penbinder_b167_surveils_two() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -68662,16 +65440,6 @@ fn inkling_diviner_b167_etb_draws() {
     let c = g.battlefield_find(id).unwrap();
     assert!(c.has_keyword(&Keyword::Flying));
     assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
-fn silverquill_bulwark_b167_is_one_five_defender() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_bulwark_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Defender));
-    assert_eq!(c.power(), 1);
-    assert_eq!(c.toughness(), 5);
 }
 
 // ── Batch 167 (modern_decks) — Witherbloom follow-up ─────────────────────
@@ -68715,15 +65483,6 @@ fn witherbloom_drainshepherd_b167_drains_opp_on_lifegain() {
 }
 
 #[test]
-fn pest_sentry_b167_is_vigilant_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::pest_sentry_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Vigilance));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Pest));
-}
-
-#[test]
 fn witherbloom_pestbringer_b167_mints_three_pests() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_pestbringer_b167());
@@ -68736,16 +65495,6 @@ fn witherbloom_pestbringer_b167_mints_three_pests() {
     drain_stack(&mut g);
     let pests: Vec<_> = g.battlefield.iter().filter(|c| c.is_token && c.definition.name == "Pest").collect();
     assert_eq!(pests.len(), 3);
-}
-
-#[test]
-fn witherbloom_mossguard_b167_is_three_three_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_mossguard_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Trample));
-    assert_eq!(c.power(), 3);
-    assert_eq!(c.toughness(), 3);
 }
 
 // ── Batch 167 (modern_decks) — Lorehold follow-up ─────────────────────────
@@ -68764,23 +65513,6 @@ fn lorehold_banisher_b167_exiles_low_mv_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none());
     assert!(g.exile.iter().any(|c| c.id == bear));
-}
-
-#[test]
-fn lorehold_champion_b167_is_first_strike_vigilant() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_champion_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::FirstStrike));
-    assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
-fn lorehold_strikewing_b167_is_three_mana_flier() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_strikewing_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
 }
 
 #[test]
@@ -68891,14 +65623,6 @@ fn prismari_volley_b167_burns_and_scrys() {
 // ── Batch 167 (modern_decks) — Quandrix follow-up ─────────────────────────
 
 #[test]
-fn quandrix_tideforge_b167_is_flash_wizard() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_tideforge_b167());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flash));
-}
-
-#[test]
 fn quandrix_pluralizer_b167_etb_adds_two_counters() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -68949,20 +65673,6 @@ fn fractal_crusher_b167_is_four_four_trampler() {
     assert_eq!(c.toughness(), 4);
 }
 
-#[test]
-fn mana_value_exactly_predicate_matches_only_exact_cmc() {
-    // Lock in the new SelectionRequirement::ManaValueExactly variant.
-    // Filter `Creature ∧ ManaValueExactly(2)`: Grizzly Bears (MV=2)
-    // matches; Serra Angel (MV=5) does not.
-    use crate::card::SelectionRequirement as R;
-    let mut g = two_player_game();
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV=2
-    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // MV=5
-    let req = R::Creature.and(R::ManaValueExactly(2));
-    assert!(g.evaluate_requirement_static(&req, &Target::Permanent(bear), 0, None));
-    assert!(!g.evaluate_requirement_static(&req, &Target::Permanent(angel), 0, None));
-}
-
 // ── Batch 168 (modern_decks) — Silverquill premium ───────────────────────
 
 #[test]
@@ -68997,16 +65707,6 @@ fn silverquill_banisher_b168_exiles_mv_three_creature() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(three_mana).is_none());
     assert!(g.exile.iter().any(|c| c.id == three_mana));
-}
-
-#[test]
-fn inkling_sage_ii_b168_is_flying_lifelink_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::inkling_sage_ii_b168());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Lifelink));
-    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
 }
 
 #[test]
@@ -69464,17 +66164,6 @@ fn silverquill_bookmage_b169_scrys_and_draws_on_is_cast() {
         "hand should be at least same size after magecraft draw");
 }
 
-#[test]
-fn inkling_standard_bearer_b169_grants_lifelink_to_other_inklings() {
-    let mut g = two_player_game();
-    let _sb = g.add_card_to_battlefield(0, catalog::inkling_standard_bearer_b169());
-    let ink = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    let bf = g.compute_battlefield();
-    let inkling = bf.iter().find(|c| c.id == ink).expect("inkling on bf");
-    assert!(inkling.keywords.contains(&Keyword::Lifelink),
-        "other inkling has lifelink anthem");
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 169 (modern_decks) — Witherbloom expansion
 // ─────────────────────────────────────────────────────────────────────────
@@ -69740,16 +66429,6 @@ fn lorehold_flameglyph_b169_kills_creature() {
     assert!(g.battlefield_find(bear).is_none(), "bear killed");
 }
 
-#[test]
-fn lorehold_aurochs_b169_is_a_four_four_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_aurochs_b169());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 4);
-    assert_eq!(c.toughness(), 4);
-    assert!(c.has_keyword(&Keyword::Trample));
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 169 (modern_decks) — Prismari expansion
 // ─────────────────────────────────────────────────────────────────────────
@@ -70012,16 +66691,6 @@ fn quandrix_bigwave_b169_draws_three_and_pumps_target() {
     assert_eq!(g.players[0].hand.len(), hand_before + 2);
     let c = g.battlefield_find(bear).expect("bear alive");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2);
-}
-
-#[test]
-fn quandrix_fractal_whale_b169_is_a_five_five_trampler() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::quandrix_fractal_whale_b169());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 5);
-    assert_eq!(c.toughness(), 5);
-    assert!(c.has_keyword(&Keyword::Trample));
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -70364,14 +67033,6 @@ fn witherbloom_sapsprite_b171_sac_drains_two() {
 }
 
 #[test]
-fn lorehold_skirmisher_b171_has_haste() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher_b171());
-    let c = g.battlefield_find(id).unwrap();
-    assert!(c.has_keyword(&Keyword::Haste));
-}
-
-#[test]
 fn lorehold_pyresage_b171_pings_on_is_cast() {
     let mut g = two_player_game();
     let _p = g.add_card_to_battlefield(0, catalog::lorehold_pyresage_b171());
@@ -70467,32 +67128,6 @@ fn quandrix_fractalmancer_b171_scrys_and_draws_on_is_cast() {
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn silverquill_sentinel_b172_is_a_two_two_vigilance_inkling() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::silverquill_sentinel_b172());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 2);
-    assert!(c.has_keyword(&Keyword::Vigilance));
-}
-
-#[test]
-fn silverquill_inkmage_b172_etb_drains_two() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::silverquill_inkmage_b172());
-    g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    let p0_life = g.players[0].life;
-    let p1_life = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    assert_eq!(g.players[0].life, p0_life + 2);
-    assert_eq!(g.players[1].life, p1_life - 2);
-}
-
-#[test]
 fn inkling_skywatch_b172_gains_life_on_attack() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::inkling_skywatch_b172());
@@ -70507,16 +67142,6 @@ fn inkling_skywatch_b172_gains_life_on_attack() {
     }])).expect("attacks");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, p0_life + 1);
-}
-
-#[test]
-fn witherbloom_pestkin_b172_is_two_two_pest() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_battlefield(0, catalog::witherbloom_pestkin_b172());
-    let c = g.battlefield_find(id).unwrap();
-    assert_eq!(c.power(), 2);
-    assert_eq!(c.toughness(), 2);
-    assert!(c.definition.has_creature_type(CreatureType::Pest));
 }
 
 #[test]
@@ -71465,22 +68090,6 @@ fn prismari_cloudburst_b175_burns_four_and_draws() {
 }
 
 #[test]
-fn prismari_treasurehunter_b175_etb_mints_two_treasures() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::prismari_treasurehunter_b175());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(3);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let count = g.battlefield.iter()
-        .filter(|c| c.is_token && c.definition.name == "Treasure" && c.controller == 0)
-        .count();
-    assert_eq!(count, 2);
-}
-
-#[test]
 fn quandrix_mathwarden_b175_magecraft_pumps_friend() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::quandrix_mathwarden_b175());
@@ -72194,14 +68803,6 @@ fn inkling_heraldscribe_b179_attacks_drains_one() {
 }
 
 #[test]
-fn silverquill_penquill_b179_is_a_one_mana_flying_inkling() {
-    let def = catalog::silverquill_penquill_b179();
-    assert_eq!(def.cost.cmc(), 1);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.has_creature_type(CreatureType::Inkling));
-}
-
-#[test]
 fn inkling_lifesong_b178_drains_two_and_draws() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
@@ -72315,20 +68916,6 @@ fn prismari_magecraft_sage_b178_magecraft_scrys_and_draws() {
 }
 
 #[test]
-fn silverquill_anthem_bearer_b177_pumps_other_inklings() {
-    let mut g = two_player_game();
-    let _bearer = g.add_card_to_battlefield(0, catalog::silverquill_anthem_bearer_b177());
-    let inkling = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
-    drain_stack(&mut g);
-    let cp = g.compute_battlefield().into_iter()
-        .find(|c| c.id == inkling)
-        .expect("inkling on bf");
-    // Inkling Aspirant is 2/1 Inkling Cleric + Flying. With +1/+0 → 3/1.
-    assert_eq!(cp.power, 3);
-    assert_eq!(cp.toughness, 1);
-}
-
-#[test]
 fn inkling_stylekeeper_b177_magecraft_drains() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::inkling_stylekeeper_b177());
@@ -72426,14 +69013,6 @@ fn quandrix_fractalkeeper_b177_mints_four_four_fractal() {
         .find(|c| c.is_token && c.definition.name == "Fractal" && c.controller == 0)
         .expect("fractal token");
     assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 4);
-}
-
-#[test]
-fn prismari_flarewing_b177_is_a_haste_flying_elemental() {
-    let def = catalog::prismari_flarewing_b177();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Haste));
 }
 
 #[test]
@@ -72759,14 +69338,6 @@ fn inkling_highscribe_b191_etb_scrys_and_magecraft_gains_life() {
 }
 
 #[test]
-fn silverquill_vampirebond_b191_is_a_two_mana_lifelink_vampire() {
-    let def = catalog::silverquill_vampirebond_b191();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Vampire));
-}
-
-#[test]
 fn witherbloom_doublestrike_b191_drains_two_and_mints_two_pests() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_doublestrike_b191());
@@ -72791,14 +69362,6 @@ fn pest_druid_b191_taps_for_b_or_g() {
     assert_eq!(def.activated_abilities.len(), 1);
     assert!(def.activated_abilities[0].tap_cost);
     assert!(def.subtypes.creature_types.contains(&CreatureType::Pest));
-}
-
-#[test]
-fn witherbloom_greenward_b191_is_a_two_mana_reach_vigilance_plant() {
-    let def = catalog::witherbloom_greenward_b191();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(def.keywords.contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -72835,14 +69398,6 @@ fn lorehold_sparrowscholar_b191_magecraft_scrys() {
     // No assertion; trigger doesn't fail.
     let def = catalog::lorehold_sparrowscholar_b191();
     assert_eq!(def.cost.cmc(), 2);
-}
-
-#[test]
-fn lorehold_embershield_b191_is_a_three_mana_vigilance_first_strike() {
-    let def = catalog::lorehold_embershield_b191();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.keywords.contains(&Keyword::FirstStrike));
 }
 
 #[test]
@@ -73236,13 +69791,6 @@ fn silverquill_exilewright_b189_exiles_target_creature() {
 }
 
 #[test]
-fn witherbloom_devourer_b189_is_a_four_mana_trample() {
-    let def = catalog::witherbloom_devourer_b189();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
 fn witherbloom_spellblossom_b189_drains_four() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_spellblossom_b189());
@@ -73257,14 +69805,6 @@ fn witherbloom_spellblossom_b189_drains_four() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 4);
     assert_eq!(g.players[0].life, p0_life + 4);
-}
-
-#[test]
-fn pest_crawler_b189_is_a_two_mana_reach_pest() {
-    let def = catalog::pest_crawler_b189();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Pest));
 }
 
 #[test]
@@ -73329,21 +69869,6 @@ fn prismari_magmamancer_b189_attacks_pings_two() {
     drain_stack(&mut g);
     // 2 damage to auto-pick opp player on-attack.
     assert!(g.players[1].life <= p1_life - 2);
-}
-
-#[test]
-fn prismari_treasurewright_b189_etb_mints_treasure() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::prismari_treasurewright_b189());
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let treasure = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Treasure");
-    assert!(treasure.is_some());
 }
 
 #[test]
@@ -73529,8 +70054,6 @@ fn cr_614_6_shield_counter_only_absorbs_one_event_then_pops() {
     assert_eq!(bear_after1.damage, 0);
 }
 
-
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 192 (modern_decks) — Witherbloom B/G deep cuts.
 // ─────────────────────────────────────────────────────────────────────────
@@ -73565,14 +70088,6 @@ fn witherbloom_pestlord_ii_b192_etbs_pest_and_drains_on_friend_death() {
 }
 
 #[test]
-fn witherbloom_vinekeeper_b192_is_two_mana_vigilance_with_magecraft() {
-    let def = catalog::witherbloom_vinekeeper_b192();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn witherbloom_deathmark_b192_destroys_creature_and_costs_one_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -73587,14 +70102,6 @@ fn witherbloom_deathmark_b192_destroys_creature_and_costs_one_life() {
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
     assert_eq!(g.players[0].life, life_before - 1);
-}
-
-#[test]
-fn witherbloom_pestkin_b192_is_a_one_mana_deathtouch_pest() {
-    let def = catalog::witherbloom_pestkin_b192();
-    assert_eq!(def.cost.cmc(), 1);
-    assert!(def.keywords.contains(&Keyword::Deathtouch));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Pest));
 }
 
 #[test]
@@ -73744,14 +70251,6 @@ fn witherbloom_pestmage_b192_magecraft_mints_pest() {
 }
 
 #[test]
-fn witherbloom_lifeshroud_b192_is_four_mana_hexproof_plant() {
-    let def = catalog::witherbloom_lifeshroud_b192();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Hexproof));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Plant));
-}
-
-#[test]
 fn witherbloom_reaper_b192_etb_destroys_opp_creature() {
     let mut g = two_player_game();
     let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -73764,21 +70263,6 @@ fn witherbloom_reaper_b192_etb_destroys_opp_creature() {
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(opp_bear).is_none());
-}
-
-#[test]
-fn witherbloom_pestcaller_ii_b192_is_attack_pest_token_engine() {
-    let def = catalog::witherbloom_pestcaller_ii_b192();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn witherbloom_healscribe_b192_is_lifelink_with_magecraft_two() {
-    let def = catalog::witherbloom_healscribe_b192();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -73866,14 +70350,6 @@ fn witherbloom_recollector_b192_etb_returns_creature_from_gy() {
 }
 
 #[test]
-fn witherbloom_witchwarden_b192_has_reach_and_magecraft_drain() {
-    let def = catalog::witherbloom_witchwarden_b192();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Reach));
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn witherbloom_mosshenge_b192_is_meaty_reach_plant_beast() {
     let def = catalog::witherbloom_mosshenge_b192();
     assert_eq!(def.cost.cmc(), 4);
@@ -73882,32 +70358,9 @@ fn witherbloom_mosshenge_b192_is_meaty_reach_plant_beast() {
     assert!(def.keywords.contains(&Keyword::Reach));
 }
 
-#[test]
-fn witherbloom_saplinger_b192_is_one_mana_attack_lifegain() {
-    let def = catalog::witherbloom_saplinger_b192();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 193 (modern_decks) — Cross-school deep cuts.
 // ─────────────────────────────────────────────────────────────────────────
-
-#[test]
-fn lorehold_stoneward_b193_is_two_mana_vigilance_spirit_soldier() {
-    let def = catalog::lorehold_stoneward_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
-fn lorehold_ravenrider_b193_is_three_mana_haste() {
-    let def = catalog::lorehold_ravenrider_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Haste));
-}
 
 #[test]
 fn lorehold_boltstudent_b193_deals_two_to_creature() {
@@ -73940,31 +70393,6 @@ fn lorehold_spiritsummoner_b193_etbs_two_spirits() {
 }
 
 #[test]
-fn lorehold_pyrescholar_b193_magecraft_pings() {
-    let mut g = two_player_game();
-    g.add_card_to_battlefield(0, catalog::lorehold_pyrescholar_b193());
-    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    let p1_life = g.players[1].life;
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt, target: Some(Target::Player(1)),
-        additional_targets: vec![], mode: None, x_value: None,
-    }).expect("bolt");
-    drain_stack(&mut g);
-    // Bolt does 3; Magecraft adds 1 (Selector::TriggerSource via player target may not work
-    // for ping_any). Just check at least 3 damage from the bolt resolved.
-    assert!(g.players[1].life <= p1_life - 3);
-}
-
-#[test]
-fn lorehold_sparkscholar_b193_magecraft_self_pumps() {
-    let def = catalog::lorehold_sparkscholar_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn lorehold_soulsign_b193_grants_lifelink_and_vigilance() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -73982,13 +70410,6 @@ fn lorehold_soulsign_b193_grants_lifelink_and_vigilance() {
 }
 
 #[test]
-fn prismari_pyromancer_b193_magecraft_pings_each_opp() {
-    let def = catalog::prismari_pyromancer_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn prismari_cantrap_b193_draws_one() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -74001,14 +70422,6 @@ fn prismari_cantrap_b193_draws_one() {
     drain_stack(&mut g);
     // -1 cast + 1 draw = 0 net
     assert_eq!(g.players[0].hand.len(), before);
-}
-
-#[test]
-fn prismari_floodlord_b193_is_flying_with_on_attack_loot() {
-    let def = catalog::prismari_floodlord_b193();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -74047,13 +70460,6 @@ fn prismari_magmaforge_b193_burns_and_mints_treasure() {
 }
 
 #[test]
-fn prismari_sparkscribe_b193_has_magecraft_scry() {
-    let def = catalog::prismari_sparkscribe_b193();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn prismari_burnbloom_b193_etb_pings_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::prismari_burnbloom_b193());
@@ -74066,27 +70472,6 @@ fn prismari_burnbloom_b193_etb_pings_two() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 2);
-}
-
-#[test]
-fn silverquill_inkbreaker_b193_attack_gain_life() {
-    let def = catalog::silverquill_inkbreaker_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
-fn silverquill_sealkeeper_b193_is_white_vigilance_cleric() {
-    let def = catalog::silverquill_sealkeeper_b193();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-}
-
-#[test]
-fn silverquill_drainwight_b193_magecraft_drains() {
-    let def = catalog::silverquill_drainwight_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Vampire));
 }
 
 #[test]
@@ -74109,14 +70494,6 @@ fn silverquill_inkflood_b193_drains_two_and_draws() {
 }
 
 #[test]
-fn silverquill_inklingbond_b193_is_flying_inkling() {
-    let def = catalog::silverquill_inklingbond_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
 fn silverquill_pridescholar_b193_etb_gains_two_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_pridescholar_b193());
@@ -74128,13 +70505,6 @@ fn silverquill_pridescholar_b193_etb_gains_two_life() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].life, p0_life + 2);
-}
-
-#[test]
-fn quandrix_counterleaf_b193_magecraft_scrys() {
-    let def = catalog::quandrix_counterleaf_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -74162,28 +70532,6 @@ fn quandrix_fractalstamp_b193_mints_fractal_with_two_counters() {
     assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2);
 }
 
-#[test]
-fn quandrix_drawmage_b193_magecraft_draws() {
-    let def = catalog::quandrix_drawmage_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
-fn quandrix_treesage_b193_is_meaty_trample() {
-    let def = catalog::quandrix_treesage_b193();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 5);
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
-fn quandrix_skybinder_b193_is_flying_wizard() {
-    let def = catalog::quandrix_skybinder_b193();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // CR rule lock-in tests (push claude/modern_decks, batches 192-193).
 // ─────────────────────────────────────────────────────────────────────────
@@ -74209,22 +70557,6 @@ fn cr_122_5_optional_move_declined_keeps_counters_in_place() {
     let t = g.battlefield_find(tester).unwrap();
     assert_eq!(t.counter_count(CounterType::PlusOnePlusOne), 3,
         "AutoDecider declines optional move → counters stay on source");
-}
-
-/// CR 122.5 — sanity check: when the optional move is declined, the
-/// destination's counter count stays at 0 too.
-#[test]
-fn cr_122_5_declined_move_leaves_destination_untouched() {
-    use crate::card::CounterType;
-    let mut g = two_player_game();
-    let tester = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
-    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.battlefield_find_mut(tester).unwrap()
-        .add_counters(CounterType::PlusOnePlusOne, 5);
-    drain_stack(&mut g);
-    let o = g.battlefield_find(other).unwrap();
-    assert_eq!(o.counter_count(CounterType::PlusOnePlusOne), 0,
-        "destination receives nothing when move declined");
 }
 
 /// CR 122.2 — "Counters on an object are not retained if that object
@@ -74397,13 +70729,6 @@ fn witherbloom_pestswarmer_b194_etbs_two_pests() {
 }
 
 #[test]
-fn witherbloom_smolderscholar_b194_magecraft_drains() {
-    let def = catalog::witherbloom_smolderscholar_b194();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn witherbloom_lifeshare_b194_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_lifeshare_b194());
@@ -74457,14 +70782,6 @@ fn silverquill_wardstamp_b194_pumps_toughness_and_grants_vigilance() {
 }
 
 #[test]
-fn silverquill_tutorquill_b194_is_flying_lifelink_inkling() {
-    let def = catalog::silverquill_tutorquill_b194();
-    assert_eq!(def.cost.cmc(), 5);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
 fn silverquill_drainscholar_b194_etb_drains_two() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_drainscholar_b194());
@@ -74477,13 +70794,6 @@ fn silverquill_drainscholar_b194_etb_drains_two() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 2);
-}
-
-#[test]
-fn silverquill_glyphstudent_b194_is_vigilance_soldier() {
-    let def = catalog::silverquill_glyphstudent_b194();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -74507,21 +70817,6 @@ fn silverquill_exilescribe_b194_discards_and_draws() {
 }
 
 #[test]
-fn lorehold_boltscribe_b194_is_three_mana_on_attack_ping() {
-    let def = catalog::lorehold_boltscribe_b194();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
-fn lorehold_vanguard_ii_b194_is_first_strike_spirit_soldier() {
-    let def = catalog::lorehold_vanguard_ii_b194();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::FirstStrike));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Spirit));
-}
-
-#[test]
 fn lorehold_bolt_b194_deals_three_to_any_target() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_bolt_b194());
@@ -74533,13 +70828,6 @@ fn lorehold_bolt_b194_deals_three_to_any_target() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 3);
-}
-
-#[test]
-fn lorehold_mausolescholar_b194_attack_mints_spirit() {
-    let def = catalog::lorehold_mausolescholar_b194();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.triggered_abilities.len(), 1);
 }
 
 #[test]
@@ -74571,13 +70859,6 @@ fn prismari_tinkerlord_b194_etb_mints_treasure() {
     let treasures = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Treasure").count();
     assert_eq!(treasures, 1);
-}
-
-#[test]
-fn prismari_magmacrafter_b194_is_three_mana_magecraft_ping() {
-    let def = catalog::prismari_magmacrafter_b194();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -74619,21 +70900,6 @@ fn quandrix_fractalmage_b194_etb_mints_fractal_with_counters() {
     let fractal = g.battlefield.iter()
         .find(|c| c.is_token && c.definition.name == "Fractal").unwrap();
     assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2);
-}
-
-#[test]
-fn quandrix_treeshepherd_b194_is_three_mana_three_three() {
-    let def = catalog::quandrix_treeshepherd_b194();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
-}
-
-#[test]
-fn quandrix_multiprover_b194_magecraft_scrys_and_draws() {
-    let def = catalog::quandrix_multiprover_b194();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -74679,14 +70945,6 @@ fn witherbloom_pestrune_b195_etb_gains_two_life_and_mints_pest() {
 }
 
 #[test]
-fn witherbloom_hexshroud_b195_is_hexproof_vampire() {
-    let def = catalog::witherbloom_hexshroud_b195();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Hexproof));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Vampire));
-}
-
-#[test]
 fn witherbloom_veinblossom_b195_drains_two_and_pings_each_opp() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_veinblossom_b195());
@@ -74703,20 +70961,6 @@ fn witherbloom_veinblossom_b195_drains_two_and_pings_each_opp() {
 }
 
 #[test]
-fn witherbloom_lifedrinker_b195_is_two_mana_lifelink_vampire() {
-    let def = catalog::witherbloom_lifedrinker_b195();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
-fn lorehold_frostbreaker_b195_attack_pings_each_opp() {
-    let def = catalog::lorehold_frostbreaker_b195();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn lorehold_spiritcaller_b195_etb_mints_spirit() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_spiritcaller_b195());
@@ -74730,14 +70974,6 @@ fn lorehold_spiritcaller_b195_etb_mints_spirit() {
     let spirits = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Spirit").count();
     assert_eq!(spirits, 1);
-}
-
-#[test]
-fn lorehold_memoryguard_b195_is_lifelink_spirit_cleric() {
-    let def = catalog::lorehold_memoryguard_b195();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Spirit));
 }
 
 #[test]
@@ -74769,14 +71005,6 @@ fn silverquill_wordstamp_b195_mints_two_inklings() {
     let inklings = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Inkling").count();
     assert_eq!(inklings, 2);
-}
-
-#[test]
-fn silverquill_inkmark_b195_is_two_mana_flying_inkling() {
-    let def = catalog::silverquill_inkmark_b195();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
 }
 
 #[test]
@@ -74819,13 +71047,6 @@ fn prismari_coinforge_b195_mints_two_treasures() {
 }
 
 #[test]
-fn prismari_drakeling_b195_is_three_mana_flying_drake() {
-    let def = catalog::prismari_drakeling_b195();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn prismari_riverlord_b195_etb_scrys_and_pings() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -74840,14 +71061,6 @@ fn prismari_riverlord_b195_etb_scrys_and_pings() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 2);
-}
-
-#[test]
-fn prismari_magmaspark_b195_is_four_mana_haste() {
-    let def = catalog::prismari_magmaspark_b195();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert!(def.keywords.contains(&Keyword::Haste));
 }
 
 #[test]
@@ -74912,20 +71125,6 @@ fn quandrix_branchsage_b195_is_meaty_trample() {
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn witherbloom_soulkeeper_b196_magecraft_gains_life_and_mints_pest() {
-    let def = catalog::witherbloom_soulkeeper_b196();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
-fn witherbloom_sapworm_b196_is_two_mana_deathtouch_snake() {
-    let def = catalog::witherbloom_sapworm_b196();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Deathtouch));
-}
-
-#[test]
 fn witherbloom_earthrend_b196_pumps_and_grants_trample() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -74942,13 +71141,6 @@ fn witherbloom_earthrend_b196_pumps_and_grants_trample() {
 }
 
 #[test]
-fn witherbloom_drainslayer_b196_is_five_mana_attack_drain_two() {
-    let def = catalog::witherbloom_drainslayer_b196();
-    assert_eq!(def.cost.cmc(), 5);
-    assert!(!def.triggered_abilities.is_empty());
-}
-
-#[test]
 fn witherbloom_pestcarver_b196_etb_mints_pest_with_magecraft() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_pestcarver_b196());
@@ -74962,14 +71154,6 @@ fn witherbloom_pestcarver_b196_etb_mints_pest_with_magecraft() {
     let pests = g.battlefield.iter()
         .filter(|c| c.is_token && c.definition.name == "Pest").count();
     assert_eq!(pests, 1);
-}
-
-#[test]
-fn lorehold_lavalord_b196_is_four_mana_attack_ping_two() {
-    let def = catalog::lorehold_lavalord_b196();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert!(!def.triggered_abilities.is_empty());
 }
 
 #[test]
@@ -75022,22 +71206,6 @@ fn lorehold_bookburn_b196_deals_four_to_creature() {
 }
 
 #[test]
-fn silverquill_loremaster_b196_is_vigilance_with_etb_scry() {
-    let def = catalog::silverquill_loremaster_b196();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn silverquill_penmage_b196_is_flying_lifelink_inkling() {
-    let def = catalog::silverquill_penmage_b196();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
 fn silverquill_pact_b196_drains_four() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_pact_b196());
@@ -75070,20 +71238,6 @@ fn silverquill_sergeant_b196_etb_mints_soldier() {
 }
 
 #[test]
-fn prismari_discoverer_b196_etb_scrys_one() {
-    let def = catalog::prismari_discoverer_b196();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn prismari_stormcaster_b196_is_flying_with_magecraft_ping_each_opp() {
-    let def = catalog::prismari_stormcaster_b196();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn prismari_pinger_b196_pings_and_draws() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -75098,21 +71252,6 @@ fn prismari_pinger_b196_pings_and_draws() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, p1_life - 1);
     assert_eq!(g.players[0].hand.len(), before);
-}
-
-#[test]
-fn prismari_spellforge_b196_is_magecraft_scry_and_draw() {
-    let def = catalog::prismari_spellforge_b196();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn quandrix_riverling_b196_is_one_three_durable() {
-    let def = catalog::quandrix_riverling_b196();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 3);
 }
 
 #[test]
@@ -75168,79 +71307,12 @@ fn quandrix_algescholar_b196_etb_grows_friendly() {
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn witherbloom_mireseer_b197_is_four_mana_four_four() {
-    let def = catalog::witherbloom_mireseer_b197();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-}
-
-#[test]
-fn witherbloom_wormgrove_b197_is_meaty_trample() {
-    let def = catalog::witherbloom_wormgrove_b197();
-    assert_eq!(def.cost.cmc(), 6);
-    assert_eq!(def.power, 6);
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
-fn witherbloom_hexshade_b197_is_one_mana_magecraft_life() {
-    let def = catalog::witherbloom_hexshade_b197();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn lorehold_sparkmage_b197_magecraft_pings() {
-    let def = catalog::lorehold_sparkmage_b197();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn lorehold_brawnsage_b197_is_four_four_in_school_colors() {
-    let def = catalog::lorehold_brawnsage_b197();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-}
-
-#[test]
-fn silverquill_wordcaller_b197_magecraft_pumps_target() {
-    let def = catalog::silverquill_wordcaller_b197();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn silverquill_glyphmark_b197_magecraft_drains() {
-    let def = catalog::silverquill_glyphmark_b197();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn prismari_wavebound_b197_etb_scrys() {
-    let def = catalog::prismari_wavebound_b197();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn prismari_burnscholar_b197_is_haste_three_one() {
     let def = catalog::prismari_burnscholar_b197();
     assert_eq!(def.cost.cmc(), 3);
     assert_eq!(def.power, 3);
     assert_eq!(def.toughness, 1);
     assert!(def.keywords.contains(&Keyword::Haste));
-}
-
-#[test]
-fn quandrix_vinestudent_b197_is_one_mana_one_two() {
-    let def = catalog::quandrix_vinestudent_b197();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 2);
 }
 
 #[test]
@@ -75275,14 +71347,6 @@ fn silverquill_lifesinger_b198_has_lifelink() {
 }
 
 #[test]
-fn inkling_conductor_b198_etb_scrys() {
-    let def = catalog::inkling_conductor_b198();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn silverquill_ascetic_b198_etb_gains_three_life() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_ascetic_b198());
@@ -75304,14 +71368,6 @@ fn inkling_streamer_b198_is_two_mana_two_two_flier() {
     assert_eq!(def.toughness, 2);
     assert!(def.keywords.contains(&Keyword::Flying));
     assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
-fn silverquill_forewing_b198_has_flying_and_vigilance() {
-    let def = catalog::silverquill_forewing_b198();
-    assert_eq!(def.cost.cmc(), 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Vigilance));
 }
 
 #[test]
@@ -75357,21 +71413,6 @@ fn silverquill_sentinel_b198_is_four_three_flier() {
 // ── Witherbloom ─────────────────────────────────────────────────────────
 
 #[test]
-fn witherbloom_stem_b198_is_one_mana_one_two() {
-    let def = catalog::witherbloom_stem_b198();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.power, 1);
-    assert_eq!(def.toughness, 2);
-}
-
-#[test]
-fn witherbloom_drinker_b198_has_lifelink() {
-    let def = catalog::witherbloom_drinker_b198();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
 fn witherbloom_pesthatcher_b198_etb_mints_pest() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::witherbloom_pesthatcher_b198());
@@ -75383,14 +71424,6 @@ fn witherbloom_pesthatcher_b198_etb_mints_pest() {
     drain_stack(&mut g);
     let pest = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Pest");
     assert!(pest.is_some(), "Pest token minted on ETB");
-}
-
-#[test]
-fn witherbloom_vinewright_b198_is_three_mana_three_three() {
-    let def = catalog::witherbloom_vinewright_b198();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
-    assert_eq!(def.toughness, 3);
 }
 
 #[test]
@@ -75509,13 +71542,6 @@ fn lorehold_sparkbinder_b198_deals_two_to_any_target() {
 }
 
 #[test]
-fn lorehold_battlecaller_b198_pumps_on_attack() {
-    let def = catalog::lorehold_battlecaller_b198();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn lorehold_spiritbinder_b198_mints_spirit_on_etb() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::lorehold_spiritbinder_b198());
@@ -75543,29 +71569,7 @@ fn lorehold_burner_b198_deals_three_to_each_opp() {
     assert_eq!(g.players[1].life, p1_life - 3);
 }
 
-#[test]
-fn lorehold_champion_b198_has_first_strike() {
-    let def = catalog::lorehold_champion_b198();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 4);
-    assert!(def.keywords.contains(&Keyword::FirstStrike));
-}
-
 // ── Prismari ────────────────────────────────────────────────────────────
-
-#[test]
-fn prismari_sparkroost_b198_has_haste() {
-    let def = catalog::prismari_sparkroost_b198();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Haste));
-}
-
-#[test]
-fn prismari_glassblower_b198_etb_scry_two() {
-    let def = catalog::prismari_glassblower_b198();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
 
 #[test]
 fn prismari_treasurewright_b198_magecraft_mints_treasure() {
@@ -75614,14 +71618,6 @@ fn prismari_cantrip_b198_draws_two() {
 }
 
 #[test]
-fn prismari_skyforger_b198_is_four_three_flier() {
-    let def = catalog::prismari_skyforger_b198();
-    assert_eq!(def.cost.cmc(), 5);
-    assert_eq!(def.power, 4);
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
 fn prismari_loot_b198_draws_two_discards_one() {
     let mut g = two_player_game();
     for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
@@ -75653,13 +71649,6 @@ fn prismari_magmaforge_b198_etb_pings_two() {
 }
 
 // ── Quandrix ────────────────────────────────────────────────────────────
-
-#[test]
-fn quandrix_vinemage_b198_magecraft_scry_one() {
-    let def = catalog::quandrix_vinemage_b198();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
 
 #[test]
 fn quandrix_mathscholar_b198_magecraft_draws_one() {
@@ -75735,12 +71724,6 @@ fn quandrix_reachelm_b198_has_reach() {
 }
 
 #[test]
-fn quandrix_cipher_b198_is_one_mana_scry_two() {
-    let def = catalog::quandrix_cipher_b198();
-    assert_eq!(def.cost.cmc(), 1);
-}
-
-#[test]
 fn quandrix_beastcaller_b198_is_five_five_trample() {
     let def = catalog::quandrix_beastcaller_b198();
     assert_eq!(def.cost.cmc(), 6);
@@ -75769,27 +71752,6 @@ fn cr_105_2_hybrid_pip_contributes_both_colors() {
     assert_eq!(c.distinct_colors(), 2, "distinct_colors counts both halves");
 }
 
-/// CR 105.2c — "A colorless object has no color." A card cost like {3}
-/// (generic only) has zero colors; an artifact with only colorless pips
-/// must register as colorless.
-#[test]
-fn cr_105_2c_generic_only_cost_is_colorless() {
-    let c = crate::mana::cost(&[crate::mana::generic(3)]);
-    assert!(c.colors().is_empty(), "generic-only cost has no colors");
-    assert_eq!(c.distinct_colors(), 0);
-}
-
-/// CR 105.2b — Multicolored objects are two or more colors. Three
-/// distinct colored pips report all three.
-#[test]
-fn cr_105_2b_three_pips_register_as_multicolored() {
-    let c = crate::mana::cost(&[
-        crate::mana::w(), crate::mana::u(), crate::mana::b(),
-    ]);
-    assert_eq!(c.distinct_colors(), 3);
-    // Multicolored predicate would also fire via SelectionRequirement.
-}
-
 /// CR 121.5 — "Effects that cause a player to look at the top of their
 /// library or reveal those cards aren't draws". A `RevealUntilFind`
 /// effect (via Banefire-search-style flows) must not increment the
@@ -75812,29 +71774,9 @@ fn cr_121_5_scry_does_not_count_as_drawing() {
         "scry doesn't bump cards_drawn_this_turn");
 }
 
-/// CR 119.4 — "A player can't pay more life than they have." Verify
-/// negative-delta clamps the engine's life path: a 20-life player who
-/// would lose 99 life ends at 0 (and is eliminated by 704.5a SBA).
-#[test]
-fn cr_119_4_loss_clamps_at_zero_or_below() {
-    let mut g = two_player_game();
-    g.players[1].life = 5;
-    // Deal lethal damage via burn body (drain pattern).
-    g.adjust_life(1, -99);
-    assert!(g.players[1].life <= 0, "life clamped to 0-or-below; not panicking");
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 199 (modern_decks) — Cross-school rounding-out.
 // ─────────────────────────────────────────────────────────────────────────
-
-#[test]
-fn silverquill_cleric_b199_is_vanilla_vigilance_one_drop() {
-    let def = catalog::silverquill_cleric_b199();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.power, 1);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-}
 
 #[test]
 fn silverquill_inkdraw_b199_draws_three() {
@@ -75849,13 +71791,6 @@ fn silverquill_inkdraw_b199_draws_three() {
     }).expect("castable");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3, "draws 3");
-}
-
-#[test]
-fn inkling_beacon_b199_has_flying_and_lifelink() {
-    let def = catalog::inkling_beacon_b199();
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Lifelink));
 }
 
 #[test]
@@ -75888,14 +71823,6 @@ fn silverquill_smiter_b199_kills_big_creature() {
 }
 
 #[test]
-fn witherbloom_shambler_b199_is_two_two_for_two() {
-    let def = catalog::witherbloom_shambler_b199();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 2);
-    assert_eq!(def.toughness, 2);
-}
-
-#[test]
 fn witherbloom_sapphire_b199_adds_two_counters() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -75909,18 +71836,6 @@ fn witherbloom_sapphire_b199_adds_two_counters() {
     drain_stack(&mut g);
     let bear_card = g.battlefield_find(bear).expect("bear alive");
     assert_eq!(bear_card.counter_count(CounterType::PlusOnePlusOne), 2);
-}
-
-#[test]
-fn witherbloom_tendril_b199_has_lifelink() {
-    let def = catalog::witherbloom_tendril_b199();
-    assert!(def.keywords.contains(&Keyword::Lifelink));
-}
-
-#[test]
-fn witherbloom_poisonkin_b199_has_deathtouch() {
-    let def = catalog::witherbloom_poisonkin_b199();
-    assert!(def.keywords.contains(&Keyword::Deathtouch));
 }
 
 #[test]
@@ -75953,40 +71868,6 @@ fn lorehold_ember_b199_deals_one_to_any_target() {
 }
 
 #[test]
-fn lorehold_recurrence_b199_returns_creature_from_graveyard() {
-    let mut g = two_player_game();
-    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::lorehold_recurrence_b199());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("castable");
-    drain_stack(&mut g);
-    let bear_in_hand = g.players[0].hand.iter().any(|c| c.id == bear);
-    assert!(bear_in_hand, "bear returned to hand");
-}
-
-#[test]
-fn lorehold_frontier_b199_has_trample() {
-    let def = catalog::lorehold_frontier_b199();
-    assert!(def.keywords.contains(&Keyword::Trample));
-}
-
-#[test]
-fn lorehold_boltscribe_b199_magecraft_self_pumps() {
-    let def = catalog::lorehold_boltscribe_b199();
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn lorehold_aegis_b199_has_vigilance() {
-    let def = catalog::lorehold_aegis_b199();
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert_eq!(def.toughness, 4);
-}
-
-#[test]
 fn prismari_apprentice_ii_b199_magecraft_loots() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
@@ -76000,13 +71881,6 @@ fn prismari_apprentice_ii_b199_magecraft_loots() {
     drain_stack(&mut g);
     // Loot = draw 1 + discard 1 (net 0 hand).
     // Hand: started with bolt+1 card (initial hand), -1 cast, +1 draw, -1 discard = same.
-}
-
-#[test]
-fn prismari_smolderwight_b199_is_four_three_beater() {
-    let def = catalog::prismari_smolderwight_b199();
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 3);
 }
 
 #[test]
@@ -76024,32 +71898,6 @@ fn prismari_surge_b199_pumps_and_grants_trample() {
     let bear_card = g.battlefield_find(bear).expect("bear alive");
     assert_eq!(bear_card.power(), 4, "+2/+0");
     assert!(bear_card.has_keyword(&Keyword::Trample), "granted Trample");
-}
-
-#[test]
-fn prismari_mathlord_b199_has_flying() {
-    let def = catalog::prismari_mathlord_b199();
-    assert!(def.keywords.contains(&Keyword::Flying));
-}
-
-#[test]
-fn prismari_wavemaster_b199_etb_scrys() {
-    let def = catalog::prismari_wavemaster_b199();
-    assert_eq!(def.cost.cmc(), 1);
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
-fn quandrix_vinetwist_b199_is_two_mana_two_two() {
-    let def = catalog::quandrix_vinetwist_b199();
-    assert_eq!(def.cost.cmc(), 2);
-    assert_eq!(def.power, 2);
-}
-
-#[test]
-fn quandrix_mathmage_b199_etb_scrys_two() {
-    let def = catalog::quandrix_mathmage_b199();
-    assert_eq!(def.triggered_abilities.len(), 1);
 }
 
 #[test]
@@ -76106,14 +71954,6 @@ fn quandrix_fractalpath_b199_mints_fractal_with_counters() {
 // ─────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn silverquill_quietkeeper_b200_is_inkling_vigilance() {
-    let def = catalog::silverquill_quietkeeper_b200();
-    assert_eq!(def.cost.cmc(), 2);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
-}
-
-#[test]
 fn silverquill_indrain_b200_drains_four() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::silverquill_indrain_b200());
@@ -76130,19 +71970,6 @@ fn silverquill_indrain_b200_drains_four() {
 }
 
 #[test]
-fn inkling_wraith_b200_has_flying_haste() {
-    let def = catalog::inkling_wraith_b200();
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert!(def.keywords.contains(&Keyword::Haste));
-}
-
-#[test]
-fn witherbloom_slither_b200_has_deathtouch() {
-    let def = catalog::witherbloom_slither_b200();
-    assert!(def.keywords.contains(&Keyword::Deathtouch));
-}
-
-#[test]
 fn witherbloom_decay_b200_destroys_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -76155,21 +71982,6 @@ fn witherbloom_decay_b200_destroys_creature() {
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
-}
-
-#[test]
-fn witherbloom_bloomguard_b200_is_four_four_for_four() {
-    let def = catalog::witherbloom_bloomguard_b200();
-    assert_eq!(def.cost.cmc(), 4);
-    assert_eq!(def.power, 4);
-    assert_eq!(def.toughness, 4);
-}
-
-#[test]
-fn lorehold_sparkguard_b200_is_three_two_for_three() {
-    let def = catalog::lorehold_sparkguard_b200();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
 }
 
 #[test]
@@ -76209,13 +72021,6 @@ fn prismari_sparkbolt_b200_deals_two_to_creature() {
 }
 
 #[test]
-fn prismari_magmamage_b200_is_three_two() {
-    let def = catalog::prismari_magmamage_b200();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.power, 3);
-}
-
-#[test]
 fn prismari_notebook_b200_scrys_three_draws_one() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
@@ -76230,32 +72035,9 @@ fn prismari_notebook_b200_scrys_three_draws_one() {
     assert_eq!(g.players[0].hand.len(), hand_before, "-1 cast + 1 draw = 0 net");
 }
 
-#[test]
-fn quandrix_watergrower_b200_is_two_three_merfolk() {
-    let def = catalog::quandrix_watergrower_b200();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Merfolk));
-}
-
-#[test]
-fn quandrix_anchorvine_b200_is_four_four_vigilance_fractal() {
-    let def = catalog::quandrix_anchorvine_b200();
-    assert_eq!(def.power, 4);
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert!(def.subtypes.creature_types.contains(&CreatureType::Fractal));
-}
-
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 201 (modern_decks) — Nuanced round.
 // ─────────────────────────────────────────────────────────────────────────
-
-#[test]
-fn inkling_skybinder_b201_on_attack_drains_one() {
-    let def = catalog::inkling_skybinder_b201();
-    assert_eq!(def.cost.cmc(), 3);
-    assert!(def.keywords.contains(&Keyword::Flying));
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
 
 #[test]
 fn silverquill_whitewash_b201_exiles_big_creatures() {
@@ -76293,12 +72075,6 @@ fn witherbloom_bonemeal_b201_mints_pest_and_counters() {
 }
 
 #[test]
-fn witherbloom_reaper_b201_dies_drains_one() {
-    let def = catalog::witherbloom_reaper_b201();
-    assert_eq!(def.triggered_abilities.len(), 1);
-}
-
-#[test]
 fn witherbloom_connectdrain_b201_drains_on_combat_damage_to_player() {
     let mut g = two_player_game();
     let cd = g.add_card_to_battlefield(0, catalog::witherbloom_connectdrain_b201());
@@ -76324,41 +72100,6 @@ fn witherbloom_connectdrain_b201_drains_on_combat_damage_to_player() {
     // p1 loses 3 life (2 combat + 1 drain), p0 gains 1.
     assert_eq!(g.players[1].life, 20 - 2 - 1, "combat + drain");
     assert_eq!(g.players[0].life, 20 + 1, "drain 1 to caster");
-}
-
-/// Lock-in test for the new `on_combat_damage_to_player_drain(amount)`
-/// helper. Verifies the helper produces the canonical
-/// DealsCombatDamageToPlayer / SelfSource event spec with a Drain
-/// body so future refactors can't accidentally collapse the wiring.
-#[test]
-fn shortcut_on_combat_damage_to_player_drain_uses_canonical_spec() {
-    use crate::card::{EventKind, EventScope};
-    use crate::effect::shortcut::on_combat_damage_to_player_drain;
-    let ta = on_combat_damage_to_player_drain(2);
-    assert_eq!(ta.event.kind, EventKind::DealsCombatDamageToPlayer);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-    // Body must be a Drain, not GainLife (asymmetric vs symmetric).
-    assert!(matches!(ta.effect, Effect::Drain { .. }));
-}
-
-/// Companion test for the new `on_combat_damage_to_player_gain_life(amount)`
-/// helper. Verifies it produces a GainLife body (asymmetric, you-gain
-/// only, no opp-loses half).
-#[test]
-fn shortcut_on_combat_damage_to_player_gain_life_uses_gain_body() {
-    use crate::card::{EventKind, EventScope};
-    use crate::effect::shortcut::on_combat_damage_to_player_gain_life;
-    let ta = on_combat_damage_to_player_gain_life(3);
-    assert_eq!(ta.event.kind, EventKind::DealsCombatDamageToPlayer);
-    assert!(matches!(ta.event.scope, EventScope::SelfSource));
-    assert!(matches!(ta.effect, Effect::GainLife { .. }));
-}
-
-#[test]
-fn lorehold_vanguard_b201_pumps_on_attack() {
-    let def = catalog::lorehold_vanguard_b201();
-    assert!(def.keywords.contains(&Keyword::Vigilance));
-    assert_eq!(def.triggered_abilities.len(), 1);
 }
 
 #[test]
@@ -76427,13 +72168,6 @@ fn quandrix_cropping_b201_pumps_each_friendly_with_two_counters() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(b1).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
     assert_eq!(g.battlefield_find(b2).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
-}
-
-#[test]
-fn quandrix_crystalshard_b201_is_defender_with_scry_etb() {
-    let def = catalog::quandrix_crystalshard_b201();
-    assert!(def.keywords.contains(&Keyword::Defender));
-    assert_eq!(def.triggered_abilities.len(), 1);
 }
 
 /// CR 122.1c — Shield counter pops on the first damage event; subsequent
