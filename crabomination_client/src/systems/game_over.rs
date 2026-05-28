@@ -132,6 +132,25 @@ pub fn sync_game_over_modal(
             theme::ACCENT_GOLD,
         ),
     };
+    // Build a one-line summary of every seat's final life total —
+    // surfaced as a sub-subtitle so the player sees "how close" the
+    // result was. Format: "You: 1 life — Opp: -3 life" (your seat
+    // labeled "You", others by name).
+    let life_summary = {
+        let parts: Vec<String> = cv
+            .players
+            .iter()
+            .map(|p| {
+                let label = if p.seat == cv.your_seat {
+                    "You".to_string()
+                } else {
+                    p.name.clone()
+                };
+                format!("{label}: {} life", p.life)
+            })
+            .collect();
+        parts.join(" — ")
+    };
     let tf = |size: f32| ui_fonts.tf(size);
     let show_auto_rematch = matches!(*kind, ActiveMatchKind::SpectateBotVsBot);
 
@@ -175,6 +194,13 @@ pub fn sync_game_over_modal(
                     Text::new(title),
                     tf(22.0),
                     TextColor(subtitle_color),
+                ));
+                // Life summary line under the title — softer color so
+                // it doesn't compete with the result.
+                p.spawn((
+                    Text::new(life_summary),
+                    tf(14.0),
+                    TextColor(theme::TEXT_BODY),
                 ));
 
                 // Action buttons row: Rematch + New Game.
