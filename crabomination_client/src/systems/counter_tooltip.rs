@@ -136,6 +136,16 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         ));
     }
 
+    // Creature type-line: surface tribal context ("Inkling Wizard",
+    // "Pest", "Spirit Warrior") so the player can see at a glance
+    // which tribal anthems / dies-trigger groups this body feeds.
+    // Only render when there are creature types to show (filters out
+    // colorless artifacts and non-creature permanents). Push
+    // (claude/modern_decks batch 198).
+    if p.card_types.contains(&CardType::Creature) && !p.creature_types.is_empty() {
+        lines.push(format!("Type: {}", p.creature_types.join(" ")));
+    }
+
     // Loyalty for planeswalkers (separate from counters list since it's
     // the headline number on every walker).
     if p.card_types.contains(&CardType::Planeswalker) {
@@ -392,6 +402,25 @@ mod tests {
         let body = build_tooltip_body(&p);
         if let Some(s) = body {
             assert!(!s.contains("marked:"), "no damage marked, should not surface: {s}");
+        }
+    }
+
+    #[test]
+    fn creature_type_line_renders_when_creature_types_present() {
+        let mut p = make_permanent_view(0, 2);
+        p.creature_types = vec!["Bear".into()];
+        let body = build_tooltip_body(&p).expect("body should render");
+        assert!(body.contains("Type: Bear"), "got: {body}");
+    }
+
+    #[test]
+    fn creature_type_line_hidden_for_non_creature_even_when_subtypes_set() {
+        let mut p = make_permanent_view(0, 2);
+        p.card_types = vec![CardType::Enchantment];
+        p.creature_types = vec!["Bear".into()];
+        let body = build_tooltip_body(&p);
+        if let Some(s) = body {
+            assert!(!s.contains("Type:"), "non-creature should not show Type: line, got: {s}");
         }
     }
 

@@ -171,7 +171,20 @@ struct MatchStats {
     /// matches that never produced an outcome. Push
     /// (claude/modern_decks batches 192-194).
     wins: u64,
+    /// Per-seat wins (indexed by seat 0..SEAT_BUCKET_COUNT). Surfaces
+    /// turn-order bias in bot-vs-bot ladders: if `seat_wins[0]` is
+    /// twice `seat_wins[1]` over a long run, the active-player heuristic
+    /// or starting-hand luck is leaking through. Pre-warmup all-zero
+    /// rows render as `seat_wins=0/0` in the rolling summary so the
+    /// operator can spot empty samples. Push (claude/modern_decks
+    /// batch 198).
+    seat_wins: [u64; SEAT_BUCKET_COUNT],
 }
+
+/// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
+/// for 4-player Commander pods. Wins for seats ≥ this cap fall into
+/// the last bucket so the array doesn't overflow on exotic formats.
+const SEAT_BUCKET_COUNT: usize = 4;
 
 /// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
 /// current `Format` enum variants (Demo, Cube) plus headroom for new
@@ -230,7 +243,11 @@ impl MatchStats {
     fn observe_winner(&mut self, w: Option<Option<usize>>) {
         match w {
             Some(None) => self.draws = self.draws.saturating_add(1),
-            Some(Some(_)) => self.wins = self.wins.saturating_add(1),
+            Some(Some(seat)) => {
+                self.wins = self.wins.saturating_add(1);
+                let idx = seat.min(SEAT_BUCKET_COUNT - 1);
+                self.seat_wins[idx] = self.seat_wins[idx].saturating_add(1);
+            }
             None => {}
         }
     }
@@ -392,6 +409,19 @@ fn format_match_stats(s: &MatchStats) -> String {
         if unresolved > 0 {
             out.push_str(&format!(" unresolved={unresolved}"));
         }
+        // Per-seat win histogram: " seat_wins=12/8/0/0" (only render
+        // up to the highest non-zero seat so 1v1 doesn't surface
+        // padding zeros for the 4-player tail).
+        let last_nonzero = s
+            .seat_wins
+            .iter()
+            .rposition(|&n| n > 0)
+            .unwrap_or(0);
+        let parts: Vec<String> = s.seat_wins[..=last_nonzero]
+            .iter()
+            .map(|w| w.to_string())
+            .collect();
+        out.push_str(&format!(" seat_wins={}", parts.join("/")));
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
@@ -1091,6 +1121,31 @@ mod tests {
         s.observe_winner(None);           // unresolved — silently dropped
         assert_eq!(s.wins, 2);
         assert_eq!(s.draws, 1);
+        assert_eq!(s.seat_wins[0], 1);
+        assert_eq!(s.seat_wins[1], 1);
+    }
+
+    #[test]
+    fn observe_winner_per_seat_clamps_at_seat_bucket_count() {
+        let mut s = MatchStats::default();
+        // Exotic 8-player format: seat 7 wins. Must not panic, must
+        // collapse into the last bucket.
+        s.observe_winner(Some(Some(7)));
+        assert_eq!(s.seat_wins[SEAT_BUCKET_COUNT - 1], 1);
+        assert_eq!(s.wins, 1);
+    }
+
+    #[test]
+    fn format_match_stats_includes_seat_wins_when_present() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_bot(Duration::from_secs(70), Format::Demo);
+        s.record_bot(Duration::from_secs(80), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(Some(0)));
+        s.observe_winner(Some(Some(1)));
+        let line = format_match_stats(&s);
+        assert!(line.contains("seat_wins=2/1"), "got: {line}");
     }
 
     #[test]
