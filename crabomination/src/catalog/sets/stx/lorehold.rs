@@ -22133,3 +22133,133 @@ pub fn lorehold_pyrescribe_b195() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 196 (modern_decks) — Lorehold more variety ─────────────────────
+
+/// Lorehold Lavalord (b196) — {3}{R} 4/3 Elemental.
+/// On attack: deal 2 damage to any target.
+pub fn lorehold_lavalord_b196() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_ping_any;
+    CardDefinition {
+        name: "Lorehold Lavalord (b196)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Sparkward (b196) — {1}{W} Instant.
+/// Target creature gets +1/+3 EOT.
+pub fn lorehold_sparkward_b196() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkward (b196)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(1),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stormrider (b196) — {3}{R}{W} 3/3 Spirit Soldier.
+/// First strike, vigilance. ETB: create a 2/2 Spirit token.
+pub fn lorehold_stormrider_b196() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stormrider (b196)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Bookburn (b196) — {2}{R} Sorcery.
+/// Deal 4 damage divided as you choose among any number of target creatures.
+/// (Approximated as 4 damage to a single creature.)
+pub fn lorehold_bookburn_b196() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Bookburn (b196)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

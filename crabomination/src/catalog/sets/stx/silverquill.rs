@@ -24227,3 +24227,144 @@ pub fn silverquill_drainlord_b195() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 196 (modern_decks) — Silverquill more variety ───────────────────
+
+/// Silverquill Loremaster (b196) — {3}{W} 3/4 Human Wizard.
+/// Vigilance. ETB: scry 2.
+pub fn silverquill_loremaster_b196() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry;
+    CardDefinition {
+        name: "Silverquill Loremaster (b196)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Penmage (b196) — {2}{W}{B} 3/3 Inkling Cleric.
+/// Flying, lifelink (premium flier).
+pub fn silverquill_penmage_b196() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penmage (b196)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Pact (b196) — {2}{W}{B} Sorcery.
+/// You gain 4 life. Each opponent loses 4 life.
+pub fn silverquill_pact_b196() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Pact (b196)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Sergeant (b196) — {1}{W} 1/1 Soldier.
+/// ETB: create a 1/1 Soldier token. (Anthem aggro support.)
+pub fn silverquill_sergeant_b196() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::mana::Color as C;
+    let soldier = TokenDefinition {
+        name: "Soldier".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![C::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Soldier],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Silverquill Sergeant (b196)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(soldier, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
