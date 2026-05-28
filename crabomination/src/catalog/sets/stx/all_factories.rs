@@ -3463,6 +3463,9 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_plantarchitect_b169,
         super::quandrix::quandrix_bigwave_b169,
         super::quandrix::quandrix_fractal_whale_b169,
+        // ── batch 170 (modern_decks): Shield-counter cards (CR 122.1c) ──
+        super::lorehold::lorehold_shieldbearer_b170,
+        super::lorehold::lorehold_aegisblade_b170,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

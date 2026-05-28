@@ -1154,6 +1154,32 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard(id);
         }
 
+        // CR 704.5n — "If an Equipment or Fortification is attached to an
+        // illegal permanent or to a player, it becomes unattached from
+        // that permanent or player. It remains on the battlefield."
+        // Illegal here means the attached card isn't on the battlefield
+        // anymore (e.g. equipped creature died) OR the target permanent
+        // is no longer a legal target (no creature subtype for Equipment).
+        // The Equipment itself stays in play — only the link is cleared.
+        let stale_equipment_links: Vec<CardId> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.definition.is_equipment())
+            .filter_map(|c| {
+                let attached = c.attached_to?;
+                let is_still_legal = self
+                    .battlefield
+                    .iter()
+                    .any(|b| b.id == attached && b.definition.is_creature());
+                if !is_still_legal { Some(c.id) } else { None }
+            })
+            .collect();
+        for id in stale_equipment_links {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == id) {
+                c.attached_to = None;
+            }
+        }
+
         // CR 704.5d — a token that's not on the battlefield ceases to exist.
         // Dies / leaves-battlefield triggers have already fired by this point
         // (they queue into the events vec before this scan), so dropping the

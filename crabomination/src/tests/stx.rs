@@ -69409,4 +69409,137 @@ fn quandrix_fractal_whale_b169_is_a_five_five_trampler() {
     assert!(c.has_keyword(&Keyword::Trample));
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// CR 122.1c — Shield counter (engine wire)
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn cr_122_1c_shield_counter_prevents_destroy_and_pops() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Drop a Shield counter directly via game state.
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.add_counters(CounterType::Shield, 1);
+    }
+    // P0 casts a destroy effect.
+    let dest = g.add_card_to_hand(0, catalog::lorehold_flameglyph_b169());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let _ = dest;
+    // Use a destroy effect via Murder-like card. Simpler: cast a Destroy spell.
+    // Skip — instead use direct destroy effect via a Wrath shape if available.
+    // Test in isolation: assert shield counter blocks destroy. Build a synthetic
+    // Effect::Destroy via a card. We'll use silverquill_finalizer's drain part
+    // ignored, finality counter set up. For now: just check that flameglyph_b169
+    // deals 3 damage but bear (2/2 + shield) survives because damage is prevented.
+    g.perform_action(GameAction::CastSpell {
+        card_id: dest, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Bear should still be alive — shield absorbed the damage.
+    assert!(g.battlefield_find(bear).is_some(), "shield prevents damage");
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.counter_count(CounterType::Shield), 0,
+        "shield counter was consumed");
+}
+
+#[test]
+fn cr_122_1c_no_shield_counter_means_normal_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dest = g.add_card_to_hand(0, catalog::lorehold_flameglyph_b169());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: dest, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // No shield — bear takes 3 damage and dies.
+    assert!(g.battlefield_find(bear).is_none(), "bear dies to bolt");
+}
+
+#[test]
+fn lorehold_shieldbearer_b170_etbs_with_shield() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_shieldbearer_b170());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("shieldbearer alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
+#[test]
+fn cr_122_1c_shield_counter_prevents_destroy_effect_and_pops() {
+    // Use Silverquill Reckoning (Destroy + token mint) to test the
+    // CR 122.1c destroy-replacement.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    if let Some(c) = g.battlefield_find_mut(bear) {
+        c.add_counters(CounterType::Shield, 1);
+    }
+    let id = g.add_card_to_hand(0, catalog::silverquill_reckoning());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("reckoning castable");
+    drain_stack(&mut g);
+    // Bear should still be alive — shield absorbed the destroy.
+    assert!(g.battlefield_find(bear).is_some(), "shield absorbs destroy");
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.counter_count(CounterType::Shield), 0,
+        "shield counter was consumed by destroy replacement");
+}
+
+#[test]
+fn cr_704_5n_equipment_unattaches_when_creature_dies() {
+    // Equipment attached to a creature stays in play but unattaches
+    // from the dying creature.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
+    // Manually attach the greaves to the bear.
+    if let Some(c) = g.battlefield_find_mut(greaves) {
+        c.attached_to = Some(bear);
+    }
+    // Now kill the bear with a Bolt.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // Bear dead, but Equipment should still be in play with attached_to = None.
+    assert!(g.battlefield_find(bear).is_none(), "bear dies");
+    let g_ = g.battlefield_find(greaves).expect("greaves still on bf");
+    assert_eq!(g_.attached_to, None, "Equipment unattaches");
+}
+
+#[test]
+fn lorehold_aegisblade_b170_adds_shield_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_aegisblade_b170());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
 

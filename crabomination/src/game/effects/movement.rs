@@ -76,6 +76,20 @@ impl GameState {
                 }
             }
             EntityRef::Permanent(cid) => {
+                // CR 122.1c — Shield counters: if damage would be dealt
+                // to this permanent, prevent that damage and remove a
+                // shield counter from it.
+                let has_shield = self
+                    .battlefield_find(cid)
+                    .map(|c| c.counter_count(CounterType::Shield) > 0)
+                    .unwrap_or(false);
+                if has_shield {
+                    if let Some(c) = self.battlefield_find_mut(cid) {
+                        let cur = c.counter_count(CounterType::Shield);
+                        c.counters.insert(CounterType::Shield, cur.saturating_sub(1));
+                    }
+                    return;
+                }
                 // CR 120.3c — damage dealt to a planeswalker causes that
                 // many loyalty counters to be removed from that
                 // planeswalker. Before this branch, non-combat

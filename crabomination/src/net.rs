@@ -413,6 +413,12 @@ pub struct PermanentView {
     /// to the graveyard. Populated by `project_permanent`.
     #[serde(default)]
     pub has_finality_counters: bool,
+    /// True when the permanent has one or more shield counters
+    /// (CR 122.1c). Clients can badge with a "🛡" icon — the shield
+    /// counter creates a damage-prevention + destroy-replacement that
+    /// pops a counter on each trigger. Populated by `project_permanent`.
+    #[serde(default)]
+    pub has_shield_counters: bool,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

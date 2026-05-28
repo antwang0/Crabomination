@@ -224,6 +224,7 @@ fn project_permanent(
         static_ability_labels: project_static_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
+        has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());

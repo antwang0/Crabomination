@@ -1015,23 +1015,40 @@ impl GameState {
                         let indestructible = self.battlefield_find(cid)
                             .map(|c| c.has_keyword(&Keyword::Indestructible))
                             .unwrap_or(true);
-                        if !indestructible {
-                            let is_creature = self.battlefield_find(cid)
-                                .map(|c| c.definition.is_creature())
-                                .unwrap_or(false);
-                            if is_creature {
-                                // Cache the dying card's snapshot for
-                                // AnotherOfYours-scope triggers and type
-                                // filter predicates (token deaths in
-                                // particular vanish before dispatch).
-                                if let Some(c) = self.battlefield_find(cid) {
-                                    self.died_card_snapshots.insert(cid, c.clone());
-                                }
-                                events.push(GameEvent::CreatureDied { card_id: cid });
-                            }
-                            let mut dies = self.remove_to_graveyard_with_triggers(cid);
-                            events.append(&mut dies);
+                        if indestructible {
+                            continue;
                         }
+                        // CR 122.1c — Shield counters create a single
+                        // replacement: "If this permanent would be
+                        // destroyed as the result of an effect, instead
+                        // remove a shield counter from it."
+                        let has_shield = self
+                            .battlefield_find(cid)
+                            .map(|c| c.counter_count(crate::card::CounterType::Shield) > 0)
+                            .unwrap_or(false);
+                        if has_shield {
+                            if let Some(c) = self.battlefield_find_mut(cid) {
+                                let cur = c.counter_count(crate::card::CounterType::Shield);
+                                c.counters
+                                    .insert(crate::card::CounterType::Shield, cur.saturating_sub(1));
+                            }
+                            continue;
+                        }
+                        let is_creature = self.battlefield_find(cid)
+                            .map(|c| c.definition.is_creature())
+                            .unwrap_or(false);
+                        if is_creature {
+                            // Cache the dying card's snapshot for
+                            // AnotherOfYours-scope triggers and type
+                            // filter predicates (token deaths in
+                            // particular vanish before dispatch).
+                            if let Some(c) = self.battlefield_find(cid) {
+                                self.died_card_snapshots.insert(cid, c.clone());
+                            }
+                            events.push(GameEvent::CreatureDied { card_id: cid });
+                        }
+                        let mut dies = self.remove_to_graveyard_with_triggers(cid);
+                        events.append(&mut dies);
                     }
                 }
                 let mut sba = self.check_state_based_actions();

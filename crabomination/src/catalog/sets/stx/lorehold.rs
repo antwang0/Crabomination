@@ -20247,6 +20247,70 @@ pub fn lorehold_flameglyph_b169() -> CardDefinition {
     }
 }
 
+// ── Batch 170 (modern_decks) — Shield-counter cards (CR 122.1c wire) ─────
+
+/// Lorehold Shieldbearer (b170) — {2}{R}{W} 2/2 Spirit Soldier.
+/// ETB: put a shield counter on this creature. (CR 122.1c: one or more
+/// shield counters create a destroy-replacement + damage-prevention.)
+pub fn lorehold_shieldbearer_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Shieldbearer (b170)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::Shield,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Aegisblade (b170) — {2}{W} Sorcery.
+/// Put a shield counter on target creature.
+pub fn lorehold_aegisblade_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Aegisblade (b170)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::Shield,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Lorehold Aurochs (b169) — {3}{R}{W} 4/4 Beast Spirit Trample.
 /// Vanilla R/W finisher.
 pub fn lorehold_aurochs_b169() -> CardDefinition {
