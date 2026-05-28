@@ -68335,6 +68335,20 @@ fn fractal_crusher_b167_is_four_four_trampler() {
 }
 
 #[test]
+fn mana_value_exactly_predicate_matches_only_exact_cmc() {
+    // Lock in the new SelectionRequirement::ManaValueExactly variant.
+    // Filter `Creature ∧ ManaValueExactly(2)`: Grizzly Bears (MV=2)
+    // matches; Serra Angel (MV=5) does not.
+    use crate::card::SelectionRequirement as R;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // MV=2
+    let angel = g.add_card_to_battlefield(0, catalog::serra_angel()); // MV=5
+    let req = R::Creature.and(R::ManaValueExactly(2));
+    assert!(g.evaluate_requirement_static(&req, &Target::Permanent(bear), 0, None));
+    assert!(!g.evaluate_requirement_static(&req, &Target::Permanent(angel), 0, None));
+}
+
+#[test]
 fn quandrix_echodraw_b167_draws_two() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());

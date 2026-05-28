@@ -19,8 +19,28 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2549 (incl. synthesised variants — batches 155–166 add 307 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2575 (incl. synthesised variants — batches 155–167 add 333 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batch 167, claude/modern_decks): 26 additional new
+STX cards across all five colleges (6 Silverquill, 5 Witherbloom, 5
+Lorehold, 5 Prismari, 5 Quandrix). Each card ships with one
+functionality test. Engine pieces landed alongside the cards:
+- **`CounterType::Finality` (CR 122.1h)**: new counter type wired
+  into `remove_from_battlefield_to_graveyard`. Permanents with one
+  or more finality counters going from battlefield → graveyard are
+  redirected to exile instead. Three cards exercise this in batch
+  167: Silverquill Curse (W/B instant, 3-mana), Witherbloom Hex
+  (B/G instant, 3-mana), and the e2e flow validation against bolt-
+  targeting in `cr_122_1h_finality_counter_exiles_instead_of_graveyard`.
+- **`PermanentView.has_finality_counters`** field added — pairs with
+  `has_stun_counters` for client badge rendering. Populated by
+  `project_permanent`.
+- **`trigger_event_label` coverage**: 17 more EventKind × EventScope
+  pairs labelled (Blocks variants, BecomesBlocked variants, combat
+  dmg variants, CardCycled, CardLeftGraveyard, CounterAdded,
+  BecameTarget, sacrificed-by-opp variants). Fills tooltip coverage
+  gaps in the dispatcher matrix.
 
 Push (modern_decks, batch 166, claude/modern_decks): 50 additional new
 STX cards spread evenly across all five colleges (10 Silverquill, 10

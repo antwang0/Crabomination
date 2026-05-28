@@ -389,6 +389,12 @@ pub enum SelectionRequirement {
     IsSpellOnStack,
     ManaValueAtMost(u32),
     ManaValueAtLeast(u32),
+    /// True when the card's mana value (CMC) is exactly `n`. Useful for
+    /// effects that want a precise CMC gate (Fix What's Broken returns
+    /// "with mana value equal to X", which requires this exact-match
+    /// shape rather than the `AtMost`/`AtLeast` approximations).
+    /// Composes naturally with `And`/`Or` for range gates.
+    ManaValueExactly(u32),
     HasCardType(CardType),
     /// True when the card's printed mana cost contains at least one
     /// `{X}` symbol. Used by SOS Paradox Surveyor's reveal filter
