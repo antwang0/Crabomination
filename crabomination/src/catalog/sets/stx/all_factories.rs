@@ -3390,6 +3390,30 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_diviner_b167,
         super::silverquill::silverquill_bulwark_b167,
         super::silverquill::silverquill_stunning_b167,
+        // ── batch 167 (modern_decks): witherbloom follow-up ──
+        super::witherbloom::witherbloom_hex_b167,
+        super::witherbloom::witherbloom_drainshepherd_b167,
+        super::witherbloom::pest_sentry_b167,
+        super::witherbloom::witherbloom_pestbringer_b167,
+        super::witherbloom::witherbloom_mossguard_b167,
+        // ── batch 167 (modern_decks): lorehold follow-up ──
+        super::lorehold::lorehold_banisher_b167,
+        super::lorehold::lorehold_champion_b167,
+        super::lorehold::lorehold_strikewing_b167,
+        super::lorehold::lorehold_inscription_b167,
+        super::lorehold::lorehold_spiritcaller_ii_b167,
+        // ── batch 167 (modern_decks): prismari follow-up ──
+        super::prismari::prismari_spellbreaker_b167,
+        super::prismari::prismari_brimblast_b167,
+        super::prismari::prismari_treasurehunter_b167,
+        super::prismari::prismari_skyrider_b167,
+        super::prismari::prismari_volley_b167,
+        // ── batch 167 (modern_decks): quandrix follow-up ──
+        super::quandrix::quandrix_tideforge_b167,
+        super::quandrix::quandrix_pluralizer_b167,
+        super::quandrix::quandrix_echobinder_b167,
+        super::quandrix::fractal_crusher_b167,
+        super::quandrix::quandrix_echodraw_b167,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

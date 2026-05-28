@@ -19878,6 +19878,172 @@ pub fn lorehold_battlespirit_b166() -> CardDefinition {
     }
 }
 
+// ── Batch 167 (modern_decks) — Lorehold follow-up ─────────────────────────
+
+/// Lorehold Banisher (b167) — {3}{W} Sorcery.
+/// Exile target creature with mana value ≤ 3.
+pub fn lorehold_banisher_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Banisher (b167)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ManaValueAtMost(3)),
+            ),
+            to: ZoneDest::Exile,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Champion (b167) — {3}{R}{W} 3/3 Spirit Warrior First Strike +
+/// Vigilance. Aggressive defensive top-end.
+pub fn lorehold_champion_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Champion (b167)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Strikewing (b167) — {2}{R} 2/3 Spirit Wizard Flying.
+/// Aggressive evasive 3-mana flyer.
+pub fn lorehold_strikewing_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Strikewing (b167)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Inscription (b167) — {R}{W} Instant.
+/// 2 damage to target creature + you gain 2 life.
+pub fn lorehold_inscription_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Inscription (b167)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritcaller II (b167) — {2}{W} 2/3 Spirit Cleric.
+/// ETB mints a Lorehold Spirit token.
+pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritcaller II (b167)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Returned Pastcaller ───────────────────────────────────────────────────
 
 /// Returned Pastcaller — {4}{W}, 4/4 Spirit Cleric. Flying.
