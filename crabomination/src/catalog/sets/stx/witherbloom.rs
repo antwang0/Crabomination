@@ -21935,6 +21935,40 @@ pub fn witherbloom_mosshenge_b192() -> CardDefinition {
     }
 }
 
+/// Witherbloom Stripblossom (b192) — {1}{B} Sorcery.
+/// Remove a trample counter from target creature.
+/// (Engine RemoveKeywordCounter exerciser. Per CR 122.1b, removing
+/// the last keyword counter of a kind drops the granted keyword.)
+pub fn witherbloom_stripblossom_b192() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Stripblossom (b192)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RemoveKeywordCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Trample,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Saplinger (b192) — {G} 1/1 Plant Druid.
 /// On attack: gain 1 life (small Witherbloom aggro).
 pub fn witherbloom_saplinger_b192() -> CardDefinition {

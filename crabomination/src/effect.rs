@@ -1103,6 +1103,13 @@ pub enum Effect {
     /// (assuming no other source) when the last keyword counter is
     /// removed. Push (modern_decks batch 183): added per CR 122.1b.
     AddKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
+    /// CR 122.1b — Remove up to `amount` keyword counters of `keyword`
+    /// from `what`. Clamped at the source's actual count; the host loses
+    /// the keyword (assuming no other source) when the last counter of
+    /// this kind is removed. Counterpart to `AddKeywordCounter`. Push
+    /// (claude/modern_decks, batches 192-193): added — closes the loop
+    /// for "strip flight" / "remove a vigilance counter" style effects.
+    RemoveKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
     /// CR 122.5 — move `amount` counters of `kind` from `from` to `to`.
     /// Clamped at the source's actual counter count; emits a single
     /// `CounterRemoved` for the source and a single `CounterAdded` for
@@ -1665,7 +1672,8 @@ impl Effect {
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
             | Effect::RemoveCounter { what, amount, .. }
-            | Effect::AddKeywordCounter { what, amount, .. } => {
+            | Effect::AddKeywordCounter { what, amount, .. }
+            | Effect::RemoveKeywordCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)
             }
             Effect::MoveCounter { from, to, amount, .. } => {
@@ -1768,7 +1776,8 @@ impl Effect {
             | Effect::GainControl { what, .. } => sel_filter(what),
             Effect::AddCounter { what, .. }
             | Effect::RemoveCounter { what, .. }
-            | Effect::AddKeywordCounter { what, .. } => sel_filter(what),
+            | Effect::AddKeywordCounter { what, .. }
+            | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::SetBasePT { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
@@ -2073,6 +2082,7 @@ impl Effect {
             | Effect::AddCounter { .. }
             | Effect::RemoveCounter { .. }
             | Effect::AddKeywordCounter { .. }
+            | Effect::RemoveKeywordCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
             | Effect::GrantKeyword { .. }
@@ -2233,6 +2243,8 @@ impl Effect {
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)
                 }
+                Effect::AddKeywordCounter { what, .. }
+                | Effect::RemoveKeywordCounter { what, .. } => sel_find(what, slot),
                 Effect::BecomeBasicLand { what, .. }
                 | Effect::ResetCreature { what, .. } => sel_find(what, slot),
                 Effect::Attach { what, to } => sel_find(what, slot).or_else(|| sel_find(to, slot)),

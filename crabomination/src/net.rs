@@ -471,6 +471,27 @@ pub struct PermanentView {
     /// Populated by `project_permanent`. Push (modern_decks, batch 187).
     #[serde(default)]
     pub keyword_counters: Vec<(Keyword, u32)>,
+    /// Number of shield counters on this permanent. Each shield counter
+    /// absorbs one damage event or one destroy event (CR 122.1c) and is
+    /// then consumed. Surfaced so the client tooltip can render
+    /// "🛡 ×N (absorbs N events)" instead of the binary "shielded". 0
+    /// when no shields. Push (claude/modern_decks, batches 192-193).
+    #[serde(default)]
+    pub shield_counter_count: u32,
+    /// Number of stun counters on this permanent. Each stun counter
+    /// causes the next untap to be skipped (CR 122.1d) and is then
+    /// consumed. Surfaced so the client tooltip can render "stunned ×N"
+    /// (skips N untap steps). 0 when not stunned. Push
+    /// (claude/modern_decks, batches 192-193).
+    #[serde(default)]
+    pub stun_counter_count: u32,
+    /// Number of finality counters on this permanent. One or more
+    /// finality counters redirect graveyard moves to exile (CR 122.1h);
+    /// the redirect is single-event-per-counter so multiple finality
+    /// counters chain. Surfaced for symmetry with shield/stun counts.
+    /// Push (claude/modern_decks, batches 192-193).
+    #[serde(default)]
+    pub finality_counter_count: u32,
 }
 
 impl PermanentView {

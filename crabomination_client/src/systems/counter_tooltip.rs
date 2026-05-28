@@ -237,13 +237,28 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // beyond their printed +1/+1 cousins. Helps the player see "this
     // creature absorbs one damage/destroy" or "this creature exiles
     // on death" without scrolling the counters list.
-    if p.has_shield_counters {
+    // CR 122.1c shield counters: each absorbs one damage/destroy event.
+    // Surface the per-counter count when N > 1 so the player sees how
+    // many incoming events the creature can shrug off. Falls back to the
+    // legacy boolean badge when the explicit count isn't populated
+    // (older server projection / older snapshot).
+    if p.shield_counter_count > 1 {
+        lines.push(format!(
+            "(shielded ×{}: absorbs {} damage/destroy events)",
+            p.shield_counter_count, p.shield_counter_count
+        ));
+    } else if p.has_shield_counters {
         lines.push(String::from("(shielded: next damage/destroy is absorbed)"));
     }
-    if p.has_finality_counters {
+    if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
     }
-    if p.has_stun_counters {
+    if p.stun_counter_count > 1 {
+        lines.push(format!(
+            "(stunned ×{}: next {} untap steps skipped)",
+            p.stun_counter_count, p.stun_counter_count
+        ));
+    } else if p.has_stun_counters {
         lines.push(String::from("(stunned: next untap is skipped)"));
     }
     // Surface +1/+1 and -1/-1 counter highlights — the most common
@@ -347,6 +362,9 @@ mod tests {
             has_minus_one_counters: false,
             total_counter_count: 0,
             keyword_counters: vec![],
+            shield_counter_count: 0,
+            stun_counter_count: 0,
+            finality_counter_count: 0,
         }
     }
 
@@ -397,6 +415,35 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         // Surface a flying counter.
         assert!(body.to_lowercase().contains("flying"), "got: {body}");
+    }
+
+    #[test]
+    fn shield_counter_count_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.shield_counter_count = 3;
+        p.has_shield_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        // Should show the explicit count, not just the boolean.
+        assert!(body.contains("shielded ×3"), "got: {body}");
+    }
+
+    #[test]
+    fn shield_counter_single_falls_back_to_boolean_message() {
+        let mut p = make_permanent_view(0, 2);
+        p.shield_counter_count = 1;
+        p.has_shield_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.to_lowercase().contains("shielded"), "got: {body}");
+        assert!(!body.contains("shielded ×"), "single shield uses boolean form: {body}");
+    }
+
+    #[test]
+    fn stun_counter_count_renders_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.stun_counter_count = 2;
+        p.has_stun_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("stunned ×2"), "got: {body}");
     }
 
     #[test]

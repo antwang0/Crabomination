@@ -261,6 +261,9 @@ fn project_permanent(
             .filter(|(_, n)| **n > 0)
             .map(|(k, n)| (k.clone(), *n))
             .collect(),
+        shield_counter_count: card.counter_count(crate::card::CounterType::Shield),
+        stun_counter_count: card.counter_count(crate::card::CounterType::Stun),
+        finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
     }
 }
 

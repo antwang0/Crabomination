@@ -1367,6 +1367,33 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 122.1b — Remove keyword counters from `what`. Clamped at
+            // the source's actual count; the host loses the keyword
+            // (assuming no other source) when the last counter is
+            // removed. Counterpart to AddKeywordCounter. Doubling-
+            // counter replacements (CR 614.16) do NOT apply to removes
+            // — they only scale puts (the rule is about "if an effect
+            // would put one or more counters…").
+            Effect::RemoveKeywordCounter { what, keyword, amount } => {
+                let request = self.evaluate_value(amount, ctx).max(0) as u32;
+                if request == 0 { return Ok(()); }
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            let entry = c.keyword_counters.entry(keyword.clone()).or_insert(0);
+                            let remove = (*entry).min(request);
+                            *entry -= remove;
+                            // If the counter is now 0, drop the entry to
+                            // keep the map sparse (so layer-6 doesn't
+                            // grant a phantom 0-count keyword).
+                            if *entry == 0 {
+                                c.keyword_counters.remove(keyword);
+                            }
+                        }
+                }
+                Ok(())
+            }
+
             Effect::MoveCounter { from, to, kind, amount } => {
                 // CR 122.5: moving counters is a single zone-internal
                 // transfer, not a remove-then-add (DoubleCounters does

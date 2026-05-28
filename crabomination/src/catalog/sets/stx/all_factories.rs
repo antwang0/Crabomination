@@ -3740,6 +3740,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::witherbloom::witherbloom_witchwarden_b192,
         super::witherbloom::witherbloom_mosshenge_b192,
         super::witherbloom::witherbloom_saplinger_b192,
+        super::witherbloom::witherbloom_stripblossom_b192,
         // ── batch 193 (modern_decks): cross-school deep cuts ──
         super::lorehold::lorehold_stoneward_b193,
         super::lorehold::lorehold_ravenrider_b193,

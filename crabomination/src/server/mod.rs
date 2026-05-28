@@ -109,6 +109,28 @@ pub struct MatchOutcome {
     /// Final `turn_number` value observed at match end. Useful for
     /// "avg turns per match" operator metrics.
     pub final_turn: u32,
+    /// `None` if the match aborted (channel disconnect, watchdog) before
+    /// the game's `game_over` field was populated. `Some(None)` for a
+    /// draw, `Some(Some(seat))` for the winning seat. Useful for
+    /// win-rate metrics across bot-vs-bot ladders.
+    pub winner: Option<Option<usize>>,
+    /// Per-seat life total observed at match end. Same length as
+    /// `state.players`. Useful for "how close was the loss" tracking
+    /// and for differentiating decking-out (life 1+) from face-damage
+    /// (life ≤ 0) victories. Empty if the match aborted before the
+    /// game state was inspected.
+    pub final_life_totals: Vec<i32>,
+}
+
+/// Capture a MatchOutcome from the current GameState. Used at every
+/// exit path of `run_match_full` so winner / life metrics are always
+/// populated (even on watchdog / disconnect exits).
+fn capture_outcome(state: &GameState) -> MatchOutcome {
+    MatchOutcome {
+        final_turn: state.turn_number,
+        winner: state.game_over,
+        final_life_totals: state.players.iter().map(|p| p.life).collect(),
+    }
 }
 
 pub fn run_match(state: GameState, occupants: Vec<SeatOccupant>) -> MatchOutcome {
@@ -229,11 +251,11 @@ pub fn run_match_full(
             &mut last_progress_at,
         ) {
             broadcast_match_over(&state, &seat_tx, &spectator_tx);
-            return MatchOutcome { final_turn: state.turn_number };
+            return capture_outcome(&state);
         }
 
         if human_seat_count == 0 && spectator_count == 0 {
-            return MatchOutcome { final_turn: state.turn_number };
+            return capture_outcome(&state);
         }
 
         // In a humanless (spectator-only) match, poll with a timeout
@@ -249,12 +271,12 @@ pub fn run_match_full(
                     }
                     None
                 }
-                Err(mpsc::RecvTimeoutError::Disconnected) => return MatchOutcome { final_turn: state.turn_number },
+                Err(mpsc::RecvTimeoutError::Disconnected) => return capture_outcome(&state),
             }
         } else {
             match merged_rx.recv() {
                 Ok(msg) => Some(msg),
-                Err(_) => return MatchOutcome { final_turn: state.turn_number },
+                Err(_) => return capture_outcome(&state),
             }
         };
         let Some((seat, msg)) = next else { continue };
@@ -273,7 +295,7 @@ pub fn run_match_full(
                 }
                 if state.is_game_over() {
                     broadcast_match_over(&state, &seat_tx, &spectator_tx);
-                    return MatchOutcome { final_turn: state.turn_number };
+                    return capture_outcome(&state);
                 }
             }
             ClientMsg::Debug(debug) => {
@@ -929,6 +951,36 @@ mod tests {
             .recv_timeout(Duration::from_secs(10))
             .expect("bot-vs-bot match should reach game over within 10s");
         handle.join().unwrap();
+    }
+
+    /// MatchOutcome should capture winner + life totals at game end —
+    /// not just the turn count. Pins the new fields (`winner`,
+    /// `final_life_totals`) against a deterministic 1-life-vs-1-life
+    /// bot-vs-bot match.
+    #[test]
+    fn match_outcome_captures_winner_and_life_totals() {
+        let mut state = two_player_game();
+        state.players[0].life = 1;
+        state.players[1].life = 1;
+        // Seat 0 has a 2/2 attacker, seat 1 has nothing. Seat 0 should
+        // win once it untaps (haste not required since end-of-step) /
+        // attacks.
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears());
+        state.clear_sickness(bear);
+        let handle = thread::spawn(move || {
+            run_match(
+                state,
+                vec![
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                    SeatOccupant::Bot(Box::new(RandomBot::new())),
+                ],
+            )
+        });
+        let outcome = handle.join().expect("match thread finishes");
+        assert_eq!(outcome.final_life_totals.len(), 2, "two seats");
+        // Winner is populated (either side could win depending on bot
+        // dice, but the field must not be None given the game ended).
+        assert!(outcome.winner.is_some(), "winner field populated post-game-over");
     }
 
     /// Bot-vs-bot smoke test on the random Cube format. Each seat gets a
