@@ -3610,5 +3610,29 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::witherbloom::witherbloom_venomspur_b185,
         // ── batch 186 (modern_decks): multi-counter magecraft engines ──
         super::silverquill::silverquill_glyphmaker_b186,
+        // ── batch 187 (modern_decks): Silverquill expansion ──
+        super::silverquill::silverquill_reachseal_b187,
+        super::silverquill::silverquill_mentordrain_b187,
+        super::silverquill::inkling_vigilkeeper_b187,
+        super::silverquill::silverquill_skytutor_b187,
+        super::silverquill::silverquill_inkletter_ii_b187,
+        super::silverquill::inkling_spellguard_b187,
+        super::silverquill::silverquill_wardlock_b187,
+        // ── batch 187 (modern_decks): Witherbloom expansion ──
+        super::witherbloom::witherbloom_brewer_b187,
+        super::witherbloom::witherbloom_toxinbloom_b187,
+        super::witherbloom::witherbloom_hexblossom_b187,
+        super::witherbloom::witherbloom_lifeknotter_b187,
+        super::witherbloom::pest_mauler_b187,
+        super::witherbloom::witherbloom_grovecaller_b187,
+        super::witherbloom::witherbloom_soulreaper_b187,
+        // ── batch 187 (modern_decks): Lorehold expansion ──
+        super::lorehold::lorehold_firstrikedoctrine_b187,
+        super::lorehold::lorehold_battleseer_b187,
+        super::lorehold::lorehold_memorymage_b187,
+        super::lorehold::lorehold_spiritcaller_b187,
+        super::lorehold::lorehold_pyrescribe_b187,
+        super::lorehold::lorehold_ghostpaladin_b187,
+        super::lorehold::lorehold_reach_doctrine_b187,
     ]
 }
