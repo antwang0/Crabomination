@@ -20084,6 +20084,108 @@ pub fn witherbloom_pestharvest_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 181 (modern_decks) — Pest tribal + drain expansion ─────────────
+
+/// Witherbloom Pestlord (b181) — {3}{B}{G} 3/3 Vampire Warlock.
+/// ETB: create 2 Pest tokens.
+pub fn witherbloom_pestlord_b181() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Pestlord (b181)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Drainscribe (b181) — {2}{B} 2/3 Human Warlock.
+/// Magecraft drain 1.
+pub fn witherbloom_drainscribe_b181() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainscribe (b181)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Plaguebearer (b181) — {2}{B}{G} 4/3 Human Warlock.
+/// Dies: each opponent loses 2 life.
+pub fn witherbloom_plaguebearer_b181() -> CardDefinition {
+    use crate::card::EventScope;
+    CardDefinition {
+        name: "Witherbloom Plaguebearer (b181)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 178 (modern_decks) — more Witherbloom variants ──────────────────
 
 /// Witherbloom Vinecaster (b178) — {1}{G} 2/2 Human Druid Reach.

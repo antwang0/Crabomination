@@ -243,6 +243,14 @@ fn compute_permanent(
             keywords.push(kw.clone());
         }
     }
+    // CR 122.1b — keyword counters: each keyword counter type on the
+    // permanent grants the named keyword while at least one counter of
+    // that type is present. Applied as a layer-6 keyword addition.
+    for (kw, count) in &card.keyword_counters {
+        if *count > 0 && !keywords.contains(kw) {
+            keywords.push(kw.clone());
+        }
+    }
 
     // Base P/T from definition + counters (applied after layer 7c).
     let base_power = card.definition.base_power() + card.power_bonus;

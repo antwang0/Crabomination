@@ -844,6 +844,15 @@ pub struct CardInstance {
     /// keywords aren't permanently mutated by an EOT pump (engine fix —
     /// push modern_decks batch 24). `has_keyword` checks both vectors.
     pub granted_keywords_eot: Vec<Keyword>,
+    /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
+    /// count; the host gets the keyword while one or more such counters
+    /// are on it. Applied as a layer-6 keyword addition during
+    /// `compute_battlefield`. Distinct from `definition.keywords`
+    /// (printed) and `granted_keywords_eot` (transient EOT grants) so
+    /// the printed/granted/counter sources can be inspected separately
+    /// (e.g., for "remove all abilities" effects). Defaults to empty.
+    /// Push (modern_decks batch 183): added per CR 122.1b.
+    pub keyword_counters: std::collections::HashMap<Keyword, u32>,
     /// "You may cast/play this card without paying its mana cost" permission
     /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
     /// Set by `Effect::GrantMayPlay`; consumed by
@@ -889,6 +898,7 @@ impl CardInstance {
             chosen_creature_type: None,
             once_per_turn_used: Vec::new(),
             granted_keywords_eot: Vec::new(),
+            keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
         }
@@ -934,7 +944,12 @@ impl CardInstance {
     }
 
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
-        self.definition.keywords.contains(kw) || self.granted_keywords_eot.contains(kw)
+        // Printed keyword, EOT-granted, or keyword counter (CR 122.1b)
+        // all qualify. The keyword-counter check requires at least one
+        // counter of the matching type to be present.
+        self.definition.keywords.contains(kw)
+            || self.granted_keywords_eot.contains(kw)
+            || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
     }
 
     pub fn has_protection_from(&self, color: Color) -> bool {

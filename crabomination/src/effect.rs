@@ -1096,6 +1096,13 @@ pub enum Effect {
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
+    /// CR 122.1b — Add a keyword counter to `what`. The host gains the
+    /// named keyword while at least one counter of this kind is present
+    /// (applied as a layer-6 grant in `compute_battlefield`). Removed
+    /// independently of the keyword; the host loses the keyword
+    /// (assuming no other source) when the last keyword counter is
+    /// removed. Push (modern_decks batch 183): added per CR 122.1b.
+    AddKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
     /// CR 122.5 — move `amount` counters of `kind` from `from` to `to`.
     /// Clamped at the source's actual counter count; emits a single
     /// `CounterRemoved` for the source and a single `CounterAdded` for
@@ -1657,7 +1664,8 @@ impl Effect {
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
-            | Effect::RemoveCounter { what, amount, .. } => {
+            | Effect::RemoveCounter { what, amount, .. }
+            | Effect::AddKeywordCounter { what, amount, .. } => {
                 sel_has_target(what) || value_has_target(amount)
             }
             Effect::MoveCounter { from, to, amount, .. } => {
@@ -1758,7 +1766,9 @@ impl Effect {
             | Effect::CounterUnlessPaid { what, .. }
             | Effect::CounterUnless { what, .. }
             | Effect::GainControl { what, .. } => sel_filter(what),
-            Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => sel_filter(what),
+            Effect::AddCounter { what, .. }
+            | Effect::RemoveCounter { what, .. }
+            | Effect::AddKeywordCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::SetBasePT { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
@@ -2062,6 +2072,7 @@ impl Effect {
             | Effect::Move { .. }
             | Effect::AddCounter { .. }
             | Effect::RemoveCounter { .. }
+            | Effect::AddKeywordCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
             | Effect::GrantKeyword { .. }

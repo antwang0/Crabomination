@@ -20679,6 +20679,98 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 182 (modern_decks) — closer to a balanced Lorehold cube ─────────
+
+/// Lorehold Cinderwell (b182) — {2}{R} 3/2 Spirit Warrior.
+/// On unblocked attack: deal 1 damage to defending player.
+pub fn lorehold_cinderwell_b182() -> CardDefinition {
+    use crate::effect::shortcut::on_unblocked;
+    CardDefinition {
+        name: "Lorehold Cinderwell (b182)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_unblocked(Effect::DealDamage {
+            to: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 180 (modern_decks) — Lorehold Spirit-tribal expansion ──────────
+
+/// Lorehold Spiritlord (b180) — {3}{R}{W} 3/3 Spirit Soldier.
+/// ETB: create two 2/2 R/W Spirit tokens with flying.
+pub fn lorehold_spiritlord_b180() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritlord (b180)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_lorehold_spirits(2))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Spectralguard (b180) — {2}{W} 2/4 Spirit Cleric.
+/// Vigilance + on-attack gain 1 life.
+pub fn lorehold_spectralguard_b180() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectralguard (b180)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 178 (modern_decks) — more Lorehold variants ─────────────────────
 
 /// Lorehold Sparkscholar (b178) — {1}{R} 1/3 Spirit Wizard.

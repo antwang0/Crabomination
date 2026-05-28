@@ -1333,6 +1333,22 @@ impl GameState {
                 Ok(())
             }
 
+            // CR 122.1b — Add a keyword counter to `what`. The host gains
+            // the named keyword while at least one counter of this kind
+            // is present (applied as a layer-6 grant in
+            // `compute_battlefield`). Push (modern_decks batch 183).
+            Effect::AddKeywordCounter { what, keyword, amount } => {
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid) {
+                            *c.keyword_counters.entry(keyword.clone()).or_insert(0) += n;
+                        }
+                }
+                Ok(())
+            }
+
             Effect::MoveCounter { from, to, kind, amount } => {
                 // CR 122.5: moving counters is a single zone-internal
                 // transfer, not a remove-then-add (DoubleCounters does

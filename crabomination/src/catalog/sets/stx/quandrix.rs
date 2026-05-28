@@ -16737,6 +16737,108 @@ pub fn quandrix_beastform_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 182 (modern_decks) — closer to a balanced Quandrix cube ─────────
+
+/// Quandrix Streamwarden (b182) — {2}{G}{U} 2/3 Merfolk Druid.
+/// ETB: scry 2 + +1/+1 counter on this creature.
+pub fn quandrix_streamwarden_b182() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Streamwarden (b182)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(2),
+            },
+            Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 180 (modern_decks) — Fractal-centric Quandrix expansion ────────
+
+/// Quandrix Counterspinner (b180) — {1}{U} Instant. Counter target spell with mana value 2 or less.
+pub fn quandrix_counterspinner_b180() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Quandrix Counterspinner (b180)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::ManaValueAtMost(2)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Fractal-Echocaller (b180) — {2}{G} 2/2 Elf Druid.
+/// ETB: create a Fractal with 1 +1/+1 counter.
+pub fn quandrix_fractal_echocaller_b180() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    use crate::effect::shortcut::etb_mint_token_with_counters;
+    CardDefinition {
+        name: "Quandrix Fractal-Echocaller (b180)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 178 (modern_decks) — more Quandrix variants ─────────────────────
 
 /// Quandrix Drawcaster (b178) — {3}{U} 2/3 Elf Wizard. ETB: draw a card.

@@ -22422,6 +22422,97 @@ pub fn inkling_stylekeeper_b177() -> CardDefinition {
     }
 }
 
+// ── Batch 183 (modern_decks) — Keyword counter cards (CR 122.1b) ─────────
+
+/// Silverquill Skystudent (b183) — {1}{W} Sorcery.
+/// Put a flying counter on target creature.
+pub fn silverquill_skystudent_b183() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
+    CardDefinition {
+        name: "Silverquill Skystudent (b183)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddKeywordCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            keyword: Keyword::Flying,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 182 (modern_decks) — closer to a balanced Silverquill cube ──────
+
+/// Silverquill Ascendant (b182) — {4}{W}{B} 5/5 Inkling Bard Flying + Lifelink.
+/// Finisher body. Pairs with Tenured Inkcaster's anthem.
+pub fn silverquill_ascendant_b182() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Ascendant (b182)",
+        cost: cost(&[generic(4), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Bard],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Stampcrafter (b182) — {2}{W}{B} 3/3 Inkling Wizard.
+/// ETB: drain 1 + scry 1.
+pub fn silverquill_stampcrafter_b182() -> CardDefinition {
+    use crate::effect::shortcut::drain_and_scry;
+    CardDefinition {
+        name: "Silverquill Stampcrafter (b182)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(drain_and_scry(1, 1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 179 (modern_decks) — Inkling tribal expansion ───────────────────
 
 /// Inkling Tutor (b179) — {1}{B} Sorcery. Discard a card, then draw two cards.

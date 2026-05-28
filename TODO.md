@@ -5,6 +5,65 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXVIII — 2026-05-28, session 12, batches 180-183)
+
+### Engine improvements
+- **CR 122.1b — Keyword counters**: previously listed as ⏳ in TODO.
+  Now wired. `CardInstance.keyword_counters: HashMap<Keyword, u32>`
+  stores per-keyword counter counts. The compute_battlefield layer-6
+  pass merges the counters into the `keywords` Vec on
+  `ComputedPermanent`. `CardInstance::has_keyword()` reads the counter
+  map alongside the printed/EOT-granted keywords. New
+  `Effect::AddKeywordCounter { what, keyword, amount }` variant carries
+  the printed grant body for "put a flying/first strike/etc counter on
+  target creature." Silverquill Skystudent (b183) is the first printed
+  card exercising the wire.
+- **`CounterUnlessPaid` mana-value-gated counterspell** — Quandrix
+  Counterspinner (b180) is the first card using a stack target with
+  the combined `IsSpellOnStack + ManaValueAtMost(2)` filter, exercising
+  the engine's stack-aware target validator for cost-restricted
+  counterspells.
+
+### New cards (15 across batches 180-183)
+- Batch 180 (5 cards): Quandrix Counterspinner (mv-2-or-less counter),
+  Quandrix Fractal-Echocaller (ETB Fractal +1/+1), Lorehold Spiritlord
+  (ETB 2 Spirits), Lorehold Spectralguard (on-attack lifegain), Prismari
+  Lavaforge (ETB 3-damage + Treasure mint).
+- Batch 181 (3 cards): Witherbloom Pestlord (ETB 2 Pests), Witherbloom
+  Drainscribe (magecraft drain), Witherbloom Plaguebearer (dies → each
+  opp -2 life via EventKind::CreatureDied / SelfSource).
+- Batch 182 (5 cards): Silverquill Ascendant (6-mana 5/5 lifelink
+  flier), Silverquill Stampcrafter (ETB drain+scry), Lorehold
+  Cinderwell (on-unblocked-attack ping), Quandrix Streamwarden (ETB
+  scry-2 + +1/+1 counter), Prismari Mage-Mentor (magecraft loot).
+- Batch 183 (1 card + engine): Silverquill Skystudent (sorcery
+  granting a flying counter — exercises the new CR 122.1b wire).
+
+### CR rule lock-in tests (1 new)
+- `cr_122_1b_flying_counter_grants_flying` — pins the canonical
+  CR 122.1b "keyword counter grants the named keyword" behaviour
+  via Silverquill Skystudent target Grizzly Bears. Verifies both
+  `CardInstance::has_keyword()` and `compute_battlefield()` layer-6
+  application paths.
+
+### Observations & future items from this session
+- **AddKeywordCounter for non-evasion keywords** — Skystudent ships
+  the Flying half. The same wire trivially supports First Strike /
+  Trample / Lifelink / Vigilance / Reach / Haste / Deathtouch counter
+  granters; all just need the printed card text and a one-line
+  AddKeywordCounter call. The engine doesn't yet have a "remove
+  keyword counter" effect (only the regular RemoveCounter walk), so
+  cards that toggle the grant on/off would need a sibling effect
+  variant.
+- **Keyword counter UI badge** — `PermanentView` doesn't yet surface
+  the keyword counter map. Could add `keyword_counter_summary:
+  Vec<(Keyword, u32)>` for the client tooltip.
+- **Counter doubling (CR 614.16)** — `AddKeywordCounter` doesn't
+  currently apply the Doubling-Season-style counter-doubler scaling.
+  The regular `AddCounter` path walks `counter_doublers_for`; the new
+  variant should mirror that. Diminishing returns since no printed
+  card combines keyword counters with Doubling Season today.
+
 ## Recent additions (Push XXVII — 2026-05-28, session 11, batches 174-179)
 
 ### Engine improvements

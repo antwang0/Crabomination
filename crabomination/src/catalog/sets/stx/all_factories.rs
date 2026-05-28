@@ -3579,5 +3579,23 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_tutor_b179,
         super::silverquill::inkling_heraldscribe_b179,
         super::silverquill::silverquill_penquill_b179,
+        // ── batch 180 (modern_decks): cross-school expansions ──
+        super::quandrix::quandrix_counterspinner_b180,
+        super::quandrix::quandrix_fractal_echocaller_b180,
+        super::lorehold::lorehold_spiritlord_b180,
+        super::lorehold::lorehold_spectralguard_b180,
+        super::prismari::prismari_lavaforge_b180,
+        // ── batch 181 (modern_decks): Witherbloom Pest tribal + drain ──
+        super::witherbloom::witherbloom_pestlord_b181,
+        super::witherbloom::witherbloom_drainscribe_b181,
+        super::witherbloom::witherbloom_plaguebearer_b181,
+        // ── batch 182 (modern_decks): balanced cube fillers ──
+        super::silverquill::silverquill_ascendant_b182,
+        super::silverquill::silverquill_stampcrafter_b182,
+        super::lorehold::lorehold_cinderwell_b182,
+        super::quandrix::quandrix_streamwarden_b182,
+        super::prismari::prismari_mage_mentor_b182,
+        // ── batch 183 (modern_decks): keyword counter cards (CR 122.1b) ──
+        super::silverquill::silverquill_skystudent_b183,
     ]
 }

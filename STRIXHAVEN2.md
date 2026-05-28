@@ -19,8 +19,30 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2649 (incl. synthesised variants — batches 155–179 add 407 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2663 (incl. synthesised variants — batches 155–183 add 421 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 174-183, claude/modern_decks): 85 additional
+new STX cards across all five colleges, plus engine + UI + server
+improvements including CR 122.1b keyword counters:
+
+**Batch 180-182 (13 cards)** — cross-school cube fillers including
+counterspells (Quandrix Counterspinner b180 with mana-value gate),
+Spirit-tribal Lorehold (Spiritlord b180), Treasure-flow Prismari
+(Lavaforge b180), unblocked-attack ping (Lorehold Cinderwell b182), ETB
+scry + grow self (Quandrix Streamwarden b182), magecraft-loot mage
+(Prismari Mage-Mentor b182). Each ships with a functionality test.
+
+**Batch 183 (1 card + engine work)** — **CR 122.1b keyword counters**
+finally implemented:
+- `CardInstance.keyword_counters: HashMap<Keyword, u32>` field.
+- `Effect::AddKeywordCounter { what, keyword, amount }` variant.
+- Layer-6 keyword counter merge in `compute_battlefield`.
+- `has_keyword()` updated to check the counter map.
+- Silverquill Skystudent (b183) exercises the new wire: sorcery puts
+  a flying counter on target creature, the creature gains Flying via
+  the layer-6 path.
+- New CR test: `cr_122_1b_flying_counter_grants_flying`.
 
 Push (modern_decks, batches 174-179, claude/modern_decks): 71 additional
 new STX cards across all five colleges, plus engine + UI + server

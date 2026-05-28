@@ -15761,6 +15761,80 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 182 (modern_decks) — closer to a balanced Prismari cube ────────
+
+/// Prismari Mage-Mentor (b182) — {U}{R} 2/2 Elemental Wizard.
+/// Magecraft draws on first instant or sorcery each turn.
+/// Approximation: every magecraft trigger draws 1 (we don't track per-turn limit yet).
+/// Use loot to avoid being too strong.
+pub fn prismari_mage_mentor_b182() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_loot;
+    CardDefinition {
+        name: "Prismari Mage-Mentor (b182)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 180 (modern_decks) — Prismari Treasure + spell expansion ───────
+
+/// Prismari Lavaforge (b180) — {3}{R}{R} 3/3 Elemental.
+/// ETB: deal 3 damage to any target + create a Treasure.
+pub fn prismari_lavaforge_b180() -> CardDefinition {
+    use crate::effect::shortcut::{etb, mint_treasures, target_filtered};
+    CardDefinition {
+        name: "Prismari Lavaforge (b180)",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .or(SelectionRequirement::Player)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+            mint_treasures(1),
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 178 (modern_decks) — more Prismari variants ─────────────────────
 
 /// Prismari Magecraft-Sage (b178) — {2}{U}{R} 2/3 Elemental Wizard.
