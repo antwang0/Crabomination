@@ -20679,6 +20679,95 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 188 (modern_decks) — additional Lorehold cards ──────────────────
+
+/// Lorehold Spiritsong (b188) — {1}{R}{W} 2/2 Spirit Cleric Lifelink.
+/// Magecraft self-pump +1/+1 EOT.
+pub fn lorehold_spiritsong_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritsong (b188)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Sparkbarrier (b188) — {2}{R} Sorcery.
+/// 3 damage to any target + create a 1/1 R/W Spirit (Lorehold spirit token).
+pub fn lorehold_sparkbarrier_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkbarrier (b188)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: Selector::Target(0),
+            },
+            mint_lorehold_spirits(1),
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Vanguard II (b188) — {2}{R}{W} 3/3 Spirit Soldier.
+/// Vigilance + Reach + magecraft self-pump +1/+0 EOT.
+pub fn lorehold_vanguard_ii_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vanguard II (b188)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 187 (modern_decks) — Lorehold expansion ─────────────────────────
 
 /// Lorehold Firstrikedoctrine (b187) — {1}{R}{W} Sorcery.

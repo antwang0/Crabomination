@@ -13,8 +13,8 @@ use crate::card::{
     Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{
-    magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_self_pump, magecraft_treasure,
-    target_filtered,
+    magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_scry, magecraft_self_pump,
+    magecraft_treasure, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u, Color};
@@ -15743,6 +15743,99 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
                 amount: Value::Const(4),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 188 (modern_decks) — additional Prismari cards ──────────────────
+
+/// Prismari Lavakin (b188) — {1}{R} 2/2 Elemental Haste.
+/// On-attack: ping 1 damage to any target.
+pub fn prismari_lavakin_b188() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_ping_any;
+    CardDefinition {
+        name: "Prismari Lavakin (b188)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Storm-Scholar (b188) — {U}{R} 1/2 Wizard.
+/// Magecraft scry 1.
+pub fn prismari_storm_scholar_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Storm-Scholar (b188)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Hailcaller (b188) — {3}{U}{R} Sorcery.
+/// 3 damage to each opponent + draw 1.
+pub fn prismari_hailcaller_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Hailcaller (b188)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                amount: Value::Const(3),
+                to: Selector::Player(PlayerRef::EachOpponent),
             },
             Effect::Draw {
                 who: Selector::You,

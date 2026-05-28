@@ -20121,6 +20121,101 @@ pub fn witherbloom_venomspur_b185() -> CardDefinition {
     }
 }
 
+// ── Batch 188 (modern_decks) — additional Witherbloom cards ──────────────
+
+/// Witherbloom Mireshade (b188) — {1}{B}{G} 2/3 Plant Druid Deathtouch.
+/// ETB: mints a Pest.
+pub fn witherbloom_mireshade_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mireshade (b188)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_mint_token(stx_pest_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Herald (b188) — {B}{G} 2/2 Pest.
+/// On-die trigger drains 1.
+pub fn pest_herald_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Herald (b188)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Spelleater (b188) — {2}{B}{G} 3/3 Plant Warlock.
+/// Magecraft drain each opp 2 (Drain 2 — strong magecraft).
+pub fn witherbloom_spelleater_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Spelleater (b188)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 187 (modern_decks) — Witherbloom expansion ─────────────────────
 
 /// Witherbloom Brewer (b187) — {1}{B}{G} 2/2 Plant Druid.

@@ -16821,6 +16821,93 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     }
 }
 
+// ── Batch 188 (modern_decks) — additional Quandrix cards ──────────────────
+
+/// Quandrix Mossleaf (b188) — {1}{G} 2/3 Plant.
+/// Reach.
+pub fn quandrix_mossleaf_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mossleaf (b188)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Dataweaver (b188) — {2}{G}{U} 3/3 Fractal Wizard.
+/// Magecraft +1/+1 counter on self.
+pub fn quandrix_dataweaver_b188() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_add_counter_self;
+    CardDefinition {
+        name: "Quandrix Dataweaver (b188)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_add_counter_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Latticebreaker (b188) — {3}{U}{U} Sorcery.
+/// Draw 3 cards.
+pub fn quandrix_latticebreaker_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Latticebreaker (b188)",
+        cost: cost(&[generic(3), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(3),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 187 (modern_decks) — Quandrix expansion ─────────────────────────
 
 /// Quandrix Tramplerune (b187) — {1}{G} Sorcery.

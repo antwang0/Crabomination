@@ -3650,5 +3650,21 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_quickdraw_b187,
         super::quandrix::quandrix_mossglider_b187,
         super::quandrix::quandrix_resonator_b187,
+        // ── batch 188 (modern_decks): cross-school small additions ──
+        super::silverquill::silverquill_cantrap_b188,
+        super::silverquill::inkling_tribune_b188,
+        super::silverquill::silverquill_litany_b188,
+        super::witherbloom::witherbloom_mireshade_b188,
+        super::witherbloom::pest_herald_b188,
+        super::witherbloom::witherbloom_spelleater_b188,
+        super::lorehold::lorehold_spiritsong_b188,
+        super::lorehold::lorehold_sparkbarrier_b188,
+        super::lorehold::lorehold_vanguard_ii_b188,
+        super::prismari::prismari_lavakin_b188,
+        super::prismari::prismari_storm_scholar_b188,
+        super::prismari::prismari_hailcaller_b188,
+        super::quandrix::quandrix_mossleaf_b188,
+        super::quandrix::quandrix_dataweaver_b188,
+        super::quandrix::quandrix_latticebreaker_b188,
     ]
 }

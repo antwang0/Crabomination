@@ -23331,6 +23331,101 @@ pub fn inkling_spellguard_b187() -> CardDefinition {
     }
 }
 
+// ── Batch 188 (modern_decks) — additional Silverquill cards ───────────────
+
+/// Silverquill Cantrap (b188) — {W} Instant.
+/// Target creature gets +1/+1 EOT and gains lifelink EOT.
+pub fn silverquill_cantrap_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Cantrap (b188)",
+        cost: cost(&[w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Tribune (b188) — {3}{W}{B} 3/4 Inkling Cleric Flying.
+/// ETB drain 2 + magecraft self-pump +1/+0 EOT.
+pub fn inkling_tribune_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Tribune (b188)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(2), magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Litany (b188) — {1}{W}{B} Sorcery.
+/// Each opponent loses 2 life; you gain 2 life; scry 1.
+pub fn silverquill_litany_b188() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Litany (b188)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            drain(2),
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Silverquill Wardlock (b187) — {1}{W} Instant.
 /// Put a shield counter on each creature you control.
 pub fn silverquill_wardlock_b187() -> CardDefinition {
