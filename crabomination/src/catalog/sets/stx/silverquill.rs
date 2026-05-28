@@ -21021,6 +21021,222 @@ pub fn silverquill_sentencing_b166() -> CardDefinition {
     }
 }
 
+// ── Batch 167 (modern_decks) — Silverquill follow-up ──────────────────────
+//
+// Six more Silverquill cards focused on engine variety:
+// finality-counter granter (exercises the CR 122.1h wire), drain-+1/+1
+// counter Inkling lord, Surveil sorcery, evasive Bookwurm-style flier,
+// reach Cleric defender, and a stunning combat trick.
+
+/// Silverquill Curse (b167) — {2}{B} Instant.
+/// Put a finality counter on target creature. Combo with a death trigger
+/// to exile-instead-of-graveyard.
+pub fn silverquill_curse_b167() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Silverquill Curse (b167)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::Finality,
+            amount: Value::Const(1),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkbond (b167) — {2}{W}{B} 3/3 Inkling Cleric Flying.
+/// Static: Other Inkling creatures you control get +1/+1.
+pub fn silverquill_inkbond_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkbond (b167)",
+        cost: cost(&[generic(2), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![StaticAbility {
+            description: "Other Inkling creatures you control get +1/+1.",
+            effect: StaticEffect::PumpPT {
+                power: 1,
+                toughness: 1,
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::HasCreatureType(CreatureType::Inkling))
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+            },
+        }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Penbinder (b167) — {1}{W} Sorcery.
+/// Surveil 2.
+pub fn silverquill_penbinder_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Penbinder (b167)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Surveil {
+            who: PlayerRef::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Inkling Diviner (b167) — {3}{W} 2/4 Inkling Cleric Flying + Vigilance.
+/// ETB draw a card.
+pub fn inkling_diviner_b167() -> CardDefinition {
+    use crate::effect::shortcut::etb_draw;
+    CardDefinition {
+        name: "Inkling Diviner (b167)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Bulwark (b167) — {2}{W} 1/5 Human Cleric Defender.
+/// Pure 1/5 wall body for defensive shells.
+pub fn silverquill_bulwark_b167() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Bulwark (b167)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Stunning (b167) — {2}{W} Instant.
+/// Tap target creature + put a stun counter on it.
+pub fn silverquill_stunning_b167() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Silverquill Stunning (b167)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Silverquill Command ────────────────────────────────────────────────────
 
 /// Silverquill Command — {2}{W}{B} Sorcery. Choose two among 4 modes.

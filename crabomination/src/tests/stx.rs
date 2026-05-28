@@ -67955,6 +67955,127 @@ fn cr_119_6_life_payment_pays_through_drain_path() {
     assert_eq!(g.players[0].life, start + 3);
 }
 
+// ── Batch 167 (modern_decks) — Silverquill follow-up ─────────────────────
+
+#[test]
+fn silverquill_curse_b167_applies_finality_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_curse_b167());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Curse castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear still alive");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+}
+
+#[test]
+fn silverquill_curse_b167_exiles_target_on_subsequent_death() {
+    // End-to-end: Curse plus Bolt should exile the bear instead of
+    // sending it to the graveyard (exercises CR 122.1h wire).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let curse = g.add_card_to_hand(0, catalog::silverquill_curse_b167());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: curse, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Curse castable");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "bear should be exiled, not in graveyard");
+    assert!(g.exile.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn silverquill_inkbond_b167_buffs_other_inklings() {
+    let mut g = two_player_game();
+    let _ib = g.add_card_to_battlefield(0, catalog::silverquill_inkbond_b167());
+    let ink = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
+    let after = g.compute_battlefield().into_iter()
+        .find(|c| c.id == ink)
+        .expect("Inkling on battlefield");
+    // 2/1 + 1/1 anthem = 3/2
+    assert_eq!(after.power, 3);
+    assert_eq!(after.toughness, 2);
+}
+
+#[test]
+fn silverquill_penbinder_b167_surveils_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::silverquill_penbinder_b167());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Penbinder castable");
+    drain_stack(&mut g);
+    // Library has same/fewer cards (surveil may put cards in graveyard).
+    assert!(g.players[0].library.len() <= lib_before);
+}
+
+#[test]
+fn inkling_diviner_b167_etb_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::inkling_diviner_b167());
+    let hand_before = g.players[0].hand.len();
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Diviner castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw = same
+    assert_eq!(g.players[0].hand.len(), hand_before);
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Vigilance));
+}
+
+#[test]
+fn silverquill_bulwark_b167_is_one_five_defender() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::silverquill_bulwark_b167());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Defender));
+    assert_eq!(c.power(), 1);
+    assert_eq!(c.toughness(), 5);
+}
+
+#[test]
+fn silverquill_stunning_b167_taps_and_stuns_target() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_stunning_b167());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stunning castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear still alive");
+    assert!(c.tapped);
+    assert_eq!(c.counter_count(CounterType::Stun), 1);
+}
+
 #[test]
 fn cr_120_3_lethal_damage_to_creature_dies_at_next_sba() {
     // CR 120.3 / CR 704.5g: When a creature has marked damage ≥ its

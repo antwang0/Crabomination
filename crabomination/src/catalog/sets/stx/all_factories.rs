@@ -3383,6 +3383,13 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_sumcaller_b166,
         super::quandrix::quandrix_mathstrider_b166,
         super::quandrix::quandrix_splitstone_b166,
+        // ── batch 167 (modern_decks): silverquill follow-up ──
+        super::silverquill::silverquill_curse_b167,
+        super::silverquill::silverquill_inkbond_b167,
+        super::silverquill::silverquill_penbinder_b167,
+        super::silverquill::inkling_diviner_b167,
+        super::silverquill::silverquill_bulwark_b167,
+        super::silverquill::silverquill_stunning_b167,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,
