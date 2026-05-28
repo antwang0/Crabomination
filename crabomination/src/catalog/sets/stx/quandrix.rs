@@ -191,19 +191,43 @@ pub fn decisive_denial() -> CardDefinition {
 
 // ── Quandrix Command ───────────────────────────────────────────────────────
 
-/// Quandrix Command — {2}{G}{U} Instant. Choose two among 4 modes.
-/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+/// Quandrix Command — {1}{G}{U} Instant. Choose two among 4 modes.
+///
+/// Approximation: AutoDecider picks +1/+1 counters (×2) + mill 2.
+/// "Choose two of four" is collapsed to Seq of the two printed
+/// auto-default modes (matches gameplay outcome when controller
+/// picks counters + mill).
 pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",
-        cost: cost(&[generic(2), g(), u()]),
+        cost: cost(&[generic(1), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
+            },
+            Effect::Mill {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+#[allow(dead_code)]
+fn _quandrix_command_alt_modes() {
+    let _ = Effect::ChooseMode(vec![
             Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature),
                 kind: CounterType::PlusOnePlusOne,
@@ -227,17 +251,7 @@ pub fn quandrix_command() -> CardDefinition {
                     ),
                 ),
             },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        ..Default::default()
-    }
+        ]);
 }
 
 // ── Fractal Summoning ──────────────────────────────────────────────────────
@@ -800,8 +814,10 @@ pub fn quandrix_scrycharmer() -> CardDefinition {
 // ── Dragonsguard Elite ─────────────────────────────────────────────────────
 
 /// Dragonsguard Elite — {1}{G}, 2/2 Human Druid. Magecraft: put a +1/+1
-/// counter on this creature.
+/// counter on this creature. `{3}{G}: This creature gets +X/+X until
+/// end of turn, where X is its power.`
 pub fn dragonsguard_elite() -> CardDefinition {
+    use crate::effect::{ActivatedAbility, Duration};
     CardDefinition {
         name: "Dragonsguard Elite",
         cost: cost(&[generic(1), g()]),
@@ -815,7 +831,26 @@ pub fn dragonsguard_elite() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(3), g()]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::PowerOf(Box::new(Selector::This)),
+                toughness: Value::PowerOf(Box::new(Selector::This)),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -912,24 +947,6 @@ pub fn quandrix_multibinding() -> CardDefinition {
         cost: cost(&[generic(2), g(), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        ..Default::default()
-    }
-}
-
-// ── Eureka Moment ──────────────────────────────────────────────────────────
-
-/// Eureka Moment — {2}{G}{U} Instant. Draw two cards. You may put a land
-/// from your hand onto the battlefield tapped.
-pub fn eureka_moment() -> CardDefinition {
-    CardDefinition {
-        name: "Eureka Moment",
-        cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
                 what: target_filtered(SelectionRequirement::Creature
@@ -945,6 +962,46 @@ pub fn eureka_moment() -> CardDefinition {
                     what: Box::new(Selector::Target(0)),
                     kind: CounterType::PlusOnePlusOne,
                 },
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Eureka Moment ──────────────────────────────────────────────────────────
+
+/// Eureka Moment — {2}{G}{U} Instant. Draw two cards. You may put a land
+/// from your hand onto the battlefield tapped.
+pub fn eureka_moment() -> CardDefinition {
+    use crate::card::Zone;
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Eureka Moment",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+            Effect::MayDo {
+                description: "Put a land from your hand onto the battlefield tapped".to_string(),
+                body: Box::new(Effect::Move {
+                    what: Selector::one_of(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Hand,
+                        filter: SelectionRequirement::Land,
+                    }),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::You,
+                        tapped: true,
+                    },
+                }),
             },
         ]),
         activated_abilities: no_abilities(),

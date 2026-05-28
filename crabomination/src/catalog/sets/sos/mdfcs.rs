@@ -1172,10 +1172,13 @@ pub fn grave_researcher() -> CardDefinition {
 
 /// Strife Scholar // Awaken the Ages — {2}{R} // {5}{R}.
 ///
-/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — deal 6 damage
-/// to target creature (Awaken the Ages is a high-cost red removal spell).
+/// Front: 3/2 Orc Sorcerer with Ward {1}. Back: sorcery — "Awaken the
+/// Ages deals 5 damage to target creature or planeswalker. Then exile
+/// Awaken the Ages." (exile-on-resolve flag matches the printed
+/// rider; the engine routes the resolved spell to exile instead of
+/// the graveyard.)
 pub fn strife_scholar() -> CardDefinition {
-    let back = spell_back(
+    let mut back = spell_back(
         "Awaken the Ages",
         cost(&[generic(5), r()]),
         CardType::Sorcery,
@@ -1187,6 +1190,7 @@ pub fn strife_scholar() -> CardDefinition {
             amount: Value::Const(5),
         },
     );
+    back.exile_on_resolve = true;
     vanilla_front(
         "Strife Scholar",
         cost(&[generic(2), r()]),

@@ -20668,8 +20668,11 @@ pub fn silverquill_deathmark_b165() -> CardDefinition {
 // ── Silverquill Command ────────────────────────────────────────────────────
 
 /// Silverquill Command — {2}{W}{B} Sorcery. Choose two among 4 modes.
-/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+///
+/// Approximation: AutoDecider picks drain 2 + +1/+1 counters (×2).
+/// Choose-two collapsed to Seq of the two auto-default modes.
 pub fn silverquill_command() -> CardDefinition {
+    use crate::card::CounterType;
     CardDefinition {
         name: "Silverquill Command",
         cost: cost(&[generic(2), w(), b()]),
@@ -20679,35 +20682,16 @@ pub fn silverquill_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
-                ),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
             },
-            Effect::Seq(vec![
-                Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-                Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
-            ]),
-            Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    power: Value::Const(3),
-                    toughness: Value::Const(3),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::Target(0),
-                    keyword: Keyword::Indestructible,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
-            Effect::Sacrifice {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                count: Value::Const(1),
-                filter: SelectionRequirement::Creature,
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(2),
             },
         ]),
         activated_abilities: no_abilities(),
@@ -20825,12 +20809,13 @@ pub fn fracture() -> CardDefinition {
 
 // ── Humiliate ──────────────────────────────────────────────────────────────
 
-/// Humiliate — {W}{B} Sorcery. Opponent discards nonland + put a +1/+1
-/// counter on a creature you control.
+/// Humiliate — {1}{W}{B} Sorcery. Opponent discards a nonland; you
+/// drain 1 (gain 1 life, opp loses 1 life). Approximation of "Reveal
+/// hand, you choose, opp discards" — collapsed to auto-pick a nonland.
 pub fn humiliate() -> CardDefinition {
     CardDefinition {
         name: "Humiliate",
-        cost: cost(&[w(), b()]),
+        cost: cost(&[generic(1), w(), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -20843,11 +20828,9 @@ pub fn humiliate() -> CardDefinition {
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
             },
-            Effect::AddCounter {
-                what: target_filtered(
-                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
-                ),
-                kind: CounterType::PlusOnePlusOne,
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
                 amount: Value::Const(1),
             },
         ]),
@@ -20897,8 +20880,9 @@ pub fn clever_lumimancer() -> CardDefinition {
 
 /// Silverquill Apprentice — {W}{B}, 2/1 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// each opponent loses 1 life and you gain 1 life."
+/// put a +1/+1 counter on target creature you control."
 pub fn silverquill_apprentice() -> CardDefinition {
+    use crate::card::CounterType;
     CardDefinition {
         name: "Silverquill Apprentice",
         cost: cost(&[w(), b()]),
@@ -20913,9 +20897,11 @@ pub fn silverquill_apprentice() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::Drain {
-            from: Selector::Player(PlayerRef::EachOpponent),
-            to: Selector::You,
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
         static_abilities: vec![],

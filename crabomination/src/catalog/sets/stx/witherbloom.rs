@@ -382,7 +382,9 @@ pub fn witherbloom_vinemaster() -> CardDefinition {
 // ── Witherbloom Command ─────────────────────────────────────────────────
 
 /// Witherbloom Command — {2}{B}{G} Sorcery. Choose two among 4 modes.
-/// 🟡 Collapsed to single-mode ChooseMode (printed: choose two).
+///
+/// Approximation: AutoDecider picks mill 4 + drain 2. Choose-two
+/// collapsed to Seq of the two auto-default modes.
 pub fn witherbloom_command() -> CardDefinition {
     CardDefinition {
         name: "Witherbloom Command",
@@ -393,31 +395,17 @@ pub fn witherbloom_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: Return target creature or PW card from gy to hand.
-            Effect::Move {
-                what: target_filtered(
-                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-                ),
-                to: ZoneDest::Hand(PlayerRef::You),
-            },
-            // Mode 1: Destroy target noncreature, nonland permanent with MV ≤ 3.
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Noncreature
-                        .and(SelectionRequirement::Nonland)
-                        .and(SelectionRequirement::ManaValueAtMost(3)),
-                ),
-            },
-            // Mode 2: Target player mills 3 cards.
+        effect: Effect::Seq(vec![
+            // Mode 0: mill 4 (real card is 4-mill).
             Effect::Mill {
                 who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::Const(3),
+                amount: Value::Const(4),
             },
-            // Mode 3: You gain 3 life.
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(3),
+            // Mode 2: drain 2 (each opp loses 2, you gain 2).
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(2),
             },
         ]),
         activated_abilities: no_abilities(),

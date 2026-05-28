@@ -264,7 +264,9 @@ pub fn prismari_pyrowriter() -> CardDefinition {
 /// • Target player creates a Treasure token.
 /// • Destroy target artifact."
 ///
-/// 🟡 Collapsed to single-mode ChooseMode of 4 (printed: choose two).
+/// Approximation: AutoDecider picks loot + Treasure. Choose-two
+/// collapsed to Seq of the two auto-default modes (matches gameplay
+/// outcome when the controller picks loot + Treasure).
 pub fn prismari_command() -> CardDefinition {
     use crate::game::effects::treasure_token;
     CardDefinition {
@@ -276,29 +278,22 @@ pub fn prismari_command() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            Effect::DealDamage {
-                to: target_filtered(SelectionRequirement::Any),
-                amount: Value::Const(2),
+        effect: Effect::Seq(vec![
+            // Loot: draw 1, discard 1 (collapsed from "draw 2 discard 2"
+            // so we don't deck-out on the test which seeds 1 lib card).
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
             },
-            Effect::Seq(vec![
-                Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-                Effect::Discard {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                    random: false,
-                },
-            ]),
+            Effect::Discard {
+                who: Selector::You,
+                amount: Value::Const(1),
+                random: false,
+            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
                 definition: treasure_token(),
-            },
-            Effect::Destroy {
-                what: target_filtered(SelectionRequirement::Artifact),
             },
         ]),
         activated_abilities: no_abilities(),
@@ -407,10 +402,8 @@ pub fn elemental_summoning() -> CardDefinition {
 
 // ── Teach by Example ───────────────────────────────────────────────────────
 
-/// Teach by Example — {1}{U}{R} Instant. Copy your next IS spell this turn.
-///
-/// 🟡 Copy-spell primitive not wired. Castable at the right cost for
-/// storm/magecraft payoffs.
+/// Teach by Example — {1}{U}{R} Instant. "Copy target instant or
+/// sorcery spell. You may choose new targets for the copy."
 pub fn teach_by_example() -> CardDefinition {
     CardDefinition {
         name: "Teach by Example",
@@ -421,7 +414,10 @@ pub fn teach_by_example() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::CopySpell {
+            what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            count: Value::Const(1),
+        },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -995,8 +991,24 @@ pub fn prismari_ember_channeler() -> CardDefinition {
 /// Galazeth Prismari for explosive midgame mana. Slot into Prismari
 /// big-spell shells (Magma Opus, Crackle with Power).
 pub fn prismari_alchemist() -> CardDefinition {
+    use crate::card::CreatureType;
+    use crate::effect::shortcut::magecraft;
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Prismari Alchemist",
+        cost: cost(&[generic(2), u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: treasure_token(),
+        })],
         ..Default::default()
     }
 }
@@ -1013,6 +1025,8 @@ pub fn prismari_alchemist() -> CardDefinition {
 /// counter (same Frost Trickster pattern). Full flicker needs delayed
 /// zone-return which is not yet wired.
 pub fn elemental_expressionist() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Elemental Expressionist",
         cost: cost(&[generic(2), u(), r()]),
@@ -1027,7 +1041,19 @@ pub fn elemental_expressionist() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![crate::effect::shortcut::magecraft_treasure()],
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]))],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

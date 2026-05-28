@@ -166,16 +166,16 @@ pub fn tend_the_pests() -> CardDefinition {
 
 // ── Spirit Summoning (Lesson) ──────────────────────────────────────────────
 
-/// Spirit Summoning — {1}{R}{W} Sorcery — Lesson. "Create a 3/2 red and
-/// white Spirit creature token."
+/// Spirit Summoning — {3}{W} Sorcery — Lesson. "Create a 3/2 white
+/// Spirit creature token with lifelink."
 pub fn spirit_summoning() -> CardDefinition {
     let spirit = TokenDefinition {
         name: "Spirit".to_string(),
         power: 3,
         toughness: 2,
-        keywords: vec![],
+        keywords: vec![Keyword::Lifelink],
         card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
+        colors: vec![Color::White],
         supertypes: vec![],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -186,7 +186,7 @@ pub fn spirit_summoning() -> CardDefinition {
     };
     CardDefinition {
         name: "Spirit Summoning",
-        cost: cost(&[generic(1), r(), w()]),
+        cost: cost(&[generic(3), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {

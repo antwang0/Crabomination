@@ -3012,7 +3012,7 @@ pub fn descendant_of_storms() -> CardDefinition {
 pub fn elite_spellbinder() -> CardDefinition {
     CardDefinition {
         name: "Elite Spellbinder",
-        cost: cost(&[generic(1), w(), w()]),
+        cost: cost(&[generic(1), w(), b()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],

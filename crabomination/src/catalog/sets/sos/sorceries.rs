@@ -2661,9 +2661,11 @@ pub fn molten_note() -> CardDefinition {
 /// spell. Each player sacrifices a creature of their choice. Each opponent
 /// loses 1 life and you gain 1 life."
 ///
-/// 🟡 The "copy this spell" rider is omitted (no copy-spell primitive).
-/// The main effect (each player sacs a creature + drain 1) is wired.
+/// ✅ On-cast self-trigger fires `MayDo(CopySpell { Self })` when the
+/// caster controls a creature (gated via `Predicate::SelectorExists`).
 pub fn social_snub() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::Predicate;
     use crate::mana::{w, b};
     CardDefinition {
         name: "Social Snub",
@@ -2687,7 +2689,24 @@ pub fn social_snub() -> CardDefinition {
             },
         ]),
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
+        // On-cast self-trigger. Filter ensures the caster controls a
+        // creature at cast time (gate from the printed Oracle).
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource)
+                .with_filter(Predicate::SelectorExists(
+                    Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                )),
+            effect: Effect::MayDo {
+                description: "Copy Social Snub?".to_string(),
+                body: Box::new(Effect::CopySpell {
+                    what: Selector::TriggerSource,
+                    count: Value::Const(1),
+                }),
+            },
+        }],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -2731,8 +2750,8 @@ pub fn fix_whats_broken() -> CardDefinition {
                 what: Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: Zone::Graveyard,
-                    filter: SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasCardType(CardType::Artifact))
+                    filter: (SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasCardType(CardType::Artifact)))
                         .and(SelectionRequirement::ManaValueAtMost(2)),
                 },
                 to: ZoneDest::Battlefield {

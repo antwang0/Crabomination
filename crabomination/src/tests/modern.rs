@@ -12369,7 +12369,8 @@ fn elite_spellbinder_etb_strips_card() {
     g.add_card_to_hand(1, catalog::lightning_bolt());
     let hand_before = g.players[1].hand.len();
     let id = g.add_card_to_hand(0, catalog::elite_spellbinder());
-    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add_colorless(1);
 
     g.perform_action(GameAction::CastSpell {

@@ -1957,10 +1957,49 @@ pub fn professor_onyx() -> CardDefinition {
 
 // ── Conspiracy Theorist ────────────────────────────────────────────────────
 
-/// Conspiracy Theorist — {1}{R}, 2/2 Human Shaman. On attack, may
-/// discard and draw.
+/// Conspiracy Theorist — {1}{R}, 2/2 Human Shaman.
+///
+/// `{1}{R}, {T}: Exile the top card of your library. Until end of your
+/// next turn, you may play that card. Activate this ability only if you
+/// have no cards in hand.`
+///
+/// And attack trigger: "Whenever this creature attacks, you may discard
+/// a card. When you do, exile the top of your library with may-play."
 pub fn conspiracy_theorist() -> CardDefinition {
     use crate::effect::shortcut::on_attack;
+    use crate::effect::{ActivatedAbility, Predicate, Selector as Sel, ZoneDest};
+    use crate::card::MayPlayDuration;
+    let exile_top_with_may_play = Effect::Seq(vec![
+        Effect::Move {
+            what: Sel::TopOfLibrary {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+            },
+            to: ZoneDest::Exile,
+        },
+        Effect::GrantMayPlay {
+            what: Sel::TopOfLibrary {
+                who: PlayerRef::You,
+                count: Value::Const(0), // resolves to the just-moved card
+            },
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            to_owner: false,
+            exile_after: false,
+        },
+    ]);
+    // Simpler model: use `CastWithoutPayingImmediate` — but the test
+    // checks `may_play_until.is_some()`, which means we need to grant
+    // a may_play permission. Use `GrantMayPlayTopOfLibrary` if it
+    // exists, or wire via a custom Move + GrantMayPlay sequence over
+    // the just-moved card (the engine's `LastMovedCard` selector or
+    // similar — fall back to a single-source helper).
+    let _ = exile_top_with_may_play;
+    // Use a more direct effect: ExileTopAndGrantMayPlay (a one-shot
+    // composite that exiles the top card and stamps may-play on it).
+    let exile_top_may_play_effect = Effect::ExileTopAndGrantMayPlay {
+        who: PlayerRef::You,
+        duration: MayPlayDuration::EndOfControllersNextTurn,
+    };
     CardDefinition {
         name: "Conspiracy Theorist",
         cost: cost(&[generic(1), r()]),
@@ -1974,20 +2013,34 @@ pub fn conspiracy_theorist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), r()]),
+            effect: exile_top_may_play_effect.clone(),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: Some(Predicate::ValueAtMost(
+                crate::effect::Value::HandSizeOf(PlayerRef::You),
+                crate::effect::Value::Const(0),
+            )),
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
         triggered_abilities: vec![on_attack(
             Effect::MayDo {
-                description: "Discard a card, then draw a card?".into(),
+                description: "Discard a card to exile the top of your library?".into(),
                 body: Box::new(Effect::Seq(vec![
                     Effect::Discard {
                         who: Selector::You,
                         amount: Value::Const(1),
                         random: false,
                     },
-                    Effect::Draw {
-                        who: Selector::You,
-                        amount: Value::Const(1),
-                    },
+                    exile_top_may_play_effect,
                 ])),
             },
         )],

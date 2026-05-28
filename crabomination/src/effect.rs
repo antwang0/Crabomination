@@ -1267,6 +1267,18 @@ pub enum Effect {
     /// continues each main phase.
     CastFreeParadigmCopy,
 
+    /// Exile the top card of `who`'s library and stamp a may-play
+    /// permission on it for `duration`. Used by Conspiracy Theorist,
+    /// Elemental Mascot, Ark of Hunger, Archaic's Agony and similar
+    /// "exile top of library; until [end of next turn / end of turn] you
+    /// may play that card" effects. A single-shot composite that
+    /// combines `Move(TopOfLibrary → Exile)` + `MayPlayPermission`
+    /// stamp atomically so the may-play targets the just-moved card.
+    ExileTopAndGrantMayPlay {
+        who: PlayerRef,
+        duration: crate::card::MayPlayDuration,
+    },
+
     // ── Sacrifice ────────────────────────────────────────────────────────────
     Sacrifice { who: Selector, count: Value, filter: SelectionRequirement },
     /// "Sacrifice a [filter] with the greatest mana value" picker.
@@ -1710,6 +1722,7 @@ impl Effect {
                 value_has_target(power) || value_has_target(toughness)
             }
             Effect::LifeGainLockThisTurn { who } => sel_has_target(who),
+            Effect::ExileTopAndGrantMayPlay { .. } => false,
         }
     }
 

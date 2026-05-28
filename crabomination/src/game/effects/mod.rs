@@ -2614,6 +2614,28 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileTopAndGrantMayPlay { who, duration } => {
+                // Atomic helper: move the top card of `who`'s library to
+                // exile and stamp `may_play_until` on it in one step.
+                let p = self.resolve_player(who, ctx).unwrap_or(ctx.controller);
+                let top_id = self.players[p].library.last().map(|c| c.id);
+                let Some(top_id) = top_id else { return Ok(()); };
+                let mut local_events = Vec::new();
+                self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
+                events.extend(local_events);
+                // Stamp the may-play permission.
+                let granted_turn = self.turn_number;
+                if let Some(card) = self.find_card_anywhere_mut(top_id) {
+                    card.may_play_until = Some(crate::card::MayPlayPermission {
+                        player: ctx.controller,
+                        granted_turn,
+                        duration: *duration,
+                        exile_after: false,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GrantMayPlay {
                 what,
                 duration,

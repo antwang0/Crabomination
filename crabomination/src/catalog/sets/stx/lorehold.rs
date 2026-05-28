@@ -34,7 +34,7 @@ pub fn lorehold_spirit_token() -> TokenDefinition {
         name: "Spirit".into(),
         power: 2,
         toughness: 2,
-        keywords: vec![],
+        keywords: vec![Keyword::Flying],
         card_types: vec![CardType::Creature],
         colors: vec![Color::Red, Color::White],
         supertypes: vec![],
@@ -295,7 +295,7 @@ pub fn sparring_regimen() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::Attacks, EventScope::YourControl),
+                event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
                 effect: Effect::AddCounter {
                     what: Selector::TriggerSource,
                     kind: CounterType::PlusOnePlusOne,
@@ -18990,11 +18990,11 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
 /// Lorehold Spiritforge (b164) — {3}{W} Sorcery.
 /// Create two 1/1 R/W Spirit creature tokens.
 pub fn lorehold_spiritforge_b164() -> CardDefinition {
-    
-    let _ = mint_lorehold_spirits;
     CardDefinition {
         name: "Lorehold Spiritforge (b164)",
         cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: mint_lorehold_spirits(2),
         ..Default::default()
     }
 }
@@ -19024,16 +19024,30 @@ pub fn lorehold_command() -> CardDefinition {
         activated_abilities: vec![],
         triggered_abilities: vec![],
     };
+    // Real Oracle: "Choose two — / • Lorehold Command deals 4 damage to
+    // target player or planeswalker. / • Target player creates two 2/2
+    // white and red Spirit creature tokens with flying. / …"
+    //
+    // Approximation: AutoDecider picks the printed default ("4 damage +
+    // two flying Spirits"). Modal-choose-two is collapsed to always
+    // applying both modes (Seq), which matches the gameplay outcome
+    // when the controller selects those two modes.
     CardDefinition {
         name: "Lorehold Command",
-        cost: cost(&[generic(3), r(), w()]),
+        cost: cost(&[generic(2), r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: mint_lorehold_spirits(2),
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: Selector::Target(0),
+                amount: Value::Const(4),
+            },
+            mint_lorehold_spirits(2),
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19190,6 +19204,20 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralward (b164)",
         cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Lifelink,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -19241,7 +19269,6 @@ pub fn academic_dispute() -> CardDefinition {
 /// Lorehold Spiritcaller (b164) — {3}{R}{W} 2/3 Spirit Wizard.
 /// Magecraft mint a 2/2 R/W Spirit token (lorehold spirit).
 pub fn lorehold_spiritcaller_b164() -> CardDefinition {
-    
     CardDefinition {
         name: "Lorehold Spiritcaller (b164)",
         cost: cost(&[generic(3), r(), w()]),
@@ -19251,6 +19278,9 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
             ..Default::default()
         },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![magecraft(mint_lorehold_spirits(1))],
         ..Default::default()
     }
 }
@@ -19330,6 +19360,17 @@ pub fn lorehold_sunweave_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sunweave (b165)",
         cost: cost(&[generic(3), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(5),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -19408,6 +19449,19 @@ pub fn lorehold_fireshield_b165() -> CardDefinition {
         cost: cost(&[r(), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(2),
+                toughness: Value::Const(2),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::FirstStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -19460,22 +19514,37 @@ pub fn rip_apart() -> CardDefinition {
 /// Lorehold Bonepreacher (b165) — {3}{R}{W} 4/3 Spirit Cleric Flying.
 /// ETB: gain 3 life.
 pub fn lorehold_bonepreacher_b165() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     CardDefinition {
         name: "Lorehold Bonepreacher (b165)",
         cost: cost(&[generic(3), r(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(3),
+            },
+        }],
         ..Default::default()
     }
 }
 
 // ── Returned Pastcaller ───────────────────────────────────────────────────
 
-/// Returned Pastcaller — {4}{R}{W}, 4/4 Spirit Cleric. Flying.
+/// Returned Pastcaller — {4}{W}, 4/4 Spirit Cleric. Flying.
 /// ETB: "Return target instant or sorcery card from your graveyard to
 /// your hand." Same shape as Pillardrop Rescuer.
 pub fn returned_pastcaller() -> CardDefinition {
     CardDefinition {
         name: "Returned Pastcaller",
-        cost: cost(&[generic(4), r(), w()]),
+        cost: cost(&[generic(4), w()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

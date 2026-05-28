@@ -1427,13 +1427,12 @@ fn spirit_summoning_creates_three_two_spirit_token() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spirit_summoning());
 
-    g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Spirit Summoning castable for {1}{R}{W}");
+    .expect("Spirit Summoning castable for {3}{W}");
     drain_stack(&mut g);
 
     let spirits: Vec<_> = g.battlefield.iter()
@@ -1448,23 +1447,23 @@ fn spirit_summoning_creates_three_two_spirit_token() {
 // ── Silverquill Apprentice ─────────────────────────────────────────────────
 
 #[test]
-fn silverquill_apprentice_drains_on_instant_cast() {
+fn silverquill_apprentice_adds_counter_on_instant_cast() {
+    // Real STX Silverquill Apprentice: Magecraft puts a +1/+1 counter
+    // on target creature you control. (Was previously drain in our
+    // catalog; corrected to match the printed Oracle.)
     let mut g = two_player_game();
     let _app = g.add_card_to_battlefield(0, catalog::silverquill_apprentice());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
-    let p0_life = g.players[0].life;
-    let p1_life = g.players[1].life;
     g.perform_action(GameAction::CastSpell {
         card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);
-    // Magecraft drain: P0 +1 life, P1 -1 life (on top of Bolt's 3 damage).
-    assert_eq!(g.players[0].life, p0_life + 1,
-        "Silverquill Apprentice should drain +1 life to controller");
-    assert_eq!(g.players[1].life, p1_life - 3 - 1,
-        "Opponent loses 3 (Bolt) + 1 (Magecraft drain)");
+    let bear_perm = g.battlefield.iter().find(|c| c.id == bear).expect("bear alive");
+    assert!(bear_perm.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "Bear should get a +1/+1 counter from Magecraft");
 }
 
 // ── Shadewing Laureate ────────────────────────────────────────────────────
@@ -3904,31 +3903,29 @@ fn environmental_sciences_gains_life_even_if_search_declined() {
         "Life still bumps even when AutoDecider declines the tutor");
 }
 
-/// Introduction to Annihilation destroys a nonland permanent. The Scry 2
-/// rider is fired against the targeted permanent's controller (a no-op
-/// when the library is empty); we focus on the destroy half.
+/// Introduction to Annihilation exiles a nonland permanent (real card
+/// is `{5}` colorless Lesson, exile-not-destroy).
 #[test]
 fn introduction_to_annihilation_destroys_nonland_permanent() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
 
     let id = g.add_card_to_hand(0, catalog::introduction_to_annihilation());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None, x_value: None,
     })
-    .expect("Introduction to Annihilation castable for {3}{W}");
+    .expect("Introduction to Annihilation castable for {5}");
     drain_stack(&mut g);
 
-    // Bear is destroyed.
+    // Bear is exiled (real card is "Exile target nonland permanent").
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Bear should be destroyed");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
-        "Bear should be in P1's graveyard");
+        "Bear should leave the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "Bear should be in exile (Introduction to Annihilation exiles)");
 }
 
 /// Introduction to Prophecy scries 3 and draws a card. We seed enough
