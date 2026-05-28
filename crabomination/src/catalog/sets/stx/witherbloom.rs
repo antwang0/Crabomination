@@ -23140,6 +23140,40 @@ pub fn witherbloom_bonemeal_b201() -> CardDefinition {
     }
 }
 
+/// Witherbloom Connectdrain (b201) — {2}{B} 2/2 Vampire Rogue Menace.
+/// Whenever Connectdrain deals combat damage to a player, drain 1.
+/// Exercises the new `on_combat_damage_to_player_drain(amount)` helper
+/// landed alongside this card.
+pub fn witherbloom_connectdrain_b201() -> CardDefinition {
+    use crate::effect::shortcut::on_combat_damage_to_player_drain;
+    CardDefinition {
+        name: "Witherbloom Connectdrain (b201)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Rogue],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Menace],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_combat_damage_to_player_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Witherbloom Reaper (b201) — {2}{B} 2/3 Vampire Warlock.
 /// Dies-drain (each opp loses 1, you gain 1).
 pub fn witherbloom_reaper_b201() -> CardDefinition {

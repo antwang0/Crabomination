@@ -4263,4 +4263,46 @@ pub mod shortcut {
             },
         ]))
     }
+
+    /// On-Combat-Damage-To-Player + Gain Life shortcut: "Whenever this
+    /// creature deals combat damage to a player, you gain `amount`
+    /// life." Inkrise Lifedrainer template. Wraps the standard
+    /// `EventKind::DealsCombatDamageToPlayer / SelfSource` event spec
+    /// with a `GainLife { who: You }` body.
+    ///
+    /// Push (claude/modern_decks batch 201): collapses the recurring
+    /// inline "DealsCombatDamageToPlayer → GainLife" pattern across
+    /// Inkrise-template cards. Keeps the call site to one line and
+    /// gives the spec stability across refactors.
+    pub fn on_combat_damage_to_player_gain_life(amount: i32) -> TriggeredAbility {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(amount),
+            },
+        }
+    }
+
+    /// On-Combat-Damage-To-Player + Drain shortcut: "Whenever this
+    /// creature deals combat damage to a player, each opponent loses
+    /// `amount` life and you gain `amount` life." Asymmetric drain-
+    /// on-connect — same shape as `on_combat_damage_to_player_gain_life`
+    /// but with a drain body instead of pure gain.
+    ///
+    /// Push (claude/modern_decks batch 201): companion to
+    /// `on_combat_damage_to_player_gain_life`. Used by Witherbloom
+    /// connect-drain cards.
+    pub fn on_combat_damage_to_player_drain(amount: i32) -> TriggeredAbility {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+        }
+    }
 }

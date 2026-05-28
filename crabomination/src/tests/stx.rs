@@ -76299,6 +76299,62 @@ fn witherbloom_reaper_b201_dies_drains_one() {
 }
 
 #[test]
+fn witherbloom_connectdrain_b201_drains_on_combat_damage_to_player() {
+    let mut g = two_player_game();
+    let cd = g.add_card_to_battlefield(0, catalog::witherbloom_connectdrain_b201());
+    // Untap + clear summoning sickness so the creature can attack.
+    {
+        let c: &mut crate::card::CardInstance = g.battlefield.iter_mut().find(|c| c.id == cd).unwrap();
+        c.summoning_sick = false;
+        c.tapped = false;
+    }
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cd,
+        target: AttackTarget::Player(1),
+    }])).expect("attackers");
+    // Advance through to combat damage.
+    let mut iters = 0;
+    while g.step != TurnStep::EndCombat && iters < 50 {
+        g.perform_action(GameAction::PassPriority).ok();
+        iters += 1;
+    }
+    drain_stack(&mut g);
+    // Connectdrain (2/2 menace) hits player → 2 damage + drain 1.
+    // p1 loses 3 life (2 combat + 1 drain), p0 gains 1.
+    assert_eq!(g.players[1].life, 20 - 2 - 1, "combat + drain");
+    assert_eq!(g.players[0].life, 20 + 1, "drain 1 to caster");
+}
+
+/// Lock-in test for the new `on_combat_damage_to_player_drain(amount)`
+/// helper. Verifies the helper produces the canonical
+/// DealsCombatDamageToPlayer / SelfSource event spec with a Drain
+/// body so future refactors can't accidentally collapse the wiring.
+#[test]
+fn shortcut_on_combat_damage_to_player_drain_uses_canonical_spec() {
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::shortcut::on_combat_damage_to_player_drain;
+    let ta = on_combat_damage_to_player_drain(2);
+    assert_eq!(ta.event.kind, EventKind::DealsCombatDamageToPlayer);
+    assert!(matches!(ta.event.scope, EventScope::SelfSource));
+    // Body must be a Drain, not GainLife (asymmetric vs symmetric).
+    assert!(matches!(ta.effect, Effect::Drain { .. }));
+}
+
+/// Companion test for the new `on_combat_damage_to_player_gain_life(amount)`
+/// helper. Verifies it produces a GainLife body (asymmetric, you-gain
+/// only, no opp-loses half).
+#[test]
+fn shortcut_on_combat_damage_to_player_gain_life_uses_gain_body() {
+    use crate::card::{EventKind, EventScope};
+    use crate::effect::shortcut::on_combat_damage_to_player_gain_life;
+    let ta = on_combat_damage_to_player_gain_life(3);
+    assert_eq!(ta.event.kind, EventKind::DealsCombatDamageToPlayer);
+    assert!(matches!(ta.event.scope, EventScope::SelfSource));
+    assert!(matches!(ta.effect, Effect::GainLife { .. }));
+}
+
+#[test]
 fn lorehold_vanguard_b201_pumps_on_attack() {
     let def = catalog::lorehold_vanguard_b201();
     assert!(def.keywords.contains(&Keyword::Vigilance));

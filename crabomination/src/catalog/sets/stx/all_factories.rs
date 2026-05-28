@@ -3932,6 +3932,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_skybinder_b201,
         super::silverquill::silverquill_whitewash_b201,
         super::witherbloom::witherbloom_bonemeal_b201,
+        super::witherbloom::witherbloom_connectdrain_b201,
         super::witherbloom::witherbloom_reaper_b201,
         super::lorehold::lorehold_vanguard_b201,
         super::lorehold::lorehold_wildfire_b201,
