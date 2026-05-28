@@ -3966,5 +3966,20 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_augur_b202,
         super::silverquill::silverquill_drainscholar_ii_b202,
         super::silverquill::silverquill_wardrune_b202,
+        // ── batch 202: Witherbloom expansion ──
+        super::witherbloom::witherbloom_pestcaller_b202,
+        super::witherbloom::witherbloom_sapdraw_b202,
+        super::witherbloom::pest_devourer_b202,
+        super::witherbloom::witherbloom_vinepath_b202,
+        super::witherbloom::witherbloom_mossblossom_b202,
+        super::witherbloom::pestshell_crusader_b202,
+        super::witherbloom::witherbloom_spellbloom_b202,
+        super::witherbloom::witherbloom_famine_b202,
+        super::witherbloom::pest_howler_b202,
+        super::witherbloom::witherbloom_cultivator_b202,
+        super::witherbloom::witherbloom_decompose_b202,
+        super::witherbloom::witherbloom_briarcaller_b202,
+        super::witherbloom::witherbloom_rotcaller_b202,
+        super::witherbloom::witherbloom_verdance_b202,
     ]
 }
