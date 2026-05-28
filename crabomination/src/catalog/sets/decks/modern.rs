@@ -11452,3 +11452,110 @@ pub fn robber_of_the_rich() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Push XXIV: a handful of vanilla / near-vanilla bodies ─────────────────
+
+/// Phyrexian Revoker — {2} Artifact Creature — Phyrexian Construct 2/1.
+/// Real Oracle: "As Phyrexian Revoker enters the battlefield, choose
+/// the name of a nonland card. / Activated abilities of sources with
+/// the chosen name can't be activated unless they're mana abilities."
+///
+/// 🟡 Body-only stub: 2/1 colorless artifact creature. The
+/// choose-a-name lockout requires a name-prompt primitive + a per-
+/// source-name ability filter, neither of which exists yet. The
+/// vanilla body still slots into cube as a 2-drop disruption shell.
+pub fn phyrexian_revoker() -> CardDefinition {
+    CardDefinition {
+        name: "Phyrexian Revoker",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        ..Default::default()
+    }
+}
+
+/// Solemn Simulacrum — {4} Artifact Creature — Golem 2/2.
+/// "When Solemn Simulacrum enters, you may search your library for a
+/// basic land card, put it onto the battlefield tapped, then shuffle.
+/// / When Solemn Simulacrum dies, you may draw a card."
+pub fn solemn_simulacrum() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Selector, ZoneDest};
+    CardDefinition {
+        name: "Solemn Simulacrum",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Golem],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Search your library for a basic land card?".to_string(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: crate::card::SelectionRequirement::IsBasicLand,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: true,
+                        },
+                    }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::MayDo {
+                    description: "Draw a card?".to_string(),
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: crate::effect::Value::Const(1),
+                    }),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Inquisitive Puppet — {1} Artifact Creature — Homunculus 0/2.
+/// "When this creature enters, look at the top card of your library.
+/// You may put that card on the bottom of your library."
+///
+/// 🟡 Approximated as Scry 1 — the engine's Scry primitive offers the
+/// look + may-bottom semantics exactly. (Real card lacks the "leave on
+/// top" option that real Scry offers, but the gameplay outcome is
+/// strictly a subset.)
+pub fn inquisitive_puppet() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    use crate::effect::{PlayerRef, Value};
+    CardDefinition {
+        name: "Inquisitive Puppet",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}

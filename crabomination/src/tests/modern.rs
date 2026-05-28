@@ -12833,3 +12833,70 @@ fn robber_of_the_rich_has_reach_and_haste() {
     assert!(card.keywords.contains(&crate::card::Keyword::Haste));
 }
 
+// ── Push XXIV: 3 more body stubs ──────────────────────────────────────────
+
+#[test]
+fn phyrexian_revoker_is_a_two_one_phyrexian_construct() {
+    let card = catalog::phyrexian_revoker();
+    assert_eq!(card.power, 2);
+    assert_eq!(card.toughness, 1);
+    assert!(card.card_types.contains(&crate::card::CardType::Artifact));
+    assert!(card.card_types.contains(&crate::card::CardType::Creature));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Phyrexian));
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Construct));
+}
+
+#[test]
+fn solemn_simulacrum_etb_may_search_for_basic_land() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Seed P0's library with a Forest to tutor for.
+    let forest_id = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::solemn_simulacrum());
+    g.players[0].mana_pool.add_colorless(4);
+    // Accept both MayDo (search) and the eventual Search decision.
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Search(Some(forest_id)),
+    ]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Solemn Simulacrum castable for {4}");
+    drain_stack(&mut g);
+
+    // Solemn Simulacrum + Forest should both be on the battlefield.
+    let sim = g.battlefield.iter().find(|c| c.id == id).expect("Simulacrum on bf");
+    assert_eq!(sim.definition.power, 2);
+    let forest_view = g.battlefield.iter().find(|c| c.id == forest_id)
+        .expect("Forest should be tutored to battlefield");
+    assert!(forest_view.tapped, "Forest enters tapped");
+}
+
+#[test]
+fn solemn_simulacrum_has_dies_draw_trigger() {
+    let card = catalog::solemn_simulacrum();
+    assert_eq!(card.triggered_abilities.len(), 2,
+        "Solemn Simulacrum should have ETB + dies triggers");
+    assert!(card.subtypes.creature_types.contains(&crate::card::CreatureType::Golem));
+}
+
+#[test]
+fn inquisitive_puppet_etb_scrys_one() {
+    let mut g = two_player_game();
+    // Seed library with a card so Scry has something to look at.
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::inquisitive_puppet());
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inquisitive Puppet castable for {1}");
+    drain_stack(&mut g);
+
+    // Puppet on battlefield.
+    let puppet = g.battlefield.iter().find(|c| c.id == id).expect("puppet on bf");
+    assert_eq!(puppet.definition.power, 0);
+    assert_eq!(puppet.definition.toughness, 2);
+}
+
