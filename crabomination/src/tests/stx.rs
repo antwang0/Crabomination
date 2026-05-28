@@ -73468,6 +73468,32 @@ fn cr_405_5_top_of_stack_resolves_first_lifo() {
     assert_eq!(g.players[1].life, p1_life - 3, "P1 took 3 from bolt2");
 }
 
+/// CR 614.16 — "If an effect would put one or more counters on a
+/// permanent, that many plus the additional counters from each applicable
+/// replacement are put on that permanent instead." Keyword counters
+/// (CR 122.1b) are counters too, so Doubling-Season-style scalers must
+/// also double keyword counters.
+#[test]
+fn cr_614_16_keyword_counters_are_doubled_by_double_counters_static() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_pestseed());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_skystudent_b183());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skystudent castable");
+    drain_stack(&mut g);
+    // Skystudent grants 1 flying counter, Pestseed doubles to 2.
+    // has_keyword still returns true with 2 counters; verify the count is 2.
+    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert!(bear_card.has_keyword(&Keyword::Flying));
+    assert_eq!(*bear_card.keyword_counters.get(&Keyword::Flying).unwrap_or(&0), 2,
+        "Doubling Season-style scaler doubles flying counter (CR 614.16)");
+}
+
 /// CR 614.6 — "A replacement effect doesn't 'use up' the spell or ability
 /// that generated it." But a single self-replacement only applies once per
 /// event. This test pins that a shield counter (CR 122.1c) absorbs one

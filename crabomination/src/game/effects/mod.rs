@@ -1338,13 +1338,31 @@ impl GameState {
             // is present (applied as a layer-6 grant in
             // `compute_battlefield`). Push (modern_decks batch 183).
             Effect::AddKeywordCounter { what, keyword, amount } => {
-                let n = self.evaluate_value(amount, ctx).max(0) as u32;
-                if n == 0 { return Ok(()); }
+                let base = self.evaluate_value(amount, ctx).max(0) as u32;
+                if base == 0 { return Ok(()); }
+                // CR 614.16 counter-doubling replacement effects (Doubling
+                // Season, Vorinclex, Pir, Hardened Scales-style scalers)
+                // also apply to keyword counters: they're counters per
+                // CR 122.1b. Each `StaticEffect::DoubleCounters` permanent
+                // the affected permanent's controller has on the
+                // battlefield doubles the count.
                 for ent in self.resolve_selector(what, ctx) {
-                    if let Some(cid) = ent.as_permanent_id()
-                        && let Some(c) = self.battlefield_find_mut(cid) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        let target_ctrl = self.battlefield_find(cid).map(|c| c.controller);
+                        let n = if let Some(ctrl) = target_ctrl {
+                            let doublers = self.counter_doublers_for(ctrl);
+                            let mut scaled = base;
+                            for _ in 0..doublers {
+                                scaled = scaled.saturating_mul(2);
+                            }
+                            scaled
+                        } else {
+                            base
+                        };
+                        if let Some(c) = self.battlefield_find_mut(cid) {
                             *c.keyword_counters.entry(keyword.clone()).or_insert(0) += n;
                         }
+                    }
                 }
                 Ok(())
             }
