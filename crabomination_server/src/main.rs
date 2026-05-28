@@ -159,6 +159,18 @@ struct MatchStats {
     /// one 30-turn outlier". `None` until the first match completes.
     /// Push (claude/modern_decks batch 189).
     max_turns: Option<u32>,
+    /// Number of matches that ended in a draw (MatchOutcome.winner =
+    /// Some(None)). Useful for spotting "stalemate" regressions
+    /// (typically a bot-vs-bot loop where neither side can finish).
+    /// Push (claude/modern_decks batches 192-194).
+    draws: u64,
+    /// Number of matches that ended cleanly with a declared winner
+    /// (Some(Some(seat))). Pre-game-over exits (channel disconnect,
+    /// watchdog) yield None and are excluded from this counter, so
+    /// `wins + draws ≤ total_matches`. The delta surfaces "stuck"
+    /// matches that never produced an outcome. Push
+    /// (claude/modern_decks batches 192-194).
+    wins: u64,
 }
 
 /// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
@@ -209,6 +221,18 @@ impl MatchStats {
             None => turns,
             Some(m) => m.max(turns),
         });
+    }
+    /// Bump the win/draw counters based on the MatchOutcome.winner
+    /// shape. `None` (pre-game-over exit — channel disconnect or
+    /// watchdog) is silently dropped: callers can compute "stuck"
+    /// matches as `total_matches - wins - draws`. `Some(None)` is a
+    /// draw; `Some(Some(_))` is a clean win.
+    fn observe_winner(&mut self, w: Option<Option<usize>>) {
+        match w {
+            Some(None) => self.draws = self.draws.saturating_add(1),
+            Some(Some(_)) => self.wins = self.wins.saturating_add(1),
+            None => {}
+        }
     }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
@@ -357,6 +381,17 @@ fn format_match_stats(s: &MatchStats) -> String {
     );
     if let Some(m) = s.max_turns {
         out.push_str(&format!(" (max turns {m})"));
+    }
+    // Win/draw split: only render once at least one win or draw is
+    // recorded so pre-warmup logs stay tight. The delta vs total
+    // matches surfaces "stuck" matches (channel disconnect /
+    // watchdog) — `total - wins - draws` is the unresolved count.
+    if s.wins + s.draws > 0 {
+        out.push_str(&format!(" wins={} draws={}", s.wins, s.draws));
+        let unresolved = n.saturating_sub(s.wins + s.draws);
+        if unresolved > 0 {
+            out.push_str(&format!(" unresolved={unresolved}"));
+        }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
@@ -689,6 +724,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_bot(duration, format);
         s.observe_turns(outcome.final_turn);
+        s.observe_winner(outcome.winner);
         *s
     };
     eprintln!(
@@ -737,6 +773,7 @@ fn run_pair_match(
         let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
         s.record_pair(duration, format);
         s.observe_turns(outcome.final_turn);
+        s.observe_winner(outcome.winner);
         *s
     };
     eprintln!(
@@ -1043,6 +1080,49 @@ mod tests {
         assert_eq!(s.pair_matches, 1);
         assert_eq!(s.total_duration, Duration::from_secs(210));
         assert_eq!(s.avg_duration(), Duration::from_secs(70));
+    }
+
+    #[test]
+    fn observe_winner_tracks_wins_and_draws() {
+        let mut s = MatchStats::default();
+        s.observe_winner(Some(Some(0))); // seat 0 wins
+        s.observe_winner(Some(None));     // draw
+        s.observe_winner(Some(Some(1))); // seat 1 wins
+        s.observe_winner(None);           // unresolved — silently dropped
+        assert_eq!(s.wins, 2);
+        assert_eq!(s.draws, 1);
+    }
+
+    #[test]
+    fn format_match_stats_includes_win_draw_when_present() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        let line = format_match_stats(&s);
+        assert!(line.contains("wins=1"), "got: {line}");
+        assert!(line.contains("draws=0"), "got: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_omits_win_draw_pre_warmup() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        // No observe_winner — pre-warmup.
+        let line = format_match_stats(&s);
+        assert!(!line.contains("wins="), "got: {line}");
+        assert!(!line.contains("draws="), "got: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_renders_unresolved_when_some_matches_lack_outcome() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.record_bot(Duration::from_secs(70), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        // The second match had no observed winner.
+        let line = format_match_stats(&s);
+        assert!(line.contains("wins=1"), "got: {line}");
+        assert!(line.contains("unresolved=1"), "got: {line}");
     }
 
     #[test]
