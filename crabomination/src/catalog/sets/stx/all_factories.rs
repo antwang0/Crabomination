@@ -3414,6 +3414,10 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_echobinder_b167,
         super::quandrix::fractal_crusher_b167,
         super::quandrix::quandrix_echodraw_b167,
+        // ── batch 168 (modern_decks): silverquill premium ──
+        super::silverquill::silverquill_banisher_b168,
+        super::silverquill::inkling_sage_ii_b168,
+        super::silverquill::silverquill_penlord_b168,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

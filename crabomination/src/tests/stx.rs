@@ -68348,6 +68348,84 @@ fn mana_value_exactly_predicate_matches_only_exact_cmc() {
     assert!(!g.evaluate_requirement_static(&req, &Target::Permanent(angel), 0, None));
 }
 
+// ── Batch 168 (modern_decks) — Silverquill premium ───────────────────────
+
+#[test]
+fn silverquill_banisher_b168_exiles_only_mv_three_creatures() {
+    // Test the new ManaValueExactly predicate via this card.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV=2
+    let id = g.add_card_to_hand(0, catalog::silverquill_banisher_b168());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let cast = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    // Bear has MV=2, not 3 → not a legal target.
+    assert!(cast.is_err(), "MV=2 bear should not be a legal target for ManaValueExactly(3)");
+}
+
+#[test]
+fn silverquill_banisher_b168_exiles_mv_three_creature() {
+    let mut g = two_player_game();
+    // Add a creature with MV=3 — Lorehold Boltmage is MV=1 instr. Use
+    // serra_angel? MV=5. Let me use a 3-mana creature.
+    let three_mana = g.add_card_to_battlefield(1, catalog::lorehold_pyresmith_b166()); // MV=3
+    let id = g.add_card_to_hand(0, catalog::silverquill_banisher_b168());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(three_mana)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Banisher castable on MV=3 creature");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(three_mana).is_none());
+    assert!(g.exile.iter().any(|c| c.id == three_mana));
+}
+
+#[test]
+fn inkling_sage_ii_b168_is_flying_lifelink_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_sage_ii_b168());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Lifelink));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
+#[test]
+fn silverquill_penlord_b168_drains_on_creature_cast() {
+    let mut g = two_player_game();
+    let _pl = g.add_card_to_battlefield(0, catalog::silverquill_penlord_b168());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let life0 = g.players[0].life;
+    let life1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life0 + 1);
+    assert_eq!(g.players[1].life, life1 - 1);
+}
+
+#[test]
+fn silverquill_penlord_b168_does_not_drain_on_instant_cast() {
+    let mut g = two_player_game();
+    let _pl = g.add_card_to_battlefield(0, catalog::silverquill_penlord_b168());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bolt is an instant, not a creature → no Penlord drain.
+    assert_eq!(g.players[0].life, life0);
+}
+
 #[test]
 fn quandrix_echodraw_b167_draws_two() {
     let mut g = two_player_game();
