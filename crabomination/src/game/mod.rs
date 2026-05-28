@@ -860,6 +860,12 @@ impl GameState {
         mut to: crate::card::Zone,
     ) -> crate::card::Zone {
         use crate::replacement::{ReplacementSource, MAX_REPLACEMENT_ITERATIONS};
+        // Note: CR 122.1h finality counter redirect is applied at the
+        // call site (`remove_from_battlefield_to_graveyard`) because by
+        // the time we reach this resolver the card has already been
+        // removed from the battlefield. The call site passes
+        // `Zone::Exile` instead of `Zone::Graveyard` when finality is
+        // present.
         let mut applied: Vec<crate::replacement::ReplacementId> = Vec::new();
         for _ in 0..MAX_REPLACEMENT_ITERATIONS {
             let mut fired = false;

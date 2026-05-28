@@ -1263,10 +1263,23 @@ impl GameState {
             let card = self.battlefield.remove(pos);
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
+            // CR 122.1h — Finality counters redirect Battlefield →
+            // Graveyard to Battlefield → Exile. We must check the
+            // dying card's counters here because the card has been
+            // removed from the battlefield before `resolve_zone_change`
+            // walks for it.
+            let initial_to = if card
+                .counter_count(crate::card::CounterType::Finality)
+                > 0
+            {
+                crate::card::Zone::Exile
+            } else {
+                crate::card::Zone::Graveyard
+            };
             let resolved = self.resolve_zone_change(
                 id,
                 crate::card::Zone::Battlefield,
-                crate::card::Zone::Graveyard,
+                initial_to,
             );
             self.place_card_at_resolved_zone(card, resolved);
         }

@@ -171,6 +171,13 @@ pub enum CounterType {
     /// Counter selectors — a creature must have a back-face spell (a
     /// "prepare spell") to be a legal target.
     Prepared,
+    /// Finality counter — CR 122.1h. One or more finality counters on a
+    /// permanent create a replacement effect: "If this permanent would
+    /// be put into a graveyard from the battlefield, exile it instead."
+    /// Implemented in `resolve_zone_change` by redirecting Battlefield
+    /// → Graveyard to Battlefield → Exile when the moving card has at
+    /// least one finality counter.
+    Finality,
 }
 
 /// Every zone a card can occupy.

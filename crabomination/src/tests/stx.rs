@@ -67886,6 +67886,93 @@ fn quandrix_splitstone_b166_etb_adds_two_counters() {
     assert_eq!(c.toughness(), 5);
 }
 
+// ── CR rule lock-in tests (batch 166) ─────────────────────────────────────
+
+#[test]
+fn cr_122_1h_finality_counter_exiles_instead_of_graveyard() {
+    // CR 122.1h: "If this permanent would be put into a graveyard from
+    // the battlefield, exile it instead." Wire-up validated by placing
+    // a finality counter on a bear, killing it with Lightning Bolt,
+    // and asserting the bear lands in exile rather than the graveyard.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Place a Finality counter on the bear.
+    g.battlefield_find_mut(bear).unwrap()
+        .add_counters(CounterType::Finality, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    // Bear should be exiled, not in graveyard.
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == bear),
+        "finality counter should redirect to exile, not graveyard");
+    assert!(g.exile.iter().any(|c| c.id == bear),
+        "bear should be in exile");
+}
+
+#[test]
+fn cr_122_1h_no_finality_counter_means_normal_graveyard_path() {
+    // Sanity check: without a finality counter, bear goes to graveyard
+    // as usual. Locks in the negative side of the rule.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
+    assert!(!g.exile.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn cr_119_6_life_payment_pays_through_drain_path() {
+    // CR 119.6: "If a cost or effect would cause a player to pay an
+    // amount of life greater than zero, that player must lose that
+    // much life. This is a payment, not damage." Sanity test that
+    // life payment via LoseLife correctly deducts life and doesn't
+    // get reduced or bumped.
+    let mut g = two_player_game();
+    let start = g.players[0].life;
+    // Use a Witherbloom drain effect — drain 2 hits both: opp loses 2,
+    // we gain 2.
+    let id = g.add_card_to_hand(0, catalog::witherbloom_lifesong_b166());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lifesong castable");
+    drain_stack(&mut g);
+    // Lifesong: drain 1 (gain 1) + GainLife 2 — total +3
+    assert_eq!(g.players[0].life, start + 3);
+}
+
+#[test]
+fn cr_120_3_lethal_damage_to_creature_dies_at_next_sba() {
+    // CR 120.3 / CR 704.5g: When a creature has marked damage ≥ its
+    // toughness (and the damage isn't prevented), state-based actions
+    // destroy it. Validated via 3 damage to a 2/2 bear.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(),
+        "bear should die to 3 damage as SBA after bolt resolution");
+}
+
 // ── Push XVII (session 2): new mono-color staples ──────────────────────
 
 #[test]

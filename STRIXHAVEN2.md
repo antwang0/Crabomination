@@ -19,8 +19,24 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2499 (incl. synthesised variants — batches 155–165 add 257 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2549 (incl. synthesised variants — batches 155–166 add 307 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batch 166, claude/modern_decks): 50 additional new
+STX cards spread evenly across all five colleges (10 Silverquill, 10
+Witherbloom, 10 Lorehold, 10 Prismari, 10 Quandrix). Each new card
+ships with one functionality test in `tests::stx`. No engine changes
+required — every card composes against existing shortcut helpers
+(`magecraft`, `etb`, `etb_drain`, `magecraft_self_pump`, `dies_gain_life`,
+`magecraft_ping_each_opp`, etc.). The batch exercises:
+- Silverquill: drain + magecraft Inkling-pump variants; the new
+  Selector-based "exile target creature with MV≤4" pattern via
+  `ManaValueAtMost(4)` on Silverquill Sentencing.
+- Witherbloom: Pest minters, gy-reanimate, magecraft drain.
+- Lorehold: Spirit minters + magecraft ping, attack-trigger pings.
+- Prismari: spellslinger magecraft loot/treasure/burn + flying haste
+  Dragon finisher.
+- Quandrix: +1/+1 counter Fractal/Elemental bodies + tribal magecraft.
 
 Push (modern_decks, batches 164 + 165, claude/modern_decks): 64
 additional new STX cards across all five colleges (14 Lorehold, 14
