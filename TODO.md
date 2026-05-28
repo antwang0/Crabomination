@@ -5,6 +5,96 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXIV — 2026-05-28, session 8)
+
+### Engine improvements
+- **Removed duplicate Attacks trigger dispatch** in `combat.rs`. The
+  hardcoded loop walking all battlefield permanents for
+  `YourControl`-scoped Attacks triggers was firing in addition to the
+  unified `dispatch_triggers_for_events` path in `mod.rs`, causing pump
+  abilities to double-fire (Battle Banner, Strixhaven Stadium,
+  Sparring Regimen, CR 506.5 batch trigger). Removed the redundant
+  loop; the unified dispatcher (which already handles non-SelfSource
+  Attacks via `is_event_hardcoded`) now owns the path. -8 failing
+  tests with no regressions.
+- **New `Effect::ExileTopAndGrantMayPlay { who, duration }`** atomic
+  helper: exile the top card of a library and stamp a `MayPlayPermission`
+  on it in one step. Powers Conspiracy Theorist (activated empty-hand
+  exile-top + may-play) and similar "exile top of library, may play
+  until N" effects.
+- **Sparring Regimen scope fix**: Attacks trigger scope corrected from
+  `YourControl` to `AnotherOfYours` to match the printed "Whenever
+  ANOTHER creature you control attacks" Oracle.
+
+### Server/view improvements
+- **`ExileCardView` enriched** with three new fields: `may_play_recipient`
+  (which seat holds may-play permission on this exiled card),
+  `mana_value` (CMC for cost-badge tooltips), `is_token` (token vs
+  printed card distinction). Lets future exile-browser UIs render
+  Suspend Aggression / Conspiracy Theorist / The Dawning Archaic-style
+  exiled-with-permission cards correctly.
+
+### Card fixes (16 catalog mismatches resolved)
+- **Cost corrections**:
+  - Elite Spellbinder: `{1}{W}{W}` → `{1}{W}{B}` (real card)
+  - Lorehold Command: `{3}{R}{W}` → `{2}{R}{W}` (real card)
+  - Quandrix Command: `{2}{G}{U}` → `{1}{G}{U}` (matches test setup)
+  - Humiliate: `{W}{B}` → `{1}{W}{B}` (real card)
+  - Returned Pastcaller: `{4}{R}{W}` → `{4}{W}` (real card)
+  - Spirit Summoning: `{1}{R}{W}` → `{3}{W}` (real Lesson)
+- **Body / effect corrections**:
+  - Eureka Moment: was a counter-doubling effect; now Draw 2 + MayDo
+    "put a land from your hand onto bf tapped" (real card).
+  - Silverquill Apprentice magecraft: drain → +1/+1 counter (printed).
+  - Spirit Summoning: red-and-white 3/2 → white 3/2 Lifelink.
+  - Vanishing Verse: now uses the new `SelectionRequirement::Monocolored`
+    predicate (printed restriction).
+  - Lorehold Spirit token: now carries Flying keyword (real card).
+- **Stub-body promotions** (had `..Default::default()` empty bodies):
+  - Lorehold Spectralward (b164): +1/+1 EOT + Lifelink
+  - Lorehold Spiritforge (b164): mints 2 Spirits
+  - Lorehold Spiritcaller (b164): 2/3 Spirit Wizard + magecraft mint
+  - Lorehold Sunweave (b165): GainLife 5 + Scry 1
+  - Lorehold Fireshield (b165): +2/+2 EOT + First Strike
+  - Lorehold Bonepreacher (b165): 3/3 Spirit Cleric + ETB Gain 3 life
+  - Prismari Alchemist: 2/4 + magecraft Treasure
+  - Quandrix Multibinding: +2 counters then double
+- **Modal Command spells** collapsed to default-two: Lorehold,
+  Witherbloom, Silverquill, Prismari Commands all now `Seq` of their
+  auto-default two modes (was ChooseMode picking one).
+- **Strife Scholar** back face: now uses `exile_on_resolve = true`
+  flag for the printed "Then exile Awaken the Ages" rider.
+- **Conspiracy Theorist**: added `{1}{R},{T}` activated ability with
+  empty-hand gate + on-attack discard-then-exile-top trigger.
+- **Teach by Example**: stub → `Effect::CopySpell`.
+- **Social Snub**: added on-cast self-trigger MayDo(CopySpell { Self }).
+- **Dragonsguard Elite**: added missing `{3}{G}: +X/+X` activated
+  ability where X is its power.
+- **Elemental Expressionist** magecraft: Treasure mint → tap + stun
+  opp creature (printed approximation of "exile until next end step").
+
+### Observations & future items from this session
+- **Lorehold Battle Banner test still uses YourControl scope** — the
+  test passes but reads "Another attacks" label only if the source
+  uses `AnotherOfYours`. Battle Banner test is `lorehold_battle_banner_
+  pumps_attackers` — the test relies on pump landing on the bear, not
+  on the trigger label. Sparring Regimen got the proper `AnotherOfYours`
+  scope correction.
+- **`ManaValueEqualsX` predicate** would let Fix What's Broken honor
+  the printed "MV equals X" gy filter precisely. Currently collapsed
+  to `ManaValueAtMost(2)` (correct for X=2; wrong for other X). Would
+  require threading ctx (or the X value) through
+  `evaluate_requirement_on_card`. Low-priority since most casts use
+  X=2.
+- **Effect handlers for `ExileTopAndGrantMayPlay`** could be reused
+  by Ark of Hunger, Archaic's Agony, Elemental Mascot (all currently
+  body-only or stubbed). Each just needs swapping in the new effect
+  variant.
+- **Exile-browser UI** — `ExileCardView` now carries the data needed
+  but the 3D client doesn't yet have an exile-zone browser panel.
+  Next-up Bevy work: a panel that lists exiled cards with name + CMC
+  badge + "may play" indicator.
+
 ## Recent additions (Push XVII-d — 2026-05-28, session 7)
 
 ### New cards (4)
