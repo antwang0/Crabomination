@@ -3994,5 +3994,18 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::lorehold::lorehold_echoblade_b202,
         super::lorehold::lorehold_lavascholar_b202,
         super::lorehold::lorehold_ghostsmith_b202,
+        // ── batch 202: Prismari expansion ──
+        super::prismari::prismari_treasurehunter_b202,
+        super::prismari::prismari_bolt_b202,
+        super::prismari::prismari_drakebreeder_b202,
+        super::prismari::prismari_spellcraft_b202,
+        super::prismari::prismari_sparkforger_b202,
+        super::prismari::prismari_squallcaller_b202,
+        super::prismari::prismari_pyroartisan_b202,
+        super::prismari::prismari_tinkerer_b202,
+        super::prismari::prismari_soothsayer_b202,
+        super::prismari::prismari_surge_ii_b202,
+        super::prismari::prismari_volcanist_b202,
+        super::prismari::prismari_spiketide_b202,
     ]
 }

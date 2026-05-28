@@ -17861,3 +17861,380 @@ pub fn prismari_sparkkeeper_b201() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 202 (modern_decks) — Prismari expansion ────────────────────────
+
+/// Prismari Treasurehunter (b202) — {2}{U}{R} 2/3 Human Wizard.
+/// Magecraft: create a Treasure token. Ramp-on-cast engine.
+pub fn prismari_treasurehunter_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Treasurehunter (b202)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Bolt (b202) — {1}{R} Instant.
+/// Deal 3 damage to any target.
+pub fn prismari_bolt_b202() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Prismari Bolt (b202)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Drakebreeder (b202) — {3}{U}{R} 3/3 Drake Flying.
+/// ETB: scry 2, then draw a card.
+pub fn prismari_drakebreeder_b202() -> CardDefinition {
+    use crate::effect::shortcut::etb_scry_and_draw;
+    CardDefinition {
+        name: "Prismari Drakebreeder (b202)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_scry_and_draw(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spellcraft (b202) — {1}{U}{R} Sorcery.
+/// Scry 2, then draw two cards. Premium card-selection.
+pub fn prismari_spellcraft_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spellcraft (b202)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Sparkforger (b202) — {1}{R} 2/2 Human Wizard.
+/// Magecraft: this creature gets +1/+0 EOT (prowess-shaped self-pump).
+pub fn prismari_sparkforger_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkforger (b202)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Squallcaller (b202) — {2}{U} 1/3 Elemental Wizard.
+/// ETB: tap target creature an opp controls.
+pub fn prismari_squallcaller_b202() -> CardDefinition {
+    use crate::effect::shortcut::etb_tap_opp_creature;
+    CardDefinition {
+        name: "Prismari Squallcaller (b202)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_tap_opp_creature()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Pyroartisan (b202) — {2}{U}{R} 3/3 Human Wizard.
+/// Magecraft: deal 1 damage to each opp.
+pub fn prismari_pyroartisan_b202() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_ping_each_opp;
+    CardDefinition {
+        name: "Prismari Pyroartisan (b202)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tinkerer (b202) — {3} 2/2 Artifact Creature — Construct.
+/// ETB: create a Treasure token. Colorless ramp on a body.
+pub fn prismari_tinkerer_b202() -> CardDefinition {
+    use crate::effect::shortcut::{etb, mint_treasures};
+    CardDefinition {
+        name: "Prismari Tinkerer (b202)",
+        cost: cost(&[generic(3)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Construct],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_treasures(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Soothsayer (b202) — {1}{U} 2/1 Human Wizard.
+/// Magecraft: loot (draw a card, then discard a card).
+pub fn prismari_soothsayer_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Soothsayer (b202)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Surge II (b202) — {3}{U}{R} Sorcery.
+/// Deal 4 damage to any target and scry 1.
+pub fn prismari_surge_ii_b202() -> CardDefinition {
+    use crate::effect::shortcut::target_any;
+    CardDefinition {
+        name: "Prismari Surge II (b202)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Volcanist (b202) — {3}{R}{R} 4/4 Elemental.
+/// Haste. Trample. Aggressive top-end finisher.
+pub fn prismari_volcanist_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Volcanist (b202)",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Haste, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Spiketide (b202) — {2}{U} Sorcery.
+/// Draw 3 cards. Discard 2 cards. Smoothing finisher.
+pub fn prismari_spiketide_b202() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Spiketide (b202)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            Effect::Discard { who: Selector::You, amount: Value::Const(2), random: true },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

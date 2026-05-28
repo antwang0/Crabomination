@@ -77164,6 +77164,183 @@ fn lorehold_ghostsmith_b202_has_attack_token_trigger() {
     assert_eq!(def.triggered_abilities.len(), 1);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 202 (modern_decks) — Prismari expansion.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn prismari_treasurehunter_b202_mints_treasure_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_treasurehunter_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let treasure = g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure");
+    assert!(treasure, "treasure minted");
+}
+
+#[test]
+fn prismari_bolt_b202_deals_three_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_bolt_b202());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 3);
+}
+
+#[test]
+fn prismari_drakebreeder_b202_etb_smooths_and_cantrips() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::prismari_drakebreeder_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 draw from scry-and-draw etb.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn prismari_spellcraft_b202_draws_two_after_scry() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    let id = g.add_card_to_hand(0, catalog::prismari_spellcraft_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 2 draw = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn prismari_sparkforger_b202_pumps_self_on_is_cast() {
+    let mut g = two_player_game();
+    let cd = g.add_card_to_battlefield(0, catalog::prismari_sparkforger_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(cd).expect("alive");
+    assert_eq!(view.power, 3, "+1/+0 magecraft self-pump");
+}
+
+#[test]
+fn prismari_squallcaller_b202_etb_taps_opp_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_squallcaller_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(opp_bear).expect("bear alive");
+    assert!(c.tapped, "opp creature tapped");
+}
+
+#[test]
+fn prismari_pyroartisan_b202_pings_opp_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_pyroartisan_b202());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // Bolt 3 + magecraft 1 = 4 damage to opp.
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn prismari_tinkerer_b202_etb_mints_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_tinkerer_b202());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let treasure = g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Treasure");
+    assert!(treasure);
+}
+
+#[test]
+fn prismari_soothsayer_b202_loots_on_is_cast() {
+    let def = catalog::prismari_soothsayer_b202();
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn prismari_surge_ii_b202_deals_four_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::prismari_surge_ii_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 4);
+}
+
+#[test]
+fn prismari_volcanist_b202_is_haste_trample() {
+    let def = catalog::prismari_volcanist_b202();
+    assert!(def.keywords.contains(&Keyword::Haste));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert_eq!(def.power, 4);
+}
+
+#[test]
+fn prismari_spiketide_b202_draws_three_and_discards_two() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_spiketide_b202());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast + 3 draw - 2 discard = net 0.
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
 #[test]
 fn silverquill_wardrune_b202_pumps_toughness_with_vigilance() {
     let mut g = two_player_game();
