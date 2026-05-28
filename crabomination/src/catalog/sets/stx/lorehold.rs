@@ -22263,3 +22263,67 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 197 (modern_decks) — Lorehold polish ───────────────────────────
+
+/// Lorehold Sparkmage (b197) — {1}{R} 2/1 Human Wizard.
+/// Magecraft: deal 1 damage to any target.
+pub fn lorehold_sparkmage_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkmage (b197)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Brawnsage (b197) — {2}{R}{W} 4/4 Spirit Warrior.
+/// Vanilla 4/4 in school colors.
+pub fn lorehold_brawnsage_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Brawnsage (b197)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

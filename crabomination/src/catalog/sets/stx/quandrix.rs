@@ -18299,3 +18299,72 @@ pub fn quandrix_algescholar_b196() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 197 (modern_decks) — Quandrix polish ───────────────────────────
+
+/// Quandrix Vinestudent (b197) — {G} 1/2 Plant Druid.
+/// Cheap green one-drop.
+pub fn quandrix_vinestudent_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Vinestudent (b197)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalsense (b197) — {1}{G}{U} 2/2 Fractal.
+/// Wait, that's a token shape. Make it a creature: ETB add counters.
+/// ETB: put two +1/+1 counters on this creature.
+pub fn quandrix_fractalsense_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalsense (b197)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -3835,5 +3835,17 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_mathlord_b196,
         super::quandrix::quandrix_vinetwine_b196,
         super::quandrix::quandrix_algescholar_b196,
+        // ── batch 197 (modern_decks): polish round ──
+        super::witherbloom::witherbloom_mireseer_b197,
+        super::witherbloom::witherbloom_wormgrove_b197,
+        super::witherbloom::witherbloom_hexshade_b197,
+        super::lorehold::lorehold_sparkmage_b197,
+        super::lorehold::lorehold_brawnsage_b197,
+        super::silverquill::silverquill_wordcaller_b197,
+        super::silverquill::silverquill_glyphmark_b197,
+        super::prismari::prismari_wavebound_b197,
+        super::prismari::prismari_burnscholar_b197,
+        super::quandrix::quandrix_vinestudent_b197,
+        super::quandrix::quandrix_fractalsense_b197,
     ]
 }

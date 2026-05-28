@@ -22500,3 +22500,98 @@ pub fn witherbloom_pestcarver_b196() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 197 (modern_decks) — Witherbloom polish ────────────────────────
+
+/// Witherbloom Mireseer (b197) — {2}{B}{G} 4/4 Plant Warlock.
+/// Vanilla above-rate body in school colors.
+pub fn witherbloom_mireseer_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Mireseer (b197)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Wormgrove (b197) — {4}{G}{G} 6/6 Plant Beast Trample.
+/// Big curve-topper trampler.
+pub fn witherbloom_wormgrove_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Wormgrove (b197)",
+        cost: cost(&[generic(4), g(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 6,
+        toughness: 6,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Hexshade (b197) — {B} 1/1 Vampire Warlock.
+/// Magecraft: gain 1 life. Cheap one-drop magecraft enabler.
+pub fn witherbloom_hexshade_b197() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Hexshade (b197)",
+        cost: cost(&[b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

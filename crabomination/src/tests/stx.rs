@@ -75162,3 +75162,99 @@ fn quandrix_algescholar_b196_etb_grows_friendly() {
     let card = g.battlefield_find(bear).unwrap();
     assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 197 (modern_decks) — Polish round.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_mireseer_b197_is_four_mana_four_four() {
+    let def = catalog::witherbloom_mireseer_b197();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn witherbloom_wormgrove_b197_is_meaty_trample() {
+    let def = catalog::witherbloom_wormgrove_b197();
+    assert_eq!(def.cost.cmc(), 6);
+    assert_eq!(def.power, 6);
+    assert!(def.keywords.contains(&Keyword::Trample));
+}
+
+#[test]
+fn witherbloom_hexshade_b197_is_one_mana_magecraft_life() {
+    let def = catalog::witherbloom_hexshade_b197();
+    assert_eq!(def.cost.cmc(), 1);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_sparkmage_b197_magecraft_pings() {
+    let def = catalog::lorehold_sparkmage_b197();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn lorehold_brawnsage_b197_is_four_four_in_school_colors() {
+    let def = catalog::lorehold_brawnsage_b197();
+    assert_eq!(def.cost.cmc(), 4);
+    assert_eq!(def.power, 4);
+    assert_eq!(def.toughness, 4);
+}
+
+#[test]
+fn silverquill_wordcaller_b197_magecraft_pumps_target() {
+    let def = catalog::silverquill_wordcaller_b197();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn silverquill_glyphmark_b197_magecraft_drains() {
+    let def = catalog::silverquill_glyphmark_b197();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn prismari_wavebound_b197_etb_scrys() {
+    let def = catalog::prismari_wavebound_b197();
+    assert_eq!(def.cost.cmc(), 2);
+    assert_eq!(def.triggered_abilities.len(), 1);
+}
+
+#[test]
+fn prismari_burnscholar_b197_is_haste_three_one() {
+    let def = catalog::prismari_burnscholar_b197();
+    assert_eq!(def.cost.cmc(), 3);
+    assert_eq!(def.power, 3);
+    assert_eq!(def.toughness, 1);
+    assert!(def.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn quandrix_vinestudent_b197_is_one_mana_one_two() {
+    let def = catalog::quandrix_vinestudent_b197();
+    assert_eq!(def.cost.cmc(), 1);
+    assert_eq!(def.power, 1);
+    assert_eq!(def.toughness, 2);
+}
+
+#[test]
+fn quandrix_fractalsense_b197_etbs_with_two_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_fractalsense_b197());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let card = g.battlefield.iter()
+        .find(|c| c.definition.name == "Quandrix Fractalsense (b197)").unwrap();
+    assert_eq!(card.counter_count(CounterType::PlusOnePlusOne), 2);
+}
