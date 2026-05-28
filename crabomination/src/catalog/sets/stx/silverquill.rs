@@ -21882,6 +21882,72 @@ pub fn silverquill_bookmage_b169() -> CardDefinition {
     }
 }
 
+// ── Batch 170 (modern_decks) — Silverquill shield-counter variants ────────
+
+/// Silverquill Aegismage (b170) — {1}{W}{B} 2/3 Vampire Cleric.
+/// ETB: put a shield counter on target creature you control.
+pub fn silverquill_aegismage_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Aegismage (b170)",
+        cost: cost(&[generic(1), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::Shield,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Wardward (b170) — {W}{B} Instant.
+/// Put two shield counters on target creature.
+pub fn silverquill_wardward_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Wardward (b170)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::AddCounter {
+            what: target_filtered(SelectionRequirement::Creature),
+            kind: CounterType::Shield,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Inkling Standard-Bearer (b169) — {4}{W}{B} 4/4 Inkling Knight.
 /// Flying + Lifelink. Other Inkling creatures you control have lifelink.
 pub fn inkling_standard_bearer_b169() -> CardDefinition {

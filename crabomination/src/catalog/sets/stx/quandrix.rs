@@ -16263,6 +16263,43 @@ pub fn quandrix_bigwave_b169() -> CardDefinition {
     }
 }
 
+// ── Batch 170 (modern_decks) — Quandrix expansion ─────────────────────────
+
+/// Quandrix Hydromancer (b170) — {2}{G}{U} 2/3 Elf Wizard.
+/// ETB: put a shield counter on this creature. Magecraft: draw a card.
+pub fn quandrix_hydromancer_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Hydromancer (b170)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Shield,
+                amount: Value::Const(1),
+            }),
+            magecraft_draw(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Quandrix Fractal Whale (b169) — {4}{G}{U} 5/5 Fractal Whale Trample.
 /// Vanilla finisher.
 pub fn quandrix_fractal_whale_b169() -> CardDefinition {

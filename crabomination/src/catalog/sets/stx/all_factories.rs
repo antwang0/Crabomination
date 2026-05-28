@@ -3466,6 +3466,12 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         // ── batch 170 (modern_decks): Shield-counter cards (CR 122.1c) ──
         super::lorehold::lorehold_shieldbearer_b170,
         super::lorehold::lorehold_aegisblade_b170,
+        super::silverquill::silverquill_aegismage_b170,
+        super::silverquill::silverquill_wardward_b170,
+        super::witherbloom::witherbloom_vitalist_b170,
+        super::witherbloom::witherbloom_drainer_b170,
+        super::prismari::prismari_forgesmith_b170,
+        super::quandrix::quandrix_hydromancer_b170,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

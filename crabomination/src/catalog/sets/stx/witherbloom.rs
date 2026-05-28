@@ -19588,6 +19588,68 @@ pub fn witherbloom_pestkeeper_b169() -> CardDefinition {
     }
 }
 
+// ── Batch 170 (modern_decks) — Witherbloom expansion ──────────────────────
+
+/// Witherbloom Vitalist (b170) — {1}{B}{G} 2/3 Human Druid.
+/// ETB: put a shield counter on this creature. Magecraft: gain 1 life.
+pub fn witherbloom_vitalist_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vitalist (b170)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Shield,
+                amount: Value::Const(1),
+            }),
+            magecraft_gain_life(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Witherbloom Drainer (b170) — {3}{B} Sorcery.
+/// Drain 3. (Each opponent loses 3 life and you gain 3 life.)
+pub fn witherbloom_drainer_b170() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainer (b170)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(3),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Witherbloom Necromancer (b169) — {3}{B}{G} 3/4 Human Warlock.
 /// ETB: return target creature card from your graveyard to your hand.
 pub fn witherbloom_necromancer_b169() -> CardDefinition {

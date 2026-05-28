@@ -15322,6 +15322,44 @@ pub fn prismari_drakelord_b169() -> CardDefinition {
     }
 }
 
+// ── Batch 170 (modern_decks) — Prismari expansion ─────────────────────────
+
+/// Prismari Forgesmith (b170) — {2}{R} 2/3 Elemental Wizard.
+/// ETB: put a shield counter on this creature. Magecraft: treasure mint.
+pub fn prismari_forgesmith_b170() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_treasure;
+    CardDefinition {
+        name: "Prismari Forgesmith (b170)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Shield,
+                amount: Value::Const(1),
+            }),
+            magecraft_treasure(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Prismari Spellcrafter (b169) — {1}{R} 2/1 Human Wizard.
 /// Magecraft: loot — discard 1, draw 1.
 pub fn prismari_spellcrafter_b169() -> CardDefinition {

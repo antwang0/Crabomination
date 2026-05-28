@@ -69542,4 +69542,119 @@ fn lorehold_aegisblade_b170_adds_shield_counter() {
     assert_eq!(c.counter_count(CounterType::Shield), 1);
 }
 
+#[test]
+fn silverquill_aegismage_b170_etb_shields_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_aegismage_b170());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
+#[test]
+fn silverquill_wardward_b170_adds_two_shields() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_wardward_b170());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 2);
+}
+
+#[test]
+fn witherbloom_vitalist_b170_etb_shields_self_and_magecraft_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_vitalist_b170());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("vitalist alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+    // Cast a Bolt → magecraft gain 1
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 1);
+}
+
+#[test]
+fn witherbloom_drainer_b170_drains_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_drainer_b170());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 3);
+    assert_eq!(g.players[1].life, p1_life - 3);
+}
+
+#[test]
+fn prismari_forgesmith_b170_etb_shields_self_and_magecraft_treasure() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_forgesmith_b170());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("forgesmith alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+    // Cast a Bolt → magecraft Treasure
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let t = g.battlefield.iter().filter(|c|
+        c.controller == 0 && c.definition.name == "Treasure"
+    ).count();
+    assert!(t >= 1, "Treasure minted by magecraft");
+}
+
+#[test]
+fn quandrix_hydromancer_b170_etb_shields_self_and_magecraft_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::quandrix_hydromancer_b170());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("hydromancer alive");
+    assert_eq!(c.counter_count(CounterType::Shield), 1);
+}
+
 
