@@ -3597,5 +3597,12 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::prismari::prismari_mage_mentor_b182,
         // ── batch 183 (modern_decks): keyword counter cards (CR 122.1b) ──
         super::silverquill::silverquill_skystudent_b183,
+        // ── batch 184 (modern_decks): more keyword counter granters ──
+        super::silverquill::silverquill_wordsharpener_b184,
+        super::silverquill::silverquill_drainmark_b184,
+        super::witherbloom::witherbloom_trampleblossom_b184,
+        super::witherbloom::witherbloom_lifebondseal_b184,
+        super::lorehold::lorehold_battlerune_b184,
+        super::lorehold::lorehold_wardseal_b184,
     ]
 }
