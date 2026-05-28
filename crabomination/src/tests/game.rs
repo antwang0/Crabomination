@@ -5070,3 +5070,58 @@ fn indestructible_survives_deathtouch_damage() {
     assert!(g.battlefield.iter().any(|c| c.id == big),
         "Indestructible should survive the deathtouch SBA");
 }
+
+// ── CR 704.5d — token cleanup ────────────────────────────────────────────
+
+/// CR 704.5d: "If a token is in a zone other than the battlefield, it
+/// ceases to exist." This is the cleanup SBA that prevents an exiled or
+/// graveyarded token from lingering.
+#[test]
+fn cr_704_5d_token_in_graveyard_ceases_to_exist() {
+    let mut g = two_player_game();
+    // Properly cast Pestlord II so ETB fires and mints a Pest token.
+    let id = g.add_card_to_hand(0, catalog::witherbloom_pestlord_ii_b192());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let pest = g.battlefield.iter()
+        .find(|c| c.is_token && c.definition.name == "Pest").unwrap().id;
+    // Bolt the Pest to send it to graveyard.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(pest)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // Per CR 704.5d, the token should NOT be in the graveyard.
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == pest),
+        "CR 704.5d: token in graveyard ceases to exist");
+}
+
+// ── CR 704.5i — planeswalker zero loyalty ────────────────────────────────
+
+/// CR 704.5i: "If a planeswalker has loyalty 0, it's put into its
+/// owner's graveyard." Pinned via Heliod, Sun-Crowned — wait, that's
+/// a creature. Let me use Professor Dellian Fel (a planeswalker in
+/// the catalog via SOS).
+#[test]
+fn cr_704_5i_planeswalker_with_zero_loyalty_dies() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
+    // Manually drain its loyalty to 0.
+    if let Some(c) = g.battlefield_find_mut(pw) {
+        c.counters.insert(CounterType::Loyalty, 0);
+    }
+    let _ = g.check_state_based_actions();
+    // Per CR 704.5i, the PW should be in graveyard.
+    assert!(g.battlefield_find(pw).is_none(),
+        "CR 704.5i: zero-loyalty planeswalker dies");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == pw));
+}

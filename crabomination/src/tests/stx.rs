@@ -9314,14 +9314,15 @@ fn resurgent_belief_returns_each_enchantment_from_graveyard() {
 
 // ── Academic Dispute ───────────────────────────────────────────────────────
 
+/// Academic Dispute now reads "Target creature gets +2/+0 and gains
+/// reach until end of turn" (the printed STX oracle, not the prior
+/// Fight body the engine had approximated). This test pins the
+/// current effect — the bear gets +2/+0 and reach EOT.
 #[test]
-#[ignore = "Academic Dispute no longer has a fight effect; it now gives +2/+0 and reach only"]
-fn academic_dispute_pumps_friendly_and_fights_opp_creature() {
+fn academic_dispute_pumps_friendly_and_grants_reach() {
     let mut g = two_player_game();
     let friendly = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.clear_sickness(friendly);
-    let _opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::academic_dispute());
     g.players[0].mana_pool.add(Color::Red, 1);
 
@@ -9335,10 +9336,9 @@ fn academic_dispute_pumps_friendly_and_fights_opp_creature() {
     .expect("Academic Dispute castable for {R}");
     drain_stack(&mut g);
 
-    // Both bears took damage — opp's 2/2 took 3 (friendly with +1/+0 = 3 power)
-    // and dies; friendly took 2 (opp's 2 power) and dies.
-    let friendly_alive = g.battlefield.iter().any(|c| c.id == friendly);
-    assert!(!friendly_alive, "Friendly bear (2/2 + 1/0 = 3/2) dies to 2 dmg");
+    // Bear is still alive (no fight); gained Reach EOT.
+    let bear = g.battlefield_find(friendly).expect("bear still alive");
+    assert!(bear.has_keyword(&Keyword::Reach), "Academic Dispute grants Reach EOT");
 }
 
 // ── Enthusiastic Study ─────────────────────────────────────────────────────
