@@ -19,8 +19,47 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2672 (incl. synthesised variants — batches 155–186 add 430 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2737 (incl. synthesised variants — batches 155–189 add 495 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 187-189, claude/modern_decks): 65 more
+STX cards across all five colleges, plus a new PermanentView field
+for keyword counters and server-side MatchStats.max_turns. CR 121.2
+/ 405.5 / 614.6 rule lock-in tests added.
+
+**Batch 189 (15 cards)** — aggressive curve fillers across schools:
+Silverquill Drainmaster II / Inkling Vassalking / Exilewright;
+Witherbloom Devourer / Spellblossom / Pest Crawler; Lorehold
+Voltmage / Fireseal / Crusader; Prismari Magmamancer /
+Treasurewright / Hailstrike; Quandrix Beastcaller / Cantrip /
+Vinescaler II.
+
+**Batch 188 (15 cards)** — cross-school small additions: Silverquill
+Cantrap / Inkling Tribune / Litany; Witherbloom Mireshade / Pest
+Herald / Spelleater; Lorehold Spiritsong / Sparkbarrier / Vanguard
+II; Prismari Lavakin / Storm-Scholar / Hailcaller; Quandrix Mossleaf
+/ Dataweaver / Latticebreaker.
+
+**Batch 187 (35 cards)** — first wave: 7 cards each across all five
+schools exercising keyword counter granters (CR 122.1b),
+Pest/Inkling/Spirit/Fractal tribal payoffs, and magecraft templates.
+
+Engine/server/UI improvements landed in this push:
+- **`PermanentView.keyword_counters: Vec<(Keyword, u32)>`** field
+  added. Client tooltip surfaces "(flying counter granting Flying)"
+  alongside the existing shield/finality/stun/boosted/weakened
+  highlights.
+- **`MatchStats.max_turns: Option<u32>`** — tracks the longest
+  observed final turn count across all completed matches for
+  outlier visibility paired with avg turns.
+
+CR rule lock-in tests added in this push:
+- `cr_121_2_multi_draw_fires_one_event_per_card` (CR 121.2 — Draw N
+  emits N individual CardDrawn events).
+- `cr_405_5_top_of_stack_resolves_first_lifo` (CR 405.5 — LIFO stack
+  resolution order).
+- `cr_614_6_shield_counter_only_absorbs_one_event_then_pops`
+  (CR 614.6 — one replacement per event for shield counters).
 
 Push (modern_decks, batches 184-186, claude/modern_decks): 10 more
 cards across all five colleges exercising the new CR 122.1b keyword

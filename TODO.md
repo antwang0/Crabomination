@@ -5,6 +5,52 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXX — 2026-05-28, session 14, batches 187-189)
+
+### New cards (65 across batches 187-189)
+- Batch 187 (35 cards): 7 per school exercising keyword counter
+  granters (CR 122.1b), Pest/Inkling/Spirit/Fractal tribal payoffs,
+  and magecraft templates.
+- Batch 188 (15 cards): cross-school small additions — cantrip pumps,
+  drain bodies, scry-cantrips.
+- Batch 189 (15 cards): aggressive curve fillers — Drainmaster II,
+  Vassalking, Exilewright; Devourer, Spellblossom, Pest Crawler;
+  Voltmage, Fireseal, Crusader; Magmamancer, Treasurewright,
+  Hailstrike; Beastcaller, Cantrip, Vinescaler II.
+
+### Engine improvements
+- **`PermanentView.keyword_counters: Vec<(Keyword, u32)>`** — surfaces
+  CR 122.1b keyword counter map for client tooltip rendering. Client
+  counter_tooltip surfaces "(flying counter granting Flying)" etc.
+  alongside the existing shield/finality/stun/boosted/weakened
+  highlights. Resolves the "Keyword counter UI badge" TODO from
+  pushes XXVIII / XXIX.
+
+### Server improvements
+- **`MatchStats.max_turns: Option<u32>`** — tracks the longest
+  observed final turn count across all completed matches for
+  outlier visibility. Surfaced in format_match_stats as
+  "(max turns N)" after avg turns.
+
+### CR rule lock-in tests (3 new)
+- `cr_121_2_multi_draw_fires_one_event_per_card` — pins per-draw
+  fanout for multi-card draw effects.
+- `cr_405_5_top_of_stack_resolves_first_lifo` — pins LIFO ordering
+  for stack resolution.
+- `cr_614_6_shield_counter_only_absorbs_one_event_then_pops` — pins
+  the one-event-per-replacement semantics of shield counters.
+
+### Observations & future items from this session
+- **`CounterType::Keyword(Keyword)`** still ⏳: a true first-class
+  variant would replace the bespoke `keyword_counters: HashMap` field
+  on CardInstance with a `CounterType::Keyword(Keyword)` enum tag.
+  ~50 lines.
+- **Counter doubling (CR 614.16)** for `AddKeywordCounter` still ⏳:
+  the regular `AddCounter` path walks `counter_doublers_for`; the new
+  variant should mirror that.
+- **Bot AI doesn't model magecraft pump/drain triggers** when
+  considering whether to cast an instant — still ⏳.
+
 ## Recent additions (Push XXIX — 2026-05-28, session 13, batches 184-186)
 
 ### New cards (10 across batches 184-186)
