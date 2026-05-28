@@ -794,7 +794,7 @@ mod tests {
         assert_eq!(main.len() + sb.len(), picks.len(),
             "no cards lost — over-cap copies must move to sideboard");
         assert_eq!(sb.len(), 2, "two over-cap copies sit in the sideboard");
-        assert!(sb.iter().all(|f| *f as usize == crate::catalog::lightning_bolt as usize),
+        assert!(sb.iter().all(|f| *f as usize == crate::catalog::lightning_bolt as *const () as usize),
             "sideboard holds the dropped Bolts");
     }
 
@@ -809,7 +809,7 @@ mod tests {
         picks.push(crate::catalog::counterspell);
         let (main, sb) = suggest_main_deck(&picks, 5);
         assert_eq!(main.len(), 5, "main fills to target after the cap kicks in");
-        assert!(main.iter().any(|f| *f as usize == crate::catalog::counterspell as usize),
+        assert!(main.iter().any(|f| *f as usize == crate::catalog::counterspell as *const () as usize),
             "Counterspell takes the slot freed by the 5th Bolt being capped");
         assert_eq!(main.len() + sb.len(), picks.len(), "no cards lost");
     }

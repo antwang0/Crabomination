@@ -12188,7 +12188,7 @@ fn tireless_provisioner_creates_treasure_on_landfall() {
     drain_stack(&mut g);
 
     let treasures: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").collect();
-    assert!(treasures.len() >= 1, "Treasure token created on landfall");
+    assert!(!treasures.is_empty(), "Treasure token created on landfall");
 }
 
 #[test]
@@ -12584,7 +12584,7 @@ fn young_pyromancer_creates_token_on_is_cast() {
     drain_stack(&mut g);
 
     let tokens: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Elemental" && c.definition.power == 1).collect();
-    assert!(tokens.len() >= 1, "Young Pyromancer created at least one Elemental token");
+    assert!(!tokens.is_empty(), "Young Pyromancer created at least one Elemental token");
 }
 
 #[test]

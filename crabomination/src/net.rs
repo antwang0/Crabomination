@@ -329,6 +329,23 @@ pub struct ExileCardView {
     /// The card's owner (the player to whom the card returns if it
     /// later moves to its owner's hand/library/graveyard).
     pub owner: usize,
+    /// If `Some`, the seat that has a `may_play_until` permission on
+    /// this exiled card. Lets the client surface a "may play X" badge
+    /// on Conspiracy Theorist / Suspend Aggression / Elemental Mascot /
+    /// The Dawning Archaic-style exiled-with-permission cards.
+    /// `None` for plain exile (no may-play grant).
+    #[serde(default)]
+    pub may_play_recipient: Option<usize>,
+    /// Card's mana value (CMC). Surfaced so the client can render the
+    /// cost badge on exile-browser entries without needing the
+    /// full CardDefinition. 0 for cards with no cost (lands).
+    #[serde(default)]
+    pub mana_value: u32,
+    /// Whether this card is a token (which would normally be cleaned
+    /// up by SBA but may exist transiently). Lets the client style
+    /// token entries distinctly.
+    #[serde(default)]
+    pub is_token: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -65,6 +65,9 @@ fn exile_entry(card: &CardInstance) -> ExileCardView {
         id: card.id,
         name: card.definition.name.to_string(),
         owner: card.owner,
+        may_play_recipient: card.may_play_until.as_ref().map(|p| p.player),
+        mana_value: card.definition.cost.cmc(),
+        is_token: card.is_token,
     }
 }
 
@@ -1172,5 +1175,51 @@ mod tests {
             "expected 'GY leaves' label for Spirit Mascot's CardLeftGraveyard trigger; got {:?}",
             perm.triggered_ability_labels,
         );
+    }
+
+    #[test]
+    fn exile_card_view_surfaces_mana_value_and_token_flag() {
+        // Push (modern_decks): the ExileCardView now carries mana_value,
+        // is_token, and may_play_recipient so the client can render an
+        // exile browser tooltip without re-fetching CardDefinition.
+        let mut state = two_player_game();
+        // Stash a Lightning Bolt directly in exile (no may-play grant).
+        let bolt_def = catalog::lightning_bolt();
+        let bolt_id = state.next_id();
+        let mut bolt = crate::card::CardInstance::new(bolt_id, bolt_def, 0);
+        bolt.controller = 0;
+        state.exile.push(bolt);
+
+        let view = project(&state, 0);
+        let entry = view.exile.iter().find(|c| c.id == bolt_id).expect("bolt in exile");
+        // Lightning Bolt costs {R}, so CMC = 1.
+        assert_eq!(entry.mana_value, 1);
+        // Plain CardInstance, not a token.
+        assert!(!entry.is_token);
+        // No may-play grant — recipient is None.
+        assert_eq!(entry.may_play_recipient, None);
+    }
+
+    #[test]
+    fn exile_card_view_surfaces_may_play_recipient() {
+        // When an exile card carries a may_play_until permission (e.g.
+        // Conspiracy Theorist's exile-top), the recipient seat surfaces
+        // through the view so the client can paint a "may play" badge.
+        let mut state = two_player_game();
+        let bolt_def = catalog::lightning_bolt();
+        let bolt_id = state.next_id();
+        let mut bolt = crate::card::CardInstance::new(bolt_id, bolt_def, 0);
+        bolt.controller = 0;
+        bolt.may_play_until = Some(crate::card::MayPlayPermission {
+            player: 0,
+            granted_turn: 1,
+            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+            exile_after: false,
+        });
+        state.exile.push(bolt);
+
+        let view = project(&state, 0);
+        let entry = view.exile.iter().find(|c| c.id == bolt_id).expect("bolt in exile");
+        assert_eq!(entry.may_play_recipient, Some(0));
     }
 }

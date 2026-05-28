@@ -67290,7 +67290,7 @@ fn storm_kiln_artist_magecraft_creates_treasure_and_deals_damage() {
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let p1_life = g.players[1].life;
-    let bf_before = g.battlefield.len();
+    let _bf_before = g.battlefield.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: bolt,

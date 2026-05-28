@@ -17,7 +17,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::PlayerRef;
-use crate::mana::{cost, generic, b, g, r, w, Color};
+use crate::mana::{cost, generic, b, g, w, Color};
 
 /// Strixhaven Pest token: 1/1 black-and-green creature with
 /// "When this creature dies, you gain 1 life." Shared by Pest

@@ -12897,7 +12897,7 @@ fn explore_grants_extra_land_play_and_draws() {
     let id = g.add_card_to_hand(0, catalog::explore());
     g.players[0].mana_pool.add(Color::Green, 1);
     // Add a forest to hand + library cards.
-    let forest = g.add_card_to_hand(0, catalog::forest());
+    let _forest = g.add_card_to_hand(0, catalog::forest());
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
