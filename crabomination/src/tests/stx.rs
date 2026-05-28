@@ -76786,10 +76786,39 @@ fn silverquill_drainscholar_ii_b202_etb_drains_two() {
 }
 
 #[test]
-fn inkling_heartcaller_b202_has_inkling_death_trigger() {
-    let def = catalog::inkling_heartcaller_b202();
-    assert_eq!(def.cost.cmc(), 3);
-    assert_eq!(def.triggered_abilities.len(), 1);
+fn inkling_heartcaller_b202_gains_life_when_inkling_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inkling_heartcaller_b202());
+    let inkling = g.add_card_to_battlefield(0, catalog::inkling_aspirant());
+    drain_stack(&mut g);
+    let p0 = g.players[0].life;
+    // Kill via Lightning Bolt → CreatureDied fires.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(inkling)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 2, "Inkling death triggers 2 life");
+}
+
+#[test]
+fn inkling_heartcaller_b202_does_not_trigger_on_non_inkling_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inkling_heartcaller_b202());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    drain_stack(&mut g);
+    let p0 = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0, "non-Inkling death does not trigger");
 }
 
 #[test]

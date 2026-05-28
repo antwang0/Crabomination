@@ -179,6 +179,20 @@ struct MatchStats {
     /// operator can spot empty samples. Push (claude/modern_decks
     /// batch 198).
     seat_wins: [u64; SEAT_BUCKET_COUNT],
+    /// Cumulative life delta on wins: for each completed match with a
+    /// winner, sum `winner_life - max(other_seat_life, 0)`. Divided by
+    /// `wins` in the summary line gives an average win-by-life number,
+    /// surfacing whether games are "blowouts" (high delta) or "races"
+    /// (low / negative delta — winner ended at 1 with opp at 0).
+    /// Saturates positive; clamped at zero when winner life is below
+    /// the negative of the opp's. Push (claude/modern_decks batch 202).
+    cumulative_win_life_delta: i64,
+    /// Number of matches counted in `cumulative_win_life_delta`. Lets
+    /// the formatter compute the average without dividing by `wins`
+    /// directly (a winner with no available life data — e.g. a forced
+    /// concession — is skipped in the cumulative sum but still counted
+    /// in `wins`).
+    win_life_samples: u64,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -249,6 +263,35 @@ impl MatchStats {
                 self.seat_wins[idx] = self.seat_wins[idx].saturating_add(1);
             }
             None => {}
+        }
+    }
+    /// Accumulate the win-by-life delta for one match. `final_life`
+    /// is the per-seat life array; `winner` is the winning seat. The
+    /// delta is `winner_life - max_opponent_life` clamped to ≥0 so
+    /// the cumulative sum can't go negative even if both ended at
+    /// negative life (rare double-loss scenario). Skipped silently
+    /// when the winning seat is out of range or no life data is
+    /// available. Push (claude/modern_decks batch 202).
+    fn observe_win_life_delta(&mut self, winner: usize, final_life: &[i32]) {
+        let Some(&winner_life) = final_life.get(winner) else { return };
+        let max_opp = final_life
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &l)| (i != winner).then_some(l))
+            .max()
+            .unwrap_or(0);
+        let delta = (winner_life - max_opp).max(0) as i64;
+        self.cumulative_win_life_delta =
+            self.cumulative_win_life_delta.saturating_add(delta);
+        self.win_life_samples = self.win_life_samples.saturating_add(1);
+    }
+    /// Average win-by-life delta across all sampled wins. Returns 0
+    /// when no win-life samples have been recorded yet.
+    fn avg_win_life_delta(&self) -> i64 {
+        if self.win_life_samples == 0 {
+            0
+        } else {
+            self.cumulative_win_life_delta / (self.win_life_samples as i64)
         }
     }
     /// Average turn count across all completed matches. Returns 0
@@ -422,6 +465,12 @@ fn format_match_stats(s: &MatchStats) -> String {
             .map(|w| w.to_string())
             .collect();
         out.push_str(&format!(" seat_wins={}", parts.join("/")));
+        // Average winning-seat life delta — "blowout" check. A high value
+        // (12+) means the winner cruised; near-zero values mean games
+        // ended in a race. Push (claude/modern_decks batch 202).
+        if s.win_life_samples > 0 {
+            out.push_str(&format!(" avg_win_life_lead={}", s.avg_win_life_delta()));
+        }
     }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
@@ -755,6 +804,9 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         s.record_bot(duration, format);
         s.observe_turns(outcome.final_turn);
         s.observe_winner(outcome.winner);
+        if let Some(Some(w)) = outcome.winner {
+            s.observe_win_life_delta(w, &outcome.final_life_totals);
+        }
         *s
     };
     eprintln!(
@@ -804,6 +856,9 @@ fn run_pair_match(
         s.record_pair(duration, format);
         s.observe_turns(outcome.final_turn);
         s.observe_winner(outcome.winner);
+        if let Some(Some(w)) = outcome.winner {
+            s.observe_win_life_delta(w, &outcome.final_life_totals);
+        }
         *s
     };
     eprintln!(
@@ -1133,6 +1188,59 @@ mod tests {
         s.observe_winner(Some(Some(7)));
         assert_eq!(s.seat_wins[SEAT_BUCKET_COUNT - 1], 1);
         assert_eq!(s.wins, 1);
+    }
+
+    #[test]
+    fn observe_win_life_delta_accumulates_winners_lead() {
+        let mut s = MatchStats::default();
+        // Winner: seat 0 at 12 life vs seat 1 at 4 life → delta 8.
+        s.observe_win_life_delta(0, &[12, 4]);
+        // Winner: seat 1 at 1 life vs seat 0 at 0 → delta 1.
+        s.observe_win_life_delta(1, &[0, 1]);
+        // Winner: seat 0 at -1 life vs seat 1 at -5 → delta 4
+        // (winner lost less life than opp; positive lead remains).
+        s.observe_win_life_delta(0, &[-1, -5]);
+        assert_eq!(s.win_life_samples, 3);
+        // Average = (8 + 1 + 4) / 3 = 4.
+        assert_eq!(s.avg_win_life_delta(), 4);
+    }
+
+    #[test]
+    fn observe_win_life_delta_clamps_negative_lead_to_zero() {
+        let mut s = MatchStats::default();
+        // Pathological: winner ended at less life than opp (shouldn't
+        // happen with normal SBAs but covers forced-draw exits).
+        s.observe_win_life_delta(0, &[1, 5]);
+        assert_eq!(s.cumulative_win_life_delta, 0,
+            "negative lead clamps to 0");
+        assert_eq!(s.win_life_samples, 1);
+    }
+
+    #[test]
+    fn observe_win_life_delta_handles_seat_out_of_range() {
+        let mut s = MatchStats::default();
+        s.observe_win_life_delta(5, &[20, 0]); // seat 5 doesn't exist
+        assert_eq!(s.win_life_samples, 0, "out-of-range silently skipped");
+    }
+
+    #[test]
+    fn format_match_stats_includes_avg_win_life_lead_when_present() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        s.observe_win_life_delta(0, &[18, 0]);
+        let line = format_match_stats(&s);
+        assert!(line.contains("avg_win_life_lead=18"), "got: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_omits_avg_win_life_lead_when_no_samples() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_winner(Some(Some(0)));
+        // No observe_win_life_delta call → samples = 0.
+        let line = format_match_stats(&s);
+        assert!(!line.contains("avg_win_life_lead"), "got: {line}");
     }
 
     #[test]
