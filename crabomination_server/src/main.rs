@@ -152,6 +152,13 @@ struct MatchStats {
     /// (high avg turn count) without sampling individual match logs.
     /// Push (claude/modern_decks batch 172).
     total_turns: u64,
+    /// Longest observed final turn count across all completed matches.
+    /// Surfaces "grindiest" games for outlier debugging — paired with
+    /// `total_turns / total_matches` (the running average) lets operators
+    /// distinguish "consistent 8-turn games" from "5-turn average with
+    /// one 30-turn outlier". `None` until the first match completes.
+    /// Push (claude/modern_decks batch 189).
+    max_turns: Option<u32>,
 }
 
 /// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
@@ -198,6 +205,10 @@ impl MatchStats {
     /// once per `record_*` (the caller passes the final turn).
     fn observe_turns(&mut self, turns: u32) {
         self.total_turns = self.total_turns.saturating_add(turns as u64);
+        self.max_turns = Some(match self.max_turns {
+            None => turns,
+            Some(m) => m.max(turns),
+        });
     }
     /// Average turn count across all completed matches. Returns 0
     /// pre-warmup. Used by `format_match_stats` for the operator
@@ -344,6 +355,9 @@ fn format_match_stats(s: &MatchStats) -> String {
         format_duration(s.avg_duration()),
         s.avg_turns(),
     );
+    if let Some(m) = s.max_turns {
+        out.push_str(&format!(" (max turns {m})"));
+    }
     if let (Some(mn), Some(mx)) = (s.min_duration, s.max_duration) {
         out.push_str(&format!(
             " (min {}, max {})",
@@ -1085,6 +1099,25 @@ mod tests {
     fn match_stats_avg_turns_zero_before_any_record() {
         let s = MatchStats::default();
         assert_eq!(s.avg_turns(), 0);
+    }
+
+    #[test]
+    fn match_stats_max_turns_tracks_longest_match() {
+        let mut s = MatchStats::default();
+        assert_eq!(s.max_turns, None, "unset before any record");
+        s.observe_turns(5);
+        s.observe_turns(20);
+        s.observe_turns(8);
+        assert_eq!(s.max_turns, Some(20), "tracks the longest observed turn count");
+    }
+
+    #[test]
+    fn match_stats_max_turns_rendered_in_summary_line() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(42);
+        let line = format_match_stats(&s);
+        assert!(line.contains("max turns 42"), "expected max-turns in summary: {line}");
     }
 
     #[test]
