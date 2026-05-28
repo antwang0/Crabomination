@@ -20679,6 +20679,97 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 189 (modern_decks) — additional Lorehold cards ──────────────────
+
+/// Lorehold Voltmage (b189) — {2}{R} 2/2 Spirit Wizard.
+/// ETB ping 2 to any target.
+pub fn lorehold_voltmage_b189() -> CardDefinition {
+    use crate::effect::shortcut::etb_ping_any;
+    CardDefinition {
+        name: "Lorehold Voltmage (b189)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Fireseal (b189) — {2}{R}{W} Sorcery.
+/// Mints 2 Lorehold Spirits + grant Haste EOT.
+pub fn lorehold_fireseal_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Fireseal (b189)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            mint_lorehold_spirits(2),
+            Effect::GrantKeyword {
+                what: Selector::LastCreatedToken,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Crusader (b189) — {1}{R}{W} 2/3 Spirit Knight Vigilance.
+/// Magecraft self-pump +1/+0 EOT.
+pub fn lorehold_crusader_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Crusader (b189)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 188 (modern_decks) — additional Lorehold cards ──────────────────
 
 /// Lorehold Spiritsong (b188) — {1}{R}{W} 2/2 Spirit Cleric Lifelink.

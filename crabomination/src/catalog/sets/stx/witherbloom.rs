@@ -20121,6 +20121,100 @@ pub fn witherbloom_venomspur_b185() -> CardDefinition {
     }
 }
 
+// ── Batch 189 (modern_decks) — additional Witherbloom cards ──────────────
+
+/// Witherbloom Devourer (b189) — {2}{B}{G} 3/2 Beast Trample.
+/// On-attack drain 1.
+pub fn witherbloom_devourer_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Devourer (b189)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Spellblossom (b189) — {3}{B}{G} Sorcery.
+/// Drain 4.
+pub fn witherbloom_spellblossom_b189() -> CardDefinition {
+    use crate::effect::shortcut::drain;
+    CardDefinition {
+        name: "Witherbloom Spellblossom (b189)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(4),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Crawler (b189) — {1}{G} 1/3 Pest.
+/// Reach + on-die gain life 1.
+pub fn pest_crawler_b189() -> CardDefinition {
+    use crate::effect::shortcut::dies_gain_life;
+    CardDefinition {
+        name: "Pest Crawler (b189)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Batch 188 (modern_decks) — additional Witherbloom cards ──────────────
 
 /// Witherbloom Mireshade (b188) — {1}{B}{G} 2/3 Plant Druid Deathtouch.

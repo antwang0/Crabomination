@@ -23331,6 +23331,92 @@ pub fn inkling_spellguard_b187() -> CardDefinition {
     }
 }
 
+// ── Batch 189 (modern_decks) — Silverquill drain + Inkling tribal ─────────
+
+/// Silverquill Drainmaster II (b189) — {2}{B}{B} 3/3 Vampire Warlock.
+/// ETB drain 3.
+pub fn silverquill_drainmaster_ii_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Drainmaster II (b189)",
+        cost: cost(&[generic(2), b(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Vassalking (b189) — {3}{W}{B} 4/3 Inkling Knight Flying + Lifelink.
+/// On-attack drain 1.
+pub fn inkling_vassalking_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Vassalking (b189)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Exilewright (b189) — {3}{W} Sorcery.
+/// Exile target creature.
+pub fn silverquill_exilewright_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Exilewright (b189)",
+        cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Exile,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 188 (modern_decks) — additional Silverquill cards ───────────────
 
 /// Silverquill Cantrap (b188) — {W} Instant.

@@ -15761,6 +15761,104 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     }
 }
 
+// ── Batch 189 (modern_decks) — additional Prismari cards ──────────────────
+
+/// Prismari Magmamancer (b189) — {2}{R}{R} 3/2 Wizard Prowess.
+/// On-attack ping 2 to any target.
+pub fn prismari_magmamancer_b189() -> CardDefinition {
+    use crate::effect::shortcut::on_attack_ping_any;
+    CardDefinition {
+        name: "Prismari Magmamancer (b189)",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Treasurewright (b189) — {1}{U}{R} 2/3 Artificer.
+/// ETB mints a Treasure token + magecraft scry 1.
+pub fn prismari_treasurewright_b189() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    use crate::effect::shortcut::etb_mint_token;
+    CardDefinition {
+        name: "Prismari Treasurewright (b189)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb_mint_token(treasure_token(), 1),
+            magecraft_scry(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Hailstrike (b189) — {U}{R} Instant.
+/// 2 damage to target creature + draw 1.
+pub fn prismari_hailstrike_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Hailstrike (b189)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 188 (modern_decks) — additional Prismari cards ──────────────────
 
 /// Prismari Lavakin (b188) — {1}{R} 2/2 Elemental Haste.

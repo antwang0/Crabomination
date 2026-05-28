@@ -3666,5 +3666,21 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_mossleaf_b188,
         super::quandrix::quandrix_dataweaver_b188,
         super::quandrix::quandrix_latticebreaker_b188,
+        // ── batch 189 (modern_decks): aggressive curve fillers ──
+        super::silverquill::silverquill_drainmaster_ii_b189,
+        super::silverquill::inkling_vassalking_b189,
+        super::silverquill::silverquill_exilewright_b189,
+        super::witherbloom::witherbloom_devourer_b189,
+        super::witherbloom::witherbloom_spellblossom_b189,
+        super::witherbloom::pest_crawler_b189,
+        super::lorehold::lorehold_voltmage_b189,
+        super::lorehold::lorehold_fireseal_b189,
+        super::lorehold::lorehold_crusader_b189,
+        super::prismari::prismari_magmamancer_b189,
+        super::prismari::prismari_treasurewright_b189,
+        super::prismari::prismari_hailstrike_b189,
+        super::quandrix::quandrix_beastcaller_b189,
+        super::quandrix::quandrix_cantrip_b189,
+        super::quandrix::quandrix_vinescaler_ii_b189,
     ]
 }

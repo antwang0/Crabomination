@@ -16821,6 +16821,103 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     }
 }
 
+// ── Batch 189 (modern_decks) — additional Quandrix cards ──────────────────
+
+/// Quandrix Beastcaller (b189) — {2}{G} 2/3 Fractal Druid.
+/// ETB +1/+1 counter on each Fractal you control.
+pub fn quandrix_beastcaller_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Beastcaller (b189)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::ForEach {
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            body: Box::new(Effect::AddCounter {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            }),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Cantrip (b189) — {1}{U} Instant.
+/// Draw 2 cards.
+pub fn quandrix_cantrip_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Cantrip (b189)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Vinescaler II (b189) — {3}{G} 4/4 Fractal.
+/// Reach + Trample.
+pub fn quandrix_vinescaler_ii_b189() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Vinescaler II (b189)",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Reach, Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 // ── Batch 188 (modern_decks) — additional Quandrix cards ──────────────────
 
 /// Quandrix Mossleaf (b188) — {1}{G} 2/3 Plant.
