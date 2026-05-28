@@ -299,6 +299,16 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(tapped)"));
     }
 
+    // Combat status: surface "(attacking)" / "(blocking attacker N)"
+    // so the player can tell at a glance which creatures are committed
+    // to combat. Push (claude/modern_decks batch 202).
+    if p.attacking {
+        lines.push(String::from("(attacking)"));
+    }
+    if let Some(att) = p.blocking_attacker {
+        lines.push(format!("(blocking #{})", att.0));
+    }
+
     // Marked damage: every creature with non-zero damage is one toughness-
     // threshold away from death. Surface "marked: N damage" plus a
     // (lethal? Y/N) shorthand so the player sees at a glance how close
@@ -489,6 +499,32 @@ mod tests {
     #[allow(dead_code)]
     fn _ensure_counter_type_import_used() {
         let _ = CounterType::PlusOnePlusOne;
+    }
+
+    #[test]
+    fn attacking_status_surfaces_in_tooltip() {
+        let mut p = make_permanent_view(0, 2);
+        p.attacking = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(attacking)"), "got: {body}");
+    }
+
+    #[test]
+    fn blocking_status_shows_attacker_id() {
+        let mut p = make_permanent_view(0, 2);
+        p.blocking_attacker = Some(CardId(7));
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(blocking #7)"), "got: {body}");
+    }
+
+    #[test]
+    fn combat_status_hidden_when_idle() {
+        let p = make_permanent_view(0, 2);
+        let body = build_tooltip_body(&p);
+        if let Some(s) = body {
+            assert!(!s.contains("(attacking)"), "no attack flag: {s}");
+            assert!(!s.contains("(blocking"), "no block flag: {s}");
+        }
     }
 }
 
