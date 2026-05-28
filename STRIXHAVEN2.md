@@ -19,8 +19,29 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 2663 (incl. synthesised variants — batches 155–183 add 421 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 2672 (incl. synthesised variants — batches 155–186 add 430 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (modern_decks, batches 184-186, claude/modern_decks): 10 more
+cards across all five colleges exercising the new CR 122.1b keyword
+counter wire:
+
+**Batch 184 (6 cards)** — six new keyword counter granters covering
+the rest of the "evergreen" keywords: Silverquill Wordsharpener (first
+strike), Silverquill Drainmark (deathtouch), Witherbloom Trampleblossom
+(trample), Witherbloom Lifebondseal (lifelink), Lorehold Battlerune
+(haste), Lorehold Wardseal (vigilance). Each ships with a test
+verifying `has_keyword()` returns true after the counter is placed.
+
+**Batch 185 (3 cards)** — self-ETB keyword counter cards: Prismari
+Sparkbloomer (ETB haste counter on self), Witherbloom Venomspur (ETB
+deathtouch counter on self), Quandrix Skyfractal (mints a Fractal
+with 2 +1/+1 counters AND a flying counter, exercising the keyword
+counter wire on a token).
+
+**Batch 186 (1 card)** — Silverquill Glyphmaker: magecraft trigger
+that combines a regular +1/+1 counter with a flying counter on a
+target friendly creature.
 
 Push (modern_decks, batches 174-183, claude/modern_decks): 85 additional
 new STX cards across all five colleges, plus engine + UI + server

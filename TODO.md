@@ -5,6 +5,39 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXIX — 2026-05-28, session 13, batches 184-186)
+
+### New cards (10 across batches 184-186)
+- Batch 184 (6 cards): six new keyword counter granters covering the
+  rest of the evergreen keywords — Silverquill Wordsharpener (first
+  strike), Silverquill Drainmark (deathtouch), Witherbloom
+  Trampleblossom (trample), Witherbloom Lifebondseal (lifelink),
+  Lorehold Battlerune (haste), Lorehold Wardseal (vigilance). Each
+  ships with a test verifying has_keyword() returns true post-grant.
+- Batch 185 (3 cards): self-ETB keyword counter cards — Prismari
+  Sparkbloomer (ETB haste counter on self), Witherbloom Venomspur
+  (ETB deathtouch counter on self), Quandrix Skyfractal (mints a
+  Fractal with 2 +1/+1 counters AND a flying counter, exercising the
+  CR 122.1b wire on a token).
+- Batch 186 (1 card): Silverquill Glyphmaker — magecraft engine that
+  combines a +1/+1 counter and a flying counter on a target friendly
+  creature.
+
+### Observations & future items from this session
+- **Keyword counter UI badge**: still ⏳. Could add
+  `PermanentView.has_keyword_counters: bool` (or a richer
+  Vec<(Keyword, u32)>) so the client can surface "this creature has a
+  flying counter" in the tooltip alongside the existing P/T-counter
+  highlights.
+- **`Effect::RemoveKeywordCounter`** — counterpart to the new
+  AddKeywordCounter. Would let cards like a hypothetical "Strip
+  Flight" (sorcery: remove a flying counter from target creature)
+  toggle the grant off. No existing card in the catalog needs this
+  today; the engine already grants the keyword while at least one
+  counter is present, so `Effect::RemoveCounter { kind: ??? }` can't
+  toggle keyword counters because they're keyed by Keyword, not
+  CounterType. Tracked.
+
 ## Recent additions (Push XXVIII — 2026-05-28, session 12, batches 180-183)
 
 ### Engine improvements
