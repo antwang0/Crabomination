@@ -27,7 +27,7 @@ use crate::card::{
 use crate::effect::shortcut::{
     drain, drain_and_surveil, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
     magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, magecraft_scry,
-    on_attack_drain, on_attack_gain_life, target_filtered,
+    on_attack_drain, on_attack_gain_life, on_other_dies, target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, StaticAbility, StaticEffect, ZoneDest};
 use crate::mana::{cost, generic, u, w, b, x, ManaCost};
@@ -21907,6 +21907,103 @@ pub fn silverquill_aegismage_b170() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByYou),
             ),
             kind: CounterType::Shield,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+// ── Batch 171 (modern_decks) — Silverquill expansion ──────────────────────
+
+/// Silverquill Quillsmith (b171) — {2}{W} 2/3 Human Wizard Vigilance.
+/// Magecraft: put a +1/+1 counter on target friendly creature.
+pub fn silverquill_quillsmith_b171() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Silverquill Quillsmith (b171)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Inkling Vanguard II (b171) — {W}{B} 1/3 Inkling Soldier Flying + Vigilance.
+/// Compact defensive Inkling.
+pub fn inkling_vanguard_ii_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Inkling Vanguard II (b171)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Silverquill Tombwarden (b171) — {3}{W}{B} 3/5 Vampire Cleric Lifelink.
+/// Whenever another creature you control dies, you gain 1 life.
+pub fn silverquill_tombwarden_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Tombwarden (b171)",
+        cost: cost(&[generic(3), w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(Effect::GainLife {
+            who: Selector::You,
             amount: Value::Const(1),
         })],
         static_abilities: vec![],

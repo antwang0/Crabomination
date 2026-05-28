@@ -69657,4 +69657,194 @@ fn quandrix_hydromancer_b170_etb_shields_self_and_magecraft_draws() {
     assert_eq!(c.counter_count(CounterType::Shield), 1);
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 171 (modern_decks) — Expansion across schools
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_quillsmith_b171_pumps_friendly_on_is_cast() {
+    let mut g = two_player_game();
+    let _q = g.add_card_to_battlefield(0, catalog::silverquill_quillsmith_b171());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn inkling_vanguard_ii_b171_is_one_three_flying_vigilance_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_vanguard_ii_b171());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!(c.power(), 1);
+    assert_eq!(c.toughness(), 3);
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Vigilance));
+    assert!(c.definition.has_creature_type(CreatureType::Inkling));
+}
+
+#[test]
+fn silverquill_tombwarden_b171_gains_life_when_other_dies() {
+    let mut g = two_player_game();
+    let _tw = g.add_card_to_battlefield(0, catalog::silverquill_tombwarden_b171());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p0_life = g.players[0].life;
+    // Kill the bear with a Bolt from P1.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none());
+    assert_eq!(g.players[0].life, p0_life + 1);
+}
+
+#[test]
+fn witherbloom_lifeleech_b171_drains_on_combat_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_lifeleech_b171());
+    g.clear_sickness(id);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }])).expect("attacks");
+    drain_stack(&mut g);
+    let p1_life = g.players[1].life;
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage resolved");
+    drain_stack(&mut g);
+    // 2 combat damage + 1 from triggered = -3
+    assert_eq!(g.players[1].life, p1_life - 3);
+}
+
+#[test]
+fn witherbloom_sapsprite_b171_sac_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapsprite_b171());
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("activatable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "sapsprite sacrificed");
+    assert_eq!(g.players[0].life, p0_life + 2);
+    assert_eq!(g.players[1].life, p1_life - 2);
+}
+
+#[test]
+fn lorehold_skirmisher_b171_has_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_skirmisher_b171());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&Keyword::Haste));
+}
+
+#[test]
+fn lorehold_pyresage_b171_pings_on_is_cast() {
+    let mut g = two_player_game();
+    let _p = g.add_card_to_battlefield(0, catalog::lorehold_pyresage_b171());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // bolt 3 + magecraft 1 = -4
+    assert_eq!(g.players[1].life, p1_life - 4);
+}
+
+#[test]
+fn prismari_sparkforge_b171_pings_opp_creature_on_is_cast() {
+    let mut g = two_player_game();
+    let _sf = g.add_card_to_battlefield(0, catalog::prismari_sparkforge_b171());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert!(c.damage >= 1, "bear damaged by magecraft ping");
+}
+
+#[test]
+fn prismari_tideflame_b171_bounces_and_burns() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_tideflame_b171());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "bear in hand");
+    assert_eq!(g.players[1].life, p1_life - 2);
+}
+
+#[test]
+fn quandrix_echocrasher_b171_pumps_self_on_combat_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_echocrasher_b171());
+    g.clear_sickness(id);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }])).expect("attacks");
+    drain_stack(&mut g);
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat damage resolved");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("echocrasher alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn quandrix_fractalmancer_b171_scrys_and_draws_on_is_cast() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::forest());
+    let _fm = g.add_card_to_battlefield(0, catalog::quandrix_fractalmancer_b171());
+    let hand_before = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // hand_before was before bolt was added. After: bolt +1, cast -1,
+    // draw +1 = hand_before + 1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
 

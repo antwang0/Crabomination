@@ -3472,6 +3472,18 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::witherbloom::witherbloom_drainer_b170,
         super::prismari::prismari_forgesmith_b170,
         super::quandrix::quandrix_hydromancer_b170,
+        // ── batch 171 (modern_decks): expanded variety ──
+        super::silverquill::silverquill_quillsmith_b171,
+        super::silverquill::inkling_vanguard_ii_b171,
+        super::silverquill::silverquill_tombwarden_b171,
+        super::witherbloom::witherbloom_lifeleech_b171,
+        super::witherbloom::witherbloom_sapsprite_b171,
+        super::lorehold::lorehold_skirmisher_b171,
+        super::lorehold::lorehold_pyresage_b171,
+        super::prismari::prismari_sparkforge_b171,
+        super::prismari::prismari_tideflame_b171,
+        super::quandrix::quandrix_echocrasher_b171,
+        super::quandrix::quandrix_fractalmancer_b171,
         // ── mono additions ──
         super::mono::professor_of_symbology,
         super::silverquill::silverquill_silencer,

@@ -19625,6 +19625,83 @@ pub fn witherbloom_vitalist_b170() -> CardDefinition {
     }
 }
 
+// ── Batch 171 (modern_decks) — Witherbloom expansion ──────────────────────
+
+/// Witherbloom Lifeleech (b171) — {1}{B} 2/1 Vampire Warlock Lifelink.
+/// Whenever this creature deals combat damage, target opp loses 1 life.
+pub fn witherbloom_lifeleech_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifeleech (b171)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Witherbloom Sapsprite (b171) — {G} 1/1 Plant.
+/// {1}{B}{G}, sac this: each opp loses 2 life, you gain 2 life.
+pub fn witherbloom_sapsprite_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapsprite (b171)",
+        cost: cost(&[g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1), b(), g()]),
+            effect: drain(2),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            ..Default::default()
+        }],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Witherbloom Drainer (b170) — {3}{B} Sorcery.
 /// Drain 3. (Each opponent loses 3 life and you gain 3 life.)
 pub fn witherbloom_drainer_b170() -> CardDefinition {

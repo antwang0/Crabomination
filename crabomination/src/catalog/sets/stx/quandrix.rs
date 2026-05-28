@@ -16265,6 +16265,84 @@ pub fn quandrix_bigwave_b169() -> CardDefinition {
 
 // ── Batch 170 (modern_decks) — Quandrix expansion ─────────────────────────
 
+// ── Batch 171 (modern_decks) — Quandrix expansion ─────────────────────────
+
+/// Quandrix Echocrasher (b171) — {3}{G}{U} 4/4 Fractal Elemental Trample.
+/// Whenever a creature you control deals combat damage, put a +1/+1
+/// counter on it.
+pub fn quandrix_echocrasher_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Echocrasher (b171)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Quandrix Fractalmancer (b171) — {2}{G}{U} 3/3 Human Druid Wizard.
+/// Magecraft: scry 1 + draw a card.
+pub fn quandrix_fractalmancer_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalmancer (b171)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Quandrix Hydromancer (b170) — {2}{G}{U} 2/3 Elf Wizard.
 /// ETB: put a shield counter on this creature. Magecraft: draw a card.
 pub fn quandrix_hydromancer_b170() -> CardDefinition {

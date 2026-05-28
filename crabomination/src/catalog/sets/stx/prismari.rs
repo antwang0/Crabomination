@@ -15324,6 +15324,77 @@ pub fn prismari_drakelord_b169() -> CardDefinition {
 
 // ── Batch 170 (modern_decks) — Prismari expansion ─────────────────────────
 
+// ── Batch 171 (modern_decks) — Prismari expansion ─────────────────────────
+
+/// Prismari Sparkforge (b171) — {1}{R} 2/2 Elemental.
+/// Magecraft: deal 1 damage to target creature an opponent controls.
+pub fn prismari_sparkforge_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkforge (b171)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Prismari Tideflame (b171) — {3}{U}{R} Instant.
+/// Bounce target creature, then deal 2 damage to target opp.
+/// Two-target multi-slot shape.
+pub fn prismari_tideflame_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tideflame (b171)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::Target(0),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+            Effect::DealDamage {
+                to: Selector::Target(1),
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Prismari Forgesmith (b170) — {2}{R} 2/3 Elemental Wizard.
 /// ETB: put a shield counter on this creature. Magecraft: treasure mint.
 pub fn prismari_forgesmith_b170() -> CardDefinition {

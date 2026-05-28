@@ -700,6 +700,26 @@ impl GameState {
             })
             .unwrap_or_default();
 
+        // Phase 1.5: walk all battlefield permanents for `YourControl`-scope
+        // combat-damage triggers. This handles "whenever a creature you
+        // control deals combat damage to a player" listeners (e.g.,
+        // Quandrix Echocrasher b171). The listener's controller must
+        // match the attacker's controller.
+        if let Some(atk_ctrl) = attacker_controller {
+            for c in &self.battlefield {
+                if c.id == source || c.controller != atk_ctrl {
+                    continue;
+                }
+                for t in &c.definition.triggered_abilities {
+                    if t.event.kind == EventKind::DealsCombatDamageToPlayer
+                        && matches!(t.event.scope, crate::effect::EventScope::YourControl)
+                    {
+                        triggers.push((c.id, t.effect.clone(), c.controller));
+                    }
+                }
+            }
+        }
+
         // Phase 2: walk every player's graveyard for `FromYourGraveyard`
         // triggers. Only fire if the attacker is controlled by the gy
         // owner (the printed "creatures you control" filter on the

@@ -20282,6 +20282,64 @@ pub fn lorehold_shieldbearer_b170() -> CardDefinition {
     }
 }
 
+// ── Batch 171 (modern_decks) — Lorehold expansion ─────────────────────────
+
+/// Lorehold Skirmisher (b171) — {1}{R} 2/2 Human Soldier Haste.
+/// Vanilla aggressive 2-drop.
+pub fn lorehold_skirmisher_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skirmisher (b171)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
+/// Lorehold Pyresage (b171) — {2}{R}{W} 2/4 Human Cleric.
+/// Magecraft: deal 1 damage to any target.
+pub fn lorehold_pyresage_b171() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyresage (b171)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        ..Default::default()
+    }
+}
+
 /// Lorehold Aegisblade (b170) — {2}{W} Sorcery.
 /// Put a shield counter on target creature.
 pub fn lorehold_aegisblade_b170() -> CardDefinition {
