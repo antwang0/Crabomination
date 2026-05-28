@@ -5,6 +5,79 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXV — 2026-05-28, session 9, batches 166 + 167)
+
+### Engine improvements
+- **`CounterType::Finality` (CR 122.1h)**: new counter type wired into
+  the SBA / destroy paths via `remove_from_battlefield_to_graveyard`.
+  When a permanent with one or more finality counters would go from
+  battlefield to graveyard, it goes to exile instead. The check fires
+  at the call site (`remove_from_battlefield_to_graveyard`) because by
+  the time `resolve_zone_change` runs the card has already been
+  removed from the battlefield — checking the post-removal `card`
+  instance avoids the battlefield-lookup-returning-None bug. Tests:
+  `cr_122_1h_finality_counter_exiles_instead_of_graveyard`,
+  `cr_122_1h_no_finality_counter_means_normal_graveyard_path`,
+  `silverquill_curse_b167_exiles_target_on_subsequent_death`.
+
+### Server/view improvements
+- **`PermanentView.has_finality_counters`**: new boolean field that
+  surfaces the CR 122.1h state to clients (paired with the existing
+  `has_stun_counters`). Lets the Bevy / 3D client badge a permanent
+  with a "→ exile on death" icon so the player knows the death will
+  be redirected. Populated by `project_permanent`.
+- **`trigger_event_label` coverage**: ~17 more EventKind × EventScope
+  pairs labelled (Blocks variants, BecomesBlocked variants,
+  DealsCombatDamageToPlayer opponent/any, DealsCombatDamageToCreature
+  YourControl/any, CardCycled any/opp, CardLeftGraveyard self/opp,
+  CounterAdded any/opp, BecameTarget you/opp/any, sacrificed-by-opp
+  variants). Fills coverage gaps in the dispatcher matrix that would
+  previously render as empty tooltips on the trigger panel.
+
+### New cards (56)
+Batch 166 (50 cards) and batch 167 (6 follow-up cards):
+- Silverquill: 10 + 6 = 16 (Inkling Bonecaster, Silverquill Auditor,
+  Inkling Squire, Silverquill Quill-Wielder, Inkling Soulkeeper,
+  Silverquill Ascription, Inkling Vellumkeeper, Silverquill Recital,
+  Inkling Lifegiver, Silverquill Sentencing; batch 167 follow-up
+  Silverquill Curse, Silverquill Inkbond, Silverquill Penbinder,
+  Inkling Diviner, Silverquill Bulwark, Silverquill Stunning).
+- Witherbloom: 10 (Vinegrowth, Pest Bloomling, Sapripper, Pest
+  Bestiary, Devouring Vines, Lifesong, Sapworm, Pest Reborn,
+  Drainmancer, Pest Devotee).
+- Lorehold: 10 (Sparkmage, Spiritskirmisher, Pyresmith, Recall,
+  Pyreweaver, Vandal, Spectrescholar, Charge, Boltmage, Battlespirit).
+- Prismari: 10 (Sparkfire, Smithy, Magmamage, Stormsage, Flarewave,
+  Tidehunter, Inferno, Skyforger, Elementalist, Flamewing).
+- Quandrix: 10 (Counterspellbinder, Fractal Echofin, Echomender, Sweep,
+  Wavecaster, Tideguard, Spellbinder, Sumcaller, Mathstrider,
+  Splitstone).
+
+### CR rule lock-in tests (4 new)
+- cr_122_1h_finality_counter_exiles_instead_of_graveyard (NEW rule)
+- cr_122_1h_no_finality_counter_means_normal_graveyard_path
+- cr_119_6_life_payment_pays_through_drain_path
+- cr_120_3_lethal_damage_to_creature_dies_at_next_sba
+
+### Observations & future items from this session
+- **`CounterType::Shield` (CR 122.1c)** — counter type is defined but
+  the printed "replacement on destroy / damage" replacement effect
+  isn't wired. Same shape as Finality: check at zone-change / damage
+  call sites. ~30 lines + test.
+- **Keyword counter (CR 122.1b)** — counter that grants the host the
+  named keyword while present. Engine-wide layer-6 (keyword) addition.
+  Diminishing Returns from no support: cards like Adventurous Mind /
+  Halana, Honored Pilot use these; the printed "+1/+1 counter and a
+  flying counter" lands the P/T half but not the keyword half today.
+- **CounterType::Finality printed grant cards** — currently only
+  available via Silverquill Curse (b167). Real-card grants include
+  Vraska, Golgari Queen's "-3 destroy target nonland permanent.
+  Create a 1/1 Assassin..." line and Doom Whisperer ETB. Worth
+  porting at least one for the engine wire.
+- **`PermanentView.has_finality_counters`** consumed by client UI —
+  not yet bound in the Bevy renderer. Next-up client work: badge
+  icon next to the existing stun counter indicator.
+
 ## Recent additions (Push XXIV — 2026-05-28, session 8)
 
 ### Engine improvements

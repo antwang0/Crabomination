@@ -407,6 +407,12 @@ pub struct PermanentView {
     /// the full `counters` vec. Populated by `project_permanent`.
     #[serde(default)]
     pub has_stun_counters: bool,
+    /// True when the permanent has one or more finality counters
+    /// (CR 122.1h). Clients can badge with a "→ exile on death" icon
+    /// so the player knows the permanent will exile instead of going
+    /// to the graveyard. Populated by `project_permanent`.
+    #[serde(default)]
+    pub has_finality_counters: bool,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

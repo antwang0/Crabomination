@@ -223,6 +223,7 @@ fn project_permanent(
         triggered_ability_labels: project_triggered_ability_labels(card),
         static_ability_labels: project_static_ability_labels(card),
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
+        has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -384,6 +385,31 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::CreatureDied, EventScope::OpponentControl) => "Opp creature dies",
         (EventKind::EntersBattlefield, EventScope::YourControl) => "Your ETB",
         (EventKind::EntersBattlefield, EventScope::OpponentControl) => "Opp ETB",
+        // Trigger labels added in batch 167 — fills remaining coverage
+        // gaps in the dispatcher matrix. Each one corresponds to an
+        // EventKind × EventScope pair that previously fell into the
+        // `""` catch-all and would render as an empty tooltip on the
+        // client trigger panel.
+        (EventKind::Blocks, EventScope::AnyPlayer) => "Any blocks",
+        (EventKind::Blocks, EventScope::YourControl) => "You block",
+        (EventKind::Blocks, EventScope::OpponentControl) => "Opp blocks",
+        (EventKind::BecomesBlocked, EventScope::OpponentControl) => "Opp blocked",
+        (EventKind::BecomesBlocked, EventScope::AnyPlayer) => "Any blocked",
+        (EventKind::DealsCombatDamageToPlayer, EventScope::OpponentControl) => "Opp combat dmg",
+        (EventKind::DealsCombatDamageToPlayer, EventScope::AnyPlayer) => "Any combat dmg",
+        (EventKind::DealsCombatDamageToCreature, EventScope::YourControl) => "Your combat dmg crea",
+        (EventKind::DealsCombatDamageToCreature, EventScope::AnyPlayer) => "Any combat dmg crea",
+        (EventKind::CardCycled, EventScope::AnyPlayer) => "Any cycle",
+        (EventKind::CardCycled, EventScope::OpponentControl) => "Opp cycle",
+        (EventKind::CardLeftGraveyard, EventScope::SelfSource) => "Self GY leave",
+        (EventKind::CardLeftGraveyard, EventScope::OpponentControl) => "Opp GY leave",
+        (EventKind::CounterAdded(_), EventScope::AnyPlayer) => "Any counter",
+        (EventKind::CounterAdded(_), EventScope::OpponentControl) => "Opp counter",
+        (EventKind::BecameTarget, EventScope::YourControl) => "You target",
+        (EventKind::BecameTarget, EventScope::OpponentControl) => "Opp targets",
+        (EventKind::BecameTarget, EventScope::AnyPlayer) => "Any targets",
+        (EventKind::CreatureSacrificed, EventScope::OpponentControl) => "Opp creature sac",
+        (EventKind::PermanentSacrificed, EventScope::OpponentControl) => "Opp permanent sac",
         _ => "",
     }
 }
