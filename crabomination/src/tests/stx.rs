@@ -76846,6 +76846,25 @@ fn silverquill_recap_b202_returns_low_mv_creature_from_graveyard() {
         "bear returned to hand");
 }
 
+#[test]
+fn silverquill_recap_b202_returns_two_low_mv_creatures_when_available() {
+    let mut g = two_player_game();
+    let bear_a = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let bear_b = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_recap_b202());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let returned_a = g.players[0].hand.iter().any(|c| c.id == bear_a);
+    let returned_b = g.players[0].hand.iter().any(|c| c.id == bear_b);
+    assert!(returned_a && returned_b,
+        "both bears returned (a={returned_a}, b={returned_b})");
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Batch 202 (modern_decks) — Witherbloom expansion.
 // ─────────────────────────────────────────────────────────────────────────

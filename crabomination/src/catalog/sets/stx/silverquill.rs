@@ -25614,18 +25614,21 @@ pub fn silverquill_recap_b202() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // Approximation: single-target return-creature from gy. The
-        // engine has no native multi-target two-card selector for
-        // graveyard cards yet (multi-pick UI is engine-wide ⏳); the
-        // headline play pattern is preserved as "return a value
-        // creature from your gy → hand" for 5 mana.
+        // Push (claude/modern_decks batch 202 round-3): Now uses
+        // `Selector::take(.., 2)` to pull up to two low-MV creature
+        // cards out of the graveyard in one Move. The take-N selector
+        // shape was already there for spell-graveyard returns; this is
+        // its first use for catalog graveyard-bf retrieval.
         effect: Effect::Move {
-            what: Selector::one_of(Selector::CardsInZone {
-                who: PlayerRef::You,
-                zone: Zone::Graveyard,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ManaValueAtMost(3)),
-            }),
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::ManaValueAtMost(3)),
+                },
+                Value::Const(2),
+            ),
             to: ZoneDest::Hand(PlayerRef::You),
         },
         activated_abilities: no_abilities(),
