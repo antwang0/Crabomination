@@ -19536,6 +19536,348 @@ pub fn lorehold_bonepreacher_b165() -> CardDefinition {
     }
 }
 
+// ── Batch 166 (modern_decks) — Lorehold cycle ─────────────────────────────
+//
+// Ten new Lorehold (R/W) cards: a mix of Spirit minters, magecraft ping,
+// attack triggers, and graveyard recursion. Each composes against
+// existing shortcuts.
+
+/// Lorehold Sparkmage (b166) — {R}{W} 2/2 Human Wizard.
+/// Magecraft: deals 1 damage to any target.
+pub fn lorehold_sparkmage_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Sparkmage (b166)",
+        cost: cost(&[r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spiritskirmisher (b166) — {1}{R} 2/1 Spirit Soldier Haste.
+/// Aggressive haste body.
+pub fn lorehold_spiritskirmisher_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spiritskirmisher (b166)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyresmith (b166) — {2}{R} 3/2 Human Warrior.
+/// On-attack: deals 1 damage to target opp creature.
+pub fn lorehold_pyresmith_b166() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    CardDefinition {
+        name: "Lorehold Pyresmith (b166)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+                amount: Value::Const(1),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Recall (b166) — {2}{W} Sorcery.
+/// Return target creature card from your gy → hand + gain 2 life.
+pub fn lorehold_recall_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Recall (b166)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyreweaver (b166) — {2}{R}{W} 3/3 Spirit Warrior.
+/// ETB mints 1 Lorehold Spirit token.
+pub fn lorehold_pyreweaver_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyreweaver (b166)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Vandal (b166) — {3}{R} 3/3 Human Warrior.
+/// ETB: destroy target artifact.
+pub fn lorehold_vandal_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vandal (b166)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(SelectionRequirement::Artifact),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Spectrescholar (b166) — {2}{W} 2/3 Spirit Cleric Vigilance.
+/// Magecraft gain 1 life.
+pub fn lorehold_spectrescholar_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Spectrescholar (b166)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Charge (b166) — {1}{R}{W} Sorcery.
+/// Mints 2 Lorehold Spirit tokens.
+pub fn lorehold_charge_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Charge (b166)",
+        cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: mint_lorehold_spirits(2),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Boltmage (b166) — {R} Instant.
+/// 2 damage to any target.
+pub fn lorehold_boltmage_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Boltmage (b166)",
+        cost: cost(&[r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Battlespirit (b166) — {3}{R}{W} 4/4 Spirit Warrior
+/// Flying + Haste. 5-mana evasive aggro finisher.
+pub fn lorehold_battlespirit_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battlespirit (b166)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 // ── Returned Pastcaller ───────────────────────────────────────────────────
 
 /// Returned Pastcaller — {4}{W}, 4/4 Spirit Cleric. Flying.

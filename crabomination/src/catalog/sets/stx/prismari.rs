@@ -14615,3 +14615,344 @@ pub fn prismari_tidecaller_b165() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 166 (modern_decks) — Prismari cycle ─────────────────────────────
+//
+// Ten new Prismari (U/R) cards: a mix of magecraft loot/treasure, spell
+// copy enablers, and elemental finishers. All compose against existing
+// shortcuts.
+
+/// Prismari Sparkfire (b166) — {U}{R} Instant.
+/// 3 damage to target creature + Scry 1.
+pub fn prismari_sparkfire_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Sparkfire (b166)",
+        cost: cost(&[u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Smithy (b166) — {2}{U}{R} 3/3 Elemental.
+/// ETB mints a Treasure token + magecraft loot.
+pub fn prismari_smithy_b166() -> CardDefinition {
+    use crate::game::effects::treasure_token;
+    CardDefinition {
+        name: "Prismari Smithy (b166)",
+        cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: treasure_token(),
+                },
+            },
+            magecraft_loot(),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Magmamage (b166) — {1}{R} 2/1 Human Wizard.
+/// Magecraft pings each opp for 1.
+pub fn prismari_magmamage_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Magmamage (b166)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Stormsage (b166) — {2}{U} 1/3 Human Wizard.
+/// Magecraft draw 1, discard 1 (loot).
+pub fn prismari_stormsage_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Stormsage (b166)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Flarewave (b166) — {3}{R}{R} Sorcery.
+/// 4 damage to any target.
+pub fn prismari_flarewave_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flarewave (b166)",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(4),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Tidehunter (b166) — {3}{U}{R} 4/3 Elemental Wizard.
+/// Magecraft self-pump +1/+1 EOT.
+pub fn prismari_tidehunter_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Tidehunter (b166)",
+        cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Inferno (b166) — {3}{R} Sorcery.
+/// 2 damage to each creature opp controls.
+pub fn prismari_inferno_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Inferno (b166)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            ),
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Skyforger (b166) — {2}{R} 2/2 Elemental.
+/// Magecraft mints a Treasure token.
+pub fn prismari_skyforger_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Skyforger (b166)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Elementalist (b166) — {1}{U}{R} 2/3 Elemental Wizard.
+/// Magecraft draw 1 — pure card draw spellslinger payoff.
+pub fn prismari_elementalist_b166() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_draw;
+    CardDefinition {
+        name: "Prismari Elementalist (b166)",
+        cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Flamewing (b166) — {3}{R}{R} 4/4 Elemental Dragon Flying + Haste.
+/// 5-mana evasive aggro finisher.
+pub fn prismari_flamewing_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Flamewing (b166)",
+        cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

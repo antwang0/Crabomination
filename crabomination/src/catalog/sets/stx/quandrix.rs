@@ -15558,3 +15558,348 @@ pub fn quandrix_spellgrafter_b165() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 166 (modern_decks) — Quandrix cycle ─────────────────────────────
+//
+// Ten new Quandrix (G/U) cards: a mix of Fractal minters, +1/+1 counter
+// payoffs, scry/draw, and tribal Fractal anthem. All compose against
+// existing shortcuts.
+
+/// Quandrix Counterspellbinder (b166) — {1}{G}{U} 2/3 Elf Druid.
+/// ETB +1/+1 counter on self.
+pub fn quandrix_counterspellbinder_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Counterspellbinder (b166)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Fractal Echofin (b166) — {G}{U} 1/1 Fractal.
+/// Vanilla 2-mana fractal body.
+pub fn fractal_echofin_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Fractal Echofin (b166)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Echomender (b166) — {2}{G}{U} 3/3 Elf Druid.
+/// Magecraft: +1/+1 counter on self.
+pub fn quandrix_echomender_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Echomender (b166)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sweep (b166) — {1}{G}{U} Sorcery.
+/// Each creature you control gets +1/+1 EOT.
+pub fn quandrix_sweep_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Sweep (b166)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Wavecaster (b166) — {2}{U} 1/3 Elf Wizard.
+/// Magecraft: draw 1.
+pub fn quandrix_wavecaster_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Wavecaster (b166)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tideguard (b166) — {2}{G} 2/4 Elf Druid Reach.
+/// 3-mana defensive reach body.
+pub fn quandrix_tideguard_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tideguard (b166)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![Keyword::Reach],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Spellbinder (b166) — {G}{U} Instant.
+/// +2/+2 EOT to target friendly creature.
+pub fn quandrix_spellbinder_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Spellbinder (b166)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Sumcaller (b166) — {3}{G}{U} Sorcery.
+/// Mints a Fractal token with 4 +1/+1 counters.
+pub fn quandrix_sumcaller_b166() -> CardDefinition {
+    use crate::catalog::sets::sos::fractal_token;
+    CardDefinition {
+        name: "Quandrix Sumcaller (b166)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(4),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mathstrider (b166) — {3}{G} 3/3 Elf Druid Trample.
+/// 4-mana trampling body.
+pub fn quandrix_mathstrider_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mathstrider (b166)",
+        cost: cost(&[generic(3), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Splitstone (b166) — {2}{G}{U} 3/3 Elemental.
+/// ETB: 2 +1/+1 counters on self.
+pub fn quandrix_splitstone_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Splitstone (b166)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

@@ -18823,3 +18823,346 @@ pub fn witherbloom_deathcoach_b165() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ── Batch 166 (modern_decks) — Witherbloom cycle ──────────────────────────
+//
+// Ten new Witherbloom (B/G) cards: a mix of Pest bodies, drain payoffs,
+// magecraft drain, and graveyard recursion. All compose against
+// existing shortcuts; no engine changes required.
+
+/// Witherbloom Vinegrowth (b166) — {1}{G} 1/2 Plant Druid.
+/// ETB: target friendly creature gets +1/+1 EOT + magecraft self-pump.
+pub fn witherbloom_vinegrowth_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Vinegrowth (b166)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Bloomling (b166) — {B}{G} 2/2 Pest.
+/// Dies → gain 1 life (Pest die rider, even though this isn't a Pest token).
+pub fn pest_bloomling_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Bloomling (b166)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![{
+            use crate::effect::shortcut::dies_gain_life;
+            dies_gain_life(1)
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapripper (b166) — {2}{B} 2/3 Plant Warlock.
+/// ETB drain 1 — defensive drain body.
+pub fn witherbloom_sapripper_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapripper (b166)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_drain(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Bestiary (b166) — {2}{B}{G} Sorcery.
+/// Mints two Pest tokens.
+pub fn pest_bestiary_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Bestiary (b166)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: stx_pest_token(),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Devouring Vines (b166) — {1}{B} Instant.
+/// Target creature gets -2/-2 EOT.
+pub fn witherbloom_devouring_vines_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Devouring Vines (b166)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::PumpPT {
+            what: Selector::Target(0),
+            power: Value::Const(-2),
+            toughness: Value::Const(-2),
+            duration: Duration::EndOfTurn,
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Lifesong (b166) — {1}{B}{G} Instant.
+/// Drain 1 + gain 2 life (3 total life swing).
+pub fn witherbloom_lifesong_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Lifesong (b166)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapworm (b166) — {2}{G} 2/3 Plant Insect Deathtouch.
+/// Defensive deathtouch body.
+pub fn witherbloom_sapworm_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapworm (b166)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Insect],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Deathtouch],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Reborn (b166) — {3}{B} Sorcery.
+/// Return target creature card from your gy → hand + mint a Pest token.
+pub fn pest_reborn_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Reborn (b166)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::Move {
+                what: Selector::take(
+                    Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    },
+                    Value::Const(1),
+                ),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Drainmancer (b166) — {2}{B}{G} 3/3 Human Warlock.
+/// Magecraft drain 1 each opp — Apprentice on a 4-mana frame.
+pub fn witherbloom_drainmancer_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Drainmancer (b166)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Pest Devotee (b166) — {2}{B}{G} 3/2 Pest Warlock Lifelink.
+/// 4-mana lifelink Pest finisher.
+pub fn pest_devotee_b166() -> CardDefinition {
+    CardDefinition {
+        name: "Pest Devotee (b166)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
