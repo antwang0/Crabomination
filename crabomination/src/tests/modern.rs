@@ -14016,3 +14016,199 @@ fn darkbore_pathway_plays_either_face() {
     drain_stack(&mut g2);
     assert_eq!(g2.players[0].mana_pool.amount(Color::Green), 1, "back face taps for green");
 }
+
+#[test]
+fn amped_raptor_etb_gains_two_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::amped_raptor());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Amped Raptor castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
+}
+
+#[test]
+fn bonecrusher_giant_is_a_four_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::bonecrusher_giant());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.definition.power, c.definition.toughness), (4, 3));
+}
+
+#[test]
+fn magda_brazen_outlaw_pumps_other_dwarves() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    // Practiced Scrollsmith is a Dwarf Cleric (3/2). Magda's anthem
+    // gives it +1/+0 → 4/2.
+    let dwarf = g.add_card_to_battlefield(0, catalog::practiced_scrollsmith());
+    let c = g.computed_permanent(dwarf).unwrap();
+    assert_eq!(c.power, 4, "other Dwarf gets +1/+0 from Magda's anthem");
+    assert_eq!(c.toughness, 2, "toughness unchanged by +1/+0");
+}
+
+#[test]
+fn three_tree_city_enters_with_charge_and_taps_for_any_color() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::three_tree_city());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 3,
+        "Three Tree City enters with three charge counters");
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Blue)]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("{T}, remove a charge: add one mana of any color");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "produced blue mana");
+    assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::Charge), 2,
+        "one charge counter spent");
+}
+
+#[test]
+fn wight_of_the_reliquary_sacrifices_to_fetch_a_land() {
+    let mut g = two_player_game();
+    let wight = g.add_card_to_battlefield(0, catalog::wight_of_the_reliquary());
+    g.clear_sickness(wight);
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wight, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("{T}, sacrifice: search a land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == wight), "Wight sacrificed as a cost");
+    let land = g.battlefield_find(forest).expect("fetched land on battlefield");
+    assert!(land.tapped, "fetched land enters tapped");
+}
+
+/// Shared helper for the deck dual-land cycle: play the land, optionally
+/// untap it, then assert mana abilities 0 and 1 tap for the two colors.
+fn assert_deck_dual_land(
+    def_fn: fn() -> crate::card::CardDefinition,
+    c0: Color,
+    c1: Color,
+    expect_tapped_on_etb: bool,
+) {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, def_fn());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(id).unwrap().tapped, expect_tapped_on_etb,
+        "ETB tapped-ness");
+    for (idx, color) in [(0usize, c0), (1usize, c1)] {
+        g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+        g.players[0].mana_pool = crate::mana::ManaPool::default();
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: id, ability_index: idx, target: None, x_value: None,
+        }).expect("mana ability");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].mana_pool.amount(color), 1, "ability {idx} taps for {color:?}");
+    }
+}
+
+#[test]
+fn hallowed_fountain_shockland_white_blue() {
+    // Shockland: AutoDecider pays 2 life → enters untapped.
+    assert_deck_dual_land(catalog::hallowed_fountain, Color::White, Color::Blue, false);
+}
+
+#[test]
+fn overgrown_tomb_shockland_black_green() {
+    assert_deck_dual_land(catalog::overgrown_tomb, Color::Black, Color::Green, false);
+}
+
+#[test]
+fn copperline_gorge_fastland_red_green() {
+    // Fastland: untapped with no other lands.
+    assert_deck_dual_land(catalog::copperline_gorge, Color::Red, Color::Green, false);
+}
+
+#[test]
+fn shadowy_backstreet_surveil_land_white_black() {
+    // Surveil land: enters tapped.
+    assert_deck_dual_land(catalog::shadowy_backstreet, Color::White, Color::Black, true);
+}
+
+#[test]
+fn undercity_sewers_surveil_land_blue_black() {
+    assert_deck_dual_land(catalog::undercity_sewers, Color::Blue, Color::Black, true);
+}
+
+/// Shared helper for the Onslaught/Zendikar fetchland cycle (zen::lands):
+/// {T}, pay 1 life, sacrifice: search for a land of one of two types and
+/// put it onto the battlefield untapped. Seeds `basic` in the library and
+/// asserts it is fetched, the fetchland is sacrificed, and 1 life is paid.
+fn assert_fetchland_fetches(
+    fetch_fn: fn() -> crate::card::CardDefinition,
+    basic_fn: fn() -> crate::card::CardDefinition,
+) {
+    let mut g = two_player_game();
+    let basic = g.add_card_to_library(0, basic_fn());
+    let fetch = g.add_card_to_battlefield(0, fetch_fn());
+    g.clear_sickness(fetch);
+    let life_before = g.players[0].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(basic))]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fetch, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("fetchland {T}, pay 1 life, sac: search a land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fetch), "fetchland sacrificed");
+    let fetched = g.battlefield_find(basic).expect("fetched basic on battlefield");
+    assert!(!fetched.tapped, "fetchland puts the land in untapped");
+    assert_eq!(g.players[0].life, life_before - 1, "paid 1 life");
+}
+
+#[test]
+fn polluted_delta_fetches_island() {
+    assert_fetchland_fetches(catalog::polluted_delta, catalog::island);
+}
+
+#[test]
+fn bloodstained_mire_fetches_mountain() {
+    assert_fetchland_fetches(catalog::bloodstained_mire, catalog::mountain);
+}
+
+#[test]
+fn wooded_foothills_fetches_forest() {
+    assert_fetchland_fetches(catalog::wooded_foothills, catalog::forest);
+}
+
+#[test]
+fn windswept_heath_fetches_forest() {
+    assert_fetchland_fetches(catalog::windswept_heath, catalog::forest);
+}
+
+#[test]
+fn misty_rainforest_fetches_island() {
+    assert_fetchland_fetches(catalog::misty_rainforest, catalog::island);
+}
+
+#[test]
+fn scalding_tarn_fetches_mountain() {
+    assert_fetchland_fetches(catalog::scalding_tarn, catalog::mountain);
+}
+
+#[test]
+fn verdant_catacombs_fetches_forest() {
+    assert_fetchland_fetches(catalog::verdant_catacombs, catalog::forest);
+}
+
+#[test]
+fn arid_mesa_fetches_mountain() {
+    assert_fetchland_fetches(catalog::arid_mesa, catalog::mountain);
+}
+
+#[test]
+fn marsh_flats_fetches_plains() {
+    assert_fetchland_fetches(catalog::marsh_flats, catalog::plains);
+}
