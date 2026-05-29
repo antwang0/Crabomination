@@ -11802,8 +11802,11 @@ pub fn bonecrusher_giant() -> CardDefinition {
 }
 
 /// Esika's Chariot — {3}{G} Legendary Artifact — Vehicle 4/4.
-/// When this enters, create two 2/2 green Cat creature tokens.
-/// Crew 2. (Vehicle/Crew omitted — acts as ETB token producer.)
+/// When this enters, create two 2/2 green Cat creature tokens. Crew 4.
+///
+/// (The "copy target token you control" ETB clause is omitted — no
+/// copy-target-token primitive; the two-Cat ETB is the headline value.)
+/// Crew 4 is wired via `Keyword::Crew(4)` + `GameAction::Crew`.
 pub fn esikas_chariot() -> CardDefinition {
     use crate::card::{Supertype, TokenDefinition};
     CardDefinition {
@@ -11811,6 +11814,11 @@ pub fn esikas_chariot() -> CardDefinition {
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Artifact],
         supertypes: vec![Supertype::Legendary],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Crew(4)],
         power: 4,
         toughness: 4,
         triggered_abilities: vec![TriggeredAbility {
@@ -11833,6 +11841,45 @@ pub fn esikas_chariot() -> CardDefinition {
                     activated_abilities: vec![],
                     triggered_abilities: vec![],
                 },
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Smuggler's Copter — {2} Artifact — Vehicle 3/3.
+/// Flying. Whenever this Vehicle attacks or blocks, you may draw a card. If
+/// you do, discard a card. Crew 1.
+///
+/// Crew 1 wired via `Keyword::Crew(1)`; the attack/block loot trigger fires
+/// on `EventKind::Attacks` (the engine fires Attacks for crewed Vehicles
+/// that attack). The block half is approximated by the attack trigger only
+/// (no DeclaredBlocker event for Vehicles yet). The "may draw then discard"
+/// rummage uses the standard loot pattern.
+pub fn smugglers_copter() -> CardDefinition {
+    CardDefinition {
+        name: "Smuggler's Copter",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Vehicle],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Crew(1), Keyword::Flying],
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::MayDo {
+                description: "draw a card, then discard a card".to_string(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                        random: false,
+                    },
+                ])),
             },
         }],
         ..Default::default()

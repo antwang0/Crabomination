@@ -1745,6 +1745,7 @@ impl GameState {
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
             GameAction::Equip { equipment, target } => self.equip(equipment, target),
+            GameAction::Crew { vehicle, crew_creatures } => self.crew(vehicle, &crew_creatures),
         }?;
         self.dispatch_triggers_for_events(&events);
         Ok(events)
@@ -1873,6 +1874,88 @@ impl GameState {
             attachment: equipment,
             attached_to: Some(target),
         }])
+    }
+
+    /// CR 702.122 — Crew a Vehicle. Taps the listed creatures (each an
+    /// untapped creature the activator controls, none being the Vehicle
+    /// itself) whose total power must meet or exceed the Vehicle's crew
+    /// number. On success, registers an `UntilEndOfTurn` layer-4
+    /// `AddCardType(Creature)` continuous effect so the Vehicle is an
+    /// artifact creature for the rest of the turn (its printed P/T comes
+    /// through the layer system via `base_power`/`base_toughness`). Crew is
+    /// usable at instant speed (CR 702.122c), so there's no sorcery-speed
+    /// gate. Re-crewing an already-crewed Vehicle is legal but pointless;
+    /// the engine still taps the creatures and stacks a redundant effect.
+    fn crew(
+        &mut self,
+        vehicle: crate::card::CardId,
+        crew_creatures: &[crate::card::CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let veh_pos = self
+            .battlefield
+            .iter()
+            .position(|c| c.id == vehicle)
+            .ok_or(GameError::CardNotOnBattlefield(vehicle))?;
+        if self.battlefield[veh_pos].controller != p {
+            return Err(GameError::NotYourPriority);
+        }
+        let crew_n = self.battlefield[veh_pos]
+            .definition
+            .crew_cost()
+            .ok_or(GameError::InvalidTarget)?;
+        // Validate the crew: distinct, controlled by p, untapped creatures,
+        // none being the Vehicle itself. Sum their computed power.
+        let computed = self.compute_battlefield();
+        let mut seen = std::collections::HashSet::new();
+        let mut total_power: i32 = 0;
+        for &cid in crew_creatures {
+            if cid == vehicle || !seen.insert(cid) {
+                return Err(GameError::InvalidTarget);
+            }
+            let Some(cp) = computed.iter().find(|c| c.id == cid) else {
+                return Err(GameError::CardNotOnBattlefield(cid));
+            };
+            if cp.controller != p || !cp.card_types.contains(&crate::card::CardType::Creature) {
+                return Err(GameError::InvalidTarget);
+            }
+            let tapped = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == cid)
+                .map(|c| c.tapped)
+                .unwrap_or(true);
+            if tapped {
+                return Err(GameError::CardIsTapped(cid));
+            }
+            total_power += cp.power.max(0);
+        }
+        if (total_power as u32) < crew_n {
+            return Err(GameError::SelectionRequirementViolated);
+        }
+        // Tap the crew.
+        let mut events = vec![];
+        for &cid in crew_creatures {
+            if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                c.tapped = true;
+                events.push(GameEvent::PermanentTapped { card_id: cid });
+            }
+        }
+        // Animate the Vehicle until end of turn.
+        let ts = self.next_timestamp();
+        self.add_continuous_effect(crate::game::layers::ContinuousEffect {
+            timestamp: ts,
+            source: vehicle,
+            affected: crate::game::layers::AffectedPermanents::Source,
+            layer: crate::game::layers::Layer::L4Type,
+            sublayer: None,
+            duration: crate::game::layers::EffectDuration::UntilEndOfTurn,
+            modification: crate::game::layers::Modification::AddCardType(
+                crate::card::CardType::Creature,
+            ),
+        });
+        events.push(GameEvent::VehicleCrewed { vehicle });
+        Ok(events)
     }
 
     /// Walk the battlefield looking for triggered abilities whose `EventSpec`

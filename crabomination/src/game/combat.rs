@@ -83,7 +83,22 @@ impl GameState {
                 .find(|c| c.id == id && c.controller == p)
                 .ok_or(GameError::CardNotOnBattlefield(id))?;
 
-            if !card.can_attack() {
+            // Creature-ness is read from the computed view so a crewed
+            // Vehicle (CR 702.122 — animated to an artifact creature via a
+            // layer-4 AddCardType) can attack, while an uncrewed one can't.
+            // Defender / Haste are likewise read post-layer so granted
+            // variants are honored.
+            let is_creature_now = computed
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| c.card_types.contains(&crate::card::CardType::Creature))
+                .unwrap_or_else(|| card.definition.is_creature());
+            let kws = computed_kw(id);
+            let can_attack = is_creature_now
+                && !card.tapped
+                && !kws.contains(&Keyword::Defender)
+                && (!card.summoning_sick || kws.contains(&Keyword::Haste));
+            if !can_attack {
                 if card.tapped {
                     return Err(GameError::CardIsTapped(id));
                 }

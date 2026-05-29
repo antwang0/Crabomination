@@ -504,6 +504,11 @@ pub struct PermanentView {
     /// by `project_permanent`.
     #[serde(default)]
     pub equippable: bool,
+    /// Crew cost (required total power, CR 702.122) when this permanent is a
+    /// Vehicle with `Keyword::Crew(N)`. 0 means not crewable. Lets the client
+    /// offer the "crew" action. Populated by `project_permanent`.
+    #[serde(default)]
+    pub crew_value: u32,
 }
 
 impl PermanentView {
@@ -772,6 +777,7 @@ pub enum GameEventWire {
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: String, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
+    VehicleCrewed { vehicle: CardId },
     PoisonAdded { player: usize, amount: u32 },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
@@ -919,6 +925,9 @@ impl From<&GameEvent> for GameEventWire {
                     attached_to: *attached_to,
                 }
             }
+            GameEvent::VehicleCrewed { vehicle } => {
+                GameEventWire::VehicleCrewed { vehicle: *vehicle }
+            }
             GameEvent::PoisonAdded { player, amount } => GameEventWire::PoisonAdded {
                 player: *player,
                 amount: *amount,
@@ -1054,6 +1063,7 @@ impl GameEventWire {
                 Some(target) => format!("{} attached to {}", name(*attachment), name(*target)),
                 None => format!("{} unattached", name(*attachment)),
             },
+            E::VehicleCrewed { vehicle } => format!("{} crewed", name(*vehicle)),
             E::PoisonAdded { player, amount } => format!("P{player} +{amount} poison"),
             E::LoyaltyAbilityActivated {
                 planeswalker,

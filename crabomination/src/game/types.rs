@@ -232,6 +232,13 @@ pub enum GameAction {
     /// Pays the `Keyword::Equip(cost)` mana cost, then attaches the
     /// Equipment, conferring its `equipped_bonus` via the layer system.
     Equip { equipment: CardId, target: CardId },
+    /// CR 702.122 — Crew a Vehicle. Taps each creature in `crew_creatures`
+    /// (each must be an untapped creature the activator controls, other than
+    /// the Vehicle); their total power must meet or exceed the Vehicle's
+    /// `Keyword::Crew(N)`. On success the Vehicle becomes an artifact
+    /// creature until end of turn. Crew is an activated ability usable any
+    /// time the controller has priority (instant speed, CR 702.122c).
+    Crew { vehicle: CardId, crew_creatures: Vec<CardId> },
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────
@@ -498,6 +505,9 @@ pub enum GameEvent {
     FirstStrikeDamageResolved,
     TopCardRevealed { player: usize, card_name: &'static str, is_land: bool },
     AttachmentMoved { attachment: CardId, attached_to: Option<CardId> },
+    /// CR 702.122 — a Vehicle was crewed and became an artifact creature
+    /// until end of turn.
+    VehicleCrewed { vehicle: CardId },
     PoisonAdded { player: usize, amount: u32 },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },

@@ -14313,3 +14313,108 @@ fn equip_rejects_at_instant_speed() {
         .expect_err("equip is sorcery speed only");
     assert!(matches!(err, GameError::SorcerySpeedOnly), "got {err:?}");
 }
+
+// ── Vehicles & Crew (CR 702.122) ────────────────────────────────────────────
+
+/// Crewing Esika's Chariot (Crew 4) by tapping two 2/2 creatures turns it
+/// into a 4/4 artifact creature until end of turn.
+#[test]
+fn crew_animates_vehicle_until_end_of_turn() {
+    let mut g = two_player_game();
+    let chariot = g.add_card_to_battlefield(0, catalog::esikas_chariot());
+    let pre = g.computed_permanent(chariot).unwrap();
+    assert!(!pre.card_types.contains(&CardType::Creature), "uncrewed = not a creature");
+
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![b1, b2] })
+        .expect("crew 4 satisfied by two 2/2s");
+    let post = g.computed_permanent(chariot).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature), "crewed = creature");
+    assert_eq!(post.power, 4);
+    assert_eq!(post.toughness, 4);
+    assert!(g.battlefield_find(b1).unwrap().tapped);
+    assert!(g.battlefield_find(b2).unwrap().tapped);
+
+    g.expire_end_of_turn_effects();
+    let after = g.computed_permanent(chariot).unwrap();
+    assert!(!after.card_types.contains(&CardType::Creature), "animation wears off EOT");
+}
+
+/// Crew is rejected when the tapped creatures' total power is below the crew
+/// number.
+#[test]
+fn crew_rejects_insufficient_power() {
+    let mut g = two_player_game();
+    let chariot = g.add_card_to_battlefield(0, catalog::esikas_chariot()); // Crew 4
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+    let err = g
+        .perform_action(GameAction::Crew { vehicle: chariot, crew_creatures: vec![b1] })
+        .expect_err("2 power < crew 4");
+    assert!(matches!(err, GameError::SelectionRequirementViolated), "got {err:?}");
+    assert!(!g.battlefield_find(b1).unwrap().tapped);
+}
+
+/// Crew rejects an already-tapped creature.
+#[test]
+fn crew_rejects_tapped_crew_creature() {
+    let mut g = two_player_game();
+    let copter = g.add_card_to_battlefield(0, catalog::smugglers_copter()); // Crew 1
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear).unwrap().tapped = true;
+    let err = g
+        .perform_action(GameAction::Crew { vehicle: copter, crew_creatures: vec![bear] })
+        .expect_err("can't crew with a tapped creature");
+    assert!(matches!(err, GameError::CardIsTapped(_)), "got {err:?}");
+}
+
+/// Smuggler's Copter (Crew 1) becomes a 3/3 flier and loots when it attacks.
+#[test]
+fn smugglers_copter_crews_and_loots_on_attack() {
+    use crate::decision::ScriptedDecider;
+    let mut g = two_player_game();
+    let copter = g.add_card_to_battlefield(0, catalog::smugglers_copter());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(copter);
+    let lib_id = g.next_id();
+    g.players[0].library.push(crate::card::CardInstance::new(
+        lib_id, catalog::grizzly_bears(), 0));
+    let _hand = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::Crew { vehicle: copter, crew_creatures: vec![bear] })
+        .expect("crew 1 satisfied by a 2/2");
+    let cp = g.computed_permanent(copter).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.keywords.contains(&crate::card::Keyword::Flying));
+
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: copter,
+        target: AttackTarget::Player(1),
+    }]))
+        .expect("crewed copter attacks");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "copter looted: a card was discarded to the graveyard");
+}
+
+/// An uncrewed Vehicle can't be declared as an attacker (it isn't a creature).
+#[test]
+fn uncrewed_vehicle_cannot_attack() {
+    let mut g = two_player_game();
+    let copter = g.add_card_to_battlefield(0, catalog::smugglers_copter());
+    g.clear_sickness(copter);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    let err = g
+        .perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: copter,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect_err("uncrewed vehicle is not a creature and can't attack");
+    let _ = err;
+}

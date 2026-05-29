@@ -343,6 +343,11 @@ pub enum Keyword {
     /// delayed trigger that re-runs the spell's effect with a fresh
     /// auto-target.
     Rebound,
+    /// CR 702.122 — Crew N. "Tap any number of other untapped creatures you
+    /// control with total power N or greater: This Vehicle becomes an
+    /// artifact creature until end of turn." Activated via
+    /// `GameAction::Crew`; the value is the required total power.
+    Crew(u32),
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -782,11 +787,31 @@ impl CardDefinition {
         self.subtypes.land_types.contains(&lt)
     }
 
-    pub fn base_power(&self) -> i32 { if self.is_creature() { self.power } else { 0 } }
-    pub fn base_toughness(&self) -> i32 { if self.is_creature() { self.toughness } else { 0 } }
+    // Vehicles (CR 301.7) carry printed P/T even though they aren't
+    // creatures until crewed, so their base P/T must survive into the layer
+    // system — when a Crew activation animates them via a layer-4
+    // AddCardType(Creature), the printed power/toughness is what the new
+    // creature uses. A non-crewed Vehicle is still not a creature, so the
+    // base P/T is inert for combat / "creatures you control" purposes.
+    pub fn base_power(&self) -> i32 {
+        if self.is_creature() || self.is_vehicle() { self.power } else { 0 }
+    }
+    pub fn base_toughness(&self) -> i32 {
+        if self.is_creature() || self.is_vehicle() { self.toughness } else { 0 }
+    }
 
     pub fn is_equipment(&self) -> bool {
         self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Equipment)
+    }
+    pub fn is_vehicle(&self) -> bool {
+        self.subtypes.artifact_subtypes.contains(&ArtifactSubtype::Vehicle)
+    }
+    /// Returns the Crew cost (required total power) if this card has
+    /// `Keyword::Crew(N)`.
+    pub fn crew_cost(&self) -> Option<u32> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Crew(n) = kw { Some(*n) } else { None }
+        })
     }
     pub fn is_aura(&self) -> bool {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
