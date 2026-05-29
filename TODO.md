@@ -53,6 +53,15 @@ a single color, and added a `MonoHybrid` primitive for `{2/C}` pips.
   edits are verified by inspection only — they are additive arms on
   already-exhaustive matches and a method swap, type-correct by review.
 
+### Late-run additions
+- **`CounterType::Indestructible`** (CR 122.1 / 702.12): new counter +
+  `CardInstance::is_indestructible()` consulted by SBA lethal damage and
+  Destroy/DestroyNoRegen. Wired Zopandrel, Hunger Dominus's `{G/P}{G/P},
+  Sac two other creatures` activation. NOTE: Zopandrel's combat-step
+  power/toughness *doubling* is still approximated as a flat +4/+4 (needs
+  per-creature P/T introspection — a `Value::PowerOf`/`ToughnessOf`-driven
+  PumpPT-by-current-stats primitive).
+
 ### Follow-ups noticed (not tackled this run)
 - **Phyrexian pip color in `colors_from_card`** already handled; but the
   monocolored-hybrid `{2/C}` "pay 2 life" variant ({2/P}-style) is not a
