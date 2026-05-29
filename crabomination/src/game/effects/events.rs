@@ -35,6 +35,9 @@ pub(crate) fn event_matches_spec(
         (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::AttacksAndIsntBlocked, GameEvent::AttackerWentUnblocked { .. }) => true,
+        // Enrage (CR 702.130): keyed on the damaged permanent, so we only
+        // match `DamageDealt` events that hit a card (not a player).
+        (EventKind::DealtDamage, GameEvent::DamageDealt { to_card: Some(_), .. }) => true,
         (EventKind::LifeGained, GameEvent::LifeGained { .. }) => true,
         (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
@@ -95,6 +98,11 @@ pub(crate) fn event_matches_spec(
         ) || matches!(
             event,
             GameEvent::CounterAdded { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // Enrage: "Whenever this creature is dealt damage." Source
+            // must equal the damaged card.
+            event,
+            GameEvent::DamageDealt { to_card: Some(cid), .. } if *cid == source.id
         ) || matches!(
             // CR 702.29c — "When you cycle this card" triggers fire
             // with the cycled card as the trigger source. The card is
@@ -249,6 +257,10 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::PermanentTapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::PermanentUntapped { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::TokenCreated { card_id } => Some(EntityRef::Permanent(*card_id)),
+        // Enrage: the subject is the damaged permanent, so trigger bodies
+        // referencing `Selector::TriggerSource` (and the implicit
+        // SelfSource scope) bind to the creature that took the damage.
+        GameEvent::DamageDealt { to_card: Some(card_id), .. } => Some(EntityRef::Permanent(*card_id)),
         // CardDrawn / CardDiscarded carry a card_id — bind
         // `Selector::TriggerSource` to the *card* (not the player) so
         // filters like `Predicate::EntityMatches { what: TriggerSource,
@@ -293,6 +305,10 @@ fn event_card(event: &GameEvent) -> Option<CardId> {
         // BecameTarget's card is the targeted permanent (used by
         // AnotherOfYours scope checks if any card uses it).
         GameEvent::BecameTarget { target, .. } => Some(*target),
+        // Enrage: the damaged permanent (drives AnotherOfYours /
+        // YourControl scope checks for "a creature you control is dealt
+        // damage" payoffs).
+        GameEvent::DamageDealt { to_card: Some(card_id), .. } => Some(*card_id),
         _ => None,
     }
 }

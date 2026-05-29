@@ -14,8 +14,8 @@ use crate::card::{
     Value, Zone,
 };
 use crate::effect::shortcut::{
-    dies_drain, dies_mint_token, drain, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
-    magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, on_attack_drain,
+    dies_drain, dies_mint_token, drain, enrage, etb, etb_drain, etb_gain_life, etb_mint_token,
+    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_self_pump, on_attack_drain,
     on_attack_gain_life, on_other_dies, on_other_dies_mint_token, target_filtered,
 };
 use crate::effect::{Duration, ManaPayload, PlayerRef, ZoneDest};
@@ -24060,6 +24060,184 @@ pub fn witherbloom_mauler_b204() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — Witherbloom (B/G) damage-matters round. Two
+// Enrage bodies (the new `EventKind::DealtDamage` event, CR 702.130) that
+// fit Witherbloom's "pain into power" flavour, plus two standard
+// drain/recursion creatures.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Witherbloom Thornbeast (b205) — {2}{B}{G} 3/5 Beast.
+/// Enrage — whenever this creature is dealt damage, each opponent loses 1
+/// life and you gain 1 life.
+pub fn witherbloom_thornbeast_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Thornbeast (b205)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 5,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Gravethorn (b205) — {1}{G} 1/5 Plant Wall with Defender.
+/// Enrage — whenever this creature is dealt damage, put that many +1/+1
+/// counters on it (scaling, via `Value::TriggerEventAmount`).
+pub fn witherbloom_gravethorn_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Gravethorn (b205)",
+        cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::TriggerEventAmount,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapfeeder (b205) — {2}{B}{G} 3/3 Plant Beast.
+/// When this creature dies, each opponent loses 2 life and you gain 2.
+pub fn witherbloom_sapfeeder_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapfeeder (b205)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![dies_drain(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodmoss (b205) — {1}{B}{G} 2/3 Plant Druid.
+/// Magecraft — whenever you cast or copy an instant or sorcery, each
+/// opponent loses 1 life and you gain 1 life.
+pub fn witherbloom_bloodmoss_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodmoss (b205)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rotcaller (b205) — {1}{B} 1/2 Human Warlock.
+/// Whenever another creature you control dies, each opponent loses 1 life
+/// and you gain 1 life (aristocrats drip).
+pub fn witherbloom_rotcaller_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotcaller (b205)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

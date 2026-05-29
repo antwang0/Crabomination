@@ -4078,5 +4078,41 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::quandrix::quandrix_fractaller_b204,
         super::quandrix::quandrix_mentor_b204,
         super::quandrix::quandrix_anchor_b204,
+        // ── batch 205 — Lorehold Enrage cycle (EventKind::DealtDamage) ──
+        super::lorehold::lorehold_battlescarred_b205,
+        super::lorehold::lorehold_echovenger_b205,
+        super::lorehold::lorehold_vengescribe_b205,
+        super::lorehold::lorehold_grudgebearer_b205,
+        super::lorehold::lorehold_stoneguard_b205,
+        super::lorehold::lorehold_chroniclekeeper_b205,
+        super::lorehold::lorehold_warhost_b205,
+        // ── batch 205 — Witherbloom (B/G) damage-matters round ──
+        super::witherbloom::witherbloom_thornbeast_b205,
+        super::witherbloom::witherbloom_gravethorn_b205,
+        super::witherbloom::witherbloom_sapfeeder_b205,
+        super::witherbloom::witherbloom_bloodmoss_b205,
+        // ── batch 205 — Quandrix (G/U) ──
+        super::quandrix::quandrix_thornfractal_b205,
+        super::quandrix::quandrix_tidecaller_b205,
+        super::quandrix::quandrix_growthseer_b205,
+        // ── batch 205 — Silverquill (W/B) ──
+        super::silverquill::silverquill_lightscribe_b205,
+        super::silverquill::silverquill_grimquill_b205,
+        super::silverquill::silverquill_final_edict_b205,
+        super::silverquill::silverquill_inkguard_b205,
+        // ── batch 205 — Prismari (U/R) ──
+        super::prismari::prismari_flarecaster_b205,
+        super::prismari::prismari_tidescribe_b205,
+        super::prismari::prismari_emberbolt_b205,
+        super::prismari::prismari_stormloot_b205,
+        // ── batch 205 round 2 — varied primitives ──
+        super::lorehold::lorehold_emberhistorian_b205,
+        super::lorehold::lorehold_relicwarden_b205,
+        super::lorehold::lorehold_warchronicler_b205,
+        super::witherbloom::witherbloom_rotcaller_b205,
+        super::quandrix::quandrix_mistcaller_b205,
+        super::silverquill::silverquill_deathscribe_b205,
+        super::prismari::prismari_pyrosmith_b205,
+        super::prismari::prismari_galemage_b205,
     ]
 }

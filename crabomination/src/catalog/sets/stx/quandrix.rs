@@ -15,7 +15,7 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    etb, magecraft, magecraft_draw, magecraft_loot, magecraft_scry, magecraft_self_pump,
+    enrage, etb, magecraft, magecraft_draw, magecraft_loot, magecraft_scry, magecraft_self_pump,
     target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
@@ -19629,6 +19629,146 @@ pub fn quandrix_anchor_b204() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — Quandrix (G/U). A scaling Enrage wall (new
+// `EventKind::DealtDamage`, CR 702.130) plus two spell-matters bodies.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Quandrix Thornfractal (b205) — {2}{G}{U} 0/6 Fractal Wall, Defender.
+/// Enrage — whenever this creature is dealt damage, put that many +1/+1
+/// counters on it. A Quandrix "absorb and grow" wall.
+pub fn quandrix_thornfractal_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Thornfractal (b205)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 6,
+        keywords: vec![Keyword::Defender],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::TriggerEventAmount,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tidecaller (b205) — {1}{G}{U} 2/3 Merfolk Wizard.
+/// Magecraft — whenever you cast or copy an instant or sorcery, draw a card.
+pub fn quandrix_tidecaller_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidecaller (b205)",
+        cost: cost(&[generic(1), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Growthseer (b205) — {2}{G} 2/2 Elf Druid.
+/// ETB — put a +1/+1 counter on target creature you control.
+pub fn quandrix_growthseer_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Growthseer (b205)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Mistcaller (b205) — {1}{U} 1/3 Merfolk Wizard.
+/// Magecraft — whenever you cast or copy an instant or sorcery, scry 2.
+pub fn quandrix_mistcaller_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Mistcaller (b205)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(2)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

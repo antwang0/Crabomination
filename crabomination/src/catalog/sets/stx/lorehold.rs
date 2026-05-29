@@ -15,8 +15,8 @@ use crate::card::{
     TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    dies_mint_token, dies_ping_any, etb, etb_drain, etb_gain_life, etb_mint_token, magecraft,
-    magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_scry,
+    dies_mint_token, dies_ping_any, enrage, etb, etb_drain, etb_gain_life, etb_mint_token,
+    magecraft, magecraft_drain_each_opp, magecraft_gain_life, magecraft_ping_any, magecraft_scry,
     magecraft_self_pump, mint_lorehold_spirits, on_attack_drain, on_attack_gain_life,
     on_attack_ping_any, on_other_dies_mint_token, target_filtered,
 };
@@ -23645,6 +23645,357 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
             count: Value::Const(1),
             definition: lorehold_spirit_token(),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — Lorehold Enrage cycle. First catalog use of
+// the new `EventKind::DealtDamage` event (CR 702.130 Enrage), exposed via
+// the `effect::shortcut::enrage()` helper. Lorehold's "history of battle"
+// flavour maps cleanly onto damage-triggered payoffs.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Lorehold Battlescarred (b205) — {2}{R}{W} 3/4 Spirit Warrior.
+/// Enrage — whenever this creature is dealt damage, put a +1/+1 counter
+/// on it. High toughness lets it survive a single burn spell and grow.
+pub fn lorehold_battlescarred_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Battlescarred (b205)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Echovenger (b205) — {3}{R}{W} 2/5 Spirit Warrior.
+/// Enrage — whenever this creature is dealt damage, put that many +1/+1
+/// counters on it (scaling enrage via `Value::TriggerEventAmount`).
+pub fn lorehold_echovenger_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Echovenger (b205)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::TriggerEventAmount,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Vengescribe (b205) — {1}{R} 2/4 Spirit Cleric.
+/// Enrage — whenever this creature is dealt damage, it deals 1 damage to
+/// any target. A defensive pinger that punishes blockers and burn.
+pub fn lorehold_vengescribe_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Vengescribe (b205)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Grudgebearer (b205) — {3}{R}{W} 4/5 Spirit Warrior.
+/// Enrage — whenever this creature is dealt damage, each opponent loses 2
+/// life and you gain 2 life.
+pub fn lorehold_grudgebearer_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Grudgebearer (b205)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 5,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Stoneguard (b205) — {2}{W} 2/5 Spirit Soldier with Vigilance.
+/// Enrage — whenever this creature is dealt damage, you gain 2 life. A
+/// resilient wall that turns combat / burn into lifegain.
+pub fn lorehold_stoneguard_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Stoneguard (b205)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 5,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Chroniclekeeper (b205) — {3}{R}{W} 3/4 Spirit Cleric.
+/// Enrage — whenever this creature is dealt damage, draw a card. Lorehold
+/// "record every blow" card-advantage engine.
+pub fn lorehold_chroniclekeeper_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Chroniclekeeper (b205)",
+        cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Warhost (b205) — {4}{R}{W} 3/4 Spirit Soldier.
+/// Enrage — whenever this creature is dealt damage, create a 1/1 white
+/// Spirit token (a Lorehold Spirit). Trades incoming damage for board.
+pub fn lorehold_warhost_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Warhost (b205)",
+        cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![enrage(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Emberhistorian (b205) — {1}{R} 2/2 Spirit Wizard.
+/// Magecraft — whenever you cast or copy an instant or sorcery, this
+/// creature deals 1 damage to any target.
+pub fn lorehold_emberhistorian_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Emberhistorian (b205)",
+        cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Relicwarden (b205) — {2}{W} 2/3 Spirit Soldier with Vigilance.
+/// Whenever this creature attacks, you gain 2 life.
+pub fn lorehold_relicwarden_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Relicwarden (b205)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Vigilance],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_attack_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Warchronicler (b205) — {2}{R}{W} 3/3 Spirit Cleric.
+/// Magecraft — whenever you cast or copy an instant or sorcery, this
+/// creature gets +2/+0 until end of turn.
+pub fn lorehold_warchronicler_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Warchronicler (b205)",
+        cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(2, 0)],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],

@@ -5,6 +5,94 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXIV — 2026-05-29, session 18, batch 205)
+
+### Engine — NEW mechanic: Enrage (CR 702.130)
+- **`EventKind::DealtDamage`** — the first damage-recipient-keyed
+  trigger event. Maps to the pre-existing `GameEvent::DamageDealt
+  { to_card: Some(_), .. }` stream so it fires on **any** damage to a
+  permanent (combat, burn spells, Fight, pingers) — matching the
+  printed "Whenever this creature is dealt damage" wording. Wired
+  through `event_matches_spec` / `event_subject` / `event_card`
+  (`game/effects/events.rs`), fan-out-enabled in `game/mod.rs` (one
+  fire per instance of damage, CR 702.130a), and exposed via the new
+  `effect::shortcut::enrage()` helper. The damage amount is reachable
+  in the trigger body via `Value::TriggerEventAmount` for scaling
+  payoffs. Trigger tooltip label "Enrage" added to `server/view.rs`.
+
+### New cards (30 across batch 205, all with functionality tests)
+- **Lorehold (R/W) Enrage cycle (10)** — Battlescarred (+1/+1 on
+  damage), Echovenger (scaling counters via TriggerEventAmount),
+  Vengescribe (ping any), Grudgebearer (drain 2), Stoneguard (gain 2),
+  Chroniclekeeper (draw), Warhost (mint Spirit), plus Emberhistorian
+  (magecraft ping), Relicwarden (attack lifegain), Warchronicler
+  (magecraft self-pump).
+- **Witherbloom (B/G) (5)** — Thornbeast / Gravethorn (enrage),
+  Sapfeeder (death drain), Bloodmoss (magecraft drain), Rotcaller
+  (aristocrats drain).
+- **Quandrix (G/U) (4)** — Thornfractal (scaling enrage wall),
+  Tidecaller (magecraft draw), Growthseer (ETB counter), Mistcaller
+  (magecraft scry).
+- **Silverquill (W/B) (5)** — Lightscribe (ETB gain 3), Grimquill
+  (magecraft drain), Final Edict (drain 3), Inkguard (lifelink
+  Inkling), Deathscribe (aristocrats drain).
+- **Prismari (U/R) (6)** — Flarecaster (magecraft ping each opp),
+  Tidescribe (ETB scry), Emberbolt (2-dmg instant), Stormloot
+  (magecraft loot), Pyrosmith (magecraft Treasure), Galemage
+  (magecraft scry).
+
+### CR rule lock-in tests (3 sections)
+- **CR 702.130 — Enrage** (NEW this session, near the card work):
+  `cr_702_130_enrage_fires_on_combat_damage` proves the trigger fires
+  off the combat-damage path; `lorehold_enrage_does_not_fire_without_
+  damage` pins the no-damage case.
+- **CR 122.1c — Shield counters** (was stale ⏳ in the audit, actually
+  implemented; promoted to ✅): `cr_122_1c_shield_counter_prevents_
+  noncombat_damage`. Also corrected 122.1b (keyword counters) to ✅.
+- **CR 510 — Combat Damage Step** (in-progress 🟡, multi-blocker split
+  still a gap): `cr_510_blocked_attacker_and_blocker_trade` locks in
+  the single-blocker simultaneous-damage trade.
+
+### Server improvement
+- **`MatchStats.min_turns`** completes the turn-count envelope
+  alongside the existing `max_turns` + running average. Rendered in
+  `format_match_stats` as `(turns MIN-MAX)` when there's a spread, or
+  `(max turns N)` when a single distinct value has been seen. 3 new
+  unit tests.
+
+### UI improvement
+- **Numeric +1/+1 / -1/-1 counter badges** in `counter_tooltip.rs`:
+  the boolean "(boosted: +1/+1 counters)" badge now reads the actual
+  count off the `counters` vec and renders the real P/T swing
+  ("(boosted: +3/+3 from 3 +1/+1 counters)"), with singular/plural
+  wording and a fallback to the legacy boolean badge for older
+  projections. Directly useful for the enrage creatures that stack
+  counters. 4 new tooltip tests.
+
+### Observations & future items from this session
+- **Enrage fan-out vs combat batching**: enrage currently fires once
+  per `DamageDealt` instance. In multi-blocker combat a creature
+  blocked by N attackers takes N separate damage events → N enrage
+  fires. This matches CR 702.130a (each instance is separate) but if
+  a future batch-collapse pass lands for combat damage, enrage should
+  be re-audited.
+- **`Value::TriggerEventAmount` for enrage** works for the
+  damage-amount read; a "the source of the damage" selector
+  (for "deals damage back to whatever damaged it" enrage variants like
+  Ravenous Chupacabra-adjacent designs) is not yet exposed — would need
+  the damaging source threaded onto the `DamageDealt` event subject.
+- **Client build/clippy in CI sandbox**: the `crabomination_client`
+  crate can't compile in the web-session sandbox because the system
+  `wayland-client` library is absent (only x11 is installed) — the
+  `wayland-sys` build script panics. Core (`crabomination`) and
+  `crabomination_server` build, test (5214 + 58), and clippy cleanly.
+  The session 18 UI change (`counter_tooltip.rs` numeric counter
+  badges + 4 tests) is pure logic against `net::PermanentView` and is
+  verified against that struct's shape, but its tests can't be executed
+  here. A future env with wayland (or a `--no-default-features` +
+  explicit-x11 Bevy build) should run `cargo test -p crabomination_client
+  counter_tooltip` to confirm.
+
 ## Recent additions (Push XXXIII — 2026-05-28, session 17, batches 202-204)
 
 ### New cards (130 across batches 202-204)
@@ -987,6 +1075,25 @@ Periodic spot-check of the rules document
 (`crabomination/MagicCompRules 20260116.txt` and the newer
 `MagicCompRules_20260417.txt`). Each rule below has a status tag (✅
 wired, 🟡 partial, ⏳ todo) plus a short note.
+
+- ✅ **CR 702.130 — Enrage** (push claude/modern_decks batch 205).
+  "Enrage is a triggered ability. 'Enrage — [effect]' means 'Whenever
+  this creature is dealt damage, [effect].'" Implemented this session:
+  the new `EventKind::DealtDamage` maps to the pre-existing
+  `GameEvent::DamageDealt { to_card: Some(_), .. }` stream (combat AND
+  non-combat damage — burn, Fight, pingers), wired through
+  `event_matches_spec` / `event_subject` / `event_card` in
+  `game/effects/events.rs`, fan-out-enabled in `game/mod.rs` (one fire
+  per instance of damage, CR 702.130a), and exposed via the
+  `effect::shortcut::enrage()` helper. The damage amount is reachable
+  in the trigger body via `Value::TriggerEventAmount` for scaling
+  payoffs. First catalog use: the Lorehold Enrage cycle (Battlescarred,
+  Echovenger, Vengescribe, Grudgebearer, Stoneguard, Chroniclekeeper,
+  Warhost) plus green Witherbloom/Quandrix walls (Thornbeast,
+  Gravethorn, Thornfractal). Tests: the `*_b205_enrage_*` family plus
+  `cr_702_130_enrage_fires_on_combat_damage` (combat-damage path) and
+  `lorehold_enrage_does_not_fire_without_damage`. Trigger tooltip label
+  "Enrage" added to `server/view.rs`.
 
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
@@ -2066,10 +2173,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (b) **122.1a** +X/+Y power/toughness — ✅ (layer-7c reads
   `counter_count(PlusOnePlusOne) - counter_count(MinusOneMinusOne)`
   and adds the delta to base P/T via `compute_battlefield`).
-  (c) **122.1b** keyword counters — ⏳ (no `CounterType::Keyword(Keyword)`
-  variant yet; cards like Decayed / Helix Pinnacle aren't in catalog).
-  (d) **122.1c** shield counters — ⏳ (no `CounterType::Shield` variant;
-  no Phyrexia-style replacement primitive). (e) **122.1d** stun
+  (c) **122.1b** keyword counters — ✅ (the `Effect::AddKeywordCounter`
+  / `RemoveKeywordCounter` primitives wire keyword-granting counters
+  and `has_keyword` reads them; Silverquill Reachseal (b187) grants
+  Reach via a counter — test
+  `silverquill_reachseal_b187_grants_reach_via_counter`).
+  (d) **122.1c** shield counters — ✅ (push claude/modern_decks batch 205
+  audit: stale ⏳ cleared. `CounterType::Shield` exists; the damage path
+  in `game/effects/movement.rs::deal_damage_to_from` prevents the damage
+  and removes a shield counter before marking it, and the destroy path
+  pops a shield instead of destroying. Tests:
+  `cr_122_1c_shield_counter_prevents_noncombat_damage`,
+  `cr_122_1c_shield_counter_prevents_destroy_and_pops`,
+  `silverquill_wardlock_b187_fans_shield_counters_to_friendly_creatures`).
+  (e) **122.1d** stun
   counters — ✅ (`CounterType::Stun`, "would untap → remove a stun
   instead" wired in `do_untap`). (f) **122.1e** loyalty counters define
   PW loyalty — ✅ (`CounterType::Loyalty` + PW-dies-at-0-loyalty SBA).

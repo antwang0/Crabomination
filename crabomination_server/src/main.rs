@@ -159,6 +159,14 @@ struct MatchStats {
     /// one 30-turn outlier". `None` until the first match completes.
     /// Push (claude/modern_decks batch 189).
     max_turns: Option<u32>,
+    /// Shortest observed final turn count across all completed matches.
+    /// Paired with `max_turns` and the running average, this completes
+    /// the turn-count envelope so operators can distinguish a tight
+    /// "always 6-8 turn" distribution from a wide "2-turn concession to
+    /// 30-turn grind" spread without sampling individual match logs.
+    /// `None` until the first match completes. Push
+    /// (claude/modern_decks batch 205).
+    min_turns: Option<u32>,
     /// Number of matches that ended in a draw (MatchOutcome.winner =
     /// Some(None)). Useful for spotting "stalemate" regressions
     /// (typically a bot-vs-bot loop where neither side can finish).
@@ -247,6 +255,10 @@ impl MatchStats {
         self.max_turns = Some(match self.max_turns {
             None => turns,
             Some(m) => m.max(turns),
+        });
+        self.min_turns = Some(match self.min_turns {
+            None => turns,
+            Some(m) => m.min(turns),
         });
     }
     /// Bump the win/draw counters based on the MatchOutcome.winner
@@ -439,8 +451,15 @@ fn format_match_stats(s: &MatchStats) -> String {
         format_duration(s.avg_duration()),
         s.avg_turns(),
     );
-    if let Some(m) = s.max_turns {
-        out.push_str(&format!(" (max turns {m})"));
+    match (s.min_turns, s.max_turns) {
+        (Some(mn), Some(mx)) if mn != mx => {
+            out.push_str(&format!(" (turns {mn}-{mx})"));
+        }
+        (Some(_), Some(mx)) => {
+            // Only one distinct value observed so far — show it as max.
+            out.push_str(&format!(" (max turns {mx})"));
+        }
+        _ => {}
     }
     // Win/draw split: only render once at least one win or draw is
     // recorded so pre-warmup logs stay tight. The delta vs total
@@ -1518,5 +1537,44 @@ mod tests {
         assert!(line.contains("format=demo:2"), "demo bucket present: {line}");
         assert!(!line.contains("cube:0"),
             "cube:0 should not appear when no cube matches played: {line}");
+    }
+
+    #[test]
+    fn observe_turns_tracks_min_and_max_envelope() {
+        // Push (claude/modern_decks batch 205) — the new min_turns
+        // completes the turn-count envelope alongside the existing
+        // max_turns + running average.
+        let mut s = MatchStats::default();
+        assert_eq!(s.min_turns, None, "no samples yet");
+        s.observe_turns(8);
+        s.observe_turns(3);
+        s.observe_turns(20);
+        assert_eq!(s.min_turns, Some(3), "shortest game tracked");
+        assert_eq!(s.max_turns, Some(20), "longest game tracked");
+    }
+
+    #[test]
+    fn format_match_stats_renders_turn_envelope_when_spread() {
+        // When min != max, the rolling line shows "(turns MIN-MAX)".
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(30), Format::Demo);
+        s.observe_turns(5);
+        s.record_bot(Duration::from_secs(120), Format::Demo);
+        s.observe_turns(15);
+        let line = format_match_stats(&s);
+        assert!(line.contains("(turns 5-15)"),
+            "expected turn envelope in rolling line: {line}");
+    }
+
+    #[test]
+    fn format_match_stats_collapses_turn_envelope_to_max_when_single_value() {
+        // A single distinct turn count renders as "(max turns N)" to
+        // avoid the degenerate "(turns N-N)".
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(30), Format::Demo);
+        s.observe_turns(7);
+        let line = format_match_stats(&s);
+        assert!(line.contains("(max turns 7)"), "single value → max turns: {line}");
+        assert!(!line.contains("(turns 7-7)"), "no degenerate range: {line}");
     }
 }

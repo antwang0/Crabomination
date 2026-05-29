@@ -26332,3 +26332,166 @@ pub fn silverquill_censer_b204() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — Silverquill (W/B) round: lifegain, drain, and
+// Inkling-tribal fillers using existing primitives.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Silverquill Lightscribe (b205) — {1}{W} 2/2 Human Cleric.
+/// ETB — you gain 3 life.
+pub fn silverquill_lightscribe_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Lightscribe (b205)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(3)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Grimquill (b205) — {2}{B} 2/2 Inkling Wizard with Flying.
+/// Magecraft — whenever you cast or copy an instant or sorcery, each
+/// opponent loses 1 life and you gain 1 life.
+pub fn silverquill_grimquill_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Grimquill (b205)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Final Edict (b205) — {2}{B} Sorcery.
+/// Each opponent loses 3 life and you gain 3 life.
+pub fn silverquill_final_edict_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Final Edict (b205)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: drain(3),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Inkguard (b205) — {W}{B} 2/3 Inkling Cleric with Lifelink.
+/// A sturdy two-drop Inkling for the W/B aggro-lifegain shell.
+pub fn silverquill_inkguard_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Inkguard (b205)",
+        cost: cost(&[w(), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Lifelink],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Silverquill Deathscribe (b205) — {2}{B} 2/2 Vampire Warlock.
+/// Whenever another creature you control dies, each opponent loses 1 life
+/// and you gain 1 life.
+pub fn silverquill_deathscribe_b205() -> CardDefinition {
+    CardDefinition {
+        name: "Silverquill Deathscribe (b205)",
+        cost: cost(&[generic(2), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

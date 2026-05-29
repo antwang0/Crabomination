@@ -73946,3 +73946,585 @@ fn quandrix_mentor_b204_pumps_friendly_on_is_cast() {
     let c = g.battlefield_find(bear).expect("alive");
     assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1);
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — Lorehold Enrage cycle. Exercises the new
+// `EventKind::DealtDamage` event (CR 702.130). Each test deals damage to
+// the enrage creature (Lightning Bolt, 3 damage) and verifies the
+// triggered payoff fires. All bodies are sized to survive 3 damage so the
+// post-trigger board state is deterministic.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_battlescarred_b205_enrage_adds_counter() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_battlescarred_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("3/4 survives 3 damage");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1,
+        "enrage put one +1/+1 counter on the damaged creature");
+}
+
+#[test]
+fn lorehold_echovenger_b205_enrage_scales_with_damage() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_echovenger_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("2/5 survives 3 damage");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3,
+        "Value::TriggerEventAmount = 3 damage → 3 counters");
+}
+
+#[test]
+fn lorehold_vengescribe_b205_enrage_pings_opponent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_vengescribe_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "2/4 survives 3 damage");
+    assert_eq!(g.players[1].life, l1 - 1,
+        "enrage ping deals 1 to the opponent (default auto-target)");
+}
+
+#[test]
+fn lorehold_grudgebearer_b205_enrage_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_grudgebearer_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "opp loses 2 from enrage drain");
+    assert_eq!(g.players[0].life, l0 + 2, "you gain 2 from enrage drain");
+}
+
+#[test]
+fn lorehold_stoneguard_b205_enrage_gains_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_stoneguard_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 2, "enrage gains 2 life");
+}
+
+#[test]
+fn lorehold_chroniclekeeper_b205_enrage_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::plains());
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_chroniclekeeper_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    // -1 Bolt cast, +1 enrage draw = net same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "enrage drew a card");
+}
+
+#[test]
+fn lorehold_warhost_b205_enrage_mints_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_warhost_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter().filter(|c| c.is_token
+        && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit)).count();
+    assert_eq!(spirits, 1, "enrage minted one Lorehold Spirit token");
+}
+
+#[test]
+fn lorehold_enrage_does_not_fire_without_damage() {
+    // Sanity: an undamaged enrage creature has no counters / no triggers.
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_battlescarred_b205());
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 0,
+        "no damage → no enrage counter");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 205 (modern_decks) — cross-school round (Witherbloom / Quandrix /
+// Silverquill / Prismari). Mixes the new Enrage event with standard
+// magecraft / drain / ETB primitives.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn witherbloom_thornbeast_b205_enrage_drains_one() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_thornbeast_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_some(), "3/5 survives 3 damage");
+    assert_eq!(g.players[1].life, l1 - 1, "opp loses 1 from enrage drain");
+    assert_eq!(g.players[0].life, l0 + 1, "you gain 1 from enrage drain");
+}
+
+#[test]
+fn witherbloom_gravethorn_b205_enrage_scales() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_gravethorn_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("1/5 survives 3 damage");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "3 damage → 3 counters");
+}
+
+#[test]
+fn witherbloom_sapfeeder_b205_death_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::witherbloom_sapfeeder_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(id).is_none(), "3/3 dies to 3 damage");
+    assert_eq!(g.players[1].life, l1 - 2, "death drain: opp loses 2");
+    assert_eq!(g.players[0].life, l0 + 2, "death drain: you gain 2");
+}
+
+#[test]
+fn witherbloom_bloodmoss_b205_magecraft_drains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_bloodmoss_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 4, "bolt 3 + magecraft drain 1");
+    assert_eq!(g.players[0].life, l0 + 1, "magecraft gains 1");
+}
+
+#[test]
+fn quandrix_thornfractal_b205_enrage_scales() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_thornfractal_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("0/6 survives 3 damage");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 3, "3 damage → 3 counters");
+}
+
+#[test]
+fn quandrix_tidecaller_b205_magecraft_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::quandrix_tidecaller_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    // -1 Bolt, +1 magecraft draw = net same.
+    assert_eq!(g.players[0].hand.len(), hand_before, "magecraft drew a card");
+}
+
+#[test]
+fn quandrix_growthseer_b205_etb_counters_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_growthseer_b205());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("bear alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "ETB +1/+1 on friendly");
+}
+
+#[test]
+fn silverquill_lightscribe_b205_etb_gains_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_lightscribe_b205());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let l0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0 + 3, "ETB gains 3 life");
+}
+
+#[test]
+fn silverquill_grimquill_b205_magecraft_drains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_grimquill_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 4, "bolt 3 + magecraft drain 1");
+}
+
+#[test]
+fn silverquill_final_edict_b205_drains_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_final_edict_b205());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 3, "opp loses 3");
+    assert_eq!(g.players[0].life, l0 + 3, "you gain 3");
+}
+
+#[test]
+fn silverquill_inkguard_b205_is_a_two_mana_lifelink_inkling() {
+    let def = catalog::silverquill_inkguard_b205();
+    assert_eq!(def.power, 2);
+    assert_eq!(def.toughness, 3);
+    assert!(def.keywords.contains(&Keyword::Lifelink));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
+#[test]
+fn prismari_flarecaster_b205_magecraft_pings_each_opp() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_flarecaster_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 4, "bolt 3 + magecraft ping 1 to each opp");
+}
+
+#[test]
+fn prismari_emberbolt_b205_deals_two_to_opponent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_emberbolt_b205());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 2, "Emberbolt deals 2");
+}
+
+#[test]
+fn prismari_tidescribe_b205_etb_resolves_and_enters() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::prismari_tidescribe_b205());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("Tidescribe on bf");
+    assert_eq!((c.power(), c.toughness()), (1, 4), "1/4 body, ETB scry 2 resolved");
+}
+
+#[test]
+fn prismari_stormloot_b205_magecraft_loots() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::prismari_stormloot_b205());
+    // A spare card to discard for the loot.
+    g.add_card_to_hand(0, catalog::island());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    // -1 Bolt cast, +1 loot draw, -1 loot discard = net -1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1, "magecraft loot: draw then discard");
+}
+
+// ── Batch 205 round 2 — varied primitives ──────────────────────────────
+
+#[test]
+fn lorehold_emberhistorian_b205_magecraft_pings() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_emberhistorian_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 4, "bolt 3 + magecraft ping 1");
+}
+
+#[test]
+fn lorehold_relicwarden_b205_attack_gains_life() {
+    use crate::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_relicwarden_b205());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) {
+        c.summoning_sick = false;
+    }
+    g.step = TurnStep::DeclareAttackers;
+    let l0_before = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: id,
+        target: AttackTarget::Player(1),
+    }])).expect("Attack declared");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, l0_before + 2, "on-attack gains 2 life");
+}
+
+#[test]
+fn lorehold_warchronicler_b205_magecraft_self_pumps() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_warchronicler_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("alive");
+    assert_eq!(c.power(), 5, "magecraft +2/+0 → 5 power");
+}
+
+#[test]
+fn witherbloom_rotcaller_b205_drains_on_other_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::witherbloom_rotcaller_b205());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l0 = g.players[0].life;
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear dies");
+    assert_eq!(g.players[1].life, l1 - 1, "aristocrats drain: opp -1");
+    assert_eq!(g.players[0].life, l0 + 1, "aristocrats drain: you +1");
+}
+
+#[test]
+fn quandrix_mistcaller_b205_magecraft_scrys() {
+    // Magecraft scry doesn't change hand/life; assert it fires without
+    // error and the body is a 1/3 Merfolk Wizard.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let mc = g.add_card_to_battlefield(0, catalog::quandrix_mistcaller_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(mc).expect("alive");
+    assert_eq!((c.power(), c.toughness()), (1, 3));
+}
+
+#[test]
+fn silverquill_deathscribe_b205_drains_on_other_death() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_deathscribe_b205());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let l1 = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the bear");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 1, "death drain opp -1");
+}
+
+#[test]
+fn prismari_pyrosmith_b205_magecraft_mints_treasure() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_pyrosmith_b205());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 1, "magecraft minted a Treasure");
+}
+
+#[test]
+fn prismari_galemage_b205_is_a_three_mana_wizard() {
+    let def = catalog::prismari_galemage_b205();
+    assert_eq!((def.power, def.toughness), (2, 3));
+    assert!(def.subtypes.creature_types.contains(&CreatureType::Wizard));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// CR rules lock-in tests (batch 205 session)
+// ─────────────────────────────────────────────────────────────────────────
+
+/// CR 702.130 — Enrage. "Whenever this creature is dealt damage" fires on
+/// COMBAT damage just as it does on spell damage. Lorehold Battlescarred
+/// (3/4) blocks a 2/2, survives the 2 combat damage, and the enrage trigger
+/// puts a +1/+1 counter on it. Exercises the `DealtDamage` event off the
+/// combat-damage path in `game/combat.rs` (CR 510 → 702.130 interaction).
+#[test]
+fn cr_702_130_enrage_fires_on_combat_damage() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::lorehold_battlescarred_b205()); // 3/4
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("bear attacks");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("battlescarred blocks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(blocker).expect("3/4 survives 2 combat damage");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1,
+        "CR 702.130: enrage fired on combat damage and added a +1/+1 counter");
+}
+
+/// CR 122.1c — Shield counters. "If damage would be dealt to a permanent
+/// with a shield counter on it … prevent that damage and remove a shield
+/// counter from it." A Bolt (3) into a 2/2 with one shield counter is fully
+/// prevented; the creature survives at 0 marked damage and the shield
+/// counter is consumed.
+#[test]
+fn cr_122_1c_shield_counter_prevents_noncombat_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.battlefield_find_mut(bear).unwrap().counters.insert(CounterType::Shield, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the shielded bear");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).expect("shield prevented lethal damage; bear survives");
+    assert_eq!(c.damage, 0, "CR 122.1c: damage was prevented, none marked");
+    assert_eq!(c.counter_count(CounterType::Shield), 0,
+        "CR 122.1c: the shield counter was removed by the prevention");
+}
+
+/// CR 510.1c / 510.1d — Combat Damage Step. A blocked attacker assigns its
+/// combat damage to the creature blocking it, and the blocker assigns to the
+/// attacker; both are dealt simultaneously. Two 2/2s trade and both die.
+#[test]
+fn cr_510_blocked_attacker_and_blocker_trade() {
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("bear attacks");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .expect("bear blocks");
+    drain_stack(&mut g);
+    while g.step != TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(),
+        "CR 510.1d: attacker took 2 lethal combat damage and died");
+    assert!(g.battlefield_find(blocker).is_none(),
+        "CR 510.1c: blocker took 2 lethal combat damage and died");
+}

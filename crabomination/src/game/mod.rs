@@ -1843,6 +1843,9 @@ impl GameState {
                         | crate::effect::EventKind::LifeGained
                         | crate::effect::EventKind::LifeLost
                         | crate::effect::EventKind::BecameTarget
+                        // Enrage fires once per instance of damage
+                        // (CR 702.130a) — fan out across the batch.
+                        | crate::effect::EventKind::DealtDamage
                 );
                 for ev in events {
                     if is_event_hardcoded(ev, &ta.event) {

@@ -277,10 +277,36 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // has_plus_one_counters / has_minus_one_counters helpers on
     // PermanentView so the client doesn't have to scan the `counters`
     // vec; surface them here.
-    if p.has_plus_one_counters {
+    // Read the explicit counts off the `counters` vec so the badge can
+    // show the actual P/T swing (e.g. "(boosted: +3/+3 from 3 +1/+1
+    // counters)") — far more useful than a bare boolean when an enrage
+    // creature or a Quandrix Fractal has stacked several counters. Falls
+    // back to the legacy boolean badge if the explicit vec is empty but
+    // the helper flag is set (older server projection / snapshot).
+    let plus_n = p
+        .counters
+        .iter()
+        .find_map(|(k, n)| matches!(k, CounterType::PlusOnePlusOne).then_some(*n))
+        .unwrap_or(0);
+    let minus_n = p
+        .counters
+        .iter()
+        .find_map(|(k, n)| matches!(k, CounterType::MinusOneMinusOne).then_some(*n))
+        .unwrap_or(0);
+    if plus_n > 0 {
+        lines.push(format!(
+            "(boosted: +{plus_n}/+{plus_n} from {plus_n} +1/+1 counter{})",
+            if plus_n == 1 { "" } else { "s" }
+        ));
+    } else if p.has_plus_one_counters {
         lines.push(String::from("(boosted: +1/+1 counters)"));
     }
-    if p.has_minus_one_counters {
+    if minus_n > 0 {
+        lines.push(format!(
+            "(weakened: -{minus_n}/-{minus_n} from {minus_n} -1/-1 counter{})",
+            if minus_n == 1 { "" } else { "s" }
+        ));
+    } else if p.has_minus_one_counters {
         lines.push(String::from("(weakened: -1/-1 counters)"));
     }
     // Surface CR 122.1b keyword counters — one line per active counter
@@ -525,6 +551,50 @@ mod tests {
             assert!(!s.contains("(attacking)"), "no attack flag: {s}");
             assert!(!s.contains("(blocking"), "no block flag: {s}");
         }
+    }
+
+    #[test]
+    fn plus_one_counters_show_numeric_pt_delta() {
+        // Push (claude/modern_decks batch 205): the +1/+1 badge now shows
+        // the actual swing read off the counters vec — useful for enrage
+        // creatures that have stacked several counters.
+        let mut p = make_permanent_view(0, 4);
+        p.counters = vec![(CounterType::PlusOnePlusOne, 3)];
+        p.has_plus_one_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(boosted: +3/+3 from 3 +1/+1 counters)"),
+            "expected numeric +1/+1 badge: {body}");
+    }
+
+    #[test]
+    fn single_plus_one_counter_uses_singular_wording() {
+        let mut p = make_permanent_view(0, 3);
+        p.counters = vec![(CounterType::PlusOnePlusOne, 1)];
+        p.has_plus_one_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(boosted: +1/+1 from 1 +1/+1 counter)"),
+            "expected singular wording: {body}");
+        assert!(!body.contains("counters)"), "no plural 's' on a single counter: {body}");
+    }
+
+    #[test]
+    fn minus_one_counters_show_numeric_pt_delta() {
+        let mut p = make_permanent_view(0, 5);
+        p.counters = vec![(CounterType::MinusOneMinusOne, 2)];
+        p.has_minus_one_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(weakened: -2/-2 from 2 -1/-1 counters)"),
+            "expected numeric -1/-1 badge: {body}");
+    }
+
+    #[test]
+    fn plus_one_badge_falls_back_to_boolean_without_explicit_count() {
+        // Older server projection: helper flag set but counters vec empty.
+        let mut p = make_permanent_view(0, 3);
+        p.has_plus_one_counters = true;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(boosted: +1/+1 counters)"),
+            "expected legacy boolean badge fallback: {body}");
     }
 }
 

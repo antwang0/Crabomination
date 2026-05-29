@@ -704,6 +704,17 @@ pub enum EventKind {
     DealsCombatDamageToPlayer,
     /// Combat damage was dealt to a creature by a creature.
     DealsCombatDamageToCreature,
+    /// CR 702.130 — **Enrage**: a permanent was dealt damage (combat or
+    /// non-combat). Fires the source's enrage trigger. Unlike
+    /// `DealsCombatDamageToCreature` (which is keyed on the *dealer* and
+    /// only on combat damage), this is keyed on the *recipient* and fires
+    /// on any damage — combat, burn spells, Fight, pingers — matching the
+    /// printed "Whenever this creature is dealt damage" wording. The
+    /// damage amount is exposed to the trigger body via
+    /// `Value::TriggerEventAmount`. Used with `EventScope::SelfSource` for
+    /// enrage creatures; `AnyPlayer`/`YourControl` scopes also work for
+    /// "whenever a creature you control is dealt damage" payoffs.
+    DealtDamage,
     /// A player gained life.
     LifeGained,
     /// A player lost life.
@@ -2741,6 +2752,18 @@ pub mod shortcut {
     pub fn on_other_dies(effect: Effect) -> TriggeredAbility {
         TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
+            effect,
+        }
+    }
+
+    /// Enrage shortcut (CR 702.130): "Whenever this creature is dealt
+    /// damage, `effect`." Wraps the `DealtDamage / SelfSource` event,
+    /// which fires on any damage to the source — combat, burn, Fight,
+    /// or pingers. The damage amount is reachable inside `effect` via
+    /// `Value::TriggerEventAmount` for scaling enrage payoffs.
+    pub fn enrage(effect: Effect) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect,
         }
     }

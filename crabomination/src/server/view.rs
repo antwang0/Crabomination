@@ -422,6 +422,10 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::BecameTarget, EventScope::AnyPlayer) => "Any targets",
         (EventKind::CreatureSacrificed, EventScope::OpponentControl) => "Opp creature sac",
         (EventKind::PermanentSacrificed, EventScope::OpponentControl) => "Opp permanent sac",
+        // Enrage (CR 702.130) — "Whenever this creature is dealt damage."
+        (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
+        (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
+        (EventKind::DealtDamage, EventScope::AnyPlayer) => "Any crea dealt dmg",
         _ => "",
     }
 }

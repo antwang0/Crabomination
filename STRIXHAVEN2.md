@@ -19,8 +19,20 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 3102 (incl. synthesised variants — batches 155–204 add 860 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 3132 (incl. synthesised variants — batches 155–205 add 890 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
+
+Push (claude/modern_decks, batch 205, claude/modern_decks): 30
+additional STX cards across all five colleges + the **Enrage** mechanic
+(new `EventKind::DealtDamage`, CR 702.130). Highlights: the Lorehold
+(R/W) Enrage cycle (Battlescarred, Echovenger, Vengescribe, Grudgebearer,
+Stoneguard, Chroniclekeeper, Warhost) plus green Witherbloom/Quandrix
+walls (Thornbeast, Gravethorn, Thornfractal) that absorb-and-grow off
+incoming damage. `Value::TriggerEventAmount` drives the scaling-counter
+variants. 31 functionality tests + 3 CR rule lock-in tests (CR 702.130
+Enrage, CR 122.1c shield counters promoted from a stale ⏳, CR 510 combat
+damage). Server `MatchStats.min_turns` + UI numeric counter badges. See
+TODO.md "Push XXXIV" for the full breakdown.
 
 Push (claude/modern_decks, batch 202, claude/modern_decks): 75
 additional STX cards across all five colleges, plus:
