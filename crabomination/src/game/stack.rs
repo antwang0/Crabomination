@@ -471,16 +471,12 @@ impl GameState {
                         .battlefield
                         .iter()
                         .any(|c| c.id == card_id && c.definition.is_aura())
+                        && let Some(crate::game::types::Target::Permanent(tid)) = target
+                        && self.battlefield.iter().any(|c| c.id == tid)
+                        && let Some(aura) =
+                            self.battlefield.iter_mut().find(|c| c.id == card_id)
                     {
-                        if let Some(crate::game::types::Target::Permanent(tid)) = target {
-                            if self.battlefield.iter().any(|c| c.id == tid) {
-                                if let Some(aura) =
-                                    self.battlefield.iter_mut().find(|c| c.id == card_id)
-                                {
-                                    aura.attached_to = Some(tid);
-                                }
-                            }
-                        }
+                        aura.attached_to = Some(tid);
                     }
 
                     // Evoke: schedule a self-sacrifice trigger that resolves

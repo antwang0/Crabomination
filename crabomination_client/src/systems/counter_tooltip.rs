@@ -527,6 +527,8 @@ mod tests {
             stun_counter_count: 0,
             finality_counter_count: 0,
             regeneration_shields: 0,
+            equippable: false,
+            crew_value: 0,
         }
     }
 
