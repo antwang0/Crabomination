@@ -23871,23 +23871,14 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false,
-            // Pay an extra creature sac (not Self) to fire the drain. We
-            // use the `exile_other_filter` shape here by setting
-            // `sac_cost`=true on a separate inline activation isn't
-            // possible since `sac_cost` sacs the source. The closest
-            // shape today is to sacrifice via the body's Effect::Sacrifice
-            // call. But `Sacrifice` is a body Effect, fine as cost-at-
-            // resolve approximation (matches Necrotic Fumes).
+            // "Sacrifice a creature" is now a proper pre-resolution
+            // activation cost via sac_other_filter (rejects when there's
+            // no creature to sacrifice), rather than a body Effect.
             exile_other_filter: None,
             condition: None,
             sorcery_speed: false,
             once_per_turn: false,
             effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature,
-                },
                 Effect::LoseLife {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(2),
@@ -23897,7 +23888,12 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
                     amount: Value::Const(2),
                 },
             ]),
-                    self_counter_cost_reduction: None, sac_other_filter: None,
+                    self_counter_cost_reduction: None,
+                    sac_other_filter: Some((
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                        1,
+                    )),
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -27799,14 +27795,8 @@ pub fn bramble_brewer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(3), b(), g()]),
+            // Sacrifice another creature as a proper activation cost.
             effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                    count: Value::Const(1),
-                },
                 Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),
@@ -27824,7 +27814,13 @@ pub fn bramble_brewer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
