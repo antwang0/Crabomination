@@ -26,9 +26,12 @@ builder string-args, false positives in the name-detector).
 - **Tireless Tracker** — sac-a-Clue → +1/+1 counter via a
   `PermanentSacrificed + YourControl` trigger.
 - **Sentinel of the Nameless City** — Ward {2} (enforced) + Plant subtype.
-- **Sylvan Safekeeper** / **Zuran Orb** — folded sac costs promoted to
-  proper `sac_other_filter` pre-resolution activation costs (reject when
-  the cost is unpayable).
+- **Sylvan Safekeeper** / **Zuran Orb** / **Orcish Lumberjack** /
+  **Elvish Reclaimer** / **Witherbloom Apothecary** / **Witherbloom
+  Plaguemage** / **Bramble Brewer** — folded sac costs promoted to proper
+  `sac_other_filter` pre-resolution activation costs (reject when the cost
+  is unpayable). Orcish Lumberjack also fixes a mana-color bug
+  ({G}{G}{G} → the printed {R}{R}{R}).
 - **Tragedy Feaster** — Ward—Discard a card now enforced.
 - **Prismari, the Inspiration** — Ward—Pay 5 life now enforced.
 - **Tragic Slip** — Morbid gate (-1/-1, or -13/-13 if a creature died).
@@ -58,6 +61,15 @@ builder string-args, false positives in the name-detector).
 - **UI**: damage-marked creatures in the alt-tooltip now show the survival
   margin ("marked: 2 damage; 3 more lethal"). 1 test. (Client crate is
   unbuildable in the web sandbox — wayland-sys; change is pure formatting.)
+
+### Card count note
+~16 cards received genuine functional promotions this session (plus
+lock-in tests added for several already-implemented-but-untested riders
+like Vandalblast/Cyclonic Rift overload). This is below the 20-card
+target: the catalog is exceptionally mature — **every card in the
+Scryfall cache is already implemented**, and the remaining unimplemented
+cards all require large new engine primitives (see backlog below). Future
+sessions wanting volume should land one of those primitives first.
 
 ### Backlog discovered (deliberately not tackled — need large primitives)
 The remaining CUBE/SOS partials cluster around primitives the engine still
