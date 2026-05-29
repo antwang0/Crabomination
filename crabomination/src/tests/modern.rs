@@ -15132,3 +15132,119 @@ fn rancor_buffs_plus_two_zero_and_grants_trample() {
     assert_eq!((buffed.power, buffed.toughness), (4, 2), "Rancor is +2/+0");
     assert!(buffed.keywords.contains(&crate::card::Keyword::Trample), "Rancor grants trample");
 }
+
+// ── Cascade instants / Darkblast dredge / simple Auras ──────────────────────
+
+#[test]
+fn bituminous_blast_burns_creature_and_cascades() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let bb = g.add_card_to_hand(0, catalog::bituminous_blast());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bb, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bituminous Blast castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(victim).is_none(), "4 damage kills the 4/4");
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "cascade resolved into the Bears");
+}
+
+#[test]
+fn violent_outburst_pumps_team_and_cascades() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(false)]));
+    let vo = g.add_card_to_hand(0, catalog::violent_outburst());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, vo);
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == mine).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "your creatures get +1/+1");
+}
+
+#[test]
+fn ardent_plea_has_exalted_and_cascade() {
+    let def = catalog::ardent_plea();
+    assert!(def.triggered_abilities.iter().any(|t|
+        matches!(t.effect, crate::effect::Effect::Cascade { .. })), "has cascade");
+    assert!(def.triggered_abilities.iter().any(|t|
+        matches!(t.effect, crate::effect::Effect::PumpPT { .. })), "has the exalted pump");
+}
+
+#[test]
+fn darkblast_shrinks_a_creature_and_can_dredge() {
+    let mut g = two_player_game();
+    let imp = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let db = g.add_card_to_hand(0, catalog::darkblast());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: db, target: Some(Target::Permanent(imp)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Darkblast castable for {B}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    if let Some(c) = view.iter().find(|c| c.id == imp) {
+        assert_eq!((c.power, c.toughness), (1, 1), "-1/-1 applied");
+    }
+    // Darkblast carries Dredge 3.
+    assert!(catalog::darkblast().keywords.iter().any(|k| matches!(k, crate::card::Keyword::Dredge(3))));
+}
+
+#[test]
+fn spectral_flight_grants_plus_two_two_and_flying() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_hand(0, catalog::spectral_flight());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spectral Flight castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == bears).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 4));
+    assert!(c.keywords.contains(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn unholy_and_holy_strength_apply_their_buffs() {
+    // Unholy Strength: +2/+1.
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let us = g.add_card_to_hand(0, catalog::unholy_strength());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: us, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Unholy Strength castable");
+    drain_stack(&mut g);
+    let v = g.compute_battlefield();
+    let c = v.iter().find(|c| c.id == b1).unwrap();
+    assert_eq!((c.power, c.toughness), (4, 3), "Unholy Strength is +2/+1");
+
+    // Holy Strength: +1/+2 (fresh game).
+    let mut g2 = two_player_game();
+    let b2 = g2.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hs = g2.add_card_to_hand(0, catalog::holy_strength());
+    g2.players[0].mana_pool.add(Color::White, 1);
+    g2.perform_action(GameAction::CastSpell {
+        card_id: hs, target: Some(Target::Permanent(b2)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Holy Strength castable");
+    drain_stack(&mut g2);
+    let v2 = g2.compute_battlefield();
+    let c2 = v2.iter().find(|c| c.id == b2).unwrap();
+    assert_eq!((c2.power, c2.toughness), (3, 4), "Holy Strength is +1/+2");
+}

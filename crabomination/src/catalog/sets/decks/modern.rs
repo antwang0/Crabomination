@@ -10027,6 +10027,130 @@ pub fn rancor() -> CardDefinition {
     }
 }
 
+/// Bituminous Blast — {3}{B}{R} Instant. "Deals 4 damage to target
+/// creature. Cascade." (CR 702.85.)
+pub fn bituminous_blast() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Bituminous Blast",
+        cost: cost(&[generic(3), b(), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage {
+            amount: Value::Const(4),
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature,
+            },
+        },
+        triggered_abilities: vec![cascade(5)],
+        ..Default::default()
+    }
+}
+
+/// Violent Outburst — {1}{R}{G} Instant. "Creatures you control get +1/+1
+/// until end of turn. Cascade."
+pub fn violent_outburst() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Violent Outburst",
+        cost: cost(&[generic(1), r(), g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: Selector::EachPermanent(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            power: Value::Const(1),
+            toughness: Value::Const(1),
+            duration: Duration::EndOfTurn,
+        },
+        triggered_abilities: vec![cascade(3)],
+        ..Default::default()
+    }
+}
+
+/// Ardent Plea — {1}{W} Enchantment. "Exalted (CR 702.83). Cascade
+/// (CR 702.85)." Cascade fires when the enchantment is cast.
+pub fn ardent_plea() -> CardDefinition {
+    use crate::effect::shortcut::{cascade, exalted};
+    CardDefinition {
+        name: "Ardent Plea",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![exalted(), cascade(2)],
+        ..Default::default()
+    }
+}
+
+/// Darkblast — {B} Instant. "Target creature gets -1/-1 until end of turn.
+/// Dredge 3." (CR 702.52.)
+pub fn darkblast() -> CardDefinition {
+    CardDefinition {
+        name: "Darkblast",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Dredge(3)],
+        effect: Effect::PumpPT {
+            what: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature,
+            },
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Helper: build a simple "+P/+T (and optional keywords)" Aura.
+fn simple_aura(
+    name: &'static str,
+    mana: ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature,
+            },
+        },
+        equipped_bonus: Some(crate::card::EquipBonus { power, toughness, keywords }),
+        ..Default::default()
+    }
+}
+
+/// Spectral Flight — {1}{U} Aura. "Enchanted creature gets +2/+2 and has
+/// flying."
+pub fn spectral_flight() -> CardDefinition {
+    simple_aura("Spectral Flight", cost(&[generic(1), u()]), 2, 2, vec![Keyword::Flying])
+}
+
+/// Flight — {U} Aura. "Enchanted creature has flying."
+pub fn flight() -> CardDefinition {
+    simple_aura("Flight", cost(&[u()]), 0, 0, vec![Keyword::Flying])
+}
+
+/// Unholy Strength — {B} Aura. "Enchanted creature gets +2/+1."
+pub fn unholy_strength() -> CardDefinition {
+    simple_aura("Unholy Strength", cost(&[b()]), 2, 1, vec![])
+}
+
+/// Holy Strength — {W} Aura. "Enchanted creature gets +1/+2."
+pub fn holy_strength() -> CardDefinition {
+    simple_aura("Holy Strength", cost(&[w()]), 1, 2, vec![])
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 ///

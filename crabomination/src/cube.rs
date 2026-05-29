@@ -293,6 +293,9 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks (cascade/aura) ──
+        ardent_plea,
+        holy_strength,
         savannah_lions,
         white_knight,
         swords_to_plowshares,
@@ -453,6 +456,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── modern_decks (auras) ──
+        spectral_flight,
+        flight,
         counterspell,
         mana_leak,
         spell_pierce,
@@ -633,6 +639,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         fatal_push,
         // ── modern_decks (dredge): Stinkweed Imp ──
         stinkweed_imp,
+        // ── modern_decks (dredge/aura) ──
+        darkblast,
+        unholy_strength,
         dark_ritual,
         demonic_tutor,
         thoughtseize,
@@ -1055,6 +1064,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──
         shardless_agent,
         rancor,
+        // ── modern_decks (cascade RG): Violent Outburst ──
+        violent_outburst,
         birds_of_paradise,
         sylvan_caryatid,
         summoners_pact,

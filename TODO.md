@@ -7,7 +7,7 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions (Push XLI — claude/modern_decks: Cascade + Dredge + Auras)
 
-Three new mechanics, 12 cards, 24 tests, 3 CR lock-ins, and one
+Three new mechanics, 20 cards, 30 tests, 3 CR lock-ins, and one
 improvement in each of engine / UI / server.
 
 - **Cascade (CR 702.85)** ✅ — `Effect::Cascade { max_mv }` +
@@ -15,17 +15,20 @@ improvement in each of engine / UI / server.
   of the library until a nonland card with MV < the spell's MV, lets
   the controller cast it free, and bottoms the rest. Cards: Bloodbraid
   Elf (promoted from a draw-1 proxy), Apex Devastator (×4), Shardless
-  Agent, Enlisted Wurm, Maelstrom Wanderer (×2 + team-haste static).
+  Agent, Enlisted Wurm, Maelstrom Wanderer (×2 + team-haste static),
+  Bituminous Blast, Violent Outburst, Ardent Plea (cascade + exalted).
 - **Dredge (CR 702.52)** ✅ (was the open TODO at the bottom of this
   file) — `GameState::draw_one` applies the dredge replacement across
   every draw site (turn draw, `Effect::Draw`, cycling); the
   `AutoDecider` declines by default so ordinary games are unaffected.
   Cards: Golgari Thug, Golgari Grave-Troll (🟡 — regen omitted),
-  Life from the Loam, Stinkweed Imp, Golgari Brownscale.
+  Life from the Loam, Stinkweed Imp, Golgari Brownscale, Darkblast.
 - **Auras / attach-on-resolve (CR 303.4)** ✅ — Aura permanent spells
   now set `attached_to` from their target on resolution, so
   `equipped_bonus` flows onto the enchanted creature (first Aura
-  support in the catalog). Cards: Gift of Orzhova, Rancor.
+  support in the catalog). Cards: Gift of Orzhova, Rancor, Spectral
+  Flight, Flight, Unholy Strength, Holy Strength (via a `simple_aura`
+  helper).
 - **Engine fix** — `ExileTopAndGrantMayPlay` read `library.last()`
   (the bottom card) while documenting "top"; corrected to `.first()`
   (index 0 = top). Regression test added.
