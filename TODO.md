@@ -5,6 +5,69 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXVIII — modern_decks: real hybrid mana + 3 CR sections)
+
+This session discovered the engine already supported two-color hybrid
+pips (`ManaSymbol::Hybrid`) end-to-end but ~14 cards approximated them as
+a single color, and added a `MonoHybrid` primitive for `{2/C}` pips.
+
+### New engine primitives / mechanics (3 CR sections)
+- **CR 202.3f — Monocolored hybrid** (near cards): `ManaSymbol::MonoHybrid(n, color)`
+  — mana value uses the generic side; payment prefers the colored side,
+  falling back to {n} generic. Wired through `cmc` / `distinct_colors` /
+  `colors` / `summary`, the `pay()` algorithm, the auto-tap planner, the
+  layer-system `colors_from_card`, server view rendering, and the client
+  draft color-bucketing. Fixed Magmablood / Wildgrowth Archaic (were
+  charging BOTH halves → CMC 9/4 instead of 6/4) and Spectral Procession
+  (flat {2}{W} → real {2/W}{2/W}{2/W}).
+- **CR 701.15g — Can't be regenerated** (in-progress, was a flagged
+  follow-up): `Effect::DestroyNoRegen` bypasses regeneration shields.
+  Wired Terminate, Putrefy, Wrath of God, Damnation. Plain `Destroy`
+  still honors shields (regression test included).
+- **CR 702.13 Intimidate / 702.16 Protection** (random): shares-a-color /
+  protection-from-color now read *computed* colors
+  (`ComputedPermanent.colors`) instead of scanning raw `{C}` cost pips,
+  fixing the interaction with hybrid / mono-hybrid pips.
+
+### Cards converted to real hybrid pips (with tests)
+- Two-color hybrid: Essenceknit Scholar, Paradox Surveyor, Abstract
+  Paintmage, Practiced Scrollsmith, Stirring Honormancer, Abigale /
+  Heroic Stanza, Lluwen / Pest Friend, Spectacle Mage, Fervent Strike,
+  Killian's Confidence, Manamorphose, Burning-Tree Emissary, Tasigur's
+  activated {2}{G/U}.
+- Mono-hybrid: Magmablood Archaic, Wildgrowth Archaic, Spectral
+  Procession.
+- Fix What's Broken reworked to a faithful {X}{2}{W}{B} (pay X life, mass
+  reanimate at exactly MV X).
+- ~30 functionality tests across these.
+
+### Improvements this session
+- **Engine**: the three mechanics above + the cost-bug fixes.
+- **Server**: `format_mana_cost` deduped onto `ManaCost::summary()` —
+  fixes Debug-formatted hybrid/Phyrexian labels (`{White/Black}` → `{W/B}`)
+  and {C} mis-rendering.
+- **UI (client)**: legal-target-filter `HasColor` uses `ManaCost::colors()`
+  (hybrid/mono-hybrid colors count); draft color-bucketing counts
+  mono-hybrid. NOTE: the client can't be compiled in this sandbox
+  (missing `libwayland-dev` / `wayland-client.pc`), so these client
+  edits are verified by inspection only — they are additive arms on
+  already-exhaustive matches and a method swap, type-correct by review.
+
+### Follow-ups noticed (not tackled this run)
+- **Phyrexian pip color in `colors_from_card`** already handled; but the
+  monocolored-hybrid `{2/C}` "pay 2 life" variant ({2/P}-style) is not a
+  thing — only `{n/color}` is modeled. No action needed.
+- **Spend-restricted mana** (Abstract Paintmage's "spend only on instant
+  and sorcery spells", Tablet of Discovery) still unmodeled — needs
+  per-mana spend-restriction metadata on the mana pool.
+- **Mono-hybrid auto-tap optimality**: the planner treats a {2/C} pip as
+  needing 1 colored or 2 generic but doesn't search for the globally
+  cheapest land assignment across mixed hybrid costs (greedy, like the
+  existing two-color hybrid path). Fine in practice.
+- **Client build in CI**: confirm `libwayland-dev` is installed in the
+  CI/runner image so the client crate (and its clippy) actually compile;
+  it does not build in this web sandbox.
+
 ## Recent additions (Push XXXVII — modern_decks: Delve + Regeneration + Fear)
 
 This session landed **three CR-keyword mechanics** the catalog had stubbed
@@ -55,11 +118,10 @@ engine/server/UI.
 - **UI**: counter tooltip badges regeneration shields (singular + ×N).
 
 ### Follow-ups noticed (not tackled this run)
-- **"Can't be regenerated" (CR 701.15g)** is not yet enforced — destroy
-  effects with the rider (Terminate, Day of Judgment, Putrefy) still let a
-  regeneration shield save the creature. Needs an `Effect::DestroyNoRegen`
-  variant (or a bool on `Destroy`) wired into the canonical can't-regen
-  cards. No current test depends on the correct interaction.
+- **"Can't be regenerated" (CR 701.15g)** — DONE in Push XXXVIII:
+  `Effect::DestroyNoRegen` wired into Terminate, Putrefy, Wrath of God,
+  Damnation. (Day of Judgment intentionally NOT changed — its printed
+  Oracle has no can't-regen clause, unlike Wrath of God.)
 - **Delve `{X}` interaction**: Logic Knot ({X}{U}{U}, Delve, counter
   unless pay {X}) wasn't added — its body needs `CounterUnlessPaid` to
   read the X paid (`Value::XFromCost`) rather than a fixed cost.
@@ -417,9 +479,11 @@ lacks. Highest-value next targets, each unlocking multiple cards:
 - **Choose-N modal commands**: Silverquill Quillforge mints Inklings
   + drains; could use a "choose 2 of 3" promote-to-mode-pick UI for
   the printed STX Command lineage. Still ⏳ as engine-wide gap.
-- **Hybrid mana payment**: still collapsed to one color across the
-  batch (Witherbloom Apprentice cost {B}{G} is fine but cards printed
-  with `{W/B}{W/B}` lose payment flexibility). Engine-wide gap.
+- **Hybrid mana payment**: RESOLVED in Push XXXVIII. `ManaSymbol::Hybrid`
+  was already supported end-to-end; the converted cards now use real
+  hybrid pips, and `MonoHybrid` covers `{2/C}`. Any card still printed
+  with a single-color approximation of a hybrid pip should be migrated
+  to `hybrid(a, b)` / `mono_hybrid(n, c)`.
 - **Lesson sideboard model**: Quandrix Cantrip is *not* a Lesson but
   shares the IS-cantrip shape — Lessons themselves still gate on the
   sideboard model.
