@@ -560,3 +560,83 @@ pub fn cephalid_coliseum() -> CardDefinition {
         equipped_bonus: None,
     }
 }
+
+// ── Manlands (CR 702 — lands that animate into creatures) ───────────────────
+
+/// Build a creature-land (manland): enters tapped, taps for each of two
+/// colors, and has a mana-cost activated ability that animates it into a
+/// creature until end of turn via `Effect::BecomeCreature`. The animated
+/// body keeps the Land type (it becomes a "land creature").
+fn manland(
+    name: &'static str,
+    type_a: LandType,
+    type_b: LandType,
+    color_a: Color,
+    color_b: Color,
+    animate_cost: ManaCost,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<crate::card::Keyword>,
+) -> CardDefinition {
+    use crate::card::CreatureType;
+    let animate = ActivatedAbility {
+        tap_cost: false,
+        mana_cost: animate_cost,
+        effect: Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(power),
+            toughness: Value::Const(toughness),
+            creature_types: vec![CreatureType::Elemental],
+            keywords,
+            duration: crate::effect::Duration::EndOfTurn,
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes {
+            land_types: vec![type_a, type_b],
+            ..Default::default()
+        },
+        activated_abilities: vec![tap_add(color_a), tap_add(color_b), animate],
+        triggered_abilities: vec![etb_tap()],
+        ..Default::default()
+    }
+}
+
+/// Celestial Colonnade — UW manland. Enters tapped, taps for {W}/{U}.
+/// {3}{W}{U}: becomes a 4/4 white-blue Elemental with flying and vigilance
+/// until end of turn (still a land).
+pub fn celestial_colonnade() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Celestial Colonnade",
+        LandType::Plains,
+        LandType::Island,
+        Color::White,
+        Color::Blue,
+        cost(&[generic(3), crate::mana::w(), u()]),
+        4,
+        4,
+        vec![Keyword::Flying, Keyword::Vigilance],
+    )
+}
+
+/// Creeping Tar Pit — UB manland. Enters tapped, taps for {U}/{B}.
+/// {1}{U}{B}: becomes a 3/2 blue-black Elemental that can't be blocked
+/// until end of turn (still a land).
+pub fn creeping_tar_pit() -> CardDefinition {
+    use crate::card::Keyword;
+    manland(
+        "Creeping Tar Pit",
+        LandType::Island,
+        LandType::Swamp,
+        Color::Blue,
+        Color::Black,
+        cost(&[generic(1), u(), crate::mana::b()]),
+        3,
+        2,
+        vec![Keyword::Unblockable],
+    )
+}

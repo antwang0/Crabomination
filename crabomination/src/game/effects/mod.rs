@@ -1254,6 +1254,75 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::BecomeCreature {
+                what,
+                power,
+                toughness,
+                creature_types,
+                keywords,
+                duration,
+            } => {
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer,
+                };
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    // Layer 4: add the Creature card type + any subtypes.
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: affected.clone(),
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: duration_kind.clone(),
+                        modification: Modification::AddCardType(crate::card::CardType::Creature),
+                    });
+                    for ct in creature_types {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: affected.clone(),
+                            layer: Layer::L4Type,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification: Modification::AddCreatureType(*ct),
+                        });
+                    }
+                    // Layer 7b: set the animated body's base P/T.
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(ContinuousEffect {
+                        timestamp: ts,
+                        source,
+                        affected: affected.clone(),
+                        layer: Layer::L7PowerTough,
+                        sublayer: Some(PtSublayer::SetValue),
+                        duration: duration_kind.clone(),
+                        modification: Modification::SetPowerToughness(p, t),
+                    });
+                    // Layer 6: keyword grants (flying, vigilance, etc.).
+                    for kw in keywords {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: affected.clone(),
+                            layer: Layer::L6Ability,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification: Modification::AddKeyword(kw.clone()),
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::GrantTriggeredAbility { what, trigger, duration: _ } => {
                 // Currently only EOT-duration grants are honored; the
                 // entry is cleared in `do_cleanup`. Permanent-duration

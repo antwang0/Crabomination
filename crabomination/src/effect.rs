@@ -1126,6 +1126,22 @@ pub enum Effect {
     /// on top per CR 613.7f / 613.7c — so a +1/+1 counter on a Square-
     /// Upped creature makes it 1/5, not 1/1.
     SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
+    /// Animate each permanent picked by `what` into a creature for
+    /// `duration` (the canonical "manland" effect — Celestial Colonnade,
+    /// Creeping Tar Pit, Mutavault, …). Installs a stack of continuous
+    /// effects: layer-4 `AddCardType(Creature)` + each creature subtype,
+    /// layer-7b `SetPowerToughness`, and layer-6 keyword grants. The
+    /// permanent keeps its other types (a land stays a land — it becomes a
+    /// "land creature"). Typically targets `Selector::This` from an
+    /// activated ability, but works on any resolved permanent.
+    BecomeCreature {
+        what: Selector,
+        power: Value,
+        toughness: Value,
+        creature_types: Vec<crate::card::CreatureType>,
+        keywords: Vec<Keyword>,
+        duration: Duration,
+    },
     GrantKeyword { what: Selector, keyword: Keyword, duration: Duration },
     /// Grant a transient triggered ability to each permanent picked by
     /// `what`, for `duration`. Stashed in `GameState.
@@ -1728,6 +1744,9 @@ impl Effect {
             Effect::SetBasePT { what, power, toughness, .. } => {
                 sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
             }
+            Effect::BecomeCreature { what, power, toughness, .. } => {
+                sel_has_target(what) || value_has_target(power) || value_has_target(toughness)
+            }
             Effect::GrantKeyword { what, .. } => sel_has_target(what),
             Effect::LoseAllAbilities { what, .. } => sel_has_target(what),
             Effect::AddCounter { what, amount, .. }
@@ -1842,6 +1861,7 @@ impl Effect {
             | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::SetBasePT { what, .. } => sel_filter(what),
+            Effect::BecomeCreature { what, .. } => sel_filter(what),
             Effect::GrantKeyword { what, .. } => sel_filter(what),
             Effect::Move { what, .. } => sel_filter(what),
             // Player-targeting effects: surface the filter so the bot's
@@ -1931,6 +1951,8 @@ impl Effect {
             // an opp creature unless the toughness bump is the bigger
             // tell.
             Effect::SetBasePT { .. } => false,
+            // Animating your own land into a creature is a friendly self-buff.
+            Effect::BecomeCreature { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),
@@ -2151,6 +2173,7 @@ impl Effect {
             | Effect::RemoveKeywordCounter { .. }
             | Effect::PumpPT { .. }
             | Effect::SetBasePT { .. }
+            | Effect::BecomeCreature { .. }
             | Effect::GrantKeyword { .. }
             | Effect::GainControl { .. }
             | Effect::ResetCreature { .. }
@@ -2306,6 +2329,7 @@ impl Effect {
                 | Effect::GainControl { what, .. } => sel_find(what, slot),
                 Effect::PumpPT { what, .. } => sel_find(what, slot),
                 Effect::SetBasePT { what, .. } => sel_find(what, slot),
+                Effect::BecomeCreature { what, .. } => sel_find(what, slot),
                 Effect::GrantKeyword { what, .. } => sel_find(what, slot),
                 Effect::AddCounter { what, .. } | Effect::RemoveCounter { what, .. } => {
                     sel_find(what, slot)

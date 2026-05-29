@@ -14418,3 +14418,80 @@ fn uncrewed_vehicle_cannot_attack() {
         .expect_err("uncrewed vehicle is not a creature and can't attack");
     let _ = err;
 }
+
+// ── Manlands (creature-lands via Effect::BecomeCreature) ────────────────────
+
+/// Celestial Colonnade animates into a 4/4 flying-vigilance Elemental that's
+/// still a land, then reverts at end of turn.
+#[test]
+fn celestial_colonnade_animates_into_a_4_4_flier() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::celestial_colonnade());
+    let pre = g.computed_permanent(land).unwrap();
+    assert!(pre.card_types.contains(&CardType::Land));
+    assert!(!pre.card_types.contains(&CardType::Creature));
+
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate for {3}{W}{U}");
+    drain_stack(&mut g);
+
+    let post = g.computed_permanent(land).unwrap();
+    assert!(post.card_types.contains(&CardType::Creature), "now a creature");
+    assert!(post.card_types.contains(&CardType::Land), "still a land");
+    assert_eq!(post.power, 4);
+    assert_eq!(post.toughness, 4);
+    assert!(post.keywords.contains(&Keyword::Flying));
+    assert!(post.keywords.contains(&Keyword::Vigilance));
+    assert!(post.subtypes.creature_types.contains(&CreatureType::Elemental));
+
+    g.expire_end_of_turn_effects();
+    let after = g.computed_permanent(land).unwrap();
+    assert!(!after.card_types.contains(&CardType::Creature), "reverts to land EOT");
+}
+
+/// Creeping Tar Pit animates into a 3/2 unblockable Elemental.
+#[test]
+fn creeping_tar_pit_animates_unblockable() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::creeping_tar_pit());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate for {1}{U}{B}");
+    drain_stack(&mut g);
+    let post = g.computed_permanent(land).unwrap();
+    assert_eq!(post.power, 3);
+    assert_eq!(post.toughness, 2);
+    assert!(post.keywords.contains(&Keyword::Unblockable));
+}
+
+/// An animated manland can be declared as an attacker (it's a creature).
+#[test]
+fn animated_manland_can_attack() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::creeping_tar_pit());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: land,
+        target: AttackTarget::Player(1),
+    }]))
+    .expect("animated manland attacks");
+}
