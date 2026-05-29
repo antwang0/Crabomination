@@ -263,6 +263,20 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     if p.finality_counter_count > 0 || p.has_finality_counters {
         lines.push(String::from("(finality: exiles instead of going to graveyard)"));
     }
+    // CR 701.15 regeneration shields: each replaces the next destruction
+    // this turn with a tap + heal + remove-from-combat. Surface the count
+    // so the player knows how many destructions the creature can shrug off
+    // before it actually dies.
+    if p.regeneration_shields > 1 {
+        lines.push(format!(
+            "(regen ×{}: absorbs {} destructions this turn)",
+            p.regeneration_shields, p.regeneration_shields
+        ));
+    } else if p.regeneration_shields == 1 {
+        lines.push(String::from(
+            "(regen: next destruction taps & heals instead of dying)",
+        ));
+    }
     if p.stun_counter_count > 1 {
         lines.push(format!(
             "(stunned ×{}: next {} untap steps skipped)",
@@ -511,6 +525,7 @@ mod tests {
             shield_counter_count: 0,
             stun_counter_count: 0,
             finality_counter_count: 0,
+            regeneration_shields: 0,
         }
     }
 
@@ -704,5 +719,19 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(boosted: +1/+1 counters)"),
             "expected legacy boolean badge fallback: {body}");
+    }
+
+    #[test]
+    fn regeneration_shield_badge_shows_singular_and_plural() {
+        let mut p = make_permanent_view(0, 2);
+        p.regeneration_shields = 1;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(regen: next destruction taps & heals instead of dying)"),
+            "expected singular regen badge: {body}");
+
+        p.regeneration_shields = 3;
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("(regen ×3: absorbs 3 destructions this turn)"),
+            "expected plural regen badge: {body}");
     }
 }

@@ -264,6 +264,7 @@ fn project_permanent(
         shield_counter_count: card.counter_count(crate::card::CounterType::Shield),
         stun_counter_count: card.counter_count(crate::card::CounterType::Stun),
         finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
+        regeneration_shields: card.regeneration_shields,
     }
 }
 

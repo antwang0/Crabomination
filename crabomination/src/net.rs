@@ -492,6 +492,12 @@ pub struct PermanentView {
     /// Push (claude/modern_decks, batches 192-193).
     #[serde(default)]
     pub finality_counter_count: u32,
+    /// Number of regeneration shields on this permanent (CR 701.15). Each
+    /// shield replaces the next destruction this turn with a tap + heal +
+    /// remove-from-combat. Transient (cleared at cleanup); surfaced so the
+    /// client can badge a "regen-shielded" creature.
+    #[serde(default)]
+    pub regeneration_shields: u32,
 }
 
 impl PermanentView {

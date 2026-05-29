@@ -426,6 +426,57 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         .filter(|a| state.would_accept(a.clone()))
         .collect();
 
+    // Delve (CR 702.66): for any hand card with `Keyword::Delve` that the
+    // bot can't (yet) afford, try exiling graveyard cards to pay the
+    // generic portion. Delve the maximum available (capped at the generic
+    // pip total), then let `would_accept` confirm the reduced cost is
+    // payable. Appended to the candidate set so the bot actually leverages
+    // Treasure Cruise / Dig Through Time / Gurmag Angler off a full bin.
+    let mut castable = castable;
+    for c in state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| c.definition.keywords.contains(&crate::card::Keyword::Delve))
+    {
+        let generic_pips: u32 = c
+            .definition
+            .cost
+            .symbols
+            .iter()
+            .filter_map(|s| match s {
+                crate::mana::ManaSymbol::Generic(n) => Some(*n),
+                _ => None,
+            })
+            .sum();
+        let gy_ids: Vec<CardId> = state.players[seat].graveyard.iter().map(|g| g.id).collect();
+        let take = (generic_pips as usize).min(gy_ids.len());
+        if take == 0 {
+            continue;
+        }
+        let delve_cards: Vec<CardId> = gy_ids.into_iter().take(take).collect();
+        let effect = &c.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots(effect, seat, None);
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, vec![])
+        };
+        let action = GameAction::CastSpellDelve {
+            card_id: c.id,
+            target,
+            additional_targets,
+            mode: None,
+            x_value: None,
+            delve_cards,
+        };
+        if state.would_accept(action.clone()) {
+            castable.push(action);
+        }
+    }
+
     // Play a land if possible — gated through `would_accept` for
     // the same reason (the engine enforces sorcery timing, lands-
     // played-this-turn, etc.). Use the game-level helper so an
@@ -1421,5 +1472,37 @@ mod tests {
         let bolt = catalog::lightning_bolt();
         assert_eq!(modal_mode_count(&bolt.effect), None,
             "Lightning Bolt is not modal");
+    }
+
+    /// The bot delves a stocked graveyard to cast a spell it couldn't afford
+    /// at full cost (CR 702.66). Treasure Cruise ({7}{U}) with only one blue
+    /// mana but seven graveyard cards must surface as a `CastSpellDelve`.
+    #[test]
+    fn bot_delves_to_afford_treasure_cruise() {
+        let mut g = two_player_game();
+        for _ in 0..7 { g.add_card_to_graveyard(0, catalog::island()); }
+        for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+        g.add_card_to_hand(0, catalog::treasure_cruise());
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.priority.player_with_priority = 0;
+        g.active_player_idx = 0;
+
+        // Drive the bot until it produces the delve cast (it may tap/scan
+        // first, but with no lands and one floating U the delve is the only
+        // castable line).
+        let mut bot = RandomBot::new();
+        let mut found = false;
+        for _ in 0..6 {
+            match bot.next_action(&g, 0) {
+                Some(GameAction::CastSpellDelve { delve_cards, .. }) => {
+                    assert!(!delve_cards.is_empty(), "delved at least one card");
+                    found = true;
+                    break;
+                }
+                Some(other) => { g.perform_action(other).ok(); }
+                None => break,
+            }
+        }
+        assert!(found, "bot should delve to cast Treasure Cruise");
     }
 }
