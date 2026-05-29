@@ -10425,7 +10425,7 @@ fn prismari_the_inspiration_is_seven_seven_legendary_dragon_with_ward_five() {
     assert_eq!(c.power(), 7);
     assert_eq!(c.toughness(), 7);
     assert!(c.has_keyword(&Keyword::Flying));
-    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::generic(5))));
+    assert!(c.has_keyword(&Keyword::Ward(crate::card::WardCost::Life(5))));
     assert!(c.definition.supertypes.contains(&Supertype::Legendary));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Dragon));
     assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Elder));
@@ -13094,4 +13094,59 @@ fn elemental_mascot_opus_exiles_top_and_grants_may_play_at_five_mana() {
         g.exile.iter().any(|c| c.id == top),
         "Opus ≥5 mana exiles the top card of the library",
     );
+}
+
+// ── modern_decks: Tragedy Feaster Ward—Discard a card (CR 702.21) ───────────
+
+#[test]
+fn tragedy_feaster_ward_discard_counters_when_payer_cannot_discard() {
+    use crate::game::types::Target;
+    // P0's Tragedy Feaster (7/6) has Ward—Discard a card. P1's only hand
+    // card is the bolt; once cast, the hand is empty so the Ward can't
+    // collect a discard → bolt is countered.
+    let mut g = two_player_game();
+    let feaster = g.add_card_to_battlefield(0, catalog::tragedy_feaster());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(feaster)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    let card = g.battlefield.iter().find(|c| c.id == feaster)
+        .expect("Tragedy Feaster survives — Ward—Discard countered the Bolt");
+    assert_eq!(card.damage, 0, "no damage — bolt was countered");
+}
+
+// ── modern_decks: Prismari, the Inspiration Ward—Pay 5 life enforcement ─────
+
+#[test]
+fn prismari_the_inspiration_ward_pay_life_counters_when_payer_too_low() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::prismari_the_inspiration());
+    g.clear_sickness(dragon);
+    // P1 can't afford Ward—Pay 5 life (only 3 life total).
+    g.players[1].life = 3;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(dragon)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable; Ward is a trigger");
+    drain_stack(&mut g);
+    let card = g.battlefield.iter().find(|c| c.id == dragon)
+        .expect("Ward—Pay 5 life counters the Bolt — dragon survives");
+    assert_eq!(card.damage, 0, "bolt countered, no damage");
+    assert_eq!(g.players[1].life, 3, "ward life wasn't paid (couldn't afford)");
 }

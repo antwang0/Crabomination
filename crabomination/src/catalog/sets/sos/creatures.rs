@@ -4841,20 +4841,16 @@ pub fn ennis_debate_moderator() -> CardDefinition {
 /// "Trample / Ward—Discard a card. / Infusion — At the beginning of your
 /// end step, sacrifice a permanent unless you gained life this turn."
 ///
-/// Body wired (7/6 Demon with Trample). Ward — Discard a card is still
-/// keyword-tagged but ⏳ for enforcement (engine has no
-/// counter-the-spell-unless-discard ward primitive yet — tracked in
-/// TODO.md). The Infusion **end-step sacrifice-unless-lifegain rider
-/// is now wired** (push modern_decks): a `StepBegins(End) / ActivePlayer`
-/// trigger fires for the active-player, and the body is an `Effect::If`
-/// gated on `Predicate::LifeGainedThisTurnAtLeast(You, 1)` — when the
-/// controller has gained life this turn, the trigger resolves as Noop;
-/// otherwise it forces `Effect::Sacrifice { who: You, count: 1, filter:
-/// Permanent }`. The "or-pay" rider on the Infusion is a forced
-/// sacrifice (the Sacrifice picker tries to pick the cheapest /
-/// lowest-value permanent automatically). The card is now strictly
-/// faithful to the printed Oracle's main and Infusion clauses; Ward —
-/// Discard remains a keyword tag.
+/// Body wired (7/6 Demon with Trample). **Ward — Discard a card is now
+/// enforced** via `Keyword::Ward(WardCost::Discard(1))` (the same
+/// counter-unless-discard ward path Forum Necroscribe uses). The Infusion
+/// **end-step sacrifice-unless-lifegain rider** is wired: a
+/// `StepBegins(End) / ActivePlayer` trigger fires for the active-player,
+/// and the body is an `Effect::If` gated on
+/// `Predicate::LifeGainedThisTurnAtLeast(You, 1)` — when the controller
+/// has gained life this turn, the trigger resolves as Noop; otherwise it
+/// forces `Effect::Sacrifice { who: You, count: 1, filter: Permanent }`.
+/// The card is now strictly faithful to the printed Oracle.
 pub fn tragedy_feaster() -> CardDefinition {
     use crate::card::Predicate;
     use crate::game::types::TurnStep;
@@ -4869,7 +4865,7 @@ pub fn tragedy_feaster() -> CardDefinition {
         },
         power: 7,
         toughness: 6,
-        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::generic(0))],
+        keywords: vec![Keyword::Trample, Keyword::Ward(crate::card::WardCost::Discard(1))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
@@ -6415,11 +6411,11 @@ pub fn mica_reader_of_ruins() -> CardDefinition {
 /// 7/7. "Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast
 /// have storm."
 ///
-/// 🟡 Body wired: 7/7 Flying Legendary Elder Dragon with `Keyword::Ward(crate::card::WardCost::generic(5))`.
-/// The "your IS spells have storm" static is omitted — storm grants
-/// would need a per-cast trigger that fans out copies for each prior
-/// spell cast this turn, which is a sibling of `Effect::CopySpell` but
-/// over a `Value::SpellsCastThisTurn` count (TODO.md).
+/// Body wired: 7/7 Flying Legendary Elder Dragon with
+/// `Keyword::Ward(WardCost::Life(5))` (Ward—Pay 5 life, now enforced).
+/// The "your IS spells have storm" static is wired via a per-cast
+/// `CopySpell { count: StormCount }` trigger (see the inline note
+/// below).
 pub fn prismari_the_inspiration() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
@@ -6445,7 +6441,7 @@ pub fn prismari_the_inspiration() -> CardDefinition {
         },
         power: 7,
         toughness: 7,
-        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::generic(5))],
+        keywords: vec![Keyword::Flying, Keyword::Ward(crate::card::WardCost::Life(5))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
