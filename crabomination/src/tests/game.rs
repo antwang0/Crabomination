@@ -5125,3 +5125,101 @@ fn cr_704_5i_planeswalker_with_zero_loyalty_dies() {
         "CR 704.5i: zero-loyalty planeswalker dies");
     assert!(g.players[0].graveyard.iter().any(|c| c.id == pw));
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// modern_decks CR rule lock-ins: Defender (702.3), Combat Damage Step
+// multi-blocker assignment (510.1c), and deathtouch lethal-per-blocker
+// (510.1c + 702.2). These advance the in-progress CR 510 tracker and
+// pin the Defender enforcement near the Sylvan Caryatid card work.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Inline vanilla creature with arbitrary P/T + keywords for combat tests.
+fn vanilla_body(name: &'static str, p: i32, t: i32, kws: Vec<crate::card::Keyword>) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    CardDefinition {
+        name,
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes::default(),
+        power: p,
+        toughness: t,
+        keywords: kws,
+        ..Default::default()
+    }
+}
+
+#[test]
+fn cr_702_3_defender_cannot_be_declared_as_attacker() {
+    // CR 702.3b: a creature with Defender can't attack. Sylvan Caryatid
+    // (0/3 Defender) is rejected at declare-attackers.
+    let mut g = two_player_game();
+    let caryatid = setup_attacker(&mut g, 0, catalog::sylvan_caryatid);
+    g.step = TurnStep::DeclareAttackers;
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: caryatid,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(res.is_err(), "Defender creature can't be declared as an attacker");
+}
+
+#[test]
+fn cr_510_1c_trampler_assigns_lethal_to_each_blocker_then_tramples() {
+    // CR 510.1c: a 5/5 trampler blocked by two 2/2s assigns lethal (2)
+    // to each blocker, then the remaining 1 tramples to the player.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Trampler 5/5", 5, 5, vec![crate::card::Keyword::Trample])
+    });
+    let b1 = setup_attacker(&mut g, 1, || vanilla_body("Wall A", 2, 2, vec![]));
+    let b2 = setup_attacker(&mut g, 1, || vanilla_body("Wall B", 2, 2, vec![]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == b1), "blocker A took lethal");
+    assert!(!g.battlefield.iter().any(|c| c.id == b2), "blocker B took lethal");
+    assert_eq!(g.players[1].life, 19, "5 - 2 - 2 = 1 tramples through");
+}
+
+#[test]
+fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
+    // CR 510.1c + 702.2e: with deathtouch, 1 damage is lethal, so a 3/3
+    // deathtoucher blocked by three 5/5s kills all three (1 each).
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("DT 3/3", 3, 3, vec![crate::card::Keyword::Deathtouch])
+    });
+    let b1 = setup_attacker(&mut g, 1, || vanilla_body("Big A", 5, 5, vec![]));
+    let b2 = setup_attacker(&mut g, 1, || vanilla_body("Big B", 5, 5, vec![]));
+    let b3 = setup_attacker(&mut g, 1, || vanilla_body("Big C", 5, 5, vec![]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![
+        (b1, attacker),
+        (b2, attacker),
+        (b3, attacker),
+    ]))
+    .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    // All three 5/5s die to 1 deathtouch damage apiece; attacker dies to 15.
+    assert!(!g.battlefield.iter().any(|c| c.id == b1));
+    assert!(!g.battlefield.iter().any(|c| c.id == b2));
+    assert!(!g.battlefield.iter().any(|c| c.id == b3));
+    assert!(!g.battlefield.iter().any(|c| c.id == attacker), "attacker takes 15");
+}

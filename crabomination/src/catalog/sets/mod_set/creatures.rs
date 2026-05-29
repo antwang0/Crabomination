@@ -114,11 +114,10 @@ pub fn dark_confidant() -> CardDefinition {
     }
 }
 
-/// Sylvan Caryatid — {1}{G}, 0/3 Plant. Hexproof. {T}: Add one mana of any
-/// color. Defender is omitted (we don't enforce can't-attack restrictions
-/// independently of `Keyword::Defender`, but `power: 0` means it'd never
-/// attack profitably anyway). Hexproof + AnyOneColor are the load-bearing
-/// halves and both are wired.
+/// Sylvan Caryatid — {1}{G}, 0/3 Plant. Defender, Hexproof. {T}: Add one
+/// mana of any color. Defender is enforced via `can_attack` (CR 702.3b —
+/// a creature with Defender can't attack), Hexproof gates opponent
+/// targeting, and the `{T}: Add any color` mana ability is wired.
 pub fn sylvan_caryatid() -> CardDefinition {
     CardDefinition {
         name: "Sylvan Caryatid",
