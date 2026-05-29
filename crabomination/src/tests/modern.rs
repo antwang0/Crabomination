@@ -13419,3 +13419,74 @@ fn delve_become_immense_pumps_six() {
     let c = g.battlefield_find(bear).unwrap();
     assert_eq!((c.power(), c.toughness()), (8, 8), "2/2 + 6/6");
 }
+
+/// Tombstalker delves to {B}{B} and enters as a 5/5 flier.
+#[test]
+fn delve_tombstalker_enters_five_five_flying() {
+    let mut g = two_player_game();
+    let gy: Vec<_> = (0..6).map(|_| g.add_card_to_graveyard(0, catalog::swamp())).collect();
+    let id = g.add_card_to_hand(0, catalog::tombstalker());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy,
+    }).expect("BB after delving six");
+    drain_stack(&mut g);
+    let t = g.battlefield.iter().find(|c| c.definition.name == "Tombstalker").unwrap();
+    assert_eq!((t.power(), t.toughness()), (5, 5));
+    assert!(t.has_keyword(&Keyword::Flying));
+}
+
+/// Wall of Bone regenerates from lethal combat damage and stays a Defender.
+#[test]
+fn wall_of_bone_regenerates_from_combat() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::wall_of_bone());
+    let big = g.add_card_to_battlefield(0, catalog::gurmag_angler()); // 5/5
+    g.clear_sickness(big);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wall, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: big, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(wall, big)])).expect("wall blocks");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat");
+    let c = g.battlefield_find(wall).expect("Wall regenerated");
+    assert_eq!(c.damage, 0, "marked damage healed");
+    assert!(c.has_keyword(&Keyword::Defender));
+}
+
+/// Will-o'-the-Wisp regenerates from a Destroy, staying on the battlefield
+/// tapped.
+#[test]
+fn will_o_the_wisp_regenerates_from_destroy() {
+    let mut g = two_player_game();
+    let wisp = g.add_card_to_battlefield(0, catalog::will_o_the_wisp());
+    g.clear_sickness(wisp);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: wisp, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    // Opponent destroys it.
+    let cut = g.add_card_to_hand(1, catalog::murderous_cut());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cut, target: Some(Target::Permanent(wisp)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murderous Cut");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(wisp).expect("Wisp survived via regen");
+    assert!(c.tapped);
+    assert_eq!(c.regeneration_shields, 0);
+}

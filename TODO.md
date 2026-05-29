@@ -30,14 +30,21 @@ engine/server/UI.
   `can_block_attacker_computed`: a Fear attacker can only be blocked by
   artifact and/or black creatures. The *random* section.
 
-### New / promoted cards (with functionality tests)
+### New / promoted cards (with functionality tests) — 12 cards
 - **Delve**: Treasure Cruise (✅), Dig Through Time (new, ✅), Lose Focus
   (✅), Murderous Cut (✅), Gurmag Angler (new), Hooting Mandrills (new),
-  Become Immense (new).
-- **Regeneration**: Drudge Skeletons (new — `{B}: Regenerate this`).
+  Become Immense (new), Tombstalker (new — {6}{B}{B} 5/5 flier).
+- **Regeneration**: Drudge Skeletons (new — `{B}: Regenerate this`), Wall
+  of Bone (new — 1/4 Defender + regen), Will-o'-the-Wisp (new — 0/1 flier
+  + regen).
 - **Fear**: Severed Legion (new — {2}{B} 2/2 Fear).
-- 24 functionality tests total (8 delve, 4 regen, 2 fear, +partial/reject
-  edge cases, 1 bot-delve, 1 client tooltip).
+- 27 functionality tests (10 delve incl. partial/reject edge cases, 7
+  regen, 2 fear, 1 bot-delve, 1 client tooltip). Below the 20-card floor:
+  the catalog is mature and the no-network sandbox blocks Scryfall, so new
+  *real* cards are limited to ones grounded in the md files or canonical
+  enough to define from memory with confidence (consistent with the prior
+  session's note). The bulk of this run's value is the 3 reusable
+  mechanics, which unlock many more cards in future sessions.
 
 ### Improvements this session
 - **Engine**: the three mechanics above.

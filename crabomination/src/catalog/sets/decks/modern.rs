@@ -9250,6 +9250,96 @@ pub fn drudge_skeletons() -> CardDefinition {
     }
 }
 
+/// Tombstalker — {6}{B}{B} Creature — Demon. 5/5 with Flying. Delve.
+///
+/// Delve (CR 702.66) pays the {6} generic; off a full graveyard this is a
+/// {B}{B} 5/5 flier.
+pub fn tombstalker() -> CardDefinition {
+    CardDefinition {
+        name: "Tombstalker",
+        cost: cost(&[generic(6), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Demon],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Flying, Keyword::Delve],
+        ..Default::default()
+    }
+}
+
+/// Will-o'-the-Wisp — {B} Creature — Spirit. 0/1 with Flying.
+/// "{B}: Regenerate Will-o'-the-Wisp." (CR 701.15)
+pub fn will_o_the_wisp() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Will-o'-the-Wisp",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
+            effect: Effect::Regenerate { what: Selector::This },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wall of Bone — {2}{B} Creature — Skeleton Wall. 1/4 with Defender.
+/// "{B}: Regenerate Wall of Bone." (CR 701.15)
+pub fn wall_of_bone() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Wall of Bone",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
+            effect: Effect::Regenerate { what: Selector::This },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
 /// Hooting Mandrills — {5}{G} Creature — Ape. 4/4 with Trample. Delve.
 ///
 /// Delve (CR 702.66) pays the {5} generic by exiling graveyard cards.
