@@ -15412,11 +15412,10 @@ fn naturalize_destroys_target_artifact() {
 }
 
 #[test]
-fn chalice_of_the_void_enters_with_x_charge_counters() {
-    // Chalice for X=1 enters with 1 charge counter (CR 614.12 +
-    // Value::XFromCost). The "counter spells of matching MV" trigger does
-    // not yet counter a matching-MV spell in practice — needs investigation
-    // (tracked in TODO.md); this test locks in the charge-counter ETB.
+fn chalice_of_the_void_counters_matching_mana_value_spell() {
+    // Chalice for X=1 → 1 charge counter; a MV-1 spell is countered on cast
+    // (CR 614.12 + the SpellCast/MV-match trigger). Chalice counters *any*
+    // player's matching spell, including its own controller's.
     let mut g = two_player_game();
     let chalice = g.add_card_to_hand(0, catalog::chalice_of_the_void());
     g.players[0].mana_pool.add_colorless(2);
@@ -15429,6 +15428,17 @@ fn chalice_of_the_void_enters_with_x_charge_counters() {
         g.battlefield.iter().find(|c| c.id == chalice)
             .map(|c| c.counter_count(crate::card::CounterType::Charge)),
         Some(1), "Chalice enters with 1 charge counter");
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before, "Chalice counters the MV-1 bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "bolt countered to graveyard");
 }
 
 #[test]

@@ -247,6 +247,18 @@ impl EntityRef {
             _ => None,
         }
     }
+    /// The `CardId` behind a card-or-permanent reference. Unlike
+    /// `as_permanent_id`, this also unwraps `EntityRef::Card` — used by the
+    /// counter-class effects, which match a spell on the stack. A cast
+    /// spell's `Selector::TriggerSource` resolves to `EntityRef::Card`
+    /// (see `event_subject`), so a SpellCast-triggered "counter that spell"
+    /// (Chalice of the Void) needs this broader unwrap to find its target.
+    pub fn as_card_id(&self) -> Option<CardId> {
+        match *self {
+            EntityRef::Permanent(c) | EntityRef::Card(c) => Some(c),
+            _ => None,
+        }
+    }
 }
 
 impl GameState {
@@ -1715,7 +1727,7 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
-                    if let Some(cid) = t.as_permanent_id()
+                    if let Some(cid) = t.as_card_id()
                         && let Some(pos) = self.stack.iter().position(|si| matches!(
                             si,
                             StackItem::Spell { card, uncounterable: false, .. }
@@ -1747,7 +1759,7 @@ impl GameState {
                 let targets = self.resolve_selector(what, ctx);
                 let mut to_remove: Vec<usize> = Vec::new();
                 for t in &targets {
-                    if let Some(cid) = t.as_permanent_id()
+                    if let Some(cid) = t.as_card_id()
                         && let Some(pos) = self.stack.iter().position(|si| matches!(
                             si,
                             StackItem::Spell { card, uncounterable: false, .. }
