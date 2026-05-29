@@ -5,6 +5,64 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXVII — modern_decks: Delve + Regeneration + Fear)
+
+This session landed **three CR-keyword mechanics** the catalog had stubbed
+or flagged in the backlog, plus the cards they unlock and improvements to
+engine/server/UI.
+
+### New engine primitives / mechanics (3 CR sections)
+- **Delve (CR 702.66)** — `GameAction::CastSpellDelve { delve_cards }` +
+  `Keyword::Delve`. Each graveyard card exiled while casting pays {1} of
+  the generic cost (generic-only clamp via `ManaCost::reduce_generic`,
+  mirrors convoke). Cards are exiled only *after* the reduced cost is paid
+  (so a rejected cast leaves the graveyard untouched) and bump
+  `cards_exiled_this_turn`. New `GameError::CardNotInGraveyard`. The
+  *near-cards* section.
+- **Regeneration (CR 701.15)** — `CardInstance.regeneration_shields`
+  (transient, not serialized, cleared at cleanup) + `Effect::Regenerate`.
+  A shield replaces the next destruction this turn (tap + remove from
+  combat + heal damage), is consumed on use, never saves a creature whose
+  toughness is ≤ 0, and is checked in both the SBA lethal-damage loop and
+  `Effect::Destroy`. The *in-progress* section (a `Keyword::Regenerate`
+  stub existed but nothing wired it).
+- **Fear (CR 702.36)** — `Keyword::Fear` + block restriction in
+  `can_block_attacker_computed`: a Fear attacker can only be blocked by
+  artifact and/or black creatures. The *random* section.
+
+### New / promoted cards (with functionality tests)
+- **Delve**: Treasure Cruise (✅), Dig Through Time (new, ✅), Lose Focus
+  (✅), Murderous Cut (✅), Gurmag Angler (new), Hooting Mandrills (new),
+  Become Immense (new).
+- **Regeneration**: Drudge Skeletons (new — `{B}: Regenerate this`).
+- **Fear**: Severed Legion (new — {2}{B} 2/2 Fear).
+- 24 functionality tests total (8 delve, 4 regen, 2 fear, +partial/reject
+  edge cases, 1 bot-delve, 1 client tooltip).
+
+### Improvements this session
+- **Engine**: the three mechanics above.
+- **Server / bot**: `main_phase_action` generates `CastSpellDelve`
+  candidates — the bot delves a stocked graveyard to afford Treasure
+  Cruise / Gurmag Angler it couldn't pay at full cost. `PermanentView`
+  gains `regeneration_shields`.
+- **UI**: counter tooltip badges regeneration shields (singular + ×N).
+
+### Follow-ups noticed (not tackled this run)
+- **"Can't be regenerated" (CR 701.15g)** is not yet enforced — destroy
+  effects with the rider (Terminate, Day of Judgment, Putrefy) still let a
+  regeneration shield save the creature. Needs an `Effect::DestroyNoRegen`
+  variant (or a bool on `Destroy`) wired into the canonical can't-regen
+  cards. No current test depends on the correct interaction.
+- **Delve `{X}` interaction**: Logic Knot ({X}{U}{U}, Delve, counter
+  unless pay {X}) wasn't added — its body needs `CounterUnlessPaid` to
+  read the X paid (`Value::XFromCost`) rather than a fixed cost.
+- **Tasigur, the Golden Fang** (Delve creature with an activated
+  graveyard-recursion ability) — body+delve would be easy; the activated
+  ability needs the random-opponent-choice picker.
+- Dredge (CR 702.52 — Golgari Thug/Grave-Troll, Life from the Loam) needs
+  a draw-replacement decision hook in both the turn-draw and `Effect::Draw`
+  paths; deferred as too invasive for this run.
+
 ## Recent additions (Push XXXVI — modern_decks, batch 207: Exalted + deaths-this-turn payoffs)
 
 This session added 40 new STX cards (batches 207-208) across all five

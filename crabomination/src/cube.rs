@@ -708,8 +708,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks batch 103 (mono-black cube expansion) ──
         mai_scornful_striker,
         // ── modern_decks batch 102: cube expansion ──
-        // murderous_cut — 🟡 Delve cost-reduction omitted; castable at
-        //                  full {5}{B}. Promote to ✅ when Delve lands.
+        // murderous_cut — ✅ Delve (CR 702.66) wired via Keyword::Delve +
+        //                  GameAction::CastSpellDelve; {4}{B} destroy.
         murderous_cut,
         wishclaw_talisman,
         // ── Cube expansion: body-only stubs ──

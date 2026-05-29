@@ -64,7 +64,7 @@ still ⏳.
 | Thought Scour | ✅ | Mill 2 + draw 1. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
 | Daze | 🟡 | Counter target spell unless its controller pays {1}. The "return an Island" alt cost is omitted (alt-cost model only supports exile-from-hand). |
-| Lose Focus | 🟡 | Counter target spell unless its controller pays {2} (`Effect::CounterUnlessPaid`). Castable at full {U} cost; the Delve cost-reduction is omitted. Tests: `lose_focus_counters_when_controller_cannot_pay_two`, `lose_focus_does_not_counter_when_controller_can_pay_two`. |
+| Lose Focus | ✅ | Counter target spell unless its controller pays {2} (`Effect::CounterUnlessPaid`). Delve (CR 702.66) now wired via `Keyword::Delve` + `GameAction::CastSpellDelve` (the {U} printed cost has no generic to reduce, but the keyword ships for correctness). Tests: `lose_focus_counters_when_controller_cannot_pay_two`, `lose_focus_does_not_counter_when_controller_can_pay_two`. |
 | Frantic Search | ✅ (was 🟡) | Draw 2, discard 2, untap up to three of your tapped lands. The `Effect::Untap { up_to: Some(Value::Const(3)) }` field caps the untap count to 3 (push V engine primitive), matching the printed Oracle exactly. |
 | Cryptic Command | 🟡 | `{1}{U}{U}{U}` Instant. **Choose two** is collapsed to a single `ChooseMode` of four bundled pairs: `[counter+bounce, counter+tap-opp-creatures, counter+draw, bounce+draw]`. AutoDecider picks mode 0 (counter+bounce). The "tap all creatures your opponents control" half uses `ForEach + Tap`. A multi-pick "choose any two" mode primitive is the gap. Tests: `cryptic_command_counter_plus_bounce_resolves`, `cryptic_command_mode_two_counter_and_draw`. |
 | Paradoxical Outcome | ✅ | Return each non-land permanent you control + draw equal (`ForEach + Move + Draw 1`). |
@@ -72,11 +72,11 @@ still ⏳.
 | Gush | 🟡 | {4}{U} Instant. Draw 2 cards at full cost. Alt cost (return two Islands) omitted. Tests: `gush_draws_two_cards`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
-| Dig Through Time | ⏳ | Delve + look at top 7, take 2. Multi-pick primitive. |
+| Dig Through Time | ✅ | Delve (CR 702.66) wired via `Keyword::Delve`; "look at top 7, take 2" approximated as `Scry 7 → Draw 2`. Test: `delve_dig_through_time_draws_two`. |
 | Windfall | 🟡 | Each player discards their hand and draws 7 (the dynamic "max discarded" yield is collapsed to a constant — same simplification as Wheel of Fortune). Test: `windfall_discards_both_hands_and_draws_seven`. |
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
 | Upheaval | ✅ | Return all permanents to their owners' hands (`ForEach + Move → Hand(OwnerOf)`). |
-| Treasure Cruise | 🟡 | Draw 3 wired at full {7}{U} cost. Delve cost reduction is omitted. Test: `treasure_cruise_draws_three_at_full_cost`. |
+| Treasure Cruise | ✅ | Draw 3. Delve (CR 702.66) wired via `Keyword::Delve` + `GameAction::CastSpellDelve` — each graveyard card exiled pays {1} of the {7}. Tests: `treasure_cruise_draws_three_at_full_cost`, `delve_treasure_cruise_pays_generic_with_graveyard`, `delve_partial_reduces_generic_portion`, `delve_cannot_pay_colored_pip`. |
 | Aether Spellbomb | ✅ | {U}, sac: return target creature to hand. {1}, sac: draw a card. Both via `ActivatedAbility::sac_cost`. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
@@ -441,7 +441,7 @@ are listed in `DECK_FEATURES.md`.
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
 | Cascade | ⏳ | Bloodbraid Challenger, Apex Devastator, Maelstrom Nexus. |
 | Storm count + cast-from-top | ⏳ | Mind's Desire (Storm), Amped Raptor / Robber of the Rich (cast-from-top). |
-| Delve cost reduction | ⏳ | Treasure Cruise, Dig Through Time, Lose Focus. |
+| Delve cost reduction | ✅ | CR 702.66 — `Keyword::Delve` + `GameAction::CastSpellDelve`. Each graveyard card exiled while casting pays {1} of the generic cost (generic-only clamp, mirrors convoke); cards exile only after the reduced cost is paid. Wired on Treasure Cruise, Dig Through Time, Lose Focus, Murderous Cut, Gurmag Angler, Hooting Mandrills, Become Immense. The bot delves automatically when it can't afford a Delve spell at full cost. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
 | Soulbond | ⏳ | Deadeye Navigator. |
 | Companion (deck-construction restriction + start-side mana cost) | ⏳ | Zirda, the Dawnwaker. |
