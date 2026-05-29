@@ -5,6 +5,71 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XLII — claude/modern_decks: Madness + discard centralization + counter-trigger fix)
+
+One new mechanic, a discard-path refactor, a real engine bug fix, 28 new
+tests, and one improvement in each of engine / UI / server.
+
+- **Madness (CR 702.35)** ✅ — `Keyword::Madness(ManaCost)` +
+  `CardDefinition::madness_cost()`. New `GameState::discard_card` is the
+  single hand-to-graveyard discard path: it fires `CardDiscarded` and
+  bumps the discard-matters counters regardless of destination, then
+  applies the Madness replacement (exile + offer a cast for the madness
+  cost from the floated pool via `offer_madness_cast`; decline /
+  unaffordable → graveyard, CR 702.35b). The `AutoDecider` declines by
+  default so ordinary bot games are unaffected. **Basking Rootwalla**
+  promoted to real Madness {0}.
+- **Discard centralization** ✅ — `Effect::Discard` (random + chosen),
+  the `DiscardChosenPending` resume, the cleanup-step discard (CR 514.1a)
+  and `cycle_card` all route through `discard_card`. Previously the
+  cleanup discard didn't even emit `CardDiscarded`; now it does (CR 514.3
+  lets discard-matters triggers fire from cleanup) and honors Madness.
+- **Engine bug fix — SpellCast-triggered counters** ✅ — `CounterSpell` /
+  `CounterSpellToZone` resolved their target via `as_permanent_id()`,
+  which returns `None` for `EntityRef::Card`. A cast spell's
+  `Selector::TriggerSource` is an `EntityRef::Card` (per `event_subject`),
+  so a "counter that spell" SpellCast trigger silently did nothing. New
+  `EntityRef::as_card_id()` unwraps both; **Chalice of the Void** now
+  actually counters a matching-MV spell. (Magecraft-style "counter the
+  spell that triggered me" effects benefit too.)
+- **CR sections this run**: 702.35 (Madness, implemented), 701.8 / 514.1a
+  (discard centralization + cleanup routing, advanced + lock-in test),
+  and the counter-trigger correctness fix exercising 701.6a.
+- **Coverage backfill (+23 cards with functionality tests)**: Naturalize,
+  Chalice of the Void, Candelabra of Tawnos, Basking Broodscale, Sowing
+  Mycospawn, Archdruid's Charm, Awaken the Honored Dead, Summoner's Pact,
+  Finale of Devastation, Dakkon Shadow Slayer, Containment Priest, Simian
+  Spirit Guide, Planar Nexus, Culling Ritual, Rushed Rebirth, Callous
+  Bloodmage, Mesmeric Orb, Swords to Plowshares, Hymn to Tourach,
+  Armageddon, Mox Sapphire, Basking Rootwalla (Madness), and **Baleful
+  Strix** (whose missing "ETB draw a card" trigger was wired this run).
+- **Server** — `MatchOutcome.final_library_sizes` (per-seat library size
+  at match end), the companion metric to the `Decked` loss reason.
+- **UI** — `pile_tooltip` now carries its rendered text and refreshes
+  when the hovered pile changes, fixing the stale-tooltip bug documented
+  in the old code comment (cursor moving between piles).
+
+### Follow-ups noticed this run (not yet done)
+
+- **Madness for more cards** — Arrogant Wurm, Fiery Temper, Anje's
+  Ravager, etc. are not in the catalog and Scryfall is blocked (403) /
+  not in the local cache, so their printed costs/stats couldn't be
+  verified. Only Basking Rootwalla (whose Madness {0} was already
+  documented in its factory comment) was promoted. Add the rest once
+  card data is available.
+- **`ActivatedAbility.remove_counter_cost`** (Golgari Grave-Troll regen,
+  "{T}, Remove four +1/+1 counters: Regenerate") — deferred: adding a
+  field to `ActivatedAbility` requires touching all 244 explicit struct
+  literals (29 of them multiline `Some((..))`), too large/risky to sed
+  safely. Worth doing as a dedicated mechanical pass (or migrate the
+  literals to `..Default::default()` first).
+- **Cleanup-step discard is still deterministic-first-card** — a UI seat
+  should get a `Decision::Discard` to choose which excess cards to pitch
+  (turn-based actions can't currently suspend through the stack).
+- **Aluren / Pithing Needle** are body-only stubs (the cast-creatures-
+  for-free static and the name-lock activation aren't wired); left
+  untested deliberately rather than asserting non-behavior.
+
 ## Recent additions (Push XLI — claude/modern_decks: Cascade + Dredge + Auras)
 
 Three new mechanics, 20 cards, 30 tests, 3 CR lock-ins, and one
