@@ -120,6 +120,48 @@ pub struct MatchOutcome {
     /// (life ≤ 0) victories. Empty if the match aborted before the
     /// game state was inspected.
     pub final_life_totals: Vec<i32>,
+    /// Per-seat manner-of-loss classification, parallel to
+    /// `final_life_totals`. `None` for seats that weren't eliminated
+    /// (the winner, or everyone in a draw/abort); `Some(reason)` for
+    /// each eliminated seat. Lets operator metrics split a ladder's
+    /// losses into life-damage vs poison vs deck-out — the deck-out
+    /// bucket is the one the new dredge/mill shells push on. Empty if
+    /// the match aborted before the game state was inspected.
+    pub loss_reasons: Vec<Option<LossReason>>,
+}
+
+/// How an eliminated player lost, inferred from their final state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LossReason {
+    /// Life total fell to 0 or below (CR 104.3a / 704.5a).
+    LifeDepleted,
+    /// Ten or more poison counters (CR 104.3c / 704.5c).
+    Poison,
+    /// Tried to draw from an empty library (CR 104.3a / 704.5c).
+    Decked,
+    /// Eliminated for some other reason (concession, "you lose the
+    /// game" effect, etc.) not distinguishable from final state alone.
+    Other,
+}
+
+/// Classify why `p` lost, or `None` if `p` is still in the game. The
+/// checks are ordered most-specific-first: a player at ≤0 life is
+/// reported as `LifeDepleted` even if their library also happens to be
+/// empty, matching the order in which state-based actions would have
+/// fired.
+fn classify_loss(p: &crate::player::Player) -> Option<LossReason> {
+    if !p.eliminated {
+        return None;
+    }
+    if p.life <= 0 {
+        Some(LossReason::LifeDepleted)
+    } else if p.poison_counters >= 10 {
+        Some(LossReason::Poison)
+    } else if p.library.is_empty() {
+        Some(LossReason::Decked)
+    } else {
+        Some(LossReason::Other)
+    }
 }
 
 /// Capture a MatchOutcome from the current GameState. Used at every
@@ -130,6 +172,7 @@ fn capture_outcome(state: &GameState) -> MatchOutcome {
         final_turn: state.turn_number,
         winner: state.game_over,
         final_life_totals: state.players.iter().map(|p| p.life).collect(),
+        loss_reasons: state.players.iter().map(classify_loss).collect(),
     }
 }
 
@@ -624,6 +667,48 @@ mod tests {
         // Start in main phase so PlayLand is legal.
         state.step = TurnStep::PreCombatMain;
         state
+    }
+
+    #[test]
+    fn classify_loss_distinguishes_manner_of_elimination() {
+        // Not eliminated → None regardless of life.
+        let mut p = Player::new(0, "P0");
+        p.life = 5;
+        assert_eq!(classify_loss(&p), None);
+
+        // Life depleted takes priority.
+        p.eliminated = true;
+        p.life = 0;
+        assert_eq!(classify_loss(&p), Some(LossReason::LifeDepleted));
+
+        // Poison while still at positive life.
+        p.life = 7;
+        p.poison_counters = 10;
+        assert_eq!(classify_loss(&p), Some(LossReason::Poison));
+
+        // Deck-out: alive, un-poisoned, empty library.
+        p.poison_counters = 0;
+        assert!(p.library.is_empty());
+        assert_eq!(classify_loss(&p), Some(LossReason::Decked));
+
+        // Otherwise: a non-empty library with no other lethal condition.
+        p.library.push(crate::card::CardInstance::new(
+            CardId(999),
+            catalog::grizzly_bears(),
+            0,
+        ));
+        assert_eq!(classify_loss(&p), Some(LossReason::Other));
+    }
+
+    #[test]
+    fn capture_outcome_reports_loss_reasons_parallel_to_seats() {
+        let mut state = two_player_game();
+        state.players[1].eliminated = true;
+        state.players[1].life = -3;
+        let outcome = capture_outcome(&state);
+        assert_eq!(outcome.loss_reasons.len(), state.players.len());
+        assert_eq!(outcome.loss_reasons[0], None, "winner has no loss reason");
+        assert_eq!(outcome.loss_reasons[1], Some(LossReason::LifeDepleted));
     }
 
     fn drain_initial(seat: &ClientChannel) {

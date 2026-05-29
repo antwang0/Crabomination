@@ -75558,6 +75558,86 @@ fn cr_510_1c_trample_overflow_to_player() {
     assert_eq!(g.players[1].life, p1_life - 2, "CR 510.1c: 2 damage tramples over");
 }
 
+/// CR 702.85b (Cascade): the exile walk stops at the first nonland card
+/// with mana value *strictly less* than the cascading spell's. A card whose
+/// MV equals the cascade MV is not a valid hit — it's exiled past and
+/// bottomed.
+#[test]
+fn cr_702_85_cascade_skips_equal_mana_value_cards() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Top of library: Brightglass Gearhulk (MV 4 — equals cascade MV, must
+    // be skipped), then Grizzly Bears (MV 2 — the legal hit).
+    let gearhulk = g.add_card_to_library(0, catalog::brightglass_gearhulk());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf()); // cascade(4)
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, elf);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "CR 702.85b: the MV-2 card is the legal cascade hit");
+    assert!(!g.battlefield.iter().any(|c| c.id == gearhulk),
+        "the MV-4 card (== cascade MV) is NOT cast");
+    assert!(g.players[0].library.iter().any(|c| c.id == gearhulk),
+        "the skipped equal-MV card is bottomed back into the library");
+}
+
+/// CR 702.52e (Dredge): dredging *replaces* the draw — the player gains no
+/// net card from the draw event (the dredged card returns to hand, but the
+/// would-be draw never happens). Net hand size change is +1 (the dredge
+/// card) and the library shrinks only by the dredge count (the mill).
+#[test]
+fn cr_702_52_dredge_replaces_the_draw_event() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::forest()); }
+    let thug = g.add_card_to_graveyard(0, catalog::golgari_thug()); // Dredge 4
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let lib_before = g.players[0].library.len();
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    // No card was drawn from the top — the library shrank only by the mill.
+    assert_eq!(g.players[0].library.len(), lib_before - 4,
+        "CR 702.52e: dredge mills 4 and skips the draw (library -4, not -5)");
+    assert!(g.players[0].hand.iter().any(|c| c.id == thug),
+        "the dredged card returns to hand");
+    assert!(!events.iter().any(|e| matches!(e, GameEvent::CardDrawn { .. })),
+        "no CardDrawn event — the draw was replaced");
+}
+
+/// CR 702.2c (Deathtouch): any nonzero combat damage a deathtouch creature
+/// deals is lethal. Here a 1/2 deathtouch *blocker* (Stinkweed Imp) kills a
+/// 6/4 attacker (Craw Wurm) by dealing it 1 damage.
+#[test]
+fn cr_702_2c_deathtouch_blocker_destroys_larger_attacker() {
+    let mut g = two_player_game();
+    let wurm = g.add_card_to_battlefield(0, catalog::craw_wurm()); // 6/4
+    let imp = g.add_card_to_battlefield(1, catalog::stinkweed_imp()); // 1/2 deathtouch
+    g.clear_sickness(wurm);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: wurm, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(imp, wurm)])).expect("block");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wurm).is_none(),
+        "CR 702.2c: 1 point of deathtouch damage is lethal to the 6/4");
+}
+
 /// CR 302.6 (Summoning sickness): a creature can't attack on the turn it
 /// comes under its controller's control unless it has haste.
 #[test]

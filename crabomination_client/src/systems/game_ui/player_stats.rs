@@ -26,6 +26,11 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Life => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
+        // Deck-out warning: a dangerously low library (≤ `LOW_LIBRARY_WARN`
+        // cards) glows amber so the viewer sees the CR 104.3a / 704.5c
+        // draw-from-empty loss closing in — especially relevant in the new
+        // dredge/mill shells, where self-mill can race the clock.
+        StatChipKind::DeckLow => (Color::srgba(0.40, 0.26, 0.10, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
         // Poison shades from a sickly green toward a warning red as it
         // approaches the CR 104.3c / 704.5c lethal threshold of 10.
@@ -39,8 +44,23 @@ pub(super) enum StatChipKind {
     Life,
     Hand,
     Deck,
+    DeckLow,
     Grave,
     Poison,
+}
+
+/// Library size at or below which the Deck chip switches to its amber
+/// deck-out warning style (CR 104.3a — a player with an empty library
+/// loses the next time they'd draw).
+const LOW_LIBRARY_WARN: usize = 3;
+
+/// Pick the Deck chip style based on remaining library size.
+fn deck_chip_kind(library_size: usize) -> StatChipKind {
+    if library_size <= LOW_LIBRARY_WARN {
+        StatChipKind::DeckLow
+    } else {
+        StatChipKind::Deck
+    }
 }
 
 pub(super) fn spawn_stat_chip(
@@ -186,7 +206,7 @@ pub fn update_player_stats_chips(
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
+        spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
         // Poison is a hidden lose condition (lethal at 10) — only surface
         // the chip once the player has actually been poisoned to avoid
@@ -386,7 +406,7 @@ pub fn update_opponent_stats_rows(
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
+                spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
                 if p.poison_counters > 0 {
                     spawn_stat_chip(
