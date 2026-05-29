@@ -24358,3 +24358,109 @@ pub fn lorehold_vanguard_b207() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 208 (modern_decks) — Lorehold (R/W) follow-ups.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Lorehold Vanguard-Captain (b208) — {2}{W} 2/2 Spirit Soldier with
+/// Exalted (CR 702.83). A second Exalted body for the R/W go-wide-then-
+/// alpha-strike shell.
+pub fn lorehold_vanguard_captain_b208() -> CardDefinition {
+    use crate::effect::shortcut::exalted;
+    CardDefinition {
+        name: "Lorehold Vanguard-Captain (b208)",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![exalted()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Pyrohistorian (b208) — {2}{R} 3/2 Spirit Wizard.
+/// When this creature enters, it deals 2 damage to any target.
+pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Pyrohistorian (b208)",
+        cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::Player)
+                    .or(SelectionRequirement::Planeswalker),
+            ),
+            amount: Value::Const(2),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Lorehold Skydefender (b208) — {1}{W} 1/3 Spirit Cleric, Flying.
+/// When this creature enters, you gain 2 life.
+pub fn lorehold_skydefender_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Lorehold Skydefender (b208)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

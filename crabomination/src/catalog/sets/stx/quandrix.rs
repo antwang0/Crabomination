@@ -20069,3 +20069,76 @@ pub fn quandrix_bigmind_b207() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 208 (modern_decks) — Quandrix (G/U) follow-ups.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Quandrix Rootmage (b208) — {2}{G} 2/3 Elf Druid.
+/// When this creature enters, put a +1/+1 counter on target creature you
+/// control.
+pub fn quandrix_rootmage_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Rootmage (b208)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: target_filtered(
+                SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            ),
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Tidecantor (b208) — {1}{U} Instant.
+/// Draw two cards.
+pub fn quandrix_tidecantor_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Tidecantor (b208)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(2),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

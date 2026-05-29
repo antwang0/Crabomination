@@ -22,8 +22,10 @@ Two adjacent catalogs:
 | STX (327 cards) | 3144 (incl. synthesised variants — batches 155–206 add 902 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (claude/modern_decks, batch 207): 33 STX cards across all five
-colleges + the **Exalted** mechanic (CR 702.83). New engine primitives:
+Push (claude/modern_decks, batches 207-208): 40 STX cards across all five
+colleges + the **Exalted** mechanic (CR 702.83). (Batch 208 adds 7
+cross-school follow-ups: a second Exalted body, ETB burn/lifegain Spirits,
+Prismari burn + magecraft scry, Quandrix counter-granter + draw.) New engine primitives:
 `Value::CreaturesDiedThisTurn(PlayerRef)` / `CreaturesDiedThisTurnTotal`
 (drive Witherbloom "harvest" payoffs — Reaping draws per dead creature,
 Gravecaller drains per table-wide death, Bloodfeast gains 2× life) and

@@ -4165,5 +4165,13 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_sanction_b207,
         super::silverquill::silverquill_coursemate_b207,
         super::silverquill::silverquill_duelmaster_b207,
+        // ── batch 208 — cross-school follow-ups ──
+        super::lorehold::lorehold_vanguard_captain_b208,
+        super::lorehold::lorehold_pyrohistorian_b208,
+        super::lorehold::lorehold_skydefender_b208,
+        super::prismari::prismari_scorchmage_b208,
+        super::prismari::prismari_scholar_adept_b208,
+        super::quandrix::quandrix_rootmage_b208,
+        super::quandrix::quandrix_tidecantor_b208,
     ]
 }

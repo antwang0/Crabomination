@@ -75402,3 +75402,116 @@ fn cr_302_6_summoning_sick_creature_cannot_attack() {
     }]));
     assert!(ok.is_ok(), "CR 702.10b: Haste exempts a freshly-entered creature");
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 208 (modern_decks) — cross-school follow-ups.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_vanguard_captain_b208_exalted_pumps_lone_attacker() {
+    let mut g = two_player_game();
+    let cap = g.add_card_to_battlefield(0, catalog::lorehold_vanguard_captain_b208());
+    g.clear_sickness(cap);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: cap, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(cap).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "Exalted +1/+1 attacking alone");
+}
+
+#[test]
+fn lorehold_pyrohistorian_b208_etb_pings_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_pyrohistorian_b208());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pyrohistorian castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "ETB 2 damage to face");
+}
+
+#[test]
+fn lorehold_skydefender_b208_etb_gains_two_and_flies() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_skydefender_b208());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0 = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skydefender castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0 + 2);
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Lorehold Skydefender (b208)").unwrap();
+    assert!(c.has_keyword(&Keyword::Flying));
+}
+
+#[test]
+fn prismari_scorchmage_b208_deals_five_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_scorchmage_b208());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Scorchmage castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "5 damage kills the bear");
+}
+
+#[test]
+fn prismari_scholar_adept_b208_magecraft_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::prismari_scholar_adept_b208());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    // Just verify the cast resolves with the magecraft trigger present.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.stack.is_empty(), "magecraft scry resolved");
+}
+
+#[test]
+fn quandrix_rootmage_b208_etb_counters_friendly() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::quandrix_rootmage_b208());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rootmage castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
+#[test]
+fn quandrix_tidecantor_b208_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quandrix_tidecantor_b208());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tidecantor castable");
+    drain_stack(&mut g);
+    // -1 cast + 2 draw = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}

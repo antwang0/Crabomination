@@ -7,10 +7,14 @@ See `CUBE_FEATURES.md` (cube-card implementation status) and
 
 ## Recent additions (Push XXXVI — modern_decks, batch 207: Exalted + deaths-this-turn payoffs)
 
-This session added 33 new STX cards across all five colleges, two new
-engine primitives, the **Exalted** keyword (CR 702.83), a combat
-double-fire correctness fix, four CR lock-in tests, and one improvement
-each to engine/UI/server.
+This session added 40 new STX cards (batches 207-208) across all five
+colleges, two new engine primitives, the **Exalted** keyword (CR 702.83),
+a combat double-fire correctness fix, four CR lock-in tests, and one
+improvement each to engine/UI/server. Batch 208 follow-ups: Lorehold
+Vanguard-Captain (2nd Exalted), Pyrohistorian (ETB ping), Skydefender
+(ETB lifegain flier); Prismari Scorchmage (5 dmg), Scholar-Adept
+(magecraft scry); Quandrix Rootmage (ETB +1/+1 on friendly), Tidecantor
+(draw 2).
 
 ### New cards (with functionality tests) — batch 207
 - **Witherbloom (B/G)**: Witherbloom Reaping (draw per creature that died

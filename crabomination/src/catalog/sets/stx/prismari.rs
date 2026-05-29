@@ -18992,3 +18992,69 @@ pub fn prismari_galeblaster_b207() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 208 (modern_decks) — Prismari (U/R) follow-ups.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Prismari Scorchmage (b208) — {3}{R} Instant.
+/// Deal 5 damage to target creature.
+pub fn prismari_scorchmage_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Scorchmage (b208)",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::DealDamage {
+            to: target_filtered(SelectionRequirement::Creature),
+            amount: Value::Const(5),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Prismari Scholar-Adept (b208) — {1}{U} 1/3 Vedalken Wizard.
+/// Magecraft — scry 1.
+pub fn prismari_scholar_adept_b208() -> CardDefinition {
+    CardDefinition {
+        name: "Prismari Scholar-Adept (b208)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
