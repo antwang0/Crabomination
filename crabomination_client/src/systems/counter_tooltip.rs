@@ -371,6 +371,100 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     }
 }
 
+
+/// Render a `Keyword` as a short human string for the tooltip. Keeps
+/// the labels short ("Lifelink", "First Strike") so a card with several
+/// granted keywords doesn't blow out the tooltip line.
+fn keyword_label(kw: &crabomination::card::Keyword) -> String {
+    use crabomination::card::Keyword as K;
+    use crabomination::mana::Color;
+    let color_word = |c: &Color| -> &'static str {
+        match c {
+            Color::White => "white",
+            Color::Blue => "blue",
+            Color::Black => "black",
+            Color::Red => "red",
+            Color::Green => "green",
+        }
+    };
+    match kw {
+        K::Flying => "Flying".into(),
+        K::FirstStrike => "First Strike".into(),
+        K::DoubleStrike => "Double Strike".into(),
+        K::Lifelink => "Lifelink".into(),
+        K::Vigilance => "Vigilance".into(),
+        K::Trample => "Trample".into(),
+        K::Deathtouch => "Deathtouch".into(),
+        K::Haste => "Haste".into(),
+        K::Menace => "Menace".into(),
+        K::Reach => "Reach".into(),
+        K::Defender => "Defender".into(),
+        K::Indestructible => "Indestructible".into(),
+        K::Hexproof => "Hexproof".into(),
+        K::Flash => "Flash".into(),
+        K::Shroud => "Shroud".into(),
+        // Surface Ward's cost as "Ward {2}" or "Ward—pay 2 life"
+        // instead of the prior `{:?}` shape that printed the raw
+        // enum variant text.
+        K::Ward(wc) => match wc {
+            crabomination::card::WardCost::Mana(c) => format!("Ward {}", c.summary()),
+            crabomination::card::WardCost::Life(n) => format!("Ward—Pay {n} life"),
+            crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
+            crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
+        },
+        // Protection rolls up the color name in lowercase to match
+        // printed Oracle ("protection from white", not "from White").
+        K::Protection(c) => format!("Protection from {}", color_word(c)),
+        // Cycling / Flashback should expose their cost so the activator
+        // can see what they'd pay.
+        K::Cycling(cost) => format!("Cycling {}", cost.summary()),
+        K::Flashback(cost) => format!("Flashback {}", cost.summary()),
+        K::Convoke => "Convoke".into(),
+        K::Persist => "Persist".into(),
+        K::Undying => "Undying".into(),
+        K::CantBeCountered => "Can't be countered".into(),
+        _ => format!("{kw:?}"),
+    }
+}
+
+fn sort_key(kind: CounterType) -> u8 {
+    match kind {
+        CounterType::PlusOnePlusOne => 0,
+        CounterType::MinusOneMinusOne => 1,
+        CounterType::Charge => 2,
+        CounterType::Stun => 3,
+        CounterType::Time => 4,
+        CounterType::Poison => 5,
+        CounterType::Energy => 6,
+        _ => 7,
+    }
+}
+
+fn counter_label(kind: CounterType) -> &'static str {
+    match kind {
+        CounterType::PlusOnePlusOne => "+1/+1",
+        CounterType::MinusOneMinusOne => "-1/-1",
+        CounterType::Loyalty => "Loyalty",
+        CounterType::Charge => "Charge",
+        CounterType::Stun => "Stun",
+        CounterType::Time => "Time",
+        CounterType::Poison => "Poison",
+        CounterType::Lore => "Lore",
+        CounterType::Fade => "Fade",
+        CounterType::Age => "Age",
+        CounterType::Level => "Level",
+        CounterType::Energy => "Energy",
+        CounterType::Experience => "Experience",
+        CounterType::Verse => "Verse",
+        CounterType::Shield => "Shield",
+        CounterType::Wish => "Wish",
+        CounterType::Page => "Page",
+        CounterType::Growth => "Growth",
+        CounterType::Prepared => "Prepared",
+        CounterType::Finality => "Finality",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::build_tooltip_body;
@@ -610,98 +704,5 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("(boosted: +1/+1 counters)"),
             "expected legacy boolean badge fallback: {body}");
-    }
-}
-
-/// Render a `Keyword` as a short human string for the tooltip. Keeps
-/// the labels short ("Lifelink", "First Strike") so a card with several
-/// granted keywords doesn't blow out the tooltip line.
-fn keyword_label(kw: &crabomination::card::Keyword) -> String {
-    use crabomination::card::Keyword as K;
-    use crabomination::mana::Color;
-    let color_word = |c: &Color| -> &'static str {
-        match c {
-            Color::White => "white",
-            Color::Blue => "blue",
-            Color::Black => "black",
-            Color::Red => "red",
-            Color::Green => "green",
-        }
-    };
-    match kw {
-        K::Flying => "Flying".into(),
-        K::FirstStrike => "First Strike".into(),
-        K::DoubleStrike => "Double Strike".into(),
-        K::Lifelink => "Lifelink".into(),
-        K::Vigilance => "Vigilance".into(),
-        K::Trample => "Trample".into(),
-        K::Deathtouch => "Deathtouch".into(),
-        K::Haste => "Haste".into(),
-        K::Menace => "Menace".into(),
-        K::Reach => "Reach".into(),
-        K::Defender => "Defender".into(),
-        K::Indestructible => "Indestructible".into(),
-        K::Hexproof => "Hexproof".into(),
-        K::Flash => "Flash".into(),
-        K::Shroud => "Shroud".into(),
-        // Surface Ward's cost as "Ward {2}" or "Ward—pay 2 life"
-        // instead of the prior `{:?}` shape that printed the raw
-        // enum variant text.
-        K::Ward(wc) => match wc {
-            crabomination::card::WardCost::Mana(c) => format!("Ward {}", c.summary()),
-            crabomination::card::WardCost::Life(n) => format!("Ward—Pay {n} life"),
-            crabomination::card::WardCost::Discard(n) => format!("Ward—Discard {n}"),
-            crabomination::card::WardCost::SacrificeCreature => "Ward—Sacrifice a creature".into(),
-        },
-        // Protection rolls up the color name in lowercase to match
-        // printed Oracle ("protection from white", not "from White").
-        K::Protection(c) => format!("Protection from {}", color_word(c)),
-        // Cycling / Flashback should expose their cost so the activator
-        // can see what they'd pay.
-        K::Cycling(cost) => format!("Cycling {}", cost.summary()),
-        K::Flashback(cost) => format!("Flashback {}", cost.summary()),
-        K::Convoke => "Convoke".into(),
-        K::Persist => "Persist".into(),
-        K::Undying => "Undying".into(),
-        K::CantBeCountered => "Can't be countered".into(),
-        _ => format!("{kw:?}"),
-    }
-}
-
-fn sort_key(kind: CounterType) -> u8 {
-    match kind {
-        CounterType::PlusOnePlusOne => 0,
-        CounterType::MinusOneMinusOne => 1,
-        CounterType::Charge => 2,
-        CounterType::Stun => 3,
-        CounterType::Time => 4,
-        CounterType::Poison => 5,
-        CounterType::Energy => 6,
-        _ => 7,
-    }
-}
-
-fn counter_label(kind: CounterType) -> &'static str {
-    match kind {
-        CounterType::PlusOnePlusOne => "+1/+1",
-        CounterType::MinusOneMinusOne => "-1/-1",
-        CounterType::Loyalty => "Loyalty",
-        CounterType::Charge => "Charge",
-        CounterType::Stun => "Stun",
-        CounterType::Time => "Time",
-        CounterType::Poison => "Poison",
-        CounterType::Lore => "Lore",
-        CounterType::Fade => "Fade",
-        CounterType::Age => "Age",
-        CounterType::Level => "Level",
-        CounterType::Energy => "Energy",
-        CounterType::Experience => "Experience",
-        CounterType::Verse => "Verse",
-        CounterType::Shield => "Shield",
-        CounterType::Wish => "Wish",
-        CounterType::Page => "Page",
-        CounterType::Growth => "Growth",
-        CounterType::Prepared => "Prepared",
-        CounterType::Finality => "Finality",
     }
 }

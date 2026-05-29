@@ -27,6 +27,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
         StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
+        // Poison shades from a sickly green toward a warning red as it
+        // approaches the CR 104.3c / 704.5c lethal threshold of 10.
+        StatChipKind::Poison => (Color::srgba(0.20, 0.32, 0.14, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -37,6 +40,7 @@ pub(super) enum StatChipKind {
     Hand,
     Deck,
     Grave,
+    Poison,
 }
 
 pub(super) fn spawn_stat_chip(
@@ -184,6 +188,17 @@ pub fn update_player_stats_chips(
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
+        // Poison is a hidden lose condition (lethal at 10) — only surface
+        // the chip once the player has actually been poisoned to avoid
+        // cluttering the HUD in non-infect games.
+        if p.poison_counters > 0 {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Poison,
+                format!("☠ {}/10", p.poison_counters),
+            );
+        }
     });
 }
 
@@ -373,6 +388,14 @@ pub fn update_opponent_stats_rows(
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Deck, format!("▤ {}", p.library.size));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
+                if p.poison_counters > 0 {
+                    spawn_stat_chip(
+                        row,
+                        &ui_fonts,
+                        StatChipKind::Poison,
+                        format!("☠ {}/10", p.poison_counters),
+                    );
+                }
             });
         }
     });

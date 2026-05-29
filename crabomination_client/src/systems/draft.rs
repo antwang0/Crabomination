@@ -476,7 +476,7 @@ fn compute_pack_card_width(window: Vec2, n_cards: usize) -> f32 {
     let avail_h = (window.y - PACK_GRID_CHROME_PX - PACK_GRID_PADDING_PX).max(PACK_CARD_W_MIN);
     let mut best = PACK_CARD_W_MIN;
     for cols in 1..=n_cards {
-        let rows = ((n_cards + cols - 1) / cols) as f32;
+        let rows = n_cards.div_ceil(cols) as f32;
         let cols_f = cols as f32;
         let w_from_width = (avail_w - (cols_f - 1.0) * PACK_GRID_GAP_PX) / cols_f;
         let h_from_height = (avail_h - (rows - 1.0) * PACK_GRID_GAP_PX) / rows;
@@ -2072,6 +2072,17 @@ fn format_label(format: MatchFormat) -> &'static str {
     }
 }
 
+
+fn color_short(c: ManaColor) -> &'static str {
+    match c {
+        ManaColor::White => "W",
+        ManaColor::Blue => "U",
+        ManaColor::Black => "B",
+        ManaColor::Red => "R",
+        ManaColor::Green => "G",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2105,15 +2116,5 @@ mod tests {
         // 15 cards on a tiny window stays at the min.
         let w = compute_pack_card_width(Vec2::new(800.0, 600.0), 15);
         assert!(w >= PACK_CARD_W_MIN);
-    }
-}
-
-fn color_short(c: ManaColor) -> &'static str {
-    match c {
-        ManaColor::White => "W",
-        ManaColor::Blue => "U",
-        ManaColor::Black => "B",
-        ManaColor::Red => "R",
-        ManaColor::Green => "G",
     }
 }

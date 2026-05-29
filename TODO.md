@@ -5,6 +5,93 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXVI — modern_decks, batch 207: Exalted + deaths-this-turn payoffs)
+
+This session added 33 new STX cards across all five colleges, two new
+engine primitives, the **Exalted** keyword (CR 702.83), a combat
+double-fire correctness fix, four CR lock-in tests, and one improvement
+each to engine/UI/server.
+
+### New cards (with functionality tests) — batch 207
+- **Witherbloom (B/G)**: Witherbloom Reaping (draw per creature that died
+  this turn), Gravecaller (ETB drain per *table-wide* death), Bloodfeast
+  (gain 2× life per your dead creature), Saplinglord (grows on other
+  deaths), Toxicult (ETB Pest + magecraft drain), Rotcaller (ETB 2 Pests),
+  Sapsiphon (combat-damage lifegain).
+- **Lorehold (R/W)**: Soulkindler (ETB Spirit), Cinderscribe (magecraft
+  ping), Battlecaller (attack-mint Spirit), Emberbolt (3 dmg any target),
+  Relicsmith (ETB gy-recursion), Charge II (+1/+0 + first strike team),
+  Vanguard (4/3 haste).
+- **Quandrix (G/U)**: Tidecaller (2-counter Fractal), Theorist (magecraft
+  scry+draw), Fractalsurge (X-counter Fractal), Studymate (grows with
+  cards drawn this turn), Currentweaver (ETB draw+scry), Bigmind (4/5
+  trample).
+- **Prismari (U/R)**: Pyrologist (magecraft ping each opp), Goldcaster
+  (magecraft Treasure), Firebolt II (4 dmg + scry), Goldsmith (ETB 2
+  Treasures), Stormloot II (draw 2 discard 1), Galeblaster (magecraft
+  self-pump).
+- **Silverquill (W/B)**: Inkbinder (magecraft drain flier), Eulogist (ETB
+  drain 2), Edict II (opp sac + draw), Inkling Highflier (2/3 flying
+  vigilance), Sanction (exile + gain 2), Coursemate (lifegain on death),
+  Duelmaster (**Exalted**).
+
+### New engine primitives
+- `Value::CreaturesDiedThisTurn(PlayerRef)` + `Value::CreaturesDiedThisTurnTotal`
+  — count creatures that died (per-player / table-wide) this turn. Backed
+  by `Player.creatures_died_this_turn`. Complement the existing
+  `Predicate::CreaturesDiedThisTurn(Total)AtLeast`.
+- `Predicate::AttackingAlone` (`GameState.attacking.len() == 1`) + the
+  `effect::shortcut::exalted()` helper.
+
+### CR sections implemented / advanced this session
+- **CR 702.83 — Exalted** ✅ (NEW, near the card work): "Whenever a
+  creature you control attacks alone, that creature gets +1/+1 until end
+  of turn." Wired as an `Attacks / YourControl` trigger gated on the new
+  `Predicate::AttackingAlone`, pumping `Selector::TriggerSource` (the lone
+  attacker, so multiple Exalted sources stack per 702.83b). Tests:
+  `cr_702_83_exalted_pumps_lone_attacker`, `cr_702_83b_exalted_silent_when_not_alone`.
+  **Engine fix unblocked by this**: `declare_attackers` previously walked
+  the attacking card's *every* Attacks trigger regardless of scope and
+  pushed it with `trigger_source: None`, so a YourControl Attacks trigger
+  on the attacker double-fired (once no-op from combat.rs, once correctly
+  from the dispatcher). It now only hardcodes `SelfSource` Attacks
+  triggers; YourControl ones route solely through
+  `dispatch_triggers_for_events`.
+- **CR 702.15 — Lifelink** ✅ (lock-in, near the card work): combat damage
+  from a lifelink creature gains its controller that much life.
+  `cr_702_15_lifelink_combat_damage_gains_life`.
+- **CR 510 — Combat Damage Step** (in-progress 🟡): added
+  `cr_510_1c_trample_overflow_to_player` (4-power trampler vs a 2/2 →
+  2 lethal + 2 tramples). The attacker-chosen damage-assignment-order
+  gap is still ⏳ (auto-ordered by CardId — needs a Decision variant).
+- **CR 302.6 — Summoning sickness** ✅ (random lock-in): a freshly-entered
+  creature can't attack unless it has Haste.
+  `cr_302_6_summoning_sick_creature_cannot_attack`.
+
+### Improvements this session
+- **Engine**: the combat double-fire fix above (YourControl Attacks
+  triggers no longer fire twice) — a real correctness bug, not just
+  net-new feature wiring.
+- **UI**: poison-counter HUD chip (`StatChipKind::Poison`), rendered on
+  both the viewer's stat row and each opponent's row, only when
+  `poison_counters > 0`. Surfaces the hidden CR 704.5c lethal-at-10 lose
+  condition in infect/poison games.
+- **Server**: `MatchStats::turn_percentile` (+ `turn_bucket_upper_bound`),
+  surfacing `turns p50≤N, p95≤N` in the rolling summary line alongside the
+  existing duration percentiles. 3 tests.
+
+### Follow-ups noticed (not tackled this run)
+- Exalted via `dispatch_triggers_for_events` only fires for the lone
+  attacker correctly; a future cleanup could give `declare_attackers`'
+  remaining SelfSource hardcode path the same `trigger_source` plumbing so
+  `Selector::TriggerSource` resolves there too (today SelfSource Attacks
+  triggers that reference `TriggerSource` get `None` — none currently do,
+  but it's a latent foot-gun).
+- The Witherbloom "harvest" cards collapse "draw a card for each creature
+  that died under your control this turn" faithfully, but a true
+  end-step-gated variant (Essenceknit Scholar style) could reuse the new
+  Value with a `DelayUntil(NextEndStep, …)`.
+
 ## Recent additions (Push XXXV — modern_decks, rider/cost-primitive promotions)
 
 This session focused on **promoting cards whose advanced riders were stubbed

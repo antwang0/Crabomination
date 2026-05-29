@@ -407,6 +407,42 @@ impl MatchStats {
         // open-ended bucket's nominal upper bound.
         Self::bucket_upper_bound(5)
     }
+    /// Turn-count analogue of [`percentile`](Self::percentile): the
+    /// upper turn-count bound of the bucket containing the `p`-th
+    /// percentile match, walking `turn_buckets`. Returns 0 when no
+    /// matches have completed. Lets operators read the game-length
+    /// distribution centre (p50) and tail (p95) directly instead of
+    /// eyeballing the histogram columns.
+    fn turn_percentile(&self, p: f32) -> u32 {
+        let total = self.total_matches();
+        if total == 0 {
+            return 0;
+        }
+        let p = p.clamp(0.0, 1.0);
+        let target = (total as f32 * p).ceil().max(1.0) as u64;
+        let mut acc = 0u64;
+        for (i, &n) in self.turn_buckets.iter().enumerate() {
+            acc = acc.saturating_add(n as u64);
+            if acc >= target {
+                return Self::turn_bucket_upper_bound(i);
+            }
+        }
+        Self::turn_bucket_upper_bound(5)
+    }
+    /// Upper edge (inclusive estimate) of turn bucket `i`. Matches the
+    /// cut points in [`turn_bucket_index`](Self::turn_bucket_index); the
+    /// open-ended `21+` bucket reports its lower edge (21) since it has
+    /// no finite upper bound.
+    fn turn_bucket_upper_bound(i: usize) -> u32 {
+        match i {
+            0 => 2,
+            1 => 5,
+            2 => 8,
+            3 => 12,
+            4 => 20,
+            _ => 21,
+        }
+    }
     /// Upper edge (inclusive estimate) of bucket `i` for percentile
     /// reporting. Matches the cut points in `bucket_index`.
     fn bucket_upper_bound(i: usize) -> Duration {
@@ -542,9 +578,11 @@ fn format_match_stats(s: &MatchStats) -> String {
     // sample.
     if n >= 2 {
         out.push_str(&format!(
-            " p50≤{}, p95≤{}",
+            " p50≤{}, p95≤{} (turns p50≤{}, p95≤{})",
             format_duration(s.percentile(0.50)),
             format_duration(s.percentile(0.95)),
+            s.turn_percentile(0.50),
+            s.turn_percentile(0.95),
         ));
     }
     // Append histogram only when at least one bucket has hits — keeps
@@ -1570,6 +1608,38 @@ mod tests {
         s.record_bot(Duration::from_secs(5), Format::Demo);
         assert_eq!(s.percentile(1.0), Duration::from_secs(30),
             "p100 with one sample = upper bound of its bucket");
+    }
+
+    #[test]
+    fn turn_percentile_zero_when_no_matches() {
+        let s = MatchStats::default();
+        assert_eq!(s.turn_percentile(0.5), 0);
+    }
+
+    #[test]
+    fn turn_percentile_lands_in_correct_bucket() {
+        let mut s = MatchStats::default();
+        // 9 short games (2 turns → bucket 0) + 1 grindy game (30 turns →
+        // bucket 5). p50 lands in the short bucket; p95 in the open-ended.
+        for _ in 0..9 {
+            s.record_bot(Duration::from_secs(10), Format::Demo);
+            s.observe_turns(2);
+        }
+        s.record_bot(Duration::from_secs(2000), Format::Demo);
+        s.observe_turns(30);
+        assert_eq!(s.turn_percentile(0.5), 2, "p50 lands in the 1-2 bucket");
+        assert_eq!(s.turn_percentile(0.95), 21, "p95 lands in the 21+ bucket");
+    }
+
+    #[test]
+    fn format_match_stats_includes_turn_percentiles() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(15), Format::Demo);
+        s.observe_turns(7);
+        s.record_pair(Duration::from_secs(15), Format::Demo);
+        s.observe_turns(9);
+        let line = format_match_stats(&s);
+        assert!(line.contains("turns p50≤"), "turn percentile present: {line}");
     }
 
     #[test]

@@ -22,7 +22,23 @@ Two adjacent catalogs:
 | STX (327 cards) | 3144 (incl. synthesised variants — batches 155–206 add 902 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (claude/modern_decks, this session): SOS/cross-set rider promotions
+Push (claude/modern_decks, batch 207): 33 STX cards across all five
+colleges + the **Exalted** mechanic (CR 702.83). New engine primitives:
+`Value::CreaturesDiedThisTurn(PlayerRef)` / `CreaturesDiedThisTurnTotal`
+(drive Witherbloom "harvest" payoffs — Reaping draws per dead creature,
+Gravecaller drains per table-wide death, Bloodfeast gains 2× life) and
+`Predicate::AttackingAlone` + the `exalted()` shortcut (Silverquill
+Duelmaster). Engine correctness fix: the `declare_attackers` SelfSource
+walk now only hardcodes `SelfSource` Attacks triggers — YourControl ones
+(Exalted, Battle Banner) route solely through `dispatch_triggers_for_events`
+instead of double-firing. 35 functionality tests + CR lock-in tests for
+702.83 (Exalted alone / not-alone), 702.15 (Lifelink combat), 510.1c
+(trample overflow), 302.6 (summoning sickness). UI: poison-counter HUD
+chip (player + opponent rows). Server: `turn_percentile` (p50/p95 game
+length, mirrors the duration percentile). See TODO.md for the full
+breakdown.
+
+Push (claude/modern_decks, earlier session): SOS/cross-set rider promotions
 using primitives that already existed (docs were stale). Applied Geometry
 now copies the target permanent via `CreateTokenCopyOf` (Fractal + 0/0 +
 six counters); Colorstorm Stallion's Opus ≥5-mana branch mints a copy
