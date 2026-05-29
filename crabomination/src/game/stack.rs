@@ -779,10 +779,13 @@ impl GameState {
         // turn-based action doesn't use the stack.
         //
         // Implementation: deterministic-first-card discard from the active
-        // player's hand. The bot harness's AutoDecider has no policy here
-        // (and turn-based actions can't suspend through the stack), so we
-        // dump the head of the hand vector. A future UI surfacing could
-        // ask the player which cards to discard via `Decision::Discard`.
+        // player's hand, routed through the centralized `discard_card` path
+        // so the discard fires `CardDiscarded` (CR 514.3 lets discard-
+        // matters triggers fire from cleanup) and honors Madness (CR
+        // 702.35). The bot harness's AutoDecider has no policy here (and
+        // turn-based actions can't suspend through the stack), so we dump
+        // the head of the hand vector. A future UI surfacing could ask the
+        // player which cards to discard via `Decision::Discard`.
         const MAX_HAND_SIZE: usize = 7;
         let active = self.active_player_idx;
         // CR 402.2 — "Each player's maximum hand size is normally seven
@@ -792,9 +795,15 @@ impl GameState {
         // Reliquary Tower, etc. set `Player.no_maximum_hand_size = true`
         // which skips this discard-down step entirely.
         if !self.players[active].no_maximum_hand_size {
+            let mut cleanup_events = Vec::new();
             while self.players[active].hand.len() > MAX_HAND_SIZE {
-                let card = self.players[active].hand.remove(0);
-                self.players[active].graveyard.push(card);
+                let Some(cid) = self.players[active].hand.first().map(|c| c.id) else {
+                    break;
+                };
+                self.discard_card(active, cid, &mut cleanup_events);
+            }
+            if !cleanup_events.is_empty() {
+                self.dispatch_triggers_for_events(&cleanup_events);
             }
         }
 

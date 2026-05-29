@@ -650,6 +650,29 @@ fn cr_70235_madness_exile_still_counts_as_a_discard() {
 }
 
 #[test]
+fn cr_5141a_cleanup_discard_routes_through_madness() {
+    // CR 514.1a — the cleanup discard-to-hand-size routes through the
+    // centralized discard path, so a Madness card discarded at cleanup is
+    // exiled and offered for its madness cost (CR 702.35) rather than
+    // going straight to the graveyard.
+    let mut g = two_player_game();
+    let active = g.active_player_idx;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Stuff the active player's hand past the maximum (7) with vanilla
+    // fillers, then a Basking Rootwalla as the head card to be discarded.
+    let rw = g.add_card_to_hand(active, catalog::basking_rootwalla());
+    for _ in 0..8 {
+        g.add_card_to_hand(active, catalog::grizzly_bears());
+    }
+
+    g.do_cleanup();
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == rw),
+        "cleanup discard of a Madness {{0}} card lets it be cast from exile");
+}
+
+#[test]
 fn tarmogoyf_pt_scales_with_card_types_in_graveyards() {
     let mut g = two_player_game();
     let goyf = g.add_card_to_battlefield(0, catalog::tarmogoyf());

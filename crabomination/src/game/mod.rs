@@ -1889,14 +1889,11 @@ impl GameState {
             .mana_pool
             .pay(&cycling_cost)
             .map_err(GameError::Mana)?;
-        // Discard the card from hand to graveyard.
+        // Discard the card from hand via the centralized path (handles the
+        // graveyard move, CardDiscarded, discard-matters counters, and the
+        // Madness replacement, CR 702.35).
         let mut events = vec![];
-        if let Some(card) = self.players[seat].remove_from_hand(card_id) {
-            self.players[seat].graveyard.push(card);
-            events.push(GameEvent::CardDiscarded {
-                player: seat,
-                card_id,
-            });
+        if self.discard_card(seat, card_id, &mut events) {
             // CR 702.29c — emit the cycle-specific event in addition to
             // the discard event, so "When you cycle this card" triggers
             // distinguish cycle from a regular hand discard.
