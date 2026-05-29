@@ -144,7 +144,7 @@ still ⏳.
 |---|---|---|
 | Blazing Rootwalla | ⏳ | Madness creature. Needs Madness. |
 | Greasewrench Goblin | ✅ | {1}{R} 2/2 Haste. Treasure-on-death trigger via `EventKind::CreatureDied + SelfSource` + the shared `treasure_token()` helper (1-mana-of-any-color, sac on tap). The "can't block" Oracle rider collapses (no per-attacker block-restriction primitive yet). Tests: `greasewrench_goblin_enters_with_haste`, `greasewrench_goblin_creates_treasure_on_death`. |
-| Grim Lavamancer | 🟡 | {R} 1/1 Human Wizard. {R}, {T}: deals 2 damage to any target. The "exile two cards from your graveyard" cost is approximated away — pending an exile-from-graveyard primitive. |
+| Grim Lavamancer | ✅ | {R} 1/1 Human Wizard. {R}, {T}, Exile two cards from your graveyard: deal 2 damage to any target — the exile-two cost is wired via `exile_other_filter: Some((Any, 2))` (pre-flight rejects when <2 cards in gy). |
 | Marauding Mako | ✅ | `{U}{B}` 2/2 Fish (Shark not in `CreatureType`). Triggered ability listens for `CardDiscarded`+`YourControl` and adds a +1/+1 counter to itself — captures the discard-payoff payoff faithfully. Available cross-pool when both U and B are picked. Test: `marauding_mako_grows_when_you_discard`. |
 | Orcish Lumberjack | ✅ | {R} 1/1 Goblin Druid. `{T}, sacrifice a Forest: Add {G}{G}{G}` — Forest sac folded into resolution as Crop Rotation does. Test: `orcish_lumberjack_sacrifices_forest_for_three_green`. |
 | Voldaren Epicure | ✅ | ETB: create a Blood token + 1 damage to each opponent (`ForEach EachOpponent`). |
@@ -174,7 +174,7 @@ still ⏳.
 | Slagstorm | ✅ | {2}{R} Sorcery. `ChooseMode([ForEach creature → 3 dmg, ForEach player → 3 dmg])`. AutoDecider picks mode 0. Tests: `slagstorm_mode_zero_sweeps_creatures`, `slagstorm_mode_one_burns_each_player`. |
 | Stoke the Flames | ✅ | {4}{R} Instant with `Keyword::Convoke`. 4 damage to any target. Test: `stoke_the_flames_deals_four_at_full_cost`. |
 | Pyrokinesis | 🟡 | {4}{R}{R} Instant. Pitch-cost alt cast: exile a red card from hand → 4 damage. The "divide 4 damage among any number of creatures" half is approximated as a single 4-damage hit. |
-| Vandalblast | 🟡 | Single-target artifact destruction; Overload {4}{R} mode omitted (no overload primitive yet). |
+| Vandalblast | ✅ | Single-target artifact destruction + Overload {4}{R} (destroy each opp artifact) via `AlternativeCost.effect_override`. Both modes tested. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 | Sundering Eruption | ✅ | MDFC: front is `{1}{R}` sorcery dealing 3 damage to a creature/planeswalker; back face Mount Tyrhus is a Mountain that ETBs tapped and taps for {R}. |
 | Pyroblast | ✅ | Push (claude/modern_decks, NEW): {R} Instant. ChooseMode counter blue spell or destroy blue permanent. Tests: `pyroblast_counters_a_blue_spell`, `pyroblast_rejects_non_blue_spell_target`. |
@@ -204,8 +204,8 @@ still ⏳.
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
 | Mossborn Hydra | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {X}{G} 0/0 Hydra. Enters with X +1/+1 counters via `enters_with_counters: Some((PlusOnePlusOne, XFromCost))`. The "double counters if X ≥ 4" rider is collapsed (no counter-multiplier-on-cast primitive). Test: `mossborn_hydra_enters_with_x_counters`. |
 | Mutable Explorer | ⏳ | Mutate primitive. |
-| Sentinel of the Nameless City | 🟡 | Vigilance + attack-trigger 1/1 green Citizen token. Ward 2 omitted (keyword exists but not enforced at targeting time); Plant subtype dropped (no `Plant` in `CreatureType`). |
-| Tireless Tracker | 🟡 | Filtered ETB-other trigger: when a land enters under your control, investigate (create a Clue). Sac-Clue +1/+1 ability omitted (no sac-of-other-permanent activation primitive). |
+| Sentinel of the Nameless City | ✅ | Vigilance + attack-trigger Citizen token + Ward {2} (enforced, CR 702.21) + Plant Warrior subtypes. |
+| Tireless Tracker | ✅ | Land-enter investigate trigger + the "whenever you sacrifice a Clue, +1/+1 counter on this" trigger (PermanentSacrificed+YourControl filtered on HasArtifactSubtype(Clue)). Tests cover both. |
 | Ursine Monstrosity | ✅ | Adapt-style P/T scaling. |
 | Baloth Prime | ⏳ | TBD. |
 | Icetill Explorer | ⏳ | TBD. |
@@ -296,7 +296,7 @@ still ⏳.
 | Ashiok, Nightmare Weaver | 🟡 | Push (claude/modern_decks batch 102): {1}{U}{B} 3-loyalty Planeswalker. **+2**: target opponent mills 3 (the "exiled with Ashiok" linkage is engine-wide ⏳ — milled cards land in opp graveyard). **-1**: Exile target opp creature (the "create a copy" half collapses). **-10**: Approximated as `WinGame { You }` (the "each opp draws 7 from exile" plinker ultimate is dropped). Tests: `ashiok_nightmare_weaver_plus_two_mills_opponent_three`, `ashiok_nightmare_weaver_minus_one_exiles_creature`. |
 | Master of Death | ✅ | UB recursion + discard. |
 | Fallen Shinobi | 🟡 | 5/4 Zombie Ninja. Combat damage mills 2 from defender. Ninjutsu and play-from-exile omitted. |
-| Bloodtithe Harvester | 🟡 | ETB and attack triggers each create a Blood token. Sac-Blood ping ability omitted (no sac-of-other-permanent activation primitive). |
+| Bloodtithe Harvester | ✅ | ETB + attack Blood-token triggers, plus `{1}, Sacrifice a Blood: deal 2 to any target` via `sac_other_filter: HasArtifactSubtype(Blood)`. Tests cover the ping + the no-Blood rejection. |
 | Terminate | ✅ | Already in catalog (destroy can't-regenerate). |
 | Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
 | Kolaghan's Command | 🟡 | Push (claude/modern_decks batch 102): {1}{B}{R} Instant. Modal — `ChooseMode([discard+reanimate, ping+destroy-artifact, discard+ping])`. The printed "choose two of four" multi-mode picker (CR 700.2d) collapses to three bundled pairs. AutoDecider picks mode 0. Test: `kolaghans_command_mode_zero_discard_plus_reanimate`. |

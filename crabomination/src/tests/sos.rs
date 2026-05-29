@@ -11553,7 +11553,7 @@ fn improvisation_capstone_exiles_four_cards_and_registers_paradigm() {
     }
     let id = g.add_card_to_hand(0, catalog::improvisation_capstone());
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![],
@@ -11610,7 +11610,7 @@ fn improvisation_capstone_digs_past_lands_until_mv_threshold_hit() {
     }
     let id = g.add_card_to_hand(0, catalog::improvisation_capstone());
     g.players[0].mana_pool.add(Color::Red, 2);
-    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add_colorless(5);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![],

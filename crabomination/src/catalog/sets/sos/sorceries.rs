@@ -3007,7 +3007,7 @@ pub fn improvisation_capstone() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {
         name: "Improvisation Capstone",
-        cost: cost(&[generic(3), r(), r()]),
+        cost: cost(&[generic(5), r(), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),

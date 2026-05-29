@@ -5,6 +5,73 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXV — modern_decks, rider/cost-primitive promotions)
+
+This session focused on **promoting cards whose advanced riders were stubbed
+behind primitives that already existed** (the in-repo docs were stale), plus
+3 CR sections and one improvement each to engine/server/UI. No new card
+*definitions* were added — the catalog already covers every card in the
+Scryfall cache (verified: all 37 "missing" cache entries are implemented via
+builder string-args, false positives in the name-detector).
+
+### Cards promoted to full functionality (with tests)
+- **Applied Geometry** — real `CreateTokenCopyOf` (copy target permanent,
+  add Fractal, override P/T 0/0, six +1/+1 counters) instead of a vanilla
+  Fractal token.
+- **Colorstorm Stallion** — Opus ≥5-mana branch now mints a copy token.
+- **Elemental Mascot** — Opus ≥5-mana branch exiles top + grants may-play
+  (`ExileTopAndGrantMayPlay`).
+- **Bloodtithe Harvester** — `{1}, Sacrifice a Blood: 2 damage` via
+  `sac_other_filter: HasArtifactSubtype(Blood)`.
+- **Tireless Tracker** — sac-a-Clue → +1/+1 counter via a
+  `PermanentSacrificed + YourControl` trigger.
+- **Sentinel of the Nameless City** — Ward {2} (enforced) + Plant subtype.
+- **Sylvan Safekeeper** / **Zuran Orb** — folded sac costs promoted to
+  proper `sac_other_filter` pre-resolution activation costs (reject when
+  the cost is unpayable).
+- **Tragedy Feaster** — Ward—Discard a card now enforced.
+- **Prismari, the Inspiration** — Ward—Pay 5 life now enforced.
+- **Tragic Slip** — Morbid gate (-1/-1, or -13/-13 if a creature died).
+- **Improvisation Capstone** — cost bug fixed ({3}{R}{R} → {5}{R}{R});
+  promoted ⏳→✅ alongside Echocasting Symposium in STRIXHAVEN2.md
+  (both were already wired — stale false-negatives).
+
+### CR sections implemented / advanced this session
+- **CR 702.3 — Defender** ✅: enforced in `can_attack`;
+  `cr_702_3_defender_cannot_be_declared_as_attacker` locks it in
+  (Sylvan Caryatid). Doc on the card corrected.
+- **CR 510 — Combat Damage Step** (advanced 🟡): multi-blocker lethal
+  assignment + trample overflow + deathtouch (1-lethal-each) now have
+  lock-in tests (`cr_510_1c_trampler_assigns_lethal_to_each_blocker_then_tramples`,
+  `cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker`). Remaining
+  gap: the attacker's controller can't *choose* the damage-assignment
+  order (auto-ordered by CardId) — still ⏳ (needs a Decision variant).
+- **CR 700.4 — Morbid** ✅ (new): `Predicate::CreaturesDiedThisTurnTotalAtLeast`
+  sums deaths across all players; `cr_700_4_morbid_total_predicate_counts_
+  deaths_across_players`. Used by Tragic Slip.
+
+### Improvements this session
+- **Engine**: `Predicate::CreaturesDiedThisTurnTotalAtLeast` (global morbid)
+  — cleaner than OR-ing per-seat predicates; view label + tests.
+- **Server**: `MatchStats.turn_buckets` turn-count histogram parallel to
+  the duration histogram, rendered in `format_match_stats`. 2 tests.
+- **UI**: damage-marked creatures in the alt-tooltip now show the survival
+  margin ("marked: 2 damage; 3 more lethal"). 1 test. (Client crate is
+  unbuildable in the web sandbox — wayland-sys; change is pure formatting.)
+
+### Backlog discovered (deliberately not tackled — need large primitives)
+The remaining CUBE/SOS partials cluster around primitives the engine still
+lacks. Highest-value next targets, each unlocking multiple cards:
+- **Madness** (CR 702.35): Blazing/Basking Rootwalla, Anje's Ravager — needs
+  discard→exile replacement + a "cast for madness cost" window (new Decision).
+- **Regeneration** (CR 701.15): Korlash + many "can't be regenerated" riders.
+- **Delve** (CR 702.66): Treasure Cruise, Dig Through Time, Logic Knot.
+- **Permanent clone / enters-as-a-copy**: Phantasmal Image, Mockingbird,
+  Mirrorform (token-copy `CreateTokenCopyOf` exists; "enters as a copy" of a
+  real permanent does not).
+- **"becomes tapped" trigger** (Magda, Goldspan Dragon Treasure riders).
+- **Overload-style / minimum-cost / spend-restricted mana** — assorted singles.
+
 ## Recent additions (Push XXXIV — 2026-05-29, session 18, batches 205-206)
 
 ### New cards (12 more across batch 206, all tested)
