@@ -764,6 +764,21 @@ per-card status and notes.
   choices, but bot games run end-to-end as-is.
 ## Implementation Progress
 
+> **Push XXXVIII (modern_decks) — real hybrid mana pips.** The engine now
+> uses real `ManaSymbol::Hybrid` for two-color pips and a new
+> `ManaSymbol::MonoHybrid(n, color)` for `{n/C}` pips. Any per-card note
+> below that says a hybrid pip is "approximated as `{X}`" is **superseded**
+> for these cards, which now use real hybrid pips payable with either
+> half: Essenceknit Scholar, Paradox Surveyor, Abstract Paintmage,
+> Practiced Scrollsmith, Stirring Honormancer, Abigale // Heroic Stanza,
+> Lluwen // Pest Friend, Magmablood Archaic (`{2/R}`), Wildgrowth Archaic
+> (`{2/G}`), Killian's Confidence (`{W/B}` may-pay). Spectacle Mage and
+> Fervent Strike (STX), plus Manamorphose, Burning-Tree Emissary,
+> Spectral Procession, Tasigur, Messenger Falcons, Gitaxian Probe,
+> Dismember and Tezzeret's Gambit (decks/STX, Phyrexian where printed)
+> were converted too. Fix What's Broken now uses a faithful `{X}{2}{W}{B}`
+> (pay X life, mass-reanimate at exactly MV X).
+
 Counts reflect the regenerated tables below (audited via
 `scripts/audit_strixhaven2.py` against `catalog::sets::sos`).
 
