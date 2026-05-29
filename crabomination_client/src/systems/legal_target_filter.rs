@@ -156,9 +156,11 @@ fn evaluate_via_catalog(
         R::HasEnchantmentSubtype(e) => def.subtypes.enchantment_subtypes.contains(e),
         R::ManaValueAtMost(n) => def.cost.cmc() <= *n,
         R::ManaValueAtLeast(n) => def.cost.cmc() >= *n,
-        R::HasColor(c) => def.cost.symbols.iter().any(|s| {
-            matches!(s, crabomination::mana::ManaSymbol::Colored(cc) if cc == c)
-        }),
+        // Use the cost's full color set so hybrid ({W/B}), mono-hybrid
+        // ({2/R}) and Phyrexian pips contribute their color(s) — matches
+        // the engine's `ManaCost::colors()` semantics rather than scanning
+        // only pure `Colored` pips.
+        R::HasColor(c) => def.cost.colors().contains(c),
         R::Multicolored => def.cost.distinct_colors() >= 2,
         R::Colorless => def.cost.distinct_colors() == 0,
         R::Monocolored => def.cost.distinct_colors() == 1,

@@ -758,27 +758,18 @@ fn project_stack(item: &StackItem, state: &GameState, _viewer_seat: usize) -> St
 }
 
 fn format_mana_cost(cost: &crate::mana::ManaCost) -> String {
-    use crate::mana::{Color, ManaSymbol};
+    // Delegate to the canonical `ManaCost::summary()` renderer so every
+    // pip kind (colored, generic, {C} colorless, {S} snow, {X}, hybrid,
+    // Phyrexian, mono-hybrid) is rendered with the proper Oracle-style
+    // letters. The previous hand-rolled match used Debug formatting for
+    // hybrid / Phyrexian colors (`{White/Black}` instead of `{W/B}`) and
+    // mis-rendered {C} pips as generic. An empty cost stays the empty
+    // string here (summary() renders "{0}" for free spells; the card
+    // view wants nothing displayed for a 0-symbol cost).
     if cost.symbols.is_empty() {
         return String::new();
     }
-    cost.symbols
-        .iter()
-        .map(|s| match s {
-            ManaSymbol::Colored(Color::White) => "{W}".to_string(),
-            ManaSymbol::Colored(Color::Blue) => "{U}".to_string(),
-            ManaSymbol::Colored(Color::Black) => "{B}".to_string(),
-            ManaSymbol::Colored(Color::Red) => "{R}".to_string(),
-            ManaSymbol::Colored(Color::Green) => "{G}".to_string(),
-            ManaSymbol::Colorless(n) => format!("{{{n}}}"),
-            ManaSymbol::Generic(n) => format!("{{{n}}}"),
-            ManaSymbol::X => "{X}".to_string(),
-            ManaSymbol::Snow => "{S}".to_string(),
-            ManaSymbol::Hybrid(a, b) => format!("{{{a:?}/{b:?}}}"),
-            ManaSymbol::Phyrexian(c) => format!("{{{c:?}/P}}"),
-            ManaSymbol::MonoHybrid(n, c) => format!("{{{n}/{c:?}}}"),
-        })
-        .collect()
+    cost.summary()
 }
 
 #[cfg(test)]
@@ -794,6 +785,24 @@ mod tests {
             Player::new(0, "P0"),
             Player::new(1, "P1"),
         ])
+    }
+
+    #[test]
+    fn format_mana_cost_renders_pip_letters_not_debug_names() {
+        use crate::mana::{cost, generic, hybrid, mono_hybrid, phyrexian, w, b, Color, ManaCost};
+        // Two-color hybrid renders as {W/B}, not the Debug {White/Black}.
+        assert_eq!(
+            format_mana_cost(&cost(&[generic(1), hybrid(Color::White, Color::Black)])),
+            "{1}{W/B}",
+        );
+        // Phyrexian renders {B/P}.
+        assert_eq!(format_mana_cost(&cost(&[phyrexian(Color::Black)])), "{B/P}");
+        // Mono-hybrid renders {2/R}.
+        assert_eq!(format_mana_cost(&cost(&[mono_hybrid(2, Color::Red)])), "{2/R}");
+        // Plain colored + generic.
+        assert_eq!(format_mana_cost(&cost(&[generic(2), w(), b()])), "{2}{W}{B}");
+        // Empty cost stays the empty string (not "{0}").
+        assert_eq!(format_mana_cost(&ManaCost::new(vec![])), "");
     }
 
     #[test]
