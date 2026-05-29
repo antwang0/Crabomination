@@ -567,6 +567,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
 /// colors, and has a mana-cost activated ability that animates it into a
 /// creature until end of turn via `Effect::BecomeCreature`. The animated
 /// body keeps the Land type (it becomes a "land creature").
+#[allow(clippy::too_many_arguments)]
 fn manland(
     name: &'static str,
     type_a: LandType,

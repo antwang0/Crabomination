@@ -5251,3 +5251,89 @@ fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
     assert!(g.evaluate_predicate(&morbid, &ctx),
         "an opponent's creature dying this turn satisfies global morbid");
 }
+
+// ── CR 702.6 / 702.122 / 301.7 / 509.1b lock-in tests (this push) ───────────
+
+/// CR 702.6 — Equip is a sorcery-speed activated ability that attaches an
+/// Equipment to a creature its controller controls.
+#[test]
+fn cr_702_6_equip_attaches_at_sorcery_speed_to_your_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    // Sorcery-speed only.
+    g.step = crate::game::TurnStep::DeclareBlockers;
+    assert!(matches!(
+        g.perform_action(crate::game::GameAction::Equip { equipment: boner, target: bear }),
+        Err(crate::game::GameError::SorcerySpeedOnly)
+    ));
+    // In the main phase, it attaches and grants the bonus.
+    g.step = crate::game::TurnStep::PreCombatMain;
+    g.perform_action(crate::game::GameAction::Equip { equipment: boner, target: bear })
+        .expect("equip in main phase");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+}
+
+/// CR 702.122 — Crew taps creatures whose total power is at least the crew
+/// number; below the threshold the activation is rejected.
+#[test]
+fn cr_702_122_crew_requires_total_power_at_least_n() {
+    let mut g = two_player_game();
+    let coach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach()); // Crew 2
+    let one_power = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power — enough
+    g.perform_action(crate::game::GameAction::Crew {
+        vehicle: coach, crew_creatures: vec![one_power],
+    }).expect("2 power satisfies crew 2");
+    assert!(g.computed_permanent(coach).unwrap()
+        .card_types.contains(&crate::card::CardType::Creature));
+}
+
+/// CR 301.7 — a Vehicle is not a creature until an effect (Crew) turns it
+/// into one.
+#[test]
+fn cr_301_7_vehicle_is_not_a_creature_until_crewed() {
+    let mut g = two_player_game();
+    let coach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
+    assert!(!g.computed_permanent(coach).unwrap()
+        .card_types.contains(&crate::card::CardType::Creature),
+        "uncrewed Vehicle is a noncreature artifact");
+    // It still carries printed P/T characteristics (CR 301.7) even uncrewed.
+    assert_eq!(coach_printed_power(&g, coach), 3);
+}
+
+fn coach_printed_power(g: &crate::game::GameState, id: crate::card::CardId) -> i32 {
+    g.battlefield.iter().find(|c| c.id == id).unwrap().definition.power
+}
+
+/// CR 509.1b — an unblockable creature ("can't be blocked") can't be chosen
+/// as the creature an attacker is blocked by.
+#[test]
+fn cr_509_1b_unblockable_attacker_cannot_be_blocked() {
+    let mut g = two_player_game();
+    // P0 animates Creeping Tar Pit (unblockable) and attacks.
+    let land = g.add_card_to_battlefield(0, catalog::creeping_tar_pit());
+    g.clear_sickness(land);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(crate::game::GameAction::ActivateAbility {
+        card_id: land, ability_index: 2, target: None, x_value: None,
+    }).expect("animate");
+    drain_stack(&mut g);
+    // P1 has a blocker.
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(blocker);
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(crate::game::GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: land,
+        target: crate::game::AttackTarget::Player(1),
+    }])).expect("tar pit attacks");
+    g.step = crate::game::TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    let err = g.perform_action(crate::game::GameAction::DeclareBlockers(vec![(blocker, land)]))
+        .expect_err("unblockable can't be blocked");
+    assert!(matches!(err, crate::game::GameError::CannotBlock(_)), "got {err:?}");
+}

@@ -129,7 +129,7 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Lotus Petal | — | ✅ | `{T}, sac: Add one mana of any color` via `sac_cost: true`. |
 | Tormod's Crypt | — | ✅ | `{T}, sac: exile each opponent's graveyard` (target-player half collapsed to each-opp). |
 | Mishra's Bauble | — | ✅ | `{T}, sac: LookAtTop(You) + DelayUntil(YourNextUpkeep, Draw 1)`. |
-| Stoneforge Mystic | {1}{W} | ✅ | ETB `Search(HasArtifactSubtype(Equipment) → Hand)`. The {1}{W}, {T}: equip ability is omitted (no equipment-attach activation primitive). |
+| Stoneforge Mystic | {1}{W} | ✅ | ETB `Search(HasArtifactSubtype(Equipment) → Hand)`. The base equip pipeline now exists (`GameAction::Equip`, CR 702.6); Stoneforge's discounted {1}{W},{T}: put-an-Equipment-onto-the-battlefield ability is still omitted (needs a play-and-attach activation variant). |
 | Qasali Pridemage | {G}{W} | ✅ | `{1}, sac: Destroy(Artifact ∨ Enchantment)`. Exalted omitted (no per-attack-power-pump primitive). |
 | Greater Good | {2}{G}{G} | ✅ | Activated ability: `SacrificeAndRemember + Draw(SacrificedPower) + Discard 3` — reuses Thud's primitive. |
 | Pyroclasm | {1}{R} | ✅ | `ForEach(Creature)` + `DealDamage 2`. Same shape as Anger of the Gods. |

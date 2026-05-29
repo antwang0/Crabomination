@@ -229,7 +229,7 @@ still ⏳.
 | Nature's Lore | ✅ | Search Forest, put onto battlefield untapped. |
 | Kodama's Reach | ✅ | Two-basic ramp. |
 | Biorhythm | 🟡 | {4}{G}{G}{G} Sorcery. `LoseLife(EachOpponent, 20) + GainLife(You, count(your creatures))`. Set-life-total-to-X primitive doesn't exist; we drop each opp by a chunk that beats their starting life total instead. Test: `biorhythm_drops_each_opponent_to_zero_or_below`. |
-| Esika's Chariot | ⏳ | Vehicle + crew + token. |
+| Esika's Chariot | 🟡 | ETB two Cat tokens + Crew 4 (animate to 4/4). Copy-target-token ETB clause omitted. |
 | Springleaf Parade | ⏳ | TBD. |
 | Up the Beanstalk | ✅ | ETB Draw 1 + filtered SpellCast trigger (mana value ≥ 5 → Draw 1). |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
@@ -259,9 +259,9 @@ still ⏳.
 | Candelabra of Tawnos | ✅ | Untap N lands for {X}. |
 | Chromatic Star | ✅ | {1} Artifact. {1}, T, Sac: add one mana of any color. Cantrips on `PermanentLeavesBattlefield` (engine extension — see notes). |
 | Ghost Vacuum | ✅ | {2} Artifact. `{2}, {T}: Move(target → Exile)` over `Any`. Auto-target prefers a graveyard card via the new `Effect::prefers_graveyard_target` (Move-to-Exile) heuristic — without it, the bot would auto-target a battlefield permanent. The "draw on every card going to your graveyard" rider on later printings is omitted (not on the original). Tests: `ghost_vacuum_exiles_target_card_from_graveyard`, `ghost_vacuum_auto_target_picks_graveyard_card_when_present`. |
-| Lavaspur Boots | ⏳ | Equipment grants haste. |
+| Lavaspur Boots | ✅ | Equipment +1/+1 + haste via `equipped_bonus`; real `GameAction::Equip` attach path (CR 702.6). |
 | Pithing Needle | 🟡 | {1} Artifact body-only stub. Name-a-card + ability suppression static omitted. |
-| Shuko | ⏳ | Equipment with free-equip. |
+| Shuko | ✅ | Equipment +1/+0, equip {0} via `equipped_bonus` + `GameAction::Equip`. |
 | Soul-Guide Lantern | ✅ | {1} Artifact. {T}: exile a card from each opponent's graveyard (approximation of "target opponent" — equivalent in 2-player). {2}, T, Sac: each player exiles their graveyard, draw 1. |
 | Agatha's Soul Cauldron | ⏳ | Borrow activated abilities of exiled creatures. |
 | Fellwar Stone | 🟡 | {T}: Add one mana of any color. (Approximation: drops the "matches opponent's lands" restriction — engine has no per-source mana provenance yet.) |
@@ -269,7 +269,7 @@ still ⏳.
 | Millstone | ✅ | {2}, {T}: target player mills 2. |
 | Mind Stone | ✅ | {T}: Add {C}. {1}, {T}, Sacrifice this: Draw a card. Both abilities wired (uses `ActivatedAbility::sac_cost`). |
 | Pentad Prism | 🟡 | {2} Artifact. ETB with 2 charge counters; remove a charge counter to add one mana of any color. Sunburst's "one counter per color of mana spent" collapses to a flat 2. Tests: `pentad_prism_etb_with_two_charge_counters`, `pentad_prism_removes_counter_to_add_one_mana_of_any_color`. |
-| Smuggler's Copter | ⏳ | Vehicle + crew + loot trigger. Needs Vehicle primitive. |
+| Smuggler's Copter | ✅ | Vehicle, Crew 1 (`Keyword::Crew` + `GameAction::Crew`), flying, attacks→may-loot. Block-half of the loot trigger omitted. |
 | Coalition Relic | 🟡 | {3} Artifact. `{T}: Add one mana of any color`. The charge-counter rider ("{T}: put a charge counter; remove three to add WUBRG") is omitted — no charge-to-mana-burst primitive yet. Tap-for-any-color half is fully functional. Test: `coalition_relic_taps_for_one_mana_of_any_color`. |
 | Monument to Endurance | ✅ | Graveyard-recursion artifact. |
 | Nettlecyst | ⏳ | Living-equipment + token. |
@@ -360,11 +360,11 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Celestial Colonnade | ⏳ | UW manland. |
+| Celestial Colonnade | ✅ | UW manland: enters tapped, taps {W}/{U}, {3}{W}{U} animate to 4/4 flying+vigilance Elemental (`Effect::BecomeCreature`). |
 | Meticulous Archive | ✅ | UW surveil land (catalog). |
 | Razortide Bridge | 🟡 | UW Bridge artifact-land. ETB tapped, typed as Plains + Island, `{T}: Add {C}`. Each bridge tracked in CUBE_FEATURES.md is its own factory; the helper `bridge_land()` reduces duplication. The "every basic land type" half is collapsed to the two relevant types (enough for fetchland + Nature's-Lore-style searches). Tests: `mistvault_bridge_etbs_tapped_with_dual_basic_typing`, `drossforge_bridge_taps_for_colorless`, `all_bridges_etb_tapped_and_carry_two_basic_land_types`. |
 | Seachrome Coast | ✅ | UW fastland (reuses fastland trigger). |
-| Creeping Tar Pit | ⏳ | UB manland. |
+| Creeping Tar Pit | ✅ | UB manland: enters tapped, taps {U}/{B}, {1}{U}{B} animate to 3/2 unblockable Elemental. |
 | Darkslick Shores | ✅ | UB fastland. |
 | Mistvault Bridge | 🟡 | UB Bridge — see Razortide Bridge row. |
 | Undercity Sewers | ✅ | UB surveil land (catalog). |
@@ -433,8 +433,8 @@ are listed in `DECK_FEATURES.md`.
 | Sacrifice-as-activation-cost (`ActivatedAbility::sac_cost`) | ✅ | Mind Stone, Aether Spellbomb, Cathar Commando, Haywire Mite — and any token-sac mana ability (Treasure, Food, Blood, Clue). |
 | Token activated abilities (`TokenDefinition::activated_abilities`) | ✅ | Treasure (`{T}, Sac: Add any color`), Food (`{2}, {T}, Sac: Gain 3 life`), Clue (`{2}, Sac: Draw 1`), Blood (loot). |
 | Trigger-filter enforcement (`EventSpec::filter` evaluated in `dispatch_triggers_for_events` + `fire_spell_cast_triggers`) | ✅ | Up the Beanstalk, Temur Ascendancy, and any future "whenever you cast a spell with property X" / "whenever a creature enters with property Y" trigger. |
-| Equipment + equip-cost activated ability | ⏳ | Lion Sash, Shuko, Lavaspur Boots, Nettlecyst, Sword of Body and Mind, Helm of the Host. |
-| Vehicles + Crew | ⏳ | Smuggler's Copter, Esika's Chariot, Shorikai, Pinnacle Emissary, Coveted Jewel-adjacent. |
+| Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Lion Sash (counter-scaled bonus), Nettlecyst, Sword of Body and Mind, Helm of the Host still need dynamic/triggered equip bonuses. |
+| Vehicles + Crew | ✅ | `Keyword::Crew(N)` + `GameAction::Crew` animate Vehicles (Smuggler's Copter, Esika's Chariot, Strixhaven Skycoach). Shorikai (walker-hybrid) still TBD. |
 | Madness | ⏳ | Anje's Ravager, Blazing Rootwalla, Basking Rootwalla. |
 | Cycling | ⏳ | Aether Spellbomb (cycle), Sundering Eruption-adjacent. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |

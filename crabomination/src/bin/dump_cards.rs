@@ -78,6 +78,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Rebound => "Rebound",
         Keyword::Exert => "Exert",
         Keyword::Dredge(_) => "Dredge",
+        Keyword::Crew(_) => "Crew",
         Keyword::Annihilator(_) => "Annihilator",
         Keyword::Ward(_) => "Ward",
         Keyword::Flashback(_) => "Flashback",

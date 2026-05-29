@@ -5,6 +5,66 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XL — modern_decks: Equipment + Vehicles + Manlands)
+
+Three new permanent mechanics + 21 card tests + 3 CR sections, plus
+engine/server/UI/bot improvements.
+
+- ✅ **Equipment attach mechanic (CR 702.6 / 301.5)** — `GameAction::Equip`
+  (sorcery-speed + your-creature gating + equip-cost payment) repoints
+  `attached_to`; `CardDefinition.equipped_bonus: Option<EquipBonus>`
+  flows +P/+T + keyword grants onto the equipped creature through the
+  layer system. **Cards**: Bonesplitter (+2/+0), Shuko (+1/+0, equip {0}),
+  Lavaspur Boots (+1/+1 haste); **Lightning Greaves** promoted from the
+  grant-on-activate approximation to a real equip granting haste+shroud.
+- ✅ **Vehicles & Crew (CR 702.122 / 301.7)** — `Keyword::Crew(N)` +
+  `GameAction::Crew` taps creatures (total power ≥ N) to animate the
+  Vehicle into an artifact creature until end of turn (layer-4
+  `AddCardType`). `base_power`/`base_toughness` honor Vehicles so the
+  crewed P/T survives layering; `declare_attackers` reads computed
+  creature-ness so crewed Vehicles attack. **Cards**: Esika's Chariot
+  (Crew 4), Smuggler's Copter (Crew 1, flying + attack-loot), Strixhaven
+  Skycoach (Crew 2, promoted from always-creature). New `VehicleCrewed`
+  event.
+- ✅ **Manlands via `Effect::BecomeCreature`** — a new composite animate
+  effect (AddCardType + creature subtypes + SetBasePT + keyword grants
+  for a duration). **Cards**: Celestial Colonnade (UW 4/4 flying+vig),
+  Creeping Tar Pit (UB 3/2 unblockable).
+- **Engine**: `Effect::BecomeCreature`; computed-creature-aware
+  `declare_attackers`; `base_power`/`base_toughness` Vehicle handling.
+- **Server**: `PermanentView.equippable` + `.crew_value` fields for
+  client action surfacing.
+- **Bot**: `pick_equip` — the bot moves Equipment onto its biggest
+  creature each main phase (dry-run gated).
+- **UI**: `E`-key equip flow (`TargetingState.pending_equip_source` →
+  click a creature → `GameAction::Equip`); `cancel_targeting` clears it.
+- **Coverage backfill (+13 card tests)**: Char, Thud, Thoughtseize,
+  Searing Blaze, Inquisition of Kozilek, Collective Defiance (×2),
+  Mystical Dispute, Plunge into Darkness, Coveted Jewel, The Mightstone
+  and Weakstone, Kozilek's Command, Eldrazi Confluence.
+- **CR lock-in tests**: 702.6 (Equip), 702.122 (Crew), 301.7 (Vehicle
+  not-a-creature-until-crewed), 509.1b (unblockable can't be blocked).
+
+### Follow-ups noticed this push (deliberately deferred)
+
+- **Equipment `equipped_bonus` is static-only** — Lion Sash ("+1/+1 for
+  each +1/+1 counter on it") needs a dynamic/count-scaled equip bonus,
+  and Sword of Body and Mind / Helm of the Host need an
+  equipped-creature *triggered* ability (combat-damage → token/mill,
+  attack → token-copy). Both want a "grant triggered ability to the
+  attached creature" primitive.
+- **Crew/Equip in the client** are keyboard-only and (for crew) not yet
+  surfaced; a proper context-menu entry keyed off `equippable` /
+  `crew_value` would round it out. The bot does not yet crew Vehicles
+  (it equips but won't tap creatures to crew) — a crew heuristic that
+  only fires with surplus attackers would help.
+- **`Effect::BecomeCreature` doesn't set colors** — manland color
+  identity (relevant to protection / "becomes a white-blue creature")
+  is approximated; add a layer-5 SetColors arm when a card needs it.
+- **Vehicles don't fire block triggers** — Smuggler's Copter's "attacks
+  or blocks" loot only fires on attack (no Vehicle DeclaredBlocker
+  event path yet).
+
 ## Recent additions (Push XXXIX — modern_decks: coverage backfill + ETB-counter fix + CR 706.2)
 
 This session focused on test-coverage backfill, two engine fixes
@@ -5232,20 +5292,27 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   card type, so colored artifacts like Treasure-with-color come
   through correctly; the typical colorless-artifact case is the
   default).
-  (e) **301.5/5a-f** Equipment subtype — 🟡 (the subtype is recognized
-  + `Keyword::Equip(cost)` is declared + `CardInstance.attached_to`
-  field exists, but the activation pipeline (CR 702.6) and the
-  equip-only-during-your-main-phase timing aren't fully wired. No
-  Equipment card in the current catalog actually uses the Equip
-  activation. Functional `attached_to` writes via Aura ETB target
-  selection are covered).
+  (e) **301.5/5a-f** Equipment subtype — ✅ (push claude/modern_decks:
+  the full equip activation pipeline is wired. `GameAction::Equip`
+  pays the `Keyword::Equip(cost)` mana cost, enforces sorcery-speed
+  timing (CR 702.6e) + the "creature you control" target restriction
+  (CR 702.6c), and repoints `attached_to`. `CardDefinition.equipped_bonus`
+  (EquipBonus) flows +P/+T and keyword grants onto the equipped creature
+  via the layer system. Cards: Bonesplitter, Shuko, Lavaspur Boots,
+  Lightning Greaves. Lock-in: `cr_702_6_equip_attaches_at_sorcery_speed
+  _to_your_creature`).
   (f) **301.6** Fortification — ⏳ (subtype declared, no Fortify
   primitive; no Fortification card in the catalog).
-  (g) **301.7/7a-b** Vehicle / Crew — ⏳ (subtype declared, no Crew
-  primitive; no Vehicle card in the catalog). Tests: ETB / ability
-  tests for STX/SOS artifacts implicitly exercise 301.1/.2/.4. The
-  Equip + Fortify + Crew paths can promote once at least one printed
-  card needing each lands.
+  (g) **301.7/7a-b** Vehicle / Crew — ✅ (push claude/modern_decks:
+  `Keyword::Crew(N)` + `GameAction::Crew` taps creatures whose total
+  power ≥ N to animate the Vehicle into an artifact creature until end
+  of turn (layer-4 AddCardType). `base_power`/`base_toughness` honor the
+  Vehicle's printed P/T (CR 301.7), and `declare_attackers` reads
+  computed creature-ness so crewed Vehicles can attack. Cards: Esika's
+  Chariot (Crew 4), Smuggler's Copter (Crew 1), Strixhaven Skycoach
+  (Crew 2, promoted from always-creature). Lock-in:
+  `cr_702_122_crew_requires_total_power_at_least_n`,
+  `cr_301_7_vehicle_is_not_a_creature_until_crewed`).
 
 - ✅ **CR 302 — Creatures** (push modern_decks batch 19,
   claude/modern_decks branch — audit against
@@ -9073,13 +9140,15 @@ resolution time" in the Suggested next-up tasks section.
   Curse, Liliana's Mastery's emblem-of-zombies, and various delirium-
   flavoured payoffs at a single primitive.
 
-- ⏳ **Equipment activation pipeline (CR 702.6)** — push (modern_decks
-  batch 27) audits CR 301.5/5a-f (Equipment). The Equip activated
-  ability is declared but not wired. Adding `ActivatedAbility.equip_to:
-  Option<SelectionRequirement>` (with the auto-target picker walking
-  controlled creatures) + `attached_to: Some(CardId)` write on
-  resolution would let the engine ship Bonesplitter / Skyclave Apparition-
-  style Equipment in any catalog.
+- ✅ **Equipment activation pipeline (CR 702.6)** — DONE (push
+  claude/modern_decks). `GameAction::Equip { equipment, target }` pays
+  the equip cost, enforces sorcery-speed + your-creature targeting, and
+  repoints `attached_to`; `CardDefinition.equipped_bonus` flows +P/+T +
+  keyword grants via the layer system. Bonesplitter, Shuko, Lavaspur
+  Boots, and the promoted Lightning Greaves ship on it. The bot equips
+  its biggest creature (`pick_equip`); the server view exposes
+  `equippable`; the client offers an `E`-key equip flow. Vehicles &
+  Crew (CR 702.122) landed in the same push.
 
 ### Suggested next-up tasks (additions from batch 28)
 
