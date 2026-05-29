@@ -38,13 +38,15 @@ fn manamorphose_adds_two_mana_and_draws_a_card() {
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::manamorphose());
-    g.players[0].mana_pool.add_colorless(2);
+    // {1}{R/G}: pay the hybrid pip with red.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
     let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Manamorphose castable for {2}");
+    .expect("Manamorphose castable for {1}{R}");
     drain_stack(&mut g);
 
     // Hand: -1 (cast) +1 (draw) → unchanged.
@@ -52,7 +54,23 @@ fn manamorphose_adds_two_mana_and_draws_a_card() {
     // Mana pool gained 2 mana of any colors. We don't constrain which colors
     // the bot picks; just that the total mana count went up by 2.
     let pool_total = g.players[0].mana_pool.total();
-    assert_eq!(pool_total, 2, "Manamorphose should add 2 mana after spending {{2}} on its own cost");
+    assert_eq!(pool_total, 2, "Manamorphose nets 2 mana after paying its own cost");
+}
+
+#[test]
+fn manamorphose_hybrid_pip_payable_with_green() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::manamorphose());
+    // Pay the {R/G} pip with green instead of red.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Manamorphose castable for {1}{G} via the hybrid pip");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 2);
 }
 
 #[test]
@@ -457,17 +475,35 @@ fn exhume_each_player_reanimates_a_creature() {
 fn burning_tree_emissary_etb_adds_red_and_green() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::burning_tree_emissary());
-    g.players[0].mana_pool.add_colorless(2);
+    // {R/G}{R/G}: pay one pip with red, one with green.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Burning-Tree Emissary castable for {2}");
+    .expect("Burning-Tree Emissary castable for {R}{G} via hybrid pips");
     drain_stack(&mut g);
 
     assert!(g.battlefield.iter().any(|c| c.id == id));
+    // ETB ramp: the {R}{G} produced makes the Emissary "free" (it refunds
+    // its own cost), so the pool nets back to {R}{G}.
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1);
     assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+#[test]
+fn burning_tree_emissary_castable_with_two_red() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::burning_tree_emissary());
+    // Both {R/G} pips payable with red.
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Burning-Tree Emissary castable for {R}{R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
 }
 
 #[test]
@@ -6041,8 +6077,8 @@ fn spectral_procession_creates_three_flying_spirits() {
     use crate::card::{CreatureType, Keyword};
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::spectral_procession());
-    g.players[0].mana_pool.add(Color::White, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    // Cheapest cast: pay each {2/W} pip with white → {W}{W}{W}.
+    g.players[0].mana_pool.add(Color::White, 3);
     let bf_count_before = g.battlefield
         .iter()
         .filter(|c| c.controller == 0)
@@ -6050,7 +6086,7 @@ fn spectral_procession_creates_three_flying_spirits() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Spectral Procession castable for {2}{W}");
+    }).expect("Spectral Procession castable for {W}{W}{W} via mono-hybrid pips");
     drain_stack(&mut g);
 
     let new_tokens: Vec<_> = g.battlefield
@@ -6072,6 +6108,24 @@ fn spectral_procession_creates_three_flying_spirits() {
         .count();
     assert_eq!(bf_count_after, bf_count_before + 3,
         "+3 permanents on caster's side of board");
+}
+
+#[test]
+fn spectral_procession_castable_with_six_generic() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spectral_procession());
+    // Pay every {2/W} pip with the generic side → {6}.
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Spectral Procession castable for {6} via the generic side");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter()
+        .filter(|c| c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Spirit))
+        .count();
+    assert_eq!(spirits, 3);
 }
 
 // ── Recursion ────────────────────────────────────────────────────────────────
@@ -12599,6 +12653,27 @@ fn tasigur_activated_ability_mills() {
 
     assert!(g.players[0].library.len() <= lib_before - 2,
         "should mill at least 2 cards");
+}
+
+#[test]
+fn tasigur_activated_ability_hybrid_pip_payable_with_blue() {
+    // {2}{G/U}: pay the hybrid pip with blue instead of green.
+    let mut g = two_player_game();
+    let tasigur = g.add_card_to_battlefield(0, catalog::tasigur_the_golden_fang());
+    g.clear_sickness(tasigur);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    let lib_before = g.players[0].library.len();
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tasigur, ability_index: 0, target: None, x_value: None,
+    }).expect("Tasigur ability activates for {2}{U} via the hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.players[0].library.len() <= lib_before - 2);
 }
 
 /// Stonecoil Serpent: 0/0 artifact creature with trample and reach.

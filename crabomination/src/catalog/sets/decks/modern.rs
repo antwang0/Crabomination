@@ -56,12 +56,12 @@ pub fn ponder() -> CardDefinition {
 /// Manamorphose — {1}{R/G} Instant. Add two mana in any combination of
 /// colors. Draw a card.
 ///
-/// Hybrid `{R/G}` is approximated as a generic `{2}` cost (the engine has
-/// no hybrid pip yet); the spell-level effect is unaffected.
+/// The `{R/G}` pip is a real `ManaSymbol::Hybrid(Red, Green)`, payable
+/// with either red or green.
 pub fn manamorphose() -> CardDefinition {
     CardDefinition {
         name: "Manamorphose",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[generic(1), crate::mana::hybrid(Color::Red, Color::Green)]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
@@ -515,12 +515,15 @@ pub fn entomb() -> CardDefinition {
 /// Burning-Tree Emissary — {R/G}{R/G} 2/2 Creature — Human Shaman. When
 /// Burning-Tree Emissary enters, add {R}{G}.
 ///
-/// Hybrid pips approximated as `{2}` (engine has no hybrid pip yet); the
-/// ETB ramp is unchanged.
+/// The `{R/G}{R/G}` pips are real `ManaSymbol::Hybrid(Red, Green)`, each
+/// payable with either red or green; the ETB ramp is unchanged.
 pub fn burning_tree_emissary() -> CardDefinition {
     CardDefinition {
         name: "Burning-Tree Emissary",
-        cost: cost(&[generic(2)]),
+        cost: cost(&[
+            crate::mana::hybrid(Color::Red, Color::Green),
+            crate::mana::hybrid(Color::Red, Color::Green),
+        ]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -4085,21 +4088,20 @@ pub fn banefire() -> CardDefinition {
 /// Spectral Procession — {2}{W} Sorcery. Create three 1/1 white Spirit
 /// creature tokens with flying.
 ///
-/// The Oracle text uses three white-or-2-life hybrid pips ({2/W}{2/W}{2/W})
-/// — collapsed to a flat {2}{W} (the most permissive of the actual costs).
-/// Three flying tokens for three mana is still strong but the alt-cost
-/// flexibility is gone.
+/// The Oracle cost is three monocolored-hybrid pips `{2/W}{2/W}{2/W}` —
+/// each payable with {2} generic or one white. Modeled with real
+/// `ManaSymbol::MonoHybrid(2, White)` pips (mana value 6 per CR 202.3f;
+/// castable for as little as {W}{W}{W}).
 pub fn spectral_procession() -> CardDefinition {
     use crate::card::TokenDefinition;
+    use crate::mana::mono_hybrid;
     CardDefinition {
         name: "Spectral Procession",
-        // Real Oracle: `{(2/W)}{(2/W)}{(2/W)}`. Hybrid pips collapse to
-        // `{2}{W}` (most permissive — matches DECK_FEATURES.md and the
-        // engine's existing "collapse hybrid to single-color" convention
-        // for the {2/X} pips). Pre-fix this was `{3}{W}{W}{W}` (i.e. all
-        // three hybrid pips paid the white side), which made the spell
-        // ~4 mana over budget.
-        cost: cost(&[generic(2), w()]),
+        cost: cost(&[
+            mono_hybrid(2, Color::White),
+            mono_hybrid(2, Color::White),
+            mono_hybrid(2, Color::White),
+        ]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -10779,9 +10781,8 @@ pub fn the_mightstone_and_weakstone() -> CardDefinition {
 /// Activated: {2}{G/U}: Mill 2, then return a nonland card from your
 /// graveyard to your hand.
 ///
-/// The hybrid {G/U} in the activated cost is collapsed to {G} (the
-/// engine has no hybrid mana resolver; {G} is the more
-/// common Sultai activation in practice).
+/// The {G/U} pip in the activated cost is a real
+/// `ManaSymbol::Hybrid(Green, Blue)`, payable with either green or blue.
 pub fn tasigur_the_golden_fang() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -10797,7 +10798,7 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
         toughness: 5,
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
-            mana_cost: cost(&[generic(2), g()]),
+            mana_cost: cost(&[generic(2), crate::mana::hybrid(Color::Green, Color::Blue)]),
             effect: Effect::Seq(vec![
                 Effect::Mill { who: Selector::You, amount: Value::Const(2) },
                 Effect::Move {

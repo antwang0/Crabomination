@@ -830,6 +830,7 @@ fn color_sort_key(def: &crabomination::card::CardDefinition) -> (u8, u8, u32, St
     for sym in &def.cost.symbols {
         match sym {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => colors[color_idx(*c)] = true,
+            ManaSymbol::MonoHybrid(_, c) => colors[color_idx(*c)] = true,
             ManaSymbol::Hybrid(a, b) => {
                 colors[color_idx(*a)] = true;
                 colors[color_idx(*b)] = true;
@@ -1252,6 +1253,9 @@ fn compute_pick_stats(picks: &[CardFactory]) -> PickStats {
         for sym in &def.cost.symbols {
             match sym {
                 ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => {
+                    s.colors[color_idx(*c)] += 1;
+                }
+                ManaSymbol::MonoHybrid(_, c) => {
                     s.colors[color_idx(*c)] += 1;
                 }
                 ManaSymbol::Hybrid(a, b) => {
