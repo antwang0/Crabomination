@@ -1,4 +1,5 @@
 pub mod animate;
+pub mod camera_zoom;
 pub mod counter_coins;
 pub mod counter_tooltip;
 pub mod debug_console;
@@ -10,5 +11,6 @@ pub mod game_ui;
 pub mod gizmos;
 pub mod kb_cursor;
 pub mod legal_target_filter;
+pub mod pt_label;
 pub mod quality;
 pub mod ui;

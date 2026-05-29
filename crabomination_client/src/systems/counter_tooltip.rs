@@ -617,5 +617,6 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Page => "Page",
         CounterType::Growth => "Growth",
         CounterType::Prepared => "Prepared",
+        CounterType::Finality => "Finality",
     }
 }

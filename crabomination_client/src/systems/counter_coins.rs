@@ -25,6 +25,10 @@ use crate::net_plugin::CurrentView;
 #[derive(Resource)]
 pub struct CounterCoinAssets {
     pub coin_mesh: Handle<Mesh>,
+    /// Slightly larger, flatter cylinder spawned just behind each coin
+    /// to draw a bright rim ("outline") around it for contrast.
+    pub outline_mesh: Handle<Mesh>,
+    pub outline_material: Handle<StandardMaterial>,
     pub plus_one_plus_one: Handle<StandardMaterial>,
     pub minus_one_minus_one: Handle<StandardMaterial>,
     pub loyalty: Handle<StandardMaterial>,
@@ -52,11 +56,23 @@ pub struct CounterCoin {
 /// battlefield via `rotation_x(-π/2)` the +Z direction becomes world +Y
 /// (above the table), so a coin sitting at local +Z naturally floats
 /// above the card.
-const COIN_RADIUS: f32 = 0.18;
-const COIN_HEIGHT: f32 = 0.05;
-const COIN_GAP_X: f32 = 0.08;
-const COIN_GAP_Y: f32 = 0.03;
-const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.01; // just above the front face
+const COIN_RADIUS: f32 = 0.24;
+const COIN_HEIGHT: f32 = 0.07;
+const COIN_GAP_X: f32 = 0.10;
+const COIN_GAP_Y: f32 = 0.04;
+const COIN_BASE_Z: f32 = CARD_THICKNESS / 2.0 + 0.05; // floats clearly above the front face
+/// Outline ring: a touch wider than the coin and a touch shorter, so it
+/// protrudes radially (a visible rim) without poking in front of the
+/// coin's face (which would z-fight).
+const OUTLINE_RADIUS: f32 = COIN_RADIUS + 0.055;
+const OUTLINE_HEIGHT: f32 = COIN_HEIGHT * 0.7;
+/// Vertical spacing between stacked coins of the *same* type. The coins
+/// face the camera (their circular face lies in the card plane), so the
+/// stack must step by roughly a coin *diameter* — stepping by the coin's
+/// thickness (`COIN_HEIGHT`) made a 3-counter "tower" pile almost
+/// entirely on top of itself. A hair under a full diameter leaves a
+/// small rim of each lower coin visible so the stack is countable.
+const COIN_STACK_STEP: f32 = COIN_RADIUS * 1.7 + COIN_GAP_Y;
 
 pub fn init_counter_coin_assets(
     commands: &mut Commands,
@@ -64,29 +80,49 @@ pub fn init_counter_coin_assets(
     materials: &mut ResMut<Assets<StandardMaterial>>,
 ) {
     let coin_mesh = meshes.add(Cylinder::new(COIN_RADIUS, COIN_HEIGHT));
+    let outline_mesh = meshes.add(Cylinder::new(OUTLINE_RADIUS, OUTLINE_HEIGHT));
 
+    // Bright near-white rim so every coin's edge stands out crisply
+    // regardless of the card art behind it. Built before the `mat`
+    // closure below, which mutably borrows `materials` for its lifetime.
+    let outline_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.96, 0.96, 0.98),
+        perceptual_roughness: 0.5,
+        metallic: 0.0,
+        emissive: LinearRgba::new(0.30, 0.30, 0.34, 1.0),
+        ..default()
+    });
+
+    // Deep, saturated coin fills — darker than before so they read as
+    // solid chips rather than washing out against bright card art. A
+    // faint self-coloured emissive keeps them from going flat-black in
+    // shadow; the bright outline ring (below) supplies the real contrast.
     let mut mat = |color: Color, metallic: f32| -> Handle<StandardMaterial> {
+        let lin = color.to_linear();
         materials.add(StandardMaterial {
             base_color: color,
-            perceptual_roughness: 0.45,
+            perceptual_roughness: 0.40,
             metallic,
+            emissive: LinearRgba::new(lin.red * 0.12, lin.green * 0.12, lin.blue * 0.12, 1.0),
             ..default()
         })
     };
 
     commands.insert_resource(CounterCoinAssets {
         coin_mesh,
-        // +1/+1 → bright green; −1/−1 → muted red.
-        plus_one_plus_one: mat(Color::srgb(0.24, 0.78, 0.32), 0.30),
-        minus_one_minus_one: mat(Color::srgb(0.74, 0.22, 0.22), 0.30),
-        // Loyalty → polished gold (high metallic for a coin look).
-        loyalty: mat(Color::srgb(0.98, 0.82, 0.20), 0.85),
-        charge: mat(Color::srgb(0.30, 0.80, 0.92), 0.45),
-        stun: mat(Color::srgb(0.74, 0.36, 0.92), 0.30),
-        time: mat(Color::srgb(0.94, 0.62, 0.22), 0.40),
-        poison: mat(Color::srgb(0.32, 0.55, 0.18), 0.10),
-        energy: mat(Color::srgb(0.30, 0.55, 0.95), 0.55),
-        generic: mat(Color::srgb(0.70, 0.70, 0.78), 0.30),
+        outline_mesh,
+        outline_material,
+        // +1/+1 → deep green; −1/−1 → deep red.
+        plus_one_plus_one: mat(Color::srgb(0.10, 0.45, 0.16), 0.30),
+        minus_one_minus_one: mat(Color::srgb(0.50, 0.08, 0.08), 0.30),
+        // Loyalty → dark gold (high metallic for a coin look).
+        loyalty: mat(Color::srgb(0.62, 0.48, 0.06), 0.85),
+        charge: mat(Color::srgb(0.10, 0.48, 0.60), 0.45),
+        stun: mat(Color::srgb(0.44, 0.16, 0.60), 0.30),
+        time: mat(Color::srgb(0.62, 0.36, 0.08), 0.40),
+        poison: mat(Color::srgb(0.16, 0.34, 0.08), 0.10),
+        energy: mat(Color::srgb(0.12, 0.30, 0.66), 0.55),
+        generic: mat(Color::srgb(0.34, 0.34, 0.42), 0.30),
     });
 }
 
@@ -210,18 +246,32 @@ pub fn sync_counter_coins(
                 // later for "stack-of-N" cases.
                 let n = (*count).min(8);
                 for i in 0..n {
-                    let y = (COIN_HEIGHT + COIN_GAP_Y) * i as f32;
-                    p_builder.spawn((
-                        Mesh3d(assets.coin_mesh.clone()),
-                        MeshMaterial3d(material_for(*kind, &assets)),
-                        // Local space: card's surface lies in XY, +Z is
-                        // out of the front face. After the parent's
-                        // rotation_x(-π/2) the coins float above the
-                        // card on the table.
-                        Transform::from_xyz(x, y, COIN_BASE_Z)
-                            .with_rotation(Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
-                        CounterCoin { card_id: p.id, kind: *kind },
-                    ));
+                    let y = COIN_STACK_STEP * i as f32;
+                    let coin_rot = Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
+                    p_builder
+                        .spawn((
+                            Mesh3d(assets.coin_mesh.clone()),
+                            MeshMaterial3d(material_for(*kind, &assets)),
+                            // Local space: card's surface lies in XY, +Z
+                            // is out of the front face. After the
+                            // parent's rotation_x(-π/2) the coins float
+                            // above the card on the table.
+                            Transform::from_xyz(x, y, COIN_BASE_Z).with_rotation(coin_rot),
+                            CounterCoin { card_id: p.id, kind: *kind },
+                        ))
+                        .with_children(|coin| {
+                            // Outline rim as a child of the coin (so it
+                            // shares the coin's despawn + isn't counted
+                            // in the rebuild signature). Local -Y maps to
+                            // world −Z under the coin's rotation_x(90°),
+                            // tucking the rim just behind the coin face.
+                            coin.spawn((
+                                Mesh3d(assets.outline_mesh.clone()),
+                                MeshMaterial3d(assets.outline_material.clone()),
+                                Transform::from_xyz(0.0, -0.012, 0.0),
+                                Pickable::IGNORE,
+                            ));
+                        });
                 }
             }
         });

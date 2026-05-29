@@ -428,6 +428,18 @@ fn main() {
             crate::systems::counter_tooltip::update_alt_tooltip
                 .run_if(in_state(AppState::InGame)),
         )
+        // Floating P/T badge over creatures whose stats differ from base.
+        .add_systems(
+            Update,
+            crate::systems::pt_label::sync_pt_labels
+                .run_if(in_state(AppState::InGame)),
+        )
+        // Hold-Ctrl camera zoom onto the cursor / highlighted card.
+        .add_systems(
+            Update,
+            crate::systems::camera_zoom::camera_zoom
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(
             Update,
             draw_pt_modified_overlays.run_if(in_state(AppState::InGame)),
@@ -466,6 +478,7 @@ fn main() {
         )
         .init_resource::<systems::game_over::AutoRematchState>()
         .init_resource::<systems::game_over::ActiveMatchKind>()
+        .init_resource::<systems::camera_zoom::CameraZoom>()
         .add_systems(
             Update,
             (
