@@ -134,21 +134,15 @@ impl GameState {
                     self.skip_first_draw = false;
                 } else {
                     let p = self.active_player_idx;
-                    match self.players[p].draw_top() {
-                        Some(id) => events.push(GameEvent::CardDrawn {
-                            player: p,
-                            card_id: id,
-                        }),
-                        None => {
-                            // Drawing from an empty library eliminates `p`.
-                            // Game-over check happens inside SBA and may end
-                            // the game if only one player remains.
-                            self.players[p].eliminated = true;
-                            let mut sba = self.check_state_based_actions();
-                            events.append(&mut sba);
-                            if self.is_game_over() {
-                                return Ok(events);
-                            }
+                    if !self.draw_one(p, &mut events) {
+                        // Drawing from an empty library eliminates `p`.
+                        // Game-over check happens inside SBA and may end
+                        // the game if only one player remains.
+                        self.players[p].eliminated = true;
+                        let mut sba = self.check_state_based_actions();
+                        events.append(&mut sba);
+                        if self.is_game_over() {
+                            return Ok(events);
                         }
                     }
                 }

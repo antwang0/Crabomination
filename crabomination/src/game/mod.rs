@@ -1800,14 +1800,84 @@ impl GameState {
                 card_id,
             });
         }
-        // Draw a card.
-        if let Some(drawn) = self.players[seat].draw_top() {
-            events.push(GameEvent::CardDrawn {
-                player: seat,
-                card_id: drawn,
-            });
-        }
+        // Draw a card (Dredge can replace this draw, CR 702.52).
+        self.draw_one(seat, &mut events);
         Ok(events)
+    }
+
+    /// Draw one card for `p`, first offering the Dredge replacement
+    /// (CR 702.52). Returns `false` only when the draw couldn't be
+    /// satisfied (empty library) and no dredge replacement applied — the
+    /// caller is responsible for the resulting loss SBA. Pushes
+    /// `CardDrawn` for a normal draw, or `CardMilled` ×N +
+    /// `CardLeftGraveyard` for a dredge.
+    pub(crate) fn draw_one(&mut self, p: usize, events: &mut Vec<GameEvent>) -> bool {
+        if self.try_dredge_instead_of_draw(p, events) {
+            return true;
+        }
+        match self.players[p].draw_top() {
+            Some(id) => {
+                events.push(GameEvent::CardDrawn { player: p, card_id: id });
+                true
+            }
+            None => false,
+        }
+    }
+
+    /// CR 702.52 — Dredge. If `p` has a card with `Keyword::Dredge(n)` in
+    /// their graveyard and at least `n` cards in their library, the player
+    /// may replace a draw by milling `n` cards and returning the dredge
+    /// card to hand instead. Returns `true` when a dredge replacement was
+    /// applied (caller skips the normal draw). The decision is surfaced as
+    /// an `OptionalTrigger`, so the `AutoDecider` declines by default and
+    /// ordinary games keep drawing normally.
+    fn try_dredge_instead_of_draw(
+        &mut self,
+        p: usize,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        use crate::card::Keyword;
+        use crate::decision::{Decision, DecisionAnswer};
+        // First dredge card in the graveyard whose count the library can
+        // satisfy (CR 702.52a — you can't dredge with fewer than N cards).
+        let cand = self.players[p].graveyard.iter().find_map(|c| {
+            c.definition.keywords.iter().find_map(|kw| match kw {
+                Keyword::Dredge(n) if self.players[p].library.len() >= *n as usize => {
+                    Some((c.id, *n))
+                }
+                _ => None,
+            })
+        });
+        let Some((card_id, n)) = cand else { return false; };
+        let answer = self.decider.decide(&Decision::OptionalTrigger {
+            source: card_id,
+            description: format!(
+                "Dredge {n}: mill {n} card(s) and return this card to your hand instead of drawing?"
+            ),
+        });
+        if !matches!(answer, DecisionAnswer::Bool(true)) {
+            return false;
+        }
+        // Mill N from the top of the library.
+        for _ in 0..n {
+            if self.players[p].library.is_empty() {
+                break;
+            }
+            let card = self.players[p].library.remove(0);
+            let cid = card.id;
+            self.players[p].graveyard.push(card);
+            events.push(GameEvent::CardMilled { player: p, card_id: cid });
+        }
+        // Return the dredge card from the graveyard to its owner's hand.
+        if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == card_id) {
+            let card = self.players[p].graveyard.remove(pos);
+            self.players[p].hand.push(card);
+            self.players[p].cards_left_graveyard_this_turn = self.players[p]
+                .cards_left_graveyard_this_turn
+                .saturating_add(1);
+            events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
+        }
+        true
     }
 
     /// CR 702.6 — Activate an Equipment's equip ability, attaching it to a

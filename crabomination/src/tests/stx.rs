@@ -14493,6 +14493,35 @@ fn conspiracy_theorist_attack_with_discard_exiles_top_and_grants_may_play() {
         "exiled card should have may_play permission");
 }
 
+/// Regression: `ExileTopAndGrantMayPlay` must exile the *top* of the
+/// library (index 0), not the bottom. With two distinct cards stacked —
+/// Lightning Bolt on top, Island on the bottom — Conspiracy Theorist's
+/// exile-top should grab the Bolt and leave the Island in the library.
+#[test]
+fn exile_top_and_grant_may_play_takes_the_top_card_not_the_bottom() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ct = g.add_card_to_battlefield(0, catalog::conspiracy_theorist());
+    g.clear_sickness(ct);
+    let _hand_discard = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // First-added card sits at index 0 (the top); second is bottomed.
+    let top_bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bottom_island = g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker: ct,
+        target: crate::game::types::AttackTarget::Player(1),
+    }])).expect("Conspiracy Theorist attacks");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == top_bolt),
+        "the top card (Bolt) should be exiled");
+    assert!(g.players[0].library.iter().any(|c| c.id == bottom_island),
+        "the bottom card (Island) should remain in the library");
+    assert!(!g.exile.iter().any(|c| c.id == bottom_island),
+        "the bottom card must not be the one exiled");
+}
+
 #[test]
 fn prismari_bauble_etb_scrys_and_can_sac_for_draw() {
     let mut g = two_player_game();

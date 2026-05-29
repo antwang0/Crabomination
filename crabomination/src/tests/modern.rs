@@ -12348,23 +12348,26 @@ fn courser_of_kruphix_gains_life_on_landfall() {
 }
 
 #[test]
-fn bloodbraid_elf_has_haste_and_etb_draws() {
+fn bloodbraid_elf_has_haste_and_cascades() {
+    // Bloodbraid Elf is now a real cascade card (CR 702.85): declining
+    // the cascade (AutoDecider default) just resolves the Elf with haste.
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::island());
     let id = g.add_card_to_hand(0, catalog::bloodbraid_elf());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(2);
-    let hand_before = g.players[0].hand.len();
 
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Bloodbraid Elf castable");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].hand.len(), hand_before, "cast(-1) + draw(+1) = net 0");
     let bbe = g.battlefield.iter().find(|c| c.definition.name == "Bloodbraid Elf").unwrap();
     assert!(bbe.definition.keywords.contains(&crate::card::Keyword::Haste));
+    assert!(bbe.definition.triggered_abilities.iter().any(|t|
+        matches!(t.effect, crate::effect::Effect::Cascade { .. })),
+        "Bloodbraid Elf carries a cascade trigger");
 }
 
 #[test]
@@ -14723,4 +14726,240 @@ fn eldrazi_confluence_mode1_makes_a_scion() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Scion"),
         "mode 1 mints an Eldrazi Scion");
+}
+
+// ── Cascade (CR 702.85) ─────────────────────────────────────────────────────
+
+/// Bloodbraid Elf's cascade walks the top of the library, exiles a nonland
+/// card with MV < 4 (Grizzly Bears, MV 2), and — when the controller opts
+/// in — casts it for free. The cascaded creature ends up on the battlefield
+/// alongside the Elf.
+#[test]
+fn bloodbraid_elf_cascade_casts_lower_mv_card() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Top of library: Grizzly Bears (MV 2 nonland) → cascade hits it.
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: elf, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bloodbraid Elf castable for {2}{R}{G}");
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "Cascade should cast Grizzly Bears for free onto the battlefield");
+    assert!(g.battlefield.iter().any(|c| c.id == elf),
+        "Bloodbraid Elf itself resolves onto the battlefield");
+    assert!(!g.players[0].library.iter().any(|c| c.id == bears),
+        "The cascaded card leaves the library");
+}
+
+/// Cascade skips lands during the exile walk. With a Forest on top and a
+/// Grizzly Bears beneath it, the Forest is exiled-and-bottomed (it can't be
+/// the cascade hit), and the Bears is the nonland card that gets cast.
+#[test]
+fn cascade_skips_lands_during_the_walk() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    // Top of library: Forest (land, skipped), then Grizzly Bears (the hit).
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    cast(&mut g, elf);
+
+    assert!(g.battlefield.iter().any(|c| c.id == bears),
+        "Cascade casts the first nonland card (Grizzly Bears)");
+    // The exiled-but-not-cast Forest goes to the bottom of the library.
+    assert!(g.players[0].library.iter().any(|c| c.id == forest),
+        "Skipped land is bottomed, not exiled permanently");
+    assert!(!g.exile.iter().any(|c| c.id == forest),
+        "Nothing from this cascade is left stranded in exile");
+}
+
+/// Declining the cascade cast (the default AutoDecider answer) bottoms the
+/// revealed card instead of casting it.
+#[test]
+fn cascade_declined_bottoms_the_card() {
+    let mut g = two_player_game();
+    // No ScriptedDecider → AutoDecider declines the optional free cast.
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+
+    let elf = g.add_card_to_hand(0, catalog::bloodbraid_elf());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+
+    cast(&mut g, elf);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bears),
+        "Declined cascade does not cast the card");
+    assert!(g.players[0].library.iter().any(|c| c.id == bears),
+        "Declined cascade bottoms the revealed card back into the library");
+    assert!(!g.exile.iter().any(|c| c.id == bears),
+        "The revealed card is not stranded in exile");
+}
+
+/// Apex Devastator cascades four times. With four MV-2 creatures stacked on
+/// top of the library and a decider that opts into every free cast, all
+/// four are cast onto the battlefield alongside the 10/10 Kavu.
+#[test]
+fn apex_devastator_cascades_four_times() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let mut bears = Vec::new();
+    for _ in 0..4 {
+        bears.push(g.add_card_to_library(0, catalog::grizzly_bears()));
+    }
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+        DecisionAnswer::Bool(true),
+    ]));
+
+    let apex = g.add_card_to_hand(0, catalog::apex_devastator());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(8);
+
+    cast(&mut g, apex);
+
+    let cast_bears = bears
+        .iter()
+        .filter(|&&b| g.battlefield.iter().any(|c| c.id == b))
+        .count();
+    assert_eq!(cast_bears, 4, "all four cascades cast a creature for free");
+    assert!(g.battlefield.iter().any(|c| c.id == apex),
+        "Apex Devastator itself resolves onto the battlefield");
+}
+
+// ── Dredge (CR 702.52) ──────────────────────────────────────────────────────
+
+/// Dredge replaces a draw: with Golgari Thug (Dredge 4) in the graveyard
+/// and at least four cards in the library, opting in mills four cards and
+/// returns the Thug to hand instead of drawing.
+#[test]
+fn dredge_replaces_draw_by_milling_and_returning() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let thug = g_dredge_fixture_thug(5);
+    let mut g = thug.0;
+    let thug_id = thug.1;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+
+    let lib_before = g.players[0].library.len();
+    let mut events = Vec::new();
+    let ok = g.draw_one(0, &mut events);
+
+    assert!(ok, "draw_one succeeds via dredge");
+    assert!(g.players[0].hand.iter().any(|c| c.id == thug_id),
+        "Golgari Thug returns to hand via dredge");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == thug_id),
+        "the dredge card leaves the graveyard");
+    assert_eq!(g.players[0].library.len(), lib_before - 4,
+        "Dredge 4 mills exactly four cards from the library");
+    let milled = events.iter().filter(|e| matches!(e, GameEvent::CardMilled { .. })).count();
+    assert_eq!(milled, 4, "four CardMilled events emitted");
+}
+
+/// Declining the dredge (AutoDecider's default) draws normally — the dredge
+/// card stays in the graveyard and the top of the library goes to hand.
+#[test]
+fn dredge_declined_draws_normally() {
+    let thug = g_dredge_fixture_thug(5);
+    let mut g = thug.0;
+    let thug_id = thug.1;
+    // No ScriptedDecider → AutoDecider declines the dredge.
+    let lib_before = g.players[0].library.len();
+    let hand_before = g.players[0].hand.len();
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == thug_id),
+        "declined dredge keeps the card in the graveyard");
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "a normal single draw happened");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "exactly one card drawn");
+}
+
+/// Dredge is unavailable when the library has fewer than N cards
+/// (CR 702.52a) — the player must draw normally and is never prompted.
+#[test]
+fn dredge_unavailable_when_library_too_small() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // Only three library cards but Dredge 4 — cannot dredge.
+    let thug = g_dredge_fixture_thug(3);
+    let mut g = thug.0;
+    let thug_id = thug.1;
+    // A Bool(true) is queued but must NOT be consumed (no prompt fires).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == thug_id),
+        "Thug stays in graveyard — dredge wasn't legal");
+    assert_eq!(g.players[0].library.len(), 2, "a normal draw consumed one of the three cards");
+}
+
+/// Helper: a two-player game with `lib` Forests in P0's library and a
+/// Golgari Thug in P0's graveyard. Returns the game and the Thug's id.
+fn g_dredge_fixture_thug(lib: usize) -> (crate::game::GameState, crate::card::CardId) {
+    let mut g = two_player_game();
+    for _ in 0..lib {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let thug_id = g.add_card_to_graveyard(0, catalog::golgari_thug());
+    (g, thug_id)
+}
+
+/// Life from the Loam returns up to three land cards from the graveyard to
+/// hand on resolution.
+#[test]
+fn life_from_the_loam_returns_lands_from_graveyard() {
+    let mut g = two_player_game();
+    let l1 = g.add_card_to_graveyard(0, catalog::forest());
+    let l2 = g.add_card_to_graveyard(0, catalog::mountain());
+    let l3 = g.add_card_to_graveyard(0, catalog::island());
+    let loam = g.add_card_to_hand(0, catalog::life_from_the_loam());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, loam);
+    for id in [l1, l2, l3] {
+        assert!(g.players[0].hand.iter().any(|c| c.id == id),
+            "each land card returns to hand");
+    }
+}
+
+/// Golgari Thug's death trigger puts a creature card from the graveyard on
+/// top of the library (the classic dredge-deck recursion line).
+#[test]
+fn golgari_thug_death_puts_creature_on_top_of_library() {
+    let mut g = two_player_game();
+    // A creature card waiting in the graveyard to be recurred.
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let thug = g.add_card_to_battlefield(0, catalog::golgari_thug());
+    // Bolt the 1/1 Thug to trigger its dies ability.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(thug)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Bolt the Thug");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == thug), "Thug died to the Bolt");
+    assert!(g.players[0].library.iter().any(|c| c.id == bears),
+        "the recurred creature ends up in the library after the Thug dies");
 }

@@ -9712,11 +9712,14 @@ pub fn lonis_genetics_expert() -> CardDefinition {
     }
 }
 
-/// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade (collapsed).
+/// Bloodbraid Elf — {2}{R}{G} Creature 3/2. Haste. Cascade.
 ///
-/// Approximation: Haste body with ETB that exiles the top card and draws
-/// it (cascade approximation: draw 1 as a rough proxy).
+/// Cascade (CR 702.85) is now a first-class engine mechanic: the
+/// `shortcut::cascade(mv)` trigger fires on cast, exiles from the top of
+/// the library until a nonland card with MV < 4 is exiled, lets the
+/// controller cast it for free, and bottoms the rest.
 pub fn bloodbraid_elf() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
     CardDefinition {
         name: "Bloodbraid Elf",
         cost: cost(&[generic(2), r(), g()]),
@@ -9728,9 +9731,101 @@ pub fn bloodbraid_elf() -> CardDefinition {
         power: 3,
         toughness: 2,
         keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![cascade(4)],
+        ..Default::default()
+    }
+}
+
+/// Apex Devastator — {8}{G}{G} Creature — Kavu. 10/10, Trample.
+/// "Cascade, cascade, cascade, cascade" (CR 702.85 — four independent
+/// cascade triggers on cast).
+///
+/// Showcases the cascade mechanic chaining: each of the four
+/// `shortcut::cascade(10)` triggers walks the top of the library
+/// independently when the spell is cast (MV gate 10 = {8}{G}{G}).
+pub fn apex_devastator() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Apex Devastator",
+        cost: cost(&[generic(8), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kavu],
+            ..Default::default()
+        },
+        power: 10,
+        toughness: 10,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![cascade(10), cascade(10), cascade(10), cascade(10)],
+        ..Default::default()
+    }
+}
+
+/// Life from the Loam — {1}{B}{G} Sorcery. "Return up to three target land
+/// cards from your graveyard to your hand. Dredge 3." (CR 702.52)
+///
+/// The "up to three target land cards" pick is approximated as a
+/// deterministic `Selector::Take { CardsInZone(gy, Land), 3 }` (the engine
+/// auto-pulls up to three land cards from your graveyard). Dredge 3 is now
+/// a first-class engine mechanic via `Keyword::Dredge(3)` + the
+/// `draw_one` replacement.
+pub fn life_from_the_loam() -> CardDefinition {
+    CardDefinition {
+        name: "Life from the Loam",
+        cost: cost(&[generic(1), b(), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Dredge(3)],
+        effect: Effect::Move {
+            what: Selector::Take {
+                inner: Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Land,
+                }),
+                count: Box::new(Value::Const(3)),
+            },
+            to: ZoneDest::Hand(PlayerRef::You),
+        },
+        ..Default::default()
+    }
+}
+
+/// Golgari Thug — {1}{B} Creature — Human Mercenary. 1/1. Dredge 4.
+/// "When this creature dies, put target creature card from your graveyard
+/// on top of your library."
+///
+/// The death recursion is wired as a `CreatureDied/SelfSource` trigger that
+/// moves a creature card from your graveyard to the top of your library
+/// (`Selector::Take { CardsInZone(gy, Creature), 1 }` — deterministic pull,
+/// the "target" choice collapsed). Dredge 4 via `Keyword::Dredge(4)`.
+pub fn golgari_thug() -> CardDefinition {
+    CardDefinition {
+        name: "Golgari Thug",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Dredge(4)],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: Selector::Take {
+                    inner: Box::new(Selector::CardsInZone {
+                        who: PlayerRef::You,
+                        zone: crate::card::Zone::Graveyard,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                    count: Box::new(Value::Const(1)),
+                },
+                to: ZoneDest::Library {
+                    who: PlayerRef::You,
+                    pos: crate::effect::LibraryPosition::Top,
+                },
+            },
         }],
         ..Default::default()
     }

@@ -818,6 +818,9 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks-16 ──
         v.push(putrefy);
         v.push(pernicious_deed);
+        // ── modern_decks (dredge): Golgari graveyard engine ──
+        v.push(golgari_thug);
+        v.push(life_from_the_loam);
         // ── SOS Witherbloom (B/G) ──
         v.push(witherbloom_charm);
         v.push(bogwater_lumaret);
@@ -1041,6 +1044,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grizzly_bears,
         elvish_archers,
         craw_wurm,
+        // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
+        apex_devastator,
         birds_of_paradise,
         sylvan_caryatid,
         summoners_pact,

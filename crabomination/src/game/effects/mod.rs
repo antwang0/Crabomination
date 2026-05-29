@@ -666,15 +666,15 @@ impl GameState {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {
                         for _ in 0..n {
-                            match self.players[p].draw_top() {
-                                Some(id) => events.push(GameEvent::CardDrawn { player: p, card_id: id }),
-                                None => {
-                                    // Drawing from empty library eliminates p
-                                    // (SBA at the end of the call decides
-                                    // game-over).
-                                    self.players[p].eliminated = true;
-                                    return Ok(());
-                                }
+                            // `draw_one` applies the Dredge replacement
+                            // (CR 702.52) before falling back to a normal
+                            // draw; AutoDecider declines dredge by default.
+                            if !self.draw_one(p, events) {
+                                // Drawing from empty library eliminates p
+                                // (SBA at the end of the call decides
+                                // game-over).
+                                self.players[p].eliminated = true;
+                                return Ok(());
                             }
                         }
                     }
@@ -2804,8 +2804,11 @@ impl GameState {
             Effect::ExileTopAndGrantMayPlay { who, duration } => {
                 // Atomic helper: move the top card of `who`'s library to
                 // exile and stamp `may_play_until` on it in one step.
+                // The top of the library is index 0 (see `Player::draw_top`
+                // and `Selector::TopOfLibrary`), so this reads `.first()`,
+                // not `.last()` (which is the bottom card).
                 let p = self.resolve_player(who, ctx).unwrap_or(ctx.controller);
-                let top_id = self.players[p].library.last().map(|c| c.id);
+                let top_id = self.players[p].library.first().map(|c| c.id);
                 let Some(top_id) = top_id else { return Ok(()); };
                 let mut local_events = Vec::new();
                 self.move_card_to(top_id, &crate::effect::ZoneDest::Exile, ctx, &mut local_events);
@@ -2856,6 +2859,80 @@ impl GameState {
                             duration: *duration,
                             exile_after: *exile_after,
                         });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::Cascade { max_mv } => {
+                // CR 702.85: exile cards from the top of the controller's
+                // library until a nonland card with MV < max_mv is exiled;
+                // the controller may cast it for free; the rest go to the
+                // bottom of the library.
+                use crate::card::{CardType, Zone};
+                use crate::effect::{LibraryPosition, ZoneDest};
+                let p = ctx.controller;
+                let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+                let mut exiled: Vec<crate::card::CardId> = Vec::new();
+                let mut hit: Option<crate::card::CardId> = None;
+                while !self.players[p].library.is_empty() {
+                    // Inspect the top card (index 0) before moving it.
+                    let top = &self.players[p].library[0];
+                    let cid = top.id;
+                    let is_land = top.definition.card_types.contains(&CardType::Land);
+                    let mv = top.definition.cost.cmc();
+                    self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                    exiled.push(cid);
+                    if !is_land && mv < cap {
+                        hit = Some(cid);
+                        break;
+                    }
+                }
+                // Offer the matched card for a free cast.
+                if let Some(cid) = hit {
+                    use crate::decision::{Decision, DecisionAnswer};
+                    let card_def = self.find_card_anywhere(cid).map(|c| c.definition.clone());
+                    if let Some(card_def) = card_def {
+                        let src = ctx.source.unwrap_or(CardId(0));
+                        let answer = self.decider.decide(&Decision::OptionalTrigger {
+                            source: src,
+                            description: "Cascade: cast the exiled card without paying its mana cost?"
+                                .to_string(),
+                        });
+                        if matches!(answer, DecisionAnswer::Bool(true)) {
+                            let auto_target = self.auto_target_for_effect_avoiding(
+                                &card_def.effect,
+                                p,
+                                Some(cid),
+                            );
+                            let cast_events = self.cast_card_for_free(
+                                p,
+                                cid,
+                                Zone::Exile,
+                                auto_target,
+                                vec![],
+                                None,
+                                None,
+                                false,
+                            )?;
+                            events.extend(cast_events);
+                            // The matched card left exile — don't bottom it.
+                            exiled.retain(|&x| x != cid);
+                        }
+                    }
+                }
+                // Bottom the remaining exiled cards (random order ≈ bottom).
+                for cid in exiled {
+                    if self.exile.iter().any(|c| c.id == cid) {
+                        self.move_card_to(
+                            cid,
+                            &ZoneDest::Library {
+                                who: PlayerRef::Seat(p),
+                                pos: LibraryPosition::Bottom,
+                            },
+                            ctx,
+                            events,
+                        );
                     }
                 }
                 Ok(())

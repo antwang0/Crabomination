@@ -1355,6 +1355,21 @@ pub enum Effect {
     /// continues each main phase.
     CastFreeParadigmCopy,
 
+    /// Cascade (CR 702.85). Triggered "when you cast this spell": exile
+    /// cards from the top of the controller's library until a nonland
+    /// card with mana value strictly less than `max_mv` is exiled. The
+    /// controller may cast that card without paying its mana cost. The
+    /// remaining exiled cards go to the bottom of the library (random
+    /// order — approximated as bottom, the same indistinguishable model
+    /// `RevealMissDest::BottomRandom` uses, since the bottom ordering is
+    /// hidden until the next shuffle/reveal).
+    ///
+    /// `max_mv` is the cascading spell's mana value. Card factories pass
+    /// `Value::Const(printed_mv)` (cascade's MV gate is the printed cost,
+    /// unaffected by cost reduction per CR 702.85b). The shortcut
+    /// [`cascade`] wires the standard SpellCast/SelfSource trigger.
+    Cascade { max_mv: Value },
+
     /// Exile the top card of `who`'s library and stamp a may-play
     /// permission on it for `duration`. Used by Conspiracy Theorist,
     /// Elemental Mascot, Ark of Hunger, Archaic's Agony and similar
@@ -1773,6 +1788,7 @@ impl Effect {
             Effect::GrantMayPlay { what, .. } => sel_has_target(what),
             Effect::CastWithoutPayingImmediate { what, .. } => sel_has_target(what),
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
+            Effect::Cascade { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),
             Effect::SacrificeGreatestMV { who, count, .. } => {
                 sel_has_target(who) || value_has_target(count)
@@ -2996,6 +3012,19 @@ pub mod shortcut {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
             effect,
+        }
+    }
+
+    /// Cascade (CR 702.85). Wires the standard "when you cast this spell"
+    /// (`SpellCast` / `SelfSource`) trigger whose body is
+    /// [`Effect::Cascade`]. `mv` is the cascading spell's printed mana
+    /// value — the gate is "exile until a nonland card with MV < `mv`".
+    pub fn cascade(mv: u32) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
+            effect: Effect::Cascade {
+                max_mv: Value::Const(mv as i32),
+            },
         }
     }
 
