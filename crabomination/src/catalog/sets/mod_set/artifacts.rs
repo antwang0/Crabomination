@@ -263,10 +263,10 @@ pub fn aether_spellbomb() -> CardDefinition {
 
 /// Zuran Orb — {0} Artifact. Sacrifice a land: You gain 2 life.
 ///
-/// The sac-a-land cost is folded into resolution as `Sacrifice(Land) +
-/// GainLife(2)`. AutoDecider auto-picks the first land you control. This
-/// keeps the activation honest: the engine refuses if you don't control
-/// a land for the `Sacrifice` step.
+/// The "Sacrifice a land" cost is now a proper pre-resolution activation
+/// cost via `sac_other_filter: Some((Land, 1))` — the engine gates the
+/// activation on the controller owning a land to sacrifice (rejecting
+/// cleanly otherwise), rather than folding the sacrifice into resolution.
 pub fn zuran_orb() -> CardDefinition {
     CardDefinition {
         name: "Zuran Orb",
@@ -281,17 +281,10 @@ pub fn zuran_orb() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Land,
-                },
-                Effect::GainLife {
-                    who: Selector::You,
-                    amount: Value::Const(2),
-                },
-            ]),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -299,7 +292,9 @@ pub fn zuran_orb() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            // Sacrifice a land as an activation cost.
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

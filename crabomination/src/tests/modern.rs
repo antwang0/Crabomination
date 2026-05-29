@@ -13056,3 +13056,16 @@ fn sylvan_safekeeper_cannot_activate_without_a_forest() {
     let view = computed.iter().find(|c| c.id == bear).unwrap();
     assert!(!view.keywords.contains(&Keyword::Shroud), "no shroud granted");
 }
+
+#[test]
+fn zuran_orb_cannot_activate_without_a_land() {
+    let mut g = two_player_game();
+    let orb = g.add_card_to_battlefield(0, catalog::zuran_orb());
+    g.clear_sickness(orb);
+    let life_before = g.players[0].life;
+    // No land to sacrifice → activation rejected pre-resolution.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: orb, ability_index: 0, target: None, x_value: None });
+    assert!(res.is_err(), "no land to sacrifice → activation rejected");
+    assert_eq!(g.players[0].life, life_before, "no life gained when cost unpayable");
+}
