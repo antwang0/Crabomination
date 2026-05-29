@@ -547,6 +547,14 @@ pub enum Predicate {
     /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
     /// trigger, and Land Tax.
     OpponentControlsMoreLandsThanYou,
+    /// True when exactly one creature is attacking this combat — the
+    /// CR 702.83a "attacks alone" condition that gates Exalted. Read
+    /// from `GameState.attacking.len() == 1`. Outside a combat with
+    /// declared attackers it evaluates `false`. Combined with an
+    /// `Attacks / YourControl` trigger it implements the printed
+    /// Exalted reminder ("Whenever a creature you control attacks
+    /// alone, that creature gets +1/+1 until end of turn").
+    AttackingAlone,
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
@@ -2784,6 +2792,25 @@ pub mod shortcut {
         TriggeredAbility {
             event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
             effect,
+        }
+    }
+
+    /// Exalted shortcut (CR 702.83): "Whenever a creature you control
+    /// attacks alone, that creature gets +1/+1 until end of turn." Wraps
+    /// an `Attacks / YourControl` trigger gated on the new
+    /// `Predicate::AttackingAlone`; the pump targets the lone attacker
+    /// (`Selector::TriggerSource`), not the Exalted source, so multiple
+    /// Exalted permanents stack on the same lone attacker per 702.83b.
+    pub fn exalted() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::YourControl)
+                .with_filter(Predicate::AttackingAlone),
+            effect: Effect::PumpPT {
+                what: Selector::TriggerSource,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
         }
     }
 

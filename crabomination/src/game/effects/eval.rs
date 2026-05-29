@@ -503,6 +503,7 @@ impl GameState {
                 }
                 max_opp_lands > your_lands
             }
+            Predicate::AttackingAlone => self.attacking.len() == 1,
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this

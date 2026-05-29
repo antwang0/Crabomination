@@ -4164,5 +4164,6 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::inkling_highflier_b207,
         super::silverquill::silverquill_sanction_b207,
         super::silverquill::silverquill_coursemate_b207,
+        super::silverquill::silverquill_duelmaster_b207,
     ]
 }

@@ -103,7 +103,15 @@ impl GameState {
                 .map(Vec::as_slice)
                 .unwrap_or(&[]);
             for t in card.definition.triggered_abilities.iter().chain(granted) {
-                if t.event.kind == EventKind::Attacks {
+                // Only SelfSource Attacks triggers are hardcoded here.
+                // YourControl-scoped Attacks triggers (Exalted via
+                // `Predicate::AttackingAlone`, Battle Banner, …) are
+                // routed through the unified `dispatch_triggers_for_events`
+                // path off the `AttackerDeclared` event — pushing them
+                // here too would double-fire the ability.
+                if t.event.kind == EventKind::Attacks
+                    && t.event.scope == crate::effect::EventScope::SelfSource
+                {
                     // Capture the trigger's optional filter so we can
                     // re-evaluate it AFTER the entire attacker batch is
                     // declared (CR 506.5 "attacking alone" semantics

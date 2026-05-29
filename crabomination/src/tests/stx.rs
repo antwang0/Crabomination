@@ -75275,3 +75275,130 @@ fn silverquill_coursemate_b207_gains_life_when_other_creature_dies() {
     bolt_own_creature(&mut g, 0, fodder);
     assert_eq!(g.players[0].life, p0_life + 1, "gain 1 when another creature dies");
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// CR rule lock-in tests (batch 207 session).
+// ─────────────────────────────────────────────────────────────────────────
+
+/// CR 702.83 (Exalted): a creature that attacks alone gets +1/+1 until end
+/// of turn. New `Predicate::AttackingAlone` + `exalted()` shortcut.
+#[test]
+fn cr_702_83_exalted_pumps_lone_attacker() {
+    let mut g = two_player_game();
+    let duel = g.add_card_to_battlefield(0, catalog::silverquill_duelmaster_b207());
+    g.clear_sickness(duel);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: duel, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(duel).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3),
+        "CR 702.83a: attacking alone grants Exalted +1/+1");
+}
+
+/// CR 702.83b: Exalted does NOT trigger when more than one creature
+/// attacks (`Predicate::AttackingAlone` is false).
+#[test]
+fn cr_702_83b_exalted_silent_when_not_alone() {
+    let mut g = two_player_game();
+    let duel = g.add_card_to_battlefield(0, catalog::silverquill_duelmaster_b207());
+    let buddy = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(duel);
+    g.clear_sickness(buddy);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: duel, target: AttackTarget::Player(1) },
+        Attack { attacker: buddy, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(duel).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 2),
+        "CR 702.83b: no Exalted pump when not attacking alone");
+}
+
+/// CR 702.15 (Lifelink): combat damage dealt by a creature with lifelink
+/// causes its controller to gain that much life.
+#[test]
+fn cr_702_15_lifelink_combat_damage_gains_life() {
+    let mut g = two_player_game();
+    // Anthemwriter is a 4/4 flying lifelink finisher.
+    let ll = g.add_card_to_battlefield(0, catalog::silverquill_anthemwriter());
+    g.clear_sickness(ll);
+    let power = g.battlefield_find(ll).unwrap().power();
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ll, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - power, "opponent took combat damage");
+    assert_eq!(g.players[0].life, p0_life + power, "CR 702.15: lifelink gains that much");
+}
+
+/// CR 510.1c: a trampling attacker blocked by a single creature assigns
+/// lethal to the blocker and tramples the rest to the defending player.
+#[test]
+fn cr_510_1c_trample_overflow_to_player() {
+    let mut g = two_player_game();
+    // 4/4 trampler vs a 2/2 blocker → 2 lethal to blocker, 2 tramples.
+    let atk = g.add_card_to_battlefield(0, catalog::quandrix_bigmind_b207()); // 4/5 Trample
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)]))
+        .expect("block");
+    drain_stack(&mut g);
+    let p1_life = g.players[1].life;
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blk).is_none(), "blocker took lethal");
+    // 4 power - 2 lethal to the 2/2 = 2 trample to player.
+    assert_eq!(g.players[1].life, p1_life - 2, "CR 510.1c: 2 damage tramples over");
+}
+
+/// CR 302.6 (Summoning sickness): a creature can't attack on the turn it
+/// comes under its controller's control unless it has haste.
+#[test]
+fn cr_302_6_summoning_sick_creature_cannot_attack() {
+    let mut g = two_player_game();
+    // No clear_sickness → the creature is summoning sick this turn.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    let res = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }]));
+    assert!(res.is_err(), "CR 302.6: summoning-sick creature can't be declared as attacker");
+    // A haste creature (Lorehold Vanguard) is exempt.
+    let haste = g.add_card_to_battlefield(0, catalog::lorehold_vanguard_b207());
+    let ok = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: haste, target: AttackTarget::Player(1),
+    }]));
+    assert!(ok.is_ok(), "CR 702.10b: Haste exempts a freshly-entered creature");
+}

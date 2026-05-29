@@ -26767,3 +26767,37 @@ pub fn silverquill_coursemate_b207() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+/// Silverquill Duelmaster (b207) — {1}{W} 2/2 Human Knight with Exalted
+/// (CR 702.83). "Whenever a creature you control attacks alone, that
+/// creature gets +1/+1 until end of turn." Exercises the new
+/// `Predicate::AttackingAlone` / `exalted()` shortcut.
+pub fn silverquill_duelmaster_b207() -> CardDefinition {
+    use crate::effect::shortcut::exalted;
+    CardDefinition {
+        name: "Silverquill Duelmaster (b207)",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![exalted()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
