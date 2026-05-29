@@ -16196,6 +16196,25 @@ fn witherbloom_apothecary_sacs_and_drains() {
 }
 
 #[test]
+fn witherbloom_apothecary_cannot_activate_without_another_creature() {
+    // The Apothecary can't sacrifice itself — with no OTHER creature to
+    // sacrifice, the sac_other_filter cost is unpayable and the
+    // activation is rejected pre-resolution.
+    let mut g = two_player_game();
+    let wa = g.add_card_to_battlefield(0, catalog::witherbloom_apothecary());
+    g.players[0].mana_pool.add_colorless(1);
+    let oppbefore = g.players[1].life;
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: wa,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    });
+    assert!(res.is_err(), "no other creature to sacrifice → rejected");
+    assert_eq!(g.players[1].life, oppbefore, "no drain when cost unpayable");
+}
+
+#[test]
 fn quandrix_trampler_enters_with_counter_per_other_creature() {
     let mut g = two_player_game();
     let _b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());

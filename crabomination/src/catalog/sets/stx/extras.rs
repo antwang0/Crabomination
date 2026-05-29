@@ -22575,20 +22575,14 @@ pub fn witherbloom_apothecary() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
             mana_cost: cost(&[generic(1)]),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                },
-                Effect::Drain {
-                    from: Selector::Player(PlayerRef::EachOpponent),
-                    to: Selector::You,
-                    amount: Value::Const(1),
-                },
-            ]),
+            // {1}, Sacrifice another creature: drain 1 from each opponent.
+            // The sacrifice is now a proper pre-resolution cost via
+            // sac_other_filter (rejects when no other creature to sac).
+            effect: Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(1),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -22597,7 +22591,13 @@ pub fn witherbloom_apothecary() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false,
             exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: Some((
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::OtherThanSource),
+                1,
+            )),
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
