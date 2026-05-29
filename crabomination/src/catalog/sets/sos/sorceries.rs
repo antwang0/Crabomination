@@ -12,14 +12,11 @@ use crate::mana::{Color, b, cost, generic, w};
 /// 1/1 black-and-green Pest creature token. Used by Witherbloom-leaning
 /// SOS cards (Send in the Pest, Pest Mascot's payoff cycle, etc.).
 ///
-/// Approximation: the printed Oracle is "Whenever this token attacks,
-/// you gain 1 life." Token-side triggered abilities aren't materialised
-/// through `token_to_card_definition` yet (the function copies P/T,
-/// keywords, subtypes, colors, and *activated* abilities, but not
-/// triggered ones). Until that lands, the Pest token enters with no
-/// rider — Witherbloom payoffs that key off "you gained life" lose this
-/// passive trickle, which is tracked in `STRIXHAVEN2.md` as 🟡 for the
-/// Pest-creating cards.
+/// Carries its printed rider "Whenever this token attacks, you gain 1
+/// life." via `TokenDefinition.triggered_abilities`, which
+/// `token_to_card_definition` copies onto the materialised token — so an
+/// attacking Pest feeds Witherbloom "you gained life" payoffs (Pest
+/// Mascot's counter cycle, Blech's per-type fan-out, etc.).
 pub fn pest_token() -> TokenDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     TokenDefinition {
@@ -590,10 +587,9 @@ pub fn oracles_restoration() -> CardDefinition {
 /// "Each opponent discards a card. You create a 1/1 black and green Pest
 /// creature token with 'Whenever this token attacks, you gain 1 life.'"
 ///
-/// Approximation: the Pest token's "gain 1 on attack" trigger is omitted
-/// (token-side triggered abilities aren't materialised through
-/// `token_to_card_definition` yet). The discard half and token creation
-/// are wired faithfully.
+/// Fully wired: the discard half, the token creation, and the Pest
+/// token's "gain 1 on attack" trigger (the shared `pest_token()` carries
+/// it via `TokenDefinition.triggered_abilities`).
 pub fn send_in_the_pest() -> CardDefinition {
     CardDefinition {
         name: "Send in the Pest",

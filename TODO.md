@@ -207,8 +207,13 @@ a single color, and added a `MonoHybrid` primitive for `{2/C}` pips.
   per-mana spend-restriction metadata on the mana pool.
 - **Mono-hybrid auto-tap optimality**: the planner treats a {2/C} pip as
   needing 1 colored or 2 generic but doesn't search for the globally
-  cheapest land assignment across mixed hybrid costs (greedy, like the
-  existing two-color hybrid path). Fine in practice.
+  cheapest land assignment across mixed hybrid costs (greedy). The
+  *two-color* hybrid path was upgraded (Push: modern_decks) to a
+  forced-color-first assignment in both `ManaPool::pay` and
+  `auto_tap_for_cost` — a {W/B}{W/B} cost now splits a Plains+Swamp
+  correctly, and a {W/B} pip taps the only producible color instead of
+  always reaching for the first half. `{2/C}` mono-hybrid still uses the
+  simpler greedy; fine in practice.
 - **Client build in CI**: confirm `libwayland-dev` is installed in the
   CI/runner image so the client crate (and its clippy) actually compile;
   it does not build in this web sandbox.
@@ -10967,9 +10972,13 @@ listed here so the next pass can pick them up.
   count: usize }` variant would let the controller pick exactly N modes
   from the list, matching the printed "choose two" pattern.
 
-- **Hybrid mana**: Every hybrid pip ({W/B}, {G/U}, etc.) is approximated
-  as one color. A `ManaSymbol::Hybrid(Color, Color)` variant + payment
-  logic would let players pay either half.
+- **Hybrid mana**: ✅ DONE. `ManaSymbol::Hybrid(Color, Color)` is paid
+  from either half, with a forced-color-first assignment in both
+  `ManaPool::pay` (so {W/R}{W/G} from a {W,R} pool isn't mis-assigned)
+  and `auto_tap_for_cost` (so a {W/B} pip taps whichever color the board
+  can actually produce, and {W/B}{W/B} splits a Plains+Swamp). Mono-hybrid
+  `{n/C}` also handled. Tests: `mana::tests::pay_hybrid_*`,
+  `tests_sos::auto_tap_*`.
 
 - **Learn/Lesson sideboard**: Learn is collapsed to Draw 1 across ~12
   cards. A minimal Lesson sideboard (separate from the main deck, searched

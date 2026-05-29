@@ -75,12 +75,10 @@ pub fn eager_glyphmage() -> CardDefinition {
 
 /// Stirring Hopesinger — {2}{W}, 1/3 Bird Bard. Flying, lifelink.
 ///
-/// The Repartee trigger ("whenever you cast an instant or sorcery that
-/// targets a creature, put a +1/+1 counter on each creature you control")
-/// is omitted — the engine has no introspection on a cast spell's target
-/// list (no `SpellTargetsCreature` predicate yet). The flying/lifelink
-/// body is wired so the card still hits the battlefield with the correct
-/// color and stats.
+/// Fully wired: flying + lifelink body, plus the Repartee trigger
+/// ("whenever you cast an instant or sorcery that targets a creature,
+/// put a +1/+1 counter on each creature you control") via the
+/// `repartee()` shortcut chained over a `ForEach` of your creatures.
 pub fn stirring_hopesinger() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::repartee;
@@ -215,10 +213,9 @@ pub fn informed_inkwright() -> CardDefinition {
 /// cards leave your graveyard, this creature gets +1/+1 until end of
 /// turn."
 ///
-/// Approximation: the "cards leave your graveyard" pump trigger is
-/// omitted — the engine has no `LeavesGraveyard`/`CardLeftGraveyard`
-/// event yet. The flying body and the ETB Surveil 1 are wired
-/// faithfully.
+/// Fully wired: flying body, the ETB Surveil 1, and the "whenever one or
+/// more cards leave your graveyard, +1/+1 until end of turn" pump via an
+/// `EventKind::CardLeftGraveyard` trigger.
 pub fn owlin_historian() -> CardDefinition {
     CardDefinition {
         name: "Owlin Historian",
@@ -275,11 +272,9 @@ pub fn owlin_historian() -> CardDefinition {
 /// targets a creature, this creature gets +1/+0 and gains lifelink
 /// until end of turn."
 ///
-/// Approximation: Ward {2} is omitted (no Ward-counter primitive yet —
-/// the keyword is carried on the card so future Ward enforcement picks
-/// it up automatically). The Repartee body is wired faithfully via
-/// the `repartee()` shortcut: pump +1/+0 on the source + grant
-/// Lifelink (EOT). Body shape is correct (3/4 Elephant Cleric).
+/// Fully wired: `Ward {2}` via `Keyword::Ward(WardCost::generic(2))`, and
+/// the Repartee body via the `repartee()` shortcut (pump +1/+0 on the
+/// source + grant Lifelink until end of turn). 3/4 Elephant Cleric body.
 pub fn inkshape_demonstrator() -> CardDefinition {
     use crate::effect::shortcut::repartee;
     CardDefinition {
@@ -1568,10 +1563,9 @@ pub fn environmental_scientist() -> CardDefinition {
 /// "When this creature dies, create two 1/1 black and green Pest creature
 /// tokens with 'Whenever this token attacks, you gain 1 life.'"
 ///
-/// Approximation: the token's "gain 1 on attack" rider isn't surfaced
-/// (token-side triggered abilities aren't materialised through
-/// `token_to_card_definition` yet — same gap as Send in the Pest's
-/// token). The death-trigger that creates two Pests is wired faithfully.
+/// Fully wired: the dies-trigger creates two `pest_token()`s, each of
+/// which carries its "gain 1 on attack" rider (token triggered abilities
+/// are materialised through `token_to_card_definition`).
 pub fn pestbrood_sloth() -> CardDefinition {
     use crate::mana::g;
     use super::sorceries::pest_token;
@@ -2504,12 +2498,10 @@ pub fn fractal_tender() -> CardDefinition {
 /// "Ward {1}. Infusion — Creatures you control get +1/+0 and have
 /// trample as long as you gained life this turn."
 ///
-/// Approximation: body + `Keyword::Ward(crate::card::WardCost::generic(1))` wired. The Infusion
-/// continuous static (+1/+0 + trample for your creatures while you've
-/// gained life this turn) is omitted (no continuous-static-on-predicate
-/// primitive yet — same gap as Tenured Concocter, Ulna Alley
-/// Shopkeep). 3/3 vanilla body still slots in as a Witherbloom-flavoured
-/// midrange creature.
+/// Fully wired: `Ward {1}` plus the Infusion static (+1/+0 and trample to
+/// your creatures while you've gained life this turn), emitted each layer
+/// recompute via the `lifegain_anthem_for_name` table (gated on
+/// `Player.life_gained_this_turn > 0`). 3/3 Elf Druid body.
 pub fn thornfist_striker() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {

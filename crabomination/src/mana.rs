@@ -471,19 +471,42 @@ impl ManaPool {
             tmp.colorless -= colorless_needed;
         }
 
-        // Pass 3: hybrid pips
-        for sym in &cost.symbols {
-            if let ManaSymbol::Hybrid(a, b) = sym {
-                if tmp.amount(*a) > 0 {
-                    *tmp.slot_mut(*a) -= 1;
-                } else if tmp.amount(*b) > 0 {
-                    *tmp.slot_mut(*b) -= 1;
-                } else {
-                    return Err(ManaError::CannotPayHybrid {
-                        color_a: *a,
-                        color_b: *b,
-                    });
+        // Pass 3: hybrid pips ({a/b}). Resolve with constraint
+        // propagation — pay any pip that currently has only one
+        // affordable color *first*, so a limited pool isn't spent on the
+        // wrong half. Example: paying {W/R}{W/G} from a {W, R} pool must
+        // take W for the {W/G} pip and R for the {W/R} pip; a naive
+        // "always try A first" pays W for {W/R} then can't cover {W/G}.
+        let mut hybrids: Vec<(Color, Color)> = cost
+            .symbols
+            .iter()
+            .filter_map(|s| match s {
+                ManaSymbol::Hybrid(a, b) => Some((*a, *b)),
+                _ => None,
+            })
+            .collect();
+        while !hybrids.is_empty() {
+            // Prefer a "forced" pip (exactly one color affordable);
+            // otherwise the first pip with any affordable color.
+            let forced = hybrids
+                .iter()
+                .position(|(a, b)| (tmp.amount(*a) > 0) ^ (tmp.amount(*b) > 0));
+            let idx = match forced.or_else(|| {
+                hybrids
+                    .iter()
+                    .position(|(a, b)| tmp.amount(*a) > 0 || tmp.amount(*b) > 0)
+            }) {
+                Some(i) => i,
+                None => {
+                    let (a, b) = hybrids[0];
+                    return Err(ManaError::CannotPayHybrid { color_a: a, color_b: b });
                 }
+            };
+            let (a, b) = hybrids.remove(idx);
+            if tmp.amount(a) > 0 {
+                *tmp.slot_mut(a) -= 1;
+            } else {
+                *tmp.slot_mut(b) -= 1;
             }
         }
 

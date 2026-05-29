@@ -12322,6 +12322,78 @@ fn paradigm_free_copy_resolves_with_scripted_yes() {
         "original Seminar stays in exile");
 }
 
+// ── Hybrid mana: auto-tap produces a payable color ──────────────────────────
+
+#[test]
+fn auto_tap_pays_hybrid_pair_from_one_of_each_color_land() {
+    use crate::mana::{cost, hybrid};
+    // {W/B}{W/B} with a Plains + a Swamp: auto-tap must split the lands
+    // (one W, one B) rather than hunting for two of the same color.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::plains());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let hcost = cost(&[
+        hybrid(Color::White, Color::Black),
+        hybrid(Color::White, Color::Black),
+    ]);
+    g.auto_tap_for_cost(0, &hcost);
+    assert!(
+        g.players[0].mana_pool.clone().pay(&hcost).is_ok(),
+        "auto-tap should produce mana that pays {{W/B}}{{W/B}} from a Plains + Swamp"
+    );
+}
+
+#[test]
+fn auto_tap_pays_hybrid_from_only_off_color_land() {
+    use crate::mana::{cost, hybrid};
+    // {W/B} with only a Swamp: the engine must tap the Swamp for black,
+    // not always reach for the first color (white) and strand the cast.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::swamp());
+    let hcost = cost(&[hybrid(Color::White, Color::Black)]);
+    g.auto_tap_for_cost(0, &hcost);
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Black), 1,
+        "auto-tap should have tapped the Swamp for black"
+    );
+    assert!(
+        g.players[0].mana_pool.clone().pay(&hcost).is_ok(),
+        "the tapped black mana pays the {{W/B}} pip"
+    );
+}
+
+#[test]
+fn auto_tap_hybrid_card_casts_with_off_color_lands() {
+    use crate::mana::ManaSymbol;
+    // End-to-end: Manamorphose is {1}{R/G}. With only two Forests, the
+    // {R/G} pip must be paid by the *green* (second) half — exactly the
+    // case the old "always try the first color" auto-tap stranded. The
+    // cast should succeed and the spell resolve to the graveyard.
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    // Library padding so the spell's "draw a card" can't deck-out.
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::manamorphose());
+    let def = catalog::manamorphose();
+    assert!(
+        def.cost.symbols.iter().any(|s| matches!(s, ManaSymbol::Hybrid(_, _))),
+        "test fixture must have a two-color hybrid pip"
+    );
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{1}{R/G} should be castable off two Forests (green pays the hybrid pip)");
+    drain_stack(&mut g);
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == id),
+        "Manamorphose should resolve to the graveyard"
+    );
+}
+
 // ── Mica, Reader of Ruins ─────────────────────────────────────────────────
 
 // ── The Dawning Archaic ───────────────────────────────────────────────────

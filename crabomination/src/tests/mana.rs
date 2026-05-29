@@ -238,3 +238,69 @@ fn mono_hybrid_contributes_color_identity() {
     assert_eq!(cost(&[mono_hybrid(2, Color::Red)]).colors(), vec![Color::Red]);
     assert_eq!(cost(&[mono_hybrid(2, Color::Green)]).distinct_colors(), 1);
 }
+
+// ── Two-color hybrid pips ({a/b}) — flexible payment ────────────────────────
+
+#[test]
+fn pay_hybrid_uses_either_available_color() {
+    use crate::mana::hybrid;
+    // {W/B} paid from a black-only pool must succeed, draining the black.
+    let mut pool = ManaPool::new();
+    pool.add(Color::Black, 1);
+    pool.pay(&cost(&[hybrid(Color::White, Color::Black)])).unwrap();
+    assert_eq!(pool.amount(Color::Black), 0);
+
+    // …and from a white-only pool, draining the white.
+    let mut pool = ManaPool::new();
+    pool.add(Color::White, 1);
+    pool.pay(&cost(&[hybrid(Color::White, Color::Black)])).unwrap();
+    assert_eq!(pool.amount(Color::White), 0);
+}
+
+#[test]
+fn pay_hybrid_pair_splits_one_of_each_color() {
+    use crate::mana::hybrid;
+    // {W/B}{W/B} from a {W, B} pool must consume both (one each), not
+    // double-spend a single color.
+    let mut pool = ManaPool::new();
+    pool.add(Color::White, 1);
+    pool.add(Color::Black, 1);
+    pool.pay(&cost(&[
+        hybrid(Color::White, Color::Black),
+        hybrid(Color::White, Color::Black),
+    ]))
+    .unwrap();
+    assert_eq!(pool.total(), 0, "both hybrid pips paid from the two-mana pool");
+}
+
+#[test]
+fn pay_hybrid_forced_assignment_beats_greedy() {
+    use crate::mana::hybrid;
+    // {W/R}{W/G} from a {W, R} pool. A naive "always try the first color"
+    // pays W for {W/R} and then can't cover {W/G}; the constraint-aware
+    // resolver must pay R for {W/R} and W for {W/G}.
+    let mut pool = ManaPool::new();
+    pool.add(Color::White, 1);
+    pool.add(Color::Red, 1);
+    pool.pay(&cost(&[
+        hybrid(Color::White, Color::Red),
+        hybrid(Color::White, Color::Green),
+    ]))
+    .expect("forced-color-first must find the valid W+R assignment");
+    assert_eq!(pool.total(), 0);
+}
+
+#[test]
+fn pay_hybrid_fails_atomically_when_unaffordable() {
+    use crate::mana::hybrid;
+    // {W/B}{W/B} with only one matching mana → fail, pool untouched.
+    let mut pool = ManaPool::new();
+    pool.add(Color::Black, 1);
+    assert!(pool
+        .pay(&cost(&[
+            hybrid(Color::White, Color::Black),
+            hybrid(Color::White, Color::Black),
+        ]))
+        .is_err());
+    assert_eq!(pool.amount(Color::Black), 1, "failed payment leaves the pool unchanged");
+}

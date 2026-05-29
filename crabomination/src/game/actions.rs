@@ -2306,6 +2306,24 @@ impl GameState {
     /// another player (e.g. resolving a Pact upkeep trigger during the
     /// caster's upkeep). We temporarily override priority to `player` so
     /// our `activate_ability` calls don't reject the tap.
+    /// Count untapped permanents `player` controls that can tap for
+    /// `color` — used by `auto_tap_for_cost_inner` to decide which half
+    /// of a hybrid pip is actually producible. Counts an "add any one
+    /// color" source (Birds of Paradise, etc.) toward every color, since
+    /// the tap loop can script it to the needed color.
+    fn untapped_producers_of(&self, player: usize, color: ManaColor) -> u32 {
+        self.battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == player
+                    && !c.tapped
+                    && c.definition.activated_abilities.iter().any(|a| {
+                        is_mana_ability(&a.effect) && effect_produces_color(&a.effect, color)
+                    })
+            })
+            .count() as u32
+    }
+
     pub(crate) fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
         let prev_priority = self.priority.player_with_priority;
         self.priority.player_with_priority = player;
@@ -2330,6 +2348,9 @@ impl GameState {
         let mut avail_colorless = pool.colorless_amount();
 
         let mut still_need_colors: Vec<ManaColor> = Vec::new();
+        // Hybrid pips are resolved after the fixed-color pass so the
+        // pool is drained by the more-constrained colored pips first.
+        let mut hybrids: Vec<(ManaColor, ManaColor)> = Vec::new();
         let mut generic: u32 = 0;
 
         for sym in &cost.symbols {
@@ -2338,13 +2359,7 @@ impl GameState {
                     let have = avail.entry(*c).or_default();
                     if *have > 0 { *have -= 1; } else { still_need_colors.push(*c); }
                 }
-                ManaSymbol::Hybrid(a, b) => {
-                    let have_a = *avail.get(a).unwrap_or(&0);
-                    let have_b = *avail.get(b).unwrap_or(&0);
-                    if have_a > 0 { *avail.entry(*a).or_default() -= 1; }
-                    else if have_b > 0 { *avail.entry(*b).or_default() -= 1; }
-                    else { still_need_colors.push(*a); }
-                }
+                ManaSymbol::Hybrid(a, b) => hybrids.push((*a, *b)),
                 ManaSymbol::Phyrexian(c) => {
                     // Pool covers it if available; otherwise paid with life — no tapping.
                     let have = avail.entry(*c).or_default();
@@ -2364,6 +2379,53 @@ impl GameState {
                     // source — skip that complexity for now (generic fallback handles it).
                 }
                 ManaSymbol::Snow | ManaSymbol::X => {}
+            }
+        }
+
+        // Resolve hybrid pips ({a/b}). Each can be paid by one mana of
+        // either color — from the pool, or by tapping a source that makes
+        // it. Resolve "forced" pips (only one color reachable) first so a
+        // limited board isn't spent on the wrong half: {W/B}{W/B} with a
+        // Plains + a Swamp must split W and B, and {W/B} with only a Swamp
+        // must tap the Swamp rather than hunting for a white source (the
+        // previous code always tried color A and stranded the cast).
+        // `reach` = pool mana + untapped sources that can make the color.
+        fn reach(
+            c: &ManaColor,
+            avail: &std::collections::HashMap<ManaColor, u32>,
+            prod: &std::collections::HashMap<ManaColor, u32>,
+        ) -> u32 {
+            avail.get(c).copied().unwrap_or(0) + prod.get(c).copied().unwrap_or(0)
+        }
+        if !hybrids.is_empty() {
+            let mut prod: std::collections::HashMap<ManaColor, u32> = ManaColor::ALL
+                .iter()
+                .map(|c| (*c, self.untapped_producers_of(player, *c)))
+                .collect();
+            while !hybrids.is_empty() {
+                let idx = hybrids
+                    .iter()
+                    .position(|(a, b)| (reach(a, &avail, &prod) > 0) ^ (reach(b, &avail, &prod) > 0))
+                    .or_else(|| {
+                        hybrids.iter().position(|(a, b)| {
+                            reach(a, &avail, &prod) > 0 || reach(b, &avail, &prod) > 0
+                        })
+                    })
+                    .unwrap_or(0);
+                let (a, b) = hybrids.remove(idx);
+                let pick = if reach(&a, &avail, &prod) > 0 { a } else { b };
+                if avail.get(&pick).copied().unwrap_or(0) > 0 {
+                    // Already in the pool — consume it, no tapping needed.
+                    *avail.entry(pick).or_default() -= 1;
+                } else if prod.get(&pick).copied().unwrap_or(0) > 0 {
+                    // Reserve an untapped source of this color to tap below.
+                    *prod.entry(pick).or_default() -= 1;
+                    still_need_colors.push(pick);
+                } else {
+                    // Neither color reachable — push anyway; the tap loop
+                    // no-ops and the cast fails downstream as before.
+                    still_need_colors.push(pick);
+                }
             }
         }
 
