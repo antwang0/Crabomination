@@ -10850,6 +10850,11 @@ pub fn doomsday_excruciator() -> CardDefinition {
 pub fn stonecoil_serpent() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::x;
+    // CR 614.12 — "enters with X +1/+1 counters" is a replacement
+    // effect, not a triggered ability. Using `enters_with_counters`
+    // (rather than an ETB AddCounter trigger) means the X counters are
+    // present the instant the Serpent enters, so a 0/0 base body never
+    // hits the SBA death check as a counter-less 0/0.
     CardDefinition {
         name: "Stonecoil Serpent",
         cost: cost(&[x()]),
@@ -10861,14 +10866,7 @@ pub fn stonecoil_serpent() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![Keyword::Trample, Keyword::Reach],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::XFromCost,
-            },
-        }],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         ..Default::default()
     }
 }

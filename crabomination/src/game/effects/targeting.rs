@@ -76,6 +76,42 @@ impl GameState {
             if is_legal(&player_secondary) { return Some(player_secondary); }
         }
 
+        // Stack walk for counter-class effects (Spell Queller, Mystic
+        // Snake, Venser-style ETB / triggered counters whose target is a
+        // spell on the stack). The battlefield/graveyard walks below
+        // never consider stack objects, so without this pass an
+        // auto-targeted "counter target spell" trigger fizzles for lack
+        // of a legal target. We prefer the topmost spell *not* cast by
+        // the controller (you counter the opponent's spell), falling
+        // back to any legal stack spell. Gated on the requirement being
+        // exactly `IsSpellOnStack` so it only fires for genuine
+        // counter-class targets — effects with a looser filter (e.g. a
+        // magecraft "exile a card from your graveyard" with an `Any` /
+        // `Nonland` filter) must not grab the just-cast spell sitting on
+        // the stack.
+        if matches!(req, crate::card::SelectionRequirement::IsSpellOnStack) {
+            use crate::game::types::StackItem;
+            // Topmost first: iterate the stack in reverse.
+            let mut hostile: Option<Target> = None;
+            let mut friendly: Option<Target> = None;
+            for si in self.stack.iter().rev() {
+                if let StackItem::Spell { card, caster, .. } = si {
+                    let t = Target::Permanent(card.id);
+                    if is_legal(&t) {
+                        if *caster != controller {
+                            hostile = Some(t);
+                            break;
+                        } else if friendly.is_none() {
+                            friendly = Some(t);
+                        }
+                    }
+                }
+            }
+            if let Some(t) = hostile.or(friendly) {
+                return Some(t);
+            }
+        }
+
         // Graveyard-target effects: walk primary player's graveyard first,
         // then secondary's. Reanimate/Disentomb (friendly) hits the caster's
         // graveyard; Ghost Vacuum (hostile) hits the opp's. Falls through

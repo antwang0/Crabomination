@@ -13823,3 +13823,196 @@ fn indestructible_counter_survives_lethal_combat_damage() {
     assert!(g.battlefield.iter().any(|c| c.id == blocker),
         "indestructible-countered blocker survives lethal combat damage");
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Coverage backfill (claude/modern_decks): functionality tests for modern-deck
+// cards (creatures, spells, and dual/shock/fast/surveil/pathway lands) that
+// were wired but lacked a dedicated test.
+// ════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn wall_of_blossoms_etb_draws_and_is_a_zero_four_defender() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::wall_of_blossoms());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Wall of Blossoms castable for {1}{G}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.definition.power, c.definition.toughness), (0, 4));
+    assert!(c.definition.keywords.contains(&crate::card::Keyword::Defender));
+    assert_eq!(g.players[0].library.len(), lib_before - 1, "ETB drew a card");
+}
+
+#[test]
+fn monastery_swiftspear_prowess_pumps_on_instant() {
+    let mut g = two_player_game();
+    let spear = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(spear).unwrap();
+    assert_eq!(c.power, 2, "Prowess: 1/2 base +1/+1 = 2 power on a noncreature cast");
+}
+
+#[test]
+fn relic_of_progenitus_exiles_opponent_graveyard() {
+    let mut g = two_player_game();
+    g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let relic = g.add_card_to_battlefield(0, catalog::relic_of_progenitus());
+    g.clear_sickness(relic);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: relic, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("Relic {T}: exile a card from each opponent's graveyard");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.is_empty(),
+        "opponent's graveyard exiled by Relic of Progenitus");
+}
+
+#[test]
+fn stonecoil_serpent_enters_with_x_counters() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::stonecoil_serpent());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    })
+    .expect("Stonecoil Serpent castable for X=3");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(id).unwrap();
+    assert_eq!((c.power, c.toughness), (3, 3), "X=3 → three +1/+1 counters");
+    assert!(c.keywords.contains(&crate::card::Keyword::Trample));
+    assert!(c.keywords.contains(&crate::card::Keyword::Reach));
+}
+
+#[test]
+fn decree_of_justice_makes_x_angels() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::decree_of_justice());
+    // {X}{X}{2}{W}{W} with X=2 → pay 2+2+2 generic + WW.
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Decree of Justice castable for X=2");
+    drain_stack(&mut g);
+    let angels: Vec<_> = g.battlefield.iter()
+        .filter(|c| c.definition.name == "Angel" && c.controller == 0).collect();
+    assert_eq!(angels.len(), 2, "X=2 → two Angel tokens");
+    assert!(angels[0].definition.keywords.contains(&crate::card::Keyword::Flying));
+}
+
+#[test]
+fn spell_queller_etb_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    g.priority.player_with_priority = 0;
+    let queller = g.add_card_to_hand(0, catalog::spell_queller());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: queller, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Spell Queller castable at flash speed");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the bolt was countered by Spell Queller's ETB");
+    assert!(g.battlefield_find(queller).is_some(), "Queller resolved onto the battlefield");
+}
+
+// ── Lands ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn godless_shrine_pays_two_life_and_taps_for_white_or_black() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::godless_shrine());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(!card.tapped, "shockland enters untapped (AutoDecider pays 2 life)");
+    assert_eq!(g.players[0].life, 18, "paid 2 life");
+    // Taps for white (ability 0) or black (ability 1).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("white mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::White), 1);
+}
+
+#[test]
+fn blooming_marsh_enters_untapped_with_few_lands() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::blooming_marsh());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(id).unwrap().tapped,
+        "fastland enters untapped with no other lands");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("green mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 1);
+}
+
+#[test]
+fn meticulous_archive_enters_tapped_and_surveils() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::meticulous_archive());
+    g.perform_action(GameAction::PlayLand(id)).unwrap();
+    drain_stack(&mut g);
+    let card = g.battlefield_find(id).unwrap();
+    assert!(card.tapped, "surveil land enters tapped");
+    // Taps for white or blue once untapped.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("blue mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
+}
+
+#[test]
+fn darkbore_pathway_plays_either_face() {
+    // Front face: Swamp (taps for black).
+    let mut g = two_player_game();
+    let front = g.add_card_to_hand(0, catalog::darkbore_pathway());
+    g.perform_action(GameAction::PlayLand(front)).unwrap();
+    drain_stack(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: front, ability_index: 0, target: None, x_value: None,
+    }).expect("black mana ability on front face");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "front face taps for black");
+
+    // Back face: Forest (taps for green).
+    let mut g2 = two_player_game();
+    let back = g2.add_card_to_hand(0, catalog::darkbore_pathway());
+    g2.perform_action(GameAction::PlayLandBack(back)).unwrap();
+    drain_stack(&mut g2);
+    g2.perform_action(GameAction::ActivateAbility {
+        card_id: back, ability_index: 0, target: None, x_value: None,
+    }).expect("green mana ability on back face");
+    drain_stack(&mut g2);
+    assert_eq!(g2.players[0].mana_pool.amount(Color::Green), 1, "back face taps for green");
+}
