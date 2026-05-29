@@ -10325,6 +10325,109 @@ fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
 }
 
 #[test]
+fn top_of_the_class_buffs_prepared_and_spares_unprepared() {
+    // Prepare-mechanic payoff: "Prepared creatures you control get +1/+1
+    // and have flying." A static anthem, so its effect surfaces through
+    // the layer-computed `compute_battlefield()` view (like the
+    // Comforting Counsel anthem tests above). The buff is keyed on a
+    // Prepared counter (the same counter Biblioplex Tomekeeper / Skycoach
+    // Waypoint apply); seed it directly here to isolate the payoff.
+    let mut g = two_player_game();
+    let _ench = g.add_card_to_battlefield(0, catalog::top_of_the_class());
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+
+    let def = catalog::elite_interceptor();
+    let (base_p, base_t) = (def.power, def.toughness);
+
+    // Before preparing: nothing has a Prepared counter → anthem applies
+    // to no one, so the MDFC creature reads at its printed P/T.
+    {
+        let computed = g.compute_battlefield();
+        let c = computed.iter().find(|c| c.id == mdfc).unwrap();
+        assert_eq!(c.power, base_p, "unprepared: base power");
+        assert_eq!(c.toughness, base_t, "unprepared: base toughness");
+        assert!(
+            !c.keywords.contains(&Keyword::Flying),
+            "unprepared creature gets no anthem flying"
+        );
+    }
+
+    // Prepare the MDFC creature (the counter the toggle cards apply).
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mdfc) {
+        c.counters.insert(CounterType::Prepared, 1);
+    }
+
+    // Now the anthem applies to the prepared creature.
+    let computed = g.compute_battlefield();
+    let prepared = computed.iter().find(|c| c.id == mdfc).unwrap();
+    assert_eq!(
+        prepared.power, base_p + 1,
+        "Top of the Class gives the prepared creature +1 power"
+    );
+    assert_eq!(
+        prepared.toughness, base_t + 1,
+        "Top of the Class gives the prepared creature +1 toughness"
+    );
+    assert!(
+        prepared.keywords.contains(&Keyword::Flying),
+        "Top of the Class grants the prepared creature flying"
+    );
+
+    // The un-prepared Grizzly Bears (never prepared) is unaffected.
+    let bear = computed.iter().find(|c| c.id == plain).unwrap();
+    assert_eq!(bear.power, 2, "unprepared bear keeps base power");
+    assert_eq!(bear.toughness, 2, "unprepared bear keeps base toughness");
+    assert!(
+        !bear.keywords.contains(&Keyword::Flying),
+        "unprepared bear gets no flying"
+    );
+}
+
+#[test]
+fn top_of_the_class_spares_opponents_prepared_creature() {
+    // "Prepared creatures *you control*" — an opponent's prepared
+    // creature must not be buffed by your anthem.
+    let mut g = two_player_game();
+    let _ench = g.add_card_to_battlefield(0, catalog::top_of_the_class());
+    let opp_mdfc = g.add_card_to_battlefield(1, catalog::elite_interceptor());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == opp_mdfc) {
+        c.counters.insert(CounterType::Prepared, 1);
+    }
+
+    let def = catalog::elite_interceptor();
+    let computed = g.compute_battlefield();
+    let opp = computed.iter().find(|c| c.id == opp_mdfc).unwrap();
+    assert_eq!(opp.power, def.power, "opponent's prepared creature: base power");
+    assert_eq!(opp.toughness, def.toughness, "opponent's prepared creature: base toughness");
+    assert!(
+        !opp.keywords.contains(&Keyword::Flying),
+        "your anthem must not grant flying to an opponent's prepared creature"
+    );
+}
+
+#[test]
+fn prepared_counter_is_inert_for_pt_without_payoff() {
+    // Control: a Prepared counter on its own changes nothing about P/T —
+    // the +1/+1 (and flying) come from Top of the Class, not the counter.
+    let mut g = two_player_game();
+    let mdfc = g.add_card_to_battlefield(0, catalog::elite_interceptor());
+    if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == mdfc) {
+        c.counters.insert(CounterType::Prepared, 1);
+    }
+
+    let def = catalog::elite_interceptor();
+    let computed = g.compute_battlefield();
+    let c = computed.iter().find(|c| c.id == mdfc).unwrap();
+    assert_eq!(c.power, def.power, "no payoff → prepared creature keeps base power");
+    assert_eq!(c.toughness, def.toughness, "no payoff → base toughness");
+    assert!(
+        !c.keywords.contains(&Keyword::Flying),
+        "no payoff → a bare Prepared counter grants no flying"
+    );
+}
+
+#[test]
 fn fix_whats_broken_returns_mana_value_x_artifact_from_graveyard() {
     // Faithful X-cost: `{X}{2}{W}{B}`, pay X life, return artifact/creature
     // cards with mana value EXACTLY X. At X=1 the MV-1 Sol Ring returns but

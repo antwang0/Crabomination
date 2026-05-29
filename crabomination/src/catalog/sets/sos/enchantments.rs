@@ -331,3 +331,69 @@ pub fn additive_evolution() -> CardDefinition {
         equipped_bonus: None,
     }
 }
+
+/// Top of the Class — {2}{W} Enchantment.
+/// "Prepared creatures you control get +1/+1 and have flying."
+///
+/// The **payoff** half of the SOS Prepare mechanic. The toggle cards
+/// (Biblioplex Tomekeeper, Skycoach Waypoint) put `CounterType::Prepared`
+/// counters on creatures with a back-face "prepare spell", but until now
+/// nothing rewarded a prepared creature — the flag was inert. This anthem
+/// reads the flag through `SelectionRequirement::WithCounter(Prepared)`,
+/// which `affected_from_requirement` lowers to
+/// `AffectedPermanents::AllWithCounter { counter: Prepared, .. }`, so both
+/// the +1/+1 and the flying grant recompute live as creatures become
+/// prepared / unprepared. Uses only existing primitives (`PumpPT` +
+/// `GrantKeyword`); no new engine surface.
+pub fn top_of_the_class() -> CardDefinition {
+    use crate::card::{StaticAbility, StaticEffect};
+    // "Prepared creatures you control" — Creature ∧ ControlledByYou ∧ a
+    // Prepared counter. Shared by both static abilities.
+    let prepared_creatures = || {
+        Selector::EachPermanent(
+            SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou)
+                .and(SelectionRequirement::WithCounter(CounterType::Prepared)),
+        )
+    };
+    CardDefinition {
+        name: "Top of the Class",
+        cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![
+            StaticAbility {
+                description: "Prepared creatures you control get +1/+1",
+                effect: StaticEffect::PumpPT {
+                    applies_to: prepared_creatures(),
+                    power: 1,
+                    toughness: 1,
+                },
+            },
+            StaticAbility {
+                description: "Prepared creatures you control have flying",
+                effect: StaticEffect::GrantKeyword {
+                    applies_to: prepared_creatures(),
+                    keyword: Keyword::Flying,
+                },
+            },
+        ],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+    }
+}

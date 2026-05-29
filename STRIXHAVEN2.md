@@ -735,17 +735,19 @@ per-card status and notes.
 
 ## Known engine gaps surfaced by these catalogs
 
-- **Prepare mechanic** (SOS colorless) — 🟡 partial. Half 1 (MDFC
+- **Prepare mechanic** (SOS colorless) — ✅ done. Half 1 (MDFC
   "prepare spell" creatures with a vanilla front + spell back) ships
-  via the engine's existing back-face plumbing. Half 2 (the flag
-  itself + payoff cards with `Prepare {cost}:` activated abilities
-  gated on the flag) is ⏳ pending. Today the toggles (Biblioplex
-  Tomekeeper, Skycoach Waypoint) correctly enforce the printed
-  "(Only creatures with prepare spells can become prepared.)"
-  reminder via `SelectionRequirement::HasBackFace` on their target
-  filters, and the `CounterType::Prepared` counter rides on the
-  permanent — but no card consumes it yet, so the flag has no
-  gameplay effect. See `.claude/prepared.md` for the design split.
+  via the engine's existing back-face plumbing. Half 2 is now complete:
+  the toggles (Biblioplex Tomekeeper, Skycoach Waypoint) put a
+  `CounterType::Prepared` counter on a creature with a back-face prepare
+  spell (enforced via `SelectionRequirement::HasBackFace`), and the
+  payoff **Top of the Class** ({2}{W}, "Prepared creatures you control
+  get +1/+1 and have flying") consumes it via
+  `SelectionRequirement::WithCounter(Prepared)` — lowered to
+  `AffectedPermanents::AllWithCounter` for the static anthem. The flag
+  is no longer inert. No new engine surface was required; the counter
+  primitives subsumed the originally-planned `Effect::SetPrepared` /
+  `Predicate::IsPrepared`. See `.claude/prepared.md` for the design.
   Engine bonus: the CR 700.2b modal-trigger mode-pick path now covers
   SelfSource ETB triggers (both push sites in `stack.rs` and
   `actions.rs`), unblocking any future modal ETB.
@@ -1503,27 +1505,29 @@ unprepared`. Cards that *care* about the flag have a **Prepare {cost}**
 activated/triggered ability and reminder text "(Only creatures with
 prepare spells can become prepared.)".
 
-Cards in the SOS table that touch the mechanic:
+Cards in the SOS table that touch the mechanic (all ✅):
 
 - **Biblioplex Tomekeeper** ({4} 3/4) — ETB toggle (prepare or unprepare).
 - **Skycoach Waypoint** (land) — `{3},{T}: prepare target`.
-- Cards whose oracle text was previously truncated by the gen script's
-  220-char cap (now 600 chars) may also expose a `Prepare {cost}` ability;
-  when re-running `scripts/gen_strixhaven2.py` look for "prepare " or
-  "prepared" in the oracle column to spot them.
+- **Top of the Class** ({2}{W} enchantment) — payoff anthem: "Prepared
+  creatures you control get +1/+1 and have flying."
 
-Engine-side this needs:
+Engine-side this is fully expressible with **existing** primitives — no
+new surface was needed:
 
-1. A new `CounterType::Prepared` (or a `PermanentFlag::Prepared` boolean)
-   on `Permanent`, surfaced through `PermanentView` for the client UI.
-2. `Effect::SetPrepared { what, value: bool }` to flip the flag.
-3. A `Predicate::IsPrepared` so prepare-payoff cards (the cards
-   *granting* a Prepare ability) can gate their riders on the flag.
-4. The activated ability *itself* on payoff cards — those need an
-   ability authored from the truncated body of the card.
+1. `CounterType::Prepared` (count-1) on the permanent models the flag and
+   is surfaced through `PermanentView.counters`.
+2. `Effect::AddCounter` / `Effect::RemoveCounter` of `CounterType::Prepared`
+   flip it (toggle cards), gated to legal targets by
+   `SelectionRequirement::HasBackFace`.
+3. `SelectionRequirement::WithCounter(CounterType::Prepared)` reads the
+   flag — usable in static anthems (lowered to
+   `AffectedPermanents::AllWithCounter`), `Predicate::EntityMatches`, and
+   target filters. This subsumes the originally-planned
+   `Effect::SetPrepared` and `Predicate::IsPrepared`.
 
-None of these are wired today; all prepare cards are ⏳ until at least
-(1) and (2) land. Track in `TODO.md` under Engine — Missing Mechanics.
+Done; covered by `tests::sos::{top_of_the_class_*, prepared_counter_is_inert_*,
+skycoach_waypoint_*, biblioplex_tomekeeper_*}`.
 
 ---
 

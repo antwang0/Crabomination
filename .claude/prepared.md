@@ -36,30 +36,37 @@ real art rather than a cardback placeholder. Saved under
 If you add a new prepared card, the prefetch handles it automatically
 — no hand-maintained allowlist.
 
-## Half 2 — The prepared flag (**⏳ pending**)
+## Half 2 — The prepared flag (**✅ wired**)
 
-A per-permanent boolean toggled by `becomes prepared` /
-`becomes unprepared` effects. Distinct from Half 1: the flag mechanic
-*reads* whether a creature has a prepare spell (its `back_face`) but
-the flag itself is independent state on the permanent.
+The "prepared" state is modeled as `CounterType::Prepared` (count-1) on
+the permanent, surfaced through `PermanentView.counters` for the client.
+A creature reads as prepared iff it carries ≥1 Prepared counter.
 
-**Toggle cards** (currently ⏳ — no flag primitive yet):
-- Biblioplex Tomekeeper — `{4}` 3/4 with ETB toggle (prepare or
-  unprepare a target).
+**Toggle cards** (✅): set/clear the counter via `Effect::AddCounter` /
+`Effect::RemoveCounter` of `CounterType::Prepared`. The printed reminder
+"(Only creatures with prepare spells can become prepared.)" is enforced
+by an `SelectionRequirement::HasBackFace` filter on the target selector
+— only a creature with a back-face "prepare spell" is a legal target.
+- Biblioplex Tomekeeper — `{4}` 3/4 with ETB choose-mode toggle
+  (prepare or unprepare a target).
 - Skycoach Waypoint — colorless land with `{3},{T}: prepare target`.
 
-**Payoff cards** carry a `Prepare {cost}` activated/triggered ability
-gated on the flag, with reminder text "(Only creatures with prepare
-spells can become prepared.)" — i.e. flag-toggle effects must reject
-targets whose `back_face` is `None`.
+**Payoff cards** (✅): read the flag via
+`SelectionRequirement::WithCounter(CounterType::Prepared)`, which
+`affected_from_requirement` lowers to
+`AffectedPermanents::AllWithCounter { counter: Prepared, .. }` for static
+anthems and which `Predicate::EntityMatches` / `SelectorExists` honor for
+conditional clauses. Recomputes live as creatures become prepared /
+unprepared.
+- Top of the Class — `{2}{W}` enchantment: "Prepared creatures you
+  control get +1/+1 and have flying." (`sos/enchantments.rs`,
+  `StaticEffect::PumpPT` + `GrantKeyword`.)
 
-**Engine work needed:**
-1. `PermanentFlag::Prepared` (or `CounterType::Prepared` count-1) on
-   `Permanent`, surfaced through `PermanentView` for the client UI.
-2. `Effect::SetPrepared { what, value: bool }`.
-3. `Predicate::IsPrepared` for prepare-payoff conditional clauses.
-4. Oracle-text helper that wires "Prepare {cost}: …" into a standard
-   activated ability with `gate: IsPrepared`.
+**No new engine surface was needed** — `CounterType::Prepared`,
+`AddCounter`/`RemoveCounter`, `HasBackFace`, and `WithCounter` already
+existed; the missing piece was purely a payoff card. The originally
+proposed `Effect::SetPrepared` / `Predicate::IsPrepared` / "Prepare
+{cost}:" helper are unnecessary — the counter primitives subsume them.
 
 See STRIXHAVEN2.md → "Prepare mechanic" and TODO.md → "Prepare
 Mechanic (SOS)" for the full status.

@@ -367,6 +367,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             stirring_hopesinger,
             stone_docent,
             inkshape_demonstrator,
+            // Prepare-mechanic payoff (anthem for prepared creatures).
+            top_of_the_class,
         ],
         // Blue (8) — added Mana Sculpt (counter + mana refund),
         // Homesickness (6-mana draw 2 + tap+stun), Fractalize (X-cost

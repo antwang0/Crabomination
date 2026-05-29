@@ -7700,21 +7700,25 @@ Sagas need: ETB with 1 lore counter, trigger each chapter, advance at upkeep,
 sacrifice when the last chapter triggers.  No `SagaLore` counter type or
 upkeep-advance primitive exists.
 
-### Prepare Mechanic (SOS)
-Secrets of Strixhaven introduces a per-permanent "prepared" flag toggled
-by `becomes prepared` / `becomes unprepared` effects. Cards like
-Biblioplex Tomekeeper and Skycoach Waypoint flip the flag; payoff cards
-have a `Prepare {cost}` activated/triggered ability and reminder text
-"(Only creatures with prepare spells can become prepared.)" Engine
-needs:
-- `PermanentFlag::Prepared` (or `CounterType::Prepared` count-1) on
-  `Permanent`, surfaced through `PermanentView`.
-- `Effect::SetPrepared { what, value: bool }`.
-- `Predicate::IsPrepared` for prepare-payoff conditional clauses.
-- A short oracle-text helper that wires "Prepare {cost}: …" into a
-  standard activated ability with `gate: IsPrepared`.
+### Prepare Mechanic (SOS) — ✅ DONE
+Secrets of Strixhaven's per-permanent "prepared" flag is fully wired
+using existing primitives — no new engine surface was needed:
+- The flag is `CounterType::Prepared` (count-1), surfaced through
+  `PermanentView.counters`.
+- Toggle cards (Biblioplex Tomekeeper, Skycoach Waypoint) flip it via
+  `Effect::AddCounter` / `Effect::RemoveCounter`, gated to legal targets
+  by `SelectionRequirement::HasBackFace`.
+- Payoff cards read it via
+  `SelectionRequirement::WithCounter(CounterType::Prepared)` (static
+  anthems lower it to `AffectedPermanents::AllWithCounter`;
+  `Predicate::EntityMatches` / `SelectorExists` cover conditionals). The
+  first payoff is **Top of the Class** ({2}{W}: "Prepared creatures you
+  control get +1/+1 and have flying").
 
-Until (1) and (2) land, all prepare-touching SOS cards are ⏳.
+The originally-planned `Effect::SetPrepared` / `Predicate::IsPrepared` /
+"Prepare {cost}:" helper turned out to be unnecessary — the counter
+primitives subsume them. Covered by `tests::sos::{top_of_the_class_*,
+prepared_counter_is_inert_*}`.
 
 ### Vehicle / Crew
 `CardType::Artifact` exists but there is no `CrewN` keyword or "becomes a
