@@ -342,12 +342,18 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
     // covers CR 121-style damage tracking. Hidden when no damage marked
     // (the common case for fresh permanents).
     if p.damage > 0 && p.card_types.contains(&CardType::Creature) {
-        let lethal = if p.damage as i32 >= p.toughness {
-            " — LETHAL"
+        if p.damage as i32 >= p.toughness {
+            lines.push(format!("(marked: {} damage — LETHAL)", p.damage));
         } else {
-            ""
-        };
-        lines.push(format!("(marked: {} damage{})", p.damage, lethal));
+            // Surface the survival margin so the player sees how much
+            // more damage kills the creature — pairs with the combat
+            // status lines for at-a-glance combat math.
+            let to_live = p.toughness - p.damage as i32;
+            lines.push(format!(
+                "(marked: {} damage; {} more lethal)",
+                p.damage, to_live
+            ));
+        }
     }
 
     // Summoning sickness: creatures that entered this turn can't attack
@@ -420,6 +426,15 @@ mod tests {
         let body = build_tooltip_body(&p).expect("tooltip should render");
         assert!(body.contains("marked: 1 damage"), "got: {body}");
         assert!(!body.contains("LETHAL"), "1 damage on a 2-tough body isn't lethal: {body}");
+    }
+
+    #[test]
+    fn marked_damage_shows_survival_margin_when_not_lethal() {
+        // 2 damage on a 5-toughness body → 3 more is lethal.
+        let p = make_permanent_view(2, 5);
+        let body = build_tooltip_body(&p).expect("tooltip should render");
+        assert!(body.contains("marked: 2 damage; 3 more lethal"), "got: {body}");
+        assert!(!body.contains("LETHAL"), "not lethal yet: {body}");
     }
 
     #[test]
