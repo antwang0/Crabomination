@@ -73,6 +73,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Horsemanship => "Horsemanship",
         Keyword::Intimidate => "Intimidate",
         Keyword::Skulk => "Skulk",
+        Keyword::Fear => "Fear",
         Keyword::Rebound => "Rebound",
         Keyword::Exert => "Exert",
         Keyword::Dredge(_) => "Dredge",

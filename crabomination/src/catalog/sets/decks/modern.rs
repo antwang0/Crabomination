@@ -9250,6 +9250,65 @@ pub fn drudge_skeletons() -> CardDefinition {
     }
 }
 
+/// Hooting Mandrills — {5}{G} Creature — Ape. 4/4 with Trample. Delve.
+///
+/// Delve (CR 702.66) pays the {5} generic by exiling graveyard cards.
+pub fn hooting_mandrills() -> CardDefinition {
+    CardDefinition {
+        name: "Hooting Mandrills",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample, Keyword::Delve],
+        ..Default::default()
+    }
+}
+
+/// Become Immense — {5}{G} Instant. Delve. Target creature gets +6/+6
+/// until end of turn.
+///
+/// Delve (CR 702.66) pays the {5}; a stocked graveyard turns this into a
+/// {G} +6/+6 pump.
+pub fn become_immense() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Become Immense",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Delve],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(6),
+            toughness: Value::Const(6),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Severed Legion — {2}{B} Creature — Zombie. 2/2 with Fear (CR 702.36):
+/// can't be blocked except by artifact and/or black creatures.
+pub fn severed_legion() -> CardDefinition {
+    CardDefinition {
+        name: "Severed Legion",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Fear],
+        ..Default::default()
+    }
+}
+
 // ── modern_decks batch 103: cube expansion cards ─────────────────────────────
 
 /// Death-Greeter's Champion — {1}{R} Creature — Human Warrior. 2/2 with

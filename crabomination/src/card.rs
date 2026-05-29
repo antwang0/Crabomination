@@ -265,6 +265,9 @@ pub enum Keyword {
     Horsemanship,
     Intimidate,
     Skulk,
+    /// CR 702.36 — Fear. "This creature can't be blocked except by
+    /// artifact creatures and/or black creatures."
+    Fear,
     Haste,
     Vigilance,
     FirstStrike,

@@ -3543,6 +3543,15 @@ pub(crate) fn can_block_attacker_computed(
     if attacker_kws.contains(&Keyword::Skulk) && blocker_computed.power > attacker.power() {
         return false;
     }
+    // Fear (CR 702.36): can only be blocked by artifact creatures and/or
+    // black creatures.
+    if attacker_kws.contains(&Keyword::Fear) {
+        let blocker_is_artifact = blocker.definition.is_artifact();
+        let blocker_is_black = blocker_computed.colors.contains(&crate::mana::Color::Black);
+        if !blocker_is_artifact && !blocker_is_black {
+            return false;
+        }
+    }
     // Intimidate: can only be blocked by artifact creatures or creatures sharing a color.
     if attacker_kws.contains(&Keyword::Intimidate) {
         let blocker_is_artifact = blocker.definition.is_artifact();

@@ -13347,3 +13347,75 @@ fn regen_shield_expires_at_cleanup() {
     }
     assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 0);
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fear (CR 702.36) — only artifact and/or black creatures can block.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// A non-black, non-artifact creature can't block a Fear attacker.
+#[test]
+fn fear_cannot_be_blocked_by_green_creature() {
+    let mut g = two_player_game();
+    let legion = g.add_card_to_battlefield(0, catalog::severed_legion());
+    g.clear_sickness(legion);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: legion, target: AttackTarget::Player(1),
+    }])).expect("Legion attacks");
+    g.step = TurnStep::DeclareBlockers;
+    let res = g.perform_action(GameAction::DeclareBlockers(vec![(bear, legion)]));
+    assert!(matches!(res, Err(GameError::CannotBlock(_))), "green bear can't block Fear");
+}
+
+/// A black creature CAN block a Fear attacker.
+#[test]
+fn fear_can_be_blocked_by_black_creature() {
+    let mut g = two_player_game();
+    let legion = g.add_card_to_battlefield(0, catalog::severed_legion());
+    g.clear_sickness(legion);
+    let skel = g.add_card_to_battlefield(1, catalog::drudge_skeletons()); // black
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: legion, target: AttackTarget::Player(1),
+    }])).expect("Legion attacks");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(skel, legion)]))
+        .expect("black Skeletons may block a Fear attacker");
+}
+
+/// Hooting Mandrills delves to {G} and enters as a 4/4 trampler.
+#[test]
+fn delve_hooting_mandrills_enters_with_trample() {
+    let mut g = two_player_game();
+    let gy: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::forest())).collect();
+    let id = g.add_card_to_hand(0, catalog::hooting_mandrills());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy,
+    }).expect("{G} after delving five");
+    drain_stack(&mut g);
+    let mand = g.battlefield.iter().find(|c| c.definition.name == "Hooting Mandrills").unwrap();
+    assert_eq!((mand.power(), mand.toughness()), (4, 4));
+    assert!(mand.has_keyword(&Keyword::Trample));
+}
+
+/// Become Immense delves to {G} and pumps a creature +6/+6.
+#[test]
+fn delve_become_immense_pumps_six() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gy: Vec<_> = (0..5).map(|_| g.add_card_to_graveyard(0, catalog::forest())).collect();
+    let id = g.add_card_to_hand(0, catalog::become_immense());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy,
+    }).expect("{G} after delving five");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (8, 8), "2/2 + 6/6");
+}
