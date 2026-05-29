@@ -29,5 +29,6 @@ pub fn mourning_thrull() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }

@@ -28,6 +28,7 @@ pub fn plains() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -57,6 +58,7 @@ pub fn island() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -86,6 +88,7 @@ pub fn swamp() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -115,6 +118,7 @@ pub fn mountain() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -144,6 +148,7 @@ pub fn forest() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -173,6 +178,7 @@ fn dual(name: &'static str, a: LandType, b: LandType, ca: Color, cb: Color) -> C
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 

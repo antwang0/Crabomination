@@ -44,6 +44,7 @@ pub fn anger_of_the_gods() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -81,6 +82,7 @@ pub fn disentomb() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -133,6 +135,7 @@ pub fn vandalblast() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -171,6 +174,7 @@ pub fn natures_lore() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -210,6 +214,7 @@ pub fn fell() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -244,6 +249,7 @@ pub fn blasphemous_edict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -279,6 +285,7 @@ pub fn upheaval() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -315,6 +322,7 @@ pub fn rakshasas_bargain() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -354,6 +362,7 @@ pub fn sundering_eruption() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Sundering Eruption",
@@ -383,6 +392,7 @@ pub fn sundering_eruption() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -433,6 +443,7 @@ pub fn big_score() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -480,6 +491,7 @@ pub fn windfall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -518,6 +530,7 @@ pub fn blasphemous_act() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -569,6 +582,7 @@ pub fn reckless_charge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -602,6 +616,7 @@ pub fn boil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -637,6 +652,7 @@ pub fn compulsive_research() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -668,6 +684,7 @@ pub fn demolish() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -698,6 +715,7 @@ pub fn mind_sculpt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -738,6 +756,7 @@ pub fn cabal_therapy() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -775,6 +794,7 @@ pub fn wear_down() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 

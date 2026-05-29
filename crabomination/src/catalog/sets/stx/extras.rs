@@ -61,6 +61,7 @@ pub fn bookwurm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -111,6 +112,7 @@ pub fn field_trip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -175,6 +177,7 @@ pub fn reduce_to_memory() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -235,6 +238,7 @@ pub fn baleful_mastery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -280,6 +284,7 @@ pub fn igneous_inspiration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -335,6 +340,7 @@ pub fn combat_professor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -387,6 +393,7 @@ pub fn beaming_defiance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -476,6 +483,7 @@ pub fn spell_satchel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -514,6 +522,7 @@ pub fn excavated_wall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -577,6 +586,7 @@ pub fn snow_day() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -624,6 +634,7 @@ pub fn curate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -672,6 +683,7 @@ pub fn solve_the_equation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -734,6 +746,7 @@ pub fn resculpt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -773,6 +786,7 @@ pub fn mortality_spear() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -828,6 +842,7 @@ pub fn daemogoth_titan() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -898,6 +913,7 @@ pub fn daemogoth_woe_eater() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -936,6 +952,7 @@ pub fn honor_troll() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -988,6 +1005,7 @@ pub fn quandrix_cultivator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1088,6 +1106,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1141,6 +1160,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1201,6 +1221,7 @@ pub fn confront_the_past() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1244,6 +1265,7 @@ pub fn specter_of_the_fens() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1291,6 +1313,7 @@ pub fn mascot_interception() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1333,6 +1356,7 @@ pub fn twinscroll_shaman() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1376,6 +1400,7 @@ pub fn practical_research() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1435,6 +1460,7 @@ pub fn hall_of_oracles() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1502,6 +1528,7 @@ pub fn star_pupil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1539,6 +1566,7 @@ pub fn ageless_guardian() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1592,6 +1620,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1639,6 +1668,7 @@ pub fn charge_through() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1693,6 +1723,7 @@ pub fn devious_cover_up() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1762,6 +1793,7 @@ pub fn manifestation_sage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1812,6 +1844,7 @@ pub fn crackle_with_power() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1872,6 +1905,7 @@ pub fn mentors_guidance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1968,6 +2002,7 @@ pub fn quintorius_field_historian() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2019,6 +2054,7 @@ pub fn galvanic_iteration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2075,6 +2111,7 @@ pub fn expressive_iteration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2140,6 +2177,7 @@ pub fn magma_opus() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2197,6 +2235,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2245,6 +2284,7 @@ pub fn crashing_drawbridge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2299,6 +2339,7 @@ pub fn eyetwitch_brood() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2351,6 +2392,7 @@ pub fn first_day_of_class() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2414,6 +2456,7 @@ pub fn verdant_mastery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2469,6 +2512,7 @@ pub fn sacred_fire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2506,6 +2550,7 @@ pub fn codespell_cleric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2553,6 +2598,7 @@ pub fn sparkmage_apprentice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2593,6 +2639,7 @@ pub fn karok_wrangler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2642,6 +2689,7 @@ pub fn defend_the_campus() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2682,6 +2730,7 @@ pub fn hall_monitor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2731,6 +2780,7 @@ pub fn stonebinders_familiar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2780,6 +2830,7 @@ pub fn necrotic_fumes() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2825,6 +2876,7 @@ pub fn make_your_mark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2867,6 +2919,7 @@ pub fn containment_breach() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2915,6 +2968,7 @@ pub fn burrog_befuddler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2963,6 +3017,7 @@ pub fn mage_hunters_mark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3015,6 +3070,7 @@ pub fn mage_duel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3055,6 +3111,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3114,6 +3171,7 @@ pub fn tezzerets_gambit() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3184,6 +3242,7 @@ pub fn wandering_archaic() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3257,6 +3316,7 @@ pub fn illuminate_history() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3306,6 +3366,7 @@ pub fn take_up_the_shield() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3367,6 +3428,7 @@ pub fn star_pupils_papers() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3428,6 +3490,7 @@ fn snarl_land(
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3555,6 +3618,7 @@ pub fn dragons_approach() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3604,6 +3668,7 @@ pub fn defiant_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3685,6 +3750,7 @@ pub fn divine_gambit() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3726,6 +3792,7 @@ pub fn cram_session() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3780,6 +3847,7 @@ pub fn soothsayer_adept() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3846,6 +3914,7 @@ pub fn crux_of_fate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3940,6 +4009,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4001,6 +4071,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     CardDefinition {
         name: "Pestilent Cauldron",
@@ -4049,6 +4120,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4116,6 +4188,7 @@ pub fn augusta_dean_of_order() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4151,6 +4224,7 @@ fn diamond(name: &'static str, color: Color) -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4227,6 +4301,7 @@ pub fn goblin_lore() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4268,6 +4343,7 @@ pub fn whirlwind_denial() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4308,6 +4384,7 @@ pub fn eliminate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4352,6 +4429,7 @@ pub fn pull_from_tomorrow() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4396,6 +4474,7 @@ pub fn burst_lightning() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4470,6 +4549,7 @@ pub fn postmortem_lunge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4512,6 +4592,7 @@ pub fn curious_cryomancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4560,6 +4641,7 @@ pub fn verdant_pledgemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4604,6 +4686,7 @@ pub fn channeled_force() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4658,6 +4741,7 @@ pub fn stonebound_mentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4718,6 +4802,7 @@ pub fn inscription_of_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4799,6 +4884,7 @@ pub fn manifold_key() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4856,6 +4942,7 @@ pub fn leyline_invocation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4900,6 +4987,7 @@ pub fn spitfire_lagac() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4951,6 +5039,7 @@ pub fn settle_the_score() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4996,6 +5085,7 @@ pub fn exsanguinate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5052,6 +5142,7 @@ pub fn fire_prophecy() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5106,6 +5197,7 @@ pub fn divide_by_zero() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5180,6 +5272,7 @@ pub fn maelstrom_muse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5247,6 +5340,7 @@ pub fn approach_of_the_second_sun() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5291,6 +5385,7 @@ pub fn resurrection() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5378,6 +5473,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5418,6 +5514,7 @@ pub fn eladamris_call() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5462,6 +5559,7 @@ pub fn yawning_fissure() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5520,6 +5618,7 @@ pub fn cleansing_wildfire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5572,6 +5671,7 @@ pub fn tendrils_of_agony() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5613,6 +5713,7 @@ pub fn saw_it_coming() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5693,6 +5794,7 @@ pub fn dueling_coach() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5754,6 +5856,7 @@ pub fn increasing_vengeance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5793,6 +5896,7 @@ pub fn quench() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5869,6 +5973,7 @@ pub fn spined_karok() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5925,6 +6030,7 @@ pub fn inspiring_veteran() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5983,6 +6089,7 @@ pub fn snipe() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6049,6 +6156,7 @@ pub fn witherbloom_pest_eater() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6098,6 +6206,7 @@ pub fn inkmoth_initiate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6142,6 +6251,7 @@ pub fn stoic_tutelage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6191,6 +6301,7 @@ pub fn lorehold_recovery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6243,6 +6354,7 @@ pub fn quandrix_surge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6287,6 +6399,7 @@ pub fn magecraft_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6334,6 +6447,7 @@ pub fn sparkmages_mantra() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6374,6 +6488,7 @@ pub fn witherbloom_drainage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6434,6 +6549,7 @@ pub fn mizzium_mortars() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6488,6 +6604,7 @@ pub fn electrolyze() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6543,6 +6660,7 @@ pub fn show_of_aggression() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6608,6 +6726,7 @@ pub fn past_in_flames() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6659,6 +6778,7 @@ pub fn inspired_idea() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6724,6 +6844,7 @@ pub fn resurgent_belief() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6785,6 +6906,7 @@ pub fn enthusiastic_study() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6845,6 +6967,7 @@ pub fn forked_bolt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6887,6 +7010,7 @@ pub fn storms_wrath() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6933,6 +7057,7 @@ pub fn cinderclasm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6982,6 +7107,7 @@ pub fn cathartic_pyre() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7021,6 +7147,7 @@ pub fn stern_dismissal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7062,6 +7189,7 @@ pub fn krosan_grip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7134,6 +7262,7 @@ pub fn sublime_epiphany() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7204,6 +7333,7 @@ pub fn persist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7248,6 +7378,7 @@ pub fn bone_to_ash() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7303,6 +7434,7 @@ pub fn ingenious_mastery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7359,6 +7491,7 @@ pub fn acolyte_of_affliction() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7403,6 +7536,7 @@ pub fn damnable_pact() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7448,6 +7582,7 @@ pub fn shore_up() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7494,6 +7629,7 @@ pub fn symbol_of_strength() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7543,6 +7679,7 @@ pub fn magmatic_sinkhole() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7606,6 +7743,7 @@ pub fn sevinnes_reclamation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7664,6 +7802,7 @@ pub fn light_of_promise() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7719,6 +7858,7 @@ pub fn skywarp_skaab() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7767,6 +7907,7 @@ pub fn anger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7854,6 +7995,7 @@ pub fn triskaidekaphile() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7904,6 +8046,7 @@ pub fn excellent_education() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7959,6 +8102,7 @@ pub fn sproutback_trudge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8004,6 +8148,7 @@ pub fn wonder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8048,6 +8193,7 @@ pub fn brawn() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8093,6 +8239,7 @@ pub fn deep_analysis() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8146,6 +8293,7 @@ pub fn kasminas_transmutation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8202,6 +8350,7 @@ pub fn crippling_fear() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8259,6 +8408,7 @@ pub fn tribute_to_hunger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8301,6 +8451,7 @@ pub fn valor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8343,6 +8494,7 @@ pub fn pigment_storm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8390,6 +8542,7 @@ pub fn step_through() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8440,6 +8593,7 @@ pub fn inkfathom_witch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8507,6 +8661,7 @@ pub fn inscription_of_ruin() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8566,6 +8721,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8619,6 +8775,7 @@ pub fn drannith_stinger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8667,6 +8824,7 @@ pub fn mage_mauler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8740,6 +8898,7 @@ pub fn heirloom_mirror() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8792,6 +8951,7 @@ pub fn quandrix_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8845,6 +9005,7 @@ pub fn witherbloom_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8899,6 +9060,7 @@ pub fn spiteful_squad() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8954,6 +9116,7 @@ pub fn master_symmetrist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9016,6 +9179,7 @@ pub fn stinging_cave_crawler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9062,6 +9226,7 @@ pub fn cogwork_archivist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9116,6 +9281,7 @@ pub fn lorehold_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9168,6 +9334,7 @@ pub fn adrix_and_nev_twincasters() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9266,6 +9433,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9312,6 +9480,7 @@ pub fn awesome_presentation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9375,6 +9544,7 @@ pub fn rise_of_extus() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9416,6 +9586,7 @@ pub fn brackish_trudge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9469,6 +9640,7 @@ pub fn lurking_deadeye() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9519,6 +9691,7 @@ pub fn aether_helix() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9561,6 +9734,7 @@ pub fn reflective_golem() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9612,6 +9786,7 @@ pub fn tempest_caller() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9670,6 +9845,7 @@ pub fn pillardrop_warden() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9730,6 +9906,7 @@ pub fn devourer_of_memory() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9776,6 +9953,7 @@ pub fn mavindas_verdict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9824,6 +10002,7 @@ pub fn witherbloom_skillchaser() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9876,6 +10055,7 @@ pub fn quandrix_pop_quiz() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9915,6 +10095,7 @@ pub fn inkwood_scrivener() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9958,6 +10139,7 @@ pub fn furnace_hellkite() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9995,6 +10177,7 @@ pub fn pinion_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10038,6 +10221,7 @@ pub fn sparkling_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10083,6 +10267,7 @@ pub fn pop_quiz_coach() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10122,6 +10307,7 @@ pub fn soothing_hush() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10160,6 +10346,7 @@ pub fn vortex_runner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10213,6 +10400,7 @@ pub fn sage_of_the_beyond() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10267,6 +10455,7 @@ pub fn frostpyre_arcanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10314,6 +10503,7 @@ pub fn inkfathom_divers() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10368,6 +10558,7 @@ pub fn quandrix_quickener() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10423,6 +10614,7 @@ pub fn search_for_glory() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10473,6 +10665,7 @@ pub fn fervent_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10556,6 +10749,7 @@ pub fn waker_of_waves() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10605,6 +10799,7 @@ pub fn discover_the_formula() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10657,6 +10852,7 @@ pub fn mortician_beetle() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10702,6 +10898,7 @@ pub fn vespine_strix() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10758,6 +10955,7 @@ pub fn witherbloom_apprenticeship() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10802,6 +11000,7 @@ pub fn wandering_mind() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10858,6 +11057,7 @@ pub fn lecturing_loxodon() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10909,6 +11109,7 @@ pub fn sequence_engine() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10967,6 +11168,7 @@ pub fn curriculum_crab() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11012,6 +11214,7 @@ pub fn pyrotechnics() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11055,6 +11258,7 @@ pub fn stormwild_capridor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11107,6 +11311,7 @@ pub fn final_payment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11184,6 +11389,7 @@ pub fn witchs_cauldron() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11234,6 +11440,7 @@ pub fn steady_stance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11287,6 +11494,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11336,6 +11544,7 @@ pub fn revitalize() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11382,6 +11591,7 @@ pub fn grim_bounty() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11446,6 +11656,7 @@ pub fn growth_spiral() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11488,6 +11699,7 @@ pub fn idyllic_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11542,6 +11754,7 @@ pub fn gift_of_estates() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11585,6 +11798,7 @@ pub fn pillage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11631,6 +11845,7 @@ pub fn slip_through_space() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11673,6 +11888,7 @@ pub fn doomskar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11714,6 +11930,7 @@ pub fn battle_mammoth() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11758,6 +11975,7 @@ pub fn mind_drain() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11805,6 +12023,7 @@ pub fn hindering_light() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11854,6 +12073,7 @@ pub fn soul_shatter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11919,6 +12139,7 @@ pub fn lurking_predators() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11958,6 +12179,7 @@ pub fn prowling_caracal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12002,6 +12224,7 @@ pub fn elvish_visionary() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12055,6 +12278,7 @@ pub fn sungrass_egg() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12113,6 +12337,7 @@ pub fn mascot_summoning() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12157,6 +12382,7 @@ pub fn scry_inversion() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12202,6 +12428,7 @@ pub fn cunning_rhetoric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12252,6 +12479,7 @@ pub fn library_larcenist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12298,6 +12526,7 @@ pub fn deans_list() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12340,6 +12569,7 @@ pub fn inkrise_infiltrator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12397,6 +12627,7 @@ pub fn sigardian_savior() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12454,6 +12685,7 @@ pub fn sneaky_snacker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12509,6 +12741,7 @@ pub fn soulknife_spy() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12560,6 +12793,7 @@ pub fn daring_diversion() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12603,6 +12837,7 @@ pub fn possibility_storm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12662,6 +12897,7 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12733,6 +12969,7 @@ pub fn strixhaven_spawner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12774,6 +13011,7 @@ pub fn mage_hunter_defender() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12819,6 +13057,7 @@ pub fn detention_sphere() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12878,6 +13117,7 @@ pub fn mascot_trainer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12930,6 +13170,7 @@ pub fn quandrix_cryptidkeeper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12991,6 +13232,7 @@ pub fn ember_anvil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13043,6 +13285,7 @@ pub fn witherbloom_strangler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13090,6 +13333,7 @@ pub fn glasspool_embellisher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13149,6 +13393,7 @@ pub fn lorehold_reanimator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13204,6 +13449,7 @@ pub fn prismari_eruption() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13255,6 +13501,7 @@ pub fn silverquill_inquisitor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13313,6 +13560,7 @@ pub fn lorehold_spectral_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13381,6 +13629,7 @@ pub fn pop_quiz_recital() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13423,6 +13672,7 @@ pub fn diviners_wand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13475,6 +13725,7 @@ pub fn fascinating_lecture() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13527,6 +13778,7 @@ pub fn quandrix_sphinx() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13598,6 +13850,7 @@ pub fn lorehold_excavator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13653,6 +13906,7 @@ pub fn stridehollow_vampire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13708,6 +13962,7 @@ pub fn witherbloom_necrotutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13750,6 +14005,7 @@ pub fn silverquill_pledge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13790,6 +14046,7 @@ pub fn inkwell_strider() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13838,6 +14095,7 @@ pub fn scolding_detention() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13888,6 +14146,7 @@ pub fn lesson_recall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13936,6 +14195,7 @@ pub fn pestilent_acolyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13988,6 +14248,7 @@ pub fn stoneglare_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14034,6 +14295,7 @@ pub fn critical_critique() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14084,6 +14346,7 @@ pub fn quandrix_manipulator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14129,6 +14392,7 @@ pub fn prismari_iteration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14167,6 +14431,7 @@ pub fn lorehold_battle_priest() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14217,6 +14482,7 @@ pub fn witherbloom_reaper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14259,6 +14525,7 @@ pub fn pyromancers_bolt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14310,6 +14577,7 @@ pub fn symmetry_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14349,6 +14617,7 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14417,6 +14686,7 @@ pub fn mob_mentality() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14458,6 +14728,7 @@ pub fn witherbloom_drain_ritual() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14500,6 +14771,7 @@ pub fn mystical_inquiry() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14557,6 +14829,7 @@ pub fn conjurers_bauble() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14595,6 +14868,7 @@ pub fn quartzwood_inkling() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14640,6 +14914,7 @@ pub fn pop_quiz_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14693,6 +14968,7 @@ pub fn brilliant_restoration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14735,6 +15011,7 @@ pub fn inkling_studies() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14784,6 +15061,7 @@ pub fn spirit_banner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14820,6 +15098,7 @@ pub fn spectral_adjudicator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14877,6 +15156,7 @@ pub fn quandrix_doubling_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14915,6 +15195,7 @@ pub fn inkling_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14954,6 +15235,7 @@ pub fn inkling_squire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15003,6 +15285,7 @@ pub fn silverquill_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15045,6 +15328,7 @@ pub fn inkling_reinforcement() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15090,6 +15374,7 @@ pub fn pestilent_verse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15128,6 +15413,7 @@ pub fn inkling_ambusher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15176,6 +15462,7 @@ pub fn silver_quill_scholarship() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15225,6 +15512,7 @@ pub fn silvercrown_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15265,6 +15553,7 @@ pub fn demolishing_lecture() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15324,6 +15613,7 @@ pub fn inkling_mentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15365,6 +15655,7 @@ pub fn pestilent_inkmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15402,6 +15693,7 @@ pub fn inkling_reaver() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15441,6 +15733,7 @@ pub fn quintessential_inkling() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15482,6 +15775,7 @@ pub fn quill_witch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15534,6 +15828,7 @@ pub fn lesson_in_honor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15578,6 +15873,7 @@ pub fn inkling_squad() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15632,6 +15928,7 @@ pub fn inkling_drillmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15674,6 +15971,7 @@ pub fn sealing_verse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15719,6 +16017,7 @@ pub fn strict_tutelage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15758,6 +16057,7 @@ pub fn inkrise_vampire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15799,6 +16099,7 @@ pub fn silverquill_sting() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15861,6 +16162,7 @@ pub fn blade_historian() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15905,6 +16207,7 @@ pub fn carving_cherub() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15942,6 +16245,7 @@ pub fn inkrider_witch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15988,6 +16292,7 @@ pub fn roving_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16033,6 +16338,7 @@ pub fn forceful_mirror() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16078,6 +16384,7 @@ pub fn fractalic_discovery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16128,6 +16435,7 @@ pub fn lorehold_lookback() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16166,6 +16474,7 @@ pub fn witherbloom_reaper_spirit() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16214,6 +16523,7 @@ pub fn witherbloom_lifedrinker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16252,6 +16562,7 @@ pub fn lorehold_battlemaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16301,6 +16612,7 @@ pub fn prismari_spellfire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16354,6 +16666,7 @@ pub fn quandrix_recalibrator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16395,6 +16708,7 @@ pub fn crackleburr_initiate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16440,6 +16754,7 @@ pub fn spellseekers_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16487,6 +16802,7 @@ pub fn burrog_snapper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16544,6 +16860,7 @@ pub fn galvanic_ribbons() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16593,6 +16910,7 @@ pub fn plant_mascot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16643,6 +16961,7 @@ pub fn quandrix_wavebender() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16696,6 +17015,7 @@ pub fn tezzerets_inkling_forge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16740,6 +17060,7 @@ pub fn quandrix_snake_charmer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16784,6 +17105,7 @@ pub fn witherbloom_necrotouch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16823,6 +17145,7 @@ pub fn pestilent_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16860,6 +17183,7 @@ pub fn shadow_mage_hopeful() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16900,6 +17224,7 @@ pub fn quill_page() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16956,6 +17281,7 @@ pub fn inkbond_cleric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16994,6 +17320,7 @@ pub fn quill_inscriber() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17030,6 +17357,7 @@ pub fn pestilent_squire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17068,6 +17396,7 @@ pub fn silverquill_mediator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17109,6 +17438,7 @@ pub fn dissident_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17159,6 +17489,7 @@ pub fn silverquill_persuader() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17195,6 +17526,7 @@ pub fn pestilent_imp() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17236,6 +17568,7 @@ pub fn witherbloom_tincture_maker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17273,6 +17606,7 @@ pub fn lorehold_crusader() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17311,6 +17645,7 @@ pub fn quandrix_initiate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17365,6 +17700,7 @@ pub fn lorehold_wand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17419,6 +17755,7 @@ pub fn witherbloom_bramble() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17461,6 +17798,7 @@ pub fn prismari_spark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17506,6 +17844,7 @@ pub fn quandrix_trickster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17542,6 +17881,7 @@ pub fn lorehold_memorialist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17591,6 +17931,7 @@ pub fn witherbloom_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17643,6 +17984,7 @@ pub fn quandrix_catalyst() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17679,6 +18021,7 @@ pub fn lorehold_vanguard() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17716,6 +18059,7 @@ pub fn inkling_sentinel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17778,6 +18122,7 @@ pub fn witherbloom_ritualist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17823,6 +18168,7 @@ pub fn quandrix_theorem() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17870,6 +18216,7 @@ pub fn prismari_surge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17913,6 +18260,7 @@ pub fn lorehold_conservator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17954,6 +18302,7 @@ pub fn silverquill_initiate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18029,6 +18378,7 @@ pub fn witherbloom_channeler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18080,6 +18430,7 @@ pub fn lorehold_mentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18136,6 +18487,7 @@ pub fn prismari_bauble() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18195,6 +18547,7 @@ pub fn inkling_aether_smith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18235,6 +18588,7 @@ pub fn disciplined_duelist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18275,6 +18629,7 @@ pub fn eager_scribe() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18325,6 +18680,7 @@ pub fn silverquill_pen() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18366,6 +18722,7 @@ pub fn witherbloom_acolyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18412,6 +18769,7 @@ pub fn witherbloom_toxicology() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18458,6 +18816,7 @@ pub fn pest_brood_caller() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18494,6 +18853,7 @@ pub fn inkling_caretaker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18534,6 +18894,7 @@ pub fn silverquill_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18580,6 +18941,7 @@ pub fn lorehold_reverie() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18624,6 +18986,7 @@ pub fn prismari_loot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18672,6 +19035,7 @@ pub fn quandrix_counterspell() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18707,6 +19071,7 @@ pub fn spell_squelch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18744,6 +19109,7 @@ pub fn witherbloom_field_worker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18787,6 +19153,7 @@ pub fn lorehold_wayfinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18830,6 +19197,7 @@ pub fn prismari_brilliance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18868,6 +19236,7 @@ pub fn quandrix_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18912,6 +19281,7 @@ pub fn silverquill_cantrip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18959,6 +19329,7 @@ pub fn witherbloom_reanimator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -18996,6 +19367,7 @@ pub fn lorehold_lightning() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19034,6 +19406,7 @@ pub fn quandrix_engineer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19079,6 +19452,7 @@ pub fn prismari_pyromage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19128,6 +19502,7 @@ pub fn lorehold_curator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19165,6 +19540,7 @@ pub fn witherbloom_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19215,6 +19591,7 @@ pub fn quandrix_apprenticeship() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19254,6 +19631,7 @@ pub fn prismari_pyrotechnics() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19290,6 +19668,7 @@ pub fn lorehold_strategist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19337,6 +19716,7 @@ pub fn witherbloom_necromancy() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19383,6 +19763,7 @@ pub fn silverquill_resolve() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19437,6 +19818,7 @@ pub fn prismari_conduit() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19482,6 +19864,7 @@ pub fn quandrix_doubling() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19527,6 +19910,7 @@ pub fn lorehold_smith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19570,6 +19954,7 @@ pub fn silverquill_decree() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19622,6 +20007,7 @@ pub fn witherbloom_wand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19670,6 +20056,7 @@ pub fn quandrix_survey() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19714,6 +20101,7 @@ pub fn prismari_arsonist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19749,6 +20137,7 @@ pub fn lorehold_banner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19789,6 +20178,7 @@ pub fn witherbloom_verdict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19827,6 +20217,7 @@ pub fn strixhaven_footsoldier() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19861,6 +20252,7 @@ pub fn mage_tower_crystal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19895,6 +20287,7 @@ pub fn witherbloom_adept() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19931,6 +20324,7 @@ pub fn lorehold_pyromancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -19973,6 +20367,7 @@ pub fn quandrix_defender() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20010,6 +20405,7 @@ pub fn silverquill_lifedrain() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20045,6 +20441,7 @@ pub fn witherbloom_plowman() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20087,6 +20484,7 @@ pub fn prismari_spellfire_sage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20124,6 +20522,7 @@ pub fn lorehold_justice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20160,6 +20559,7 @@ pub fn quandrix_recall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20202,6 +20602,7 @@ pub fn witherbloom_pestilence() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20236,6 +20637,7 @@ pub fn lorehold_combatant() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20293,6 +20695,7 @@ pub fn owlin_tactician() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20337,6 +20740,7 @@ pub fn pest_mediator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20387,6 +20791,7 @@ pub fn inkling_aerialist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20435,6 +20840,7 @@ pub fn quandrix_theorist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20474,6 +20880,7 @@ pub fn prismari_inferno() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20516,6 +20923,7 @@ pub fn lorehold_resurgence() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20559,6 +20967,7 @@ pub fn witherbloom_studies() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20609,6 +21018,7 @@ pub fn silverquill_vanguard() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20646,6 +21056,7 @@ pub fn prismari_channeler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20690,6 +21101,7 @@ pub fn lorehold_anthem() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20737,6 +21149,7 @@ pub fn strixhaven_diplomat() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20773,6 +21186,7 @@ pub fn lorehold_banishment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20815,6 +21229,7 @@ pub fn quandrix_mass_counter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20857,6 +21272,7 @@ pub fn prismari_storm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20898,6 +21314,7 @@ pub fn witherbloom_plague() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20940,6 +21357,7 @@ pub fn silverquill_aerie() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -20985,6 +21403,7 @@ pub fn silverquill_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21022,6 +21441,7 @@ pub fn witherbloom_apprentices_familiar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21071,6 +21491,7 @@ pub fn lorehold_investigator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21108,6 +21529,7 @@ pub fn prismari_ember_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21157,6 +21579,7 @@ pub fn quandrix_calculator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21203,6 +21626,7 @@ pub fn lorehold_spark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21241,6 +21665,7 @@ pub fn witherbloom_tonic() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21291,6 +21716,7 @@ pub fn silverquill_scribe() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21341,6 +21767,7 @@ pub fn prismari_maelstrom() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21379,6 +21806,7 @@ pub fn lorehold_beacon() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21437,6 +21865,7 @@ pub fn quandrix_mentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21477,6 +21906,7 @@ pub fn silverquill_riposte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21523,6 +21953,7 @@ pub fn witherbloom_druid_in_training() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21569,6 +22000,7 @@ pub fn lorehold_recurrence() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21623,6 +22055,7 @@ pub fn prismari_sage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21675,6 +22108,7 @@ pub fn quandrix_aviator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21736,6 +22170,7 @@ pub fn witherbloom_necromancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21774,6 +22209,7 @@ pub fn silverquill_edict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21822,6 +22258,7 @@ pub fn lorehold_recall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21865,6 +22302,7 @@ pub fn quandrix_refraction() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21914,6 +22352,7 @@ pub fn prismari_architect() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -21958,6 +22397,7 @@ pub fn witherbloom_briarmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22005,6 +22445,7 @@ pub fn silverquill_strategist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22071,6 +22512,7 @@ pub fn lorehold_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22108,6 +22550,7 @@ pub fn witherbloom_sapfeeder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22159,6 +22602,7 @@ pub fn quandrix_mathematician() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22209,6 +22653,7 @@ pub fn prismari_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22246,6 +22691,7 @@ pub fn silverquill_initiate_first_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22292,6 +22738,7 @@ pub fn lorehold_sparkmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22350,6 +22797,7 @@ pub fn witherbloom_loremage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22397,6 +22845,7 @@ pub fn quandrix_surge_spell() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22449,6 +22898,7 @@ pub fn prismari_volcanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22499,6 +22949,7 @@ pub fn lorehold_spellsage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22542,6 +22993,7 @@ pub fn silverquill_penmate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22608,6 +23060,7 @@ pub fn witherbloom_apothecary() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22651,6 +23104,7 @@ pub fn quandrix_trampler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22728,6 +23182,7 @@ pub fn prismari_painter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22777,6 +23232,7 @@ pub fn lorehold_archivist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22830,6 +23286,7 @@ pub fn silverquill_scrivener() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22891,6 +23348,7 @@ pub fn witherbloom_geneticist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22938,6 +23396,7 @@ pub fn quandrix_resonator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -22985,6 +23444,7 @@ pub fn prismari_wavecaller() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23042,6 +23502,7 @@ pub fn lorehold_spiritguide() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23099,6 +23560,7 @@ pub fn silverquill_verse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23147,6 +23609,7 @@ pub fn witherbloom_quagmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23191,6 +23654,7 @@ pub fn quandrix_surveyor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23235,6 +23699,7 @@ pub fn prismari_glitterbomb() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23294,6 +23759,7 @@ pub fn pestilent_haze() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23342,6 +23808,7 @@ pub fn vanquish_the_horde() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: Some(SelectionRequirement::Creature),
+        equipped_bonus: None,
     }
 }
 
@@ -23403,6 +23870,7 @@ pub fn quandrix_doublewright() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23444,6 +23912,7 @@ pub fn lorehold_theorizer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23486,6 +23955,7 @@ pub fn prismari_inventor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23532,6 +24002,7 @@ pub fn silverquill_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23593,6 +24064,7 @@ pub fn quandrix_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23645,6 +24117,7 @@ pub fn witherbloom_concoction() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23700,6 +24173,7 @@ pub fn prismari_sparkmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23748,6 +24222,7 @@ pub fn silverquill_ambassador() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23831,6 +24306,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23916,6 +24392,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -23978,6 +24455,7 @@ pub fn silverquill_skywriter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24035,6 +24513,7 @@ pub fn quandrix_curriculum() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24085,6 +24564,7 @@ pub fn lorehold_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24137,6 +24617,7 @@ pub fn prismari_magicraft() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24209,6 +24690,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24273,6 +24755,7 @@ pub fn silverquill_drafter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24339,6 +24822,7 @@ pub fn quandrix_schematist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24399,6 +24883,7 @@ pub fn lorehold_resurrectionist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24446,6 +24931,7 @@ pub fn prismari_tinkerer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24497,6 +24983,7 @@ pub fn quandrix_forecaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24546,6 +25033,7 @@ pub fn silverquill_bookbinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24582,6 +25070,7 @@ pub fn lorehold_crusader_knight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24637,6 +25126,7 @@ pub fn witherbloom_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24691,6 +25181,7 @@ pub fn prismari_conjurer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24748,6 +25239,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24793,6 +25285,7 @@ pub fn silverquill_penmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24864,6 +25357,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24908,6 +25402,7 @@ pub fn witherbloom_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -24948,6 +25443,7 @@ pub fn prismari_cartographer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25012,6 +25508,7 @@ pub fn quandrix_geologist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25070,6 +25567,7 @@ pub fn silverquill_chastiser() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25134,6 +25632,7 @@ pub fn witherbloom_pestmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25201,6 +25700,7 @@ pub fn lorehold_chronicler() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25245,6 +25745,7 @@ pub fn prismari_pyromentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25297,6 +25798,7 @@ pub fn quandrix_equation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25347,6 +25849,7 @@ pub fn silverquill_inquisitors_mark() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25392,6 +25895,7 @@ pub fn witherbloom_mire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25466,6 +25970,7 @@ pub fn lorehold_memorial() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25516,6 +26021,7 @@ pub fn prismari_ember_trickster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25578,6 +26084,7 @@ pub fn quandrix_aetherist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25629,6 +26136,7 @@ pub fn silverquill_sentinel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25691,6 +26199,7 @@ pub fn witherbloom_necrogale() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25753,6 +26262,7 @@ pub fn lorehold_echo() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25809,6 +26319,7 @@ pub fn prismari_spellforger() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25860,6 +26371,7 @@ pub fn quandrix_multiplier() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25910,6 +26422,7 @@ pub fn silverquill_scribefall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -25973,6 +26486,7 @@ pub fn witherbloom_wickering() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26037,6 +26551,7 @@ pub fn lorehold_historian() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26095,6 +26610,7 @@ pub fn prismari_spectacle() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26157,6 +26673,7 @@ pub fn quandrix_wavebreaker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26221,6 +26738,7 @@ pub fn silverquill_anthemwright() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26268,6 +26786,7 @@ pub fn witherbloom_decay() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26324,6 +26843,7 @@ pub fn lorehold_reverberation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26393,6 +26913,7 @@ pub fn prismari_eccentric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26442,6 +26963,7 @@ pub fn quandrix_theorem_crafter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26499,6 +27021,7 @@ pub fn witherbloom_pestseed() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26539,6 +27062,7 @@ pub fn silverquill_editorialist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26584,6 +27108,7 @@ pub fn inkblot_recluse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26631,6 +27156,7 @@ pub fn quill_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26678,6 +27204,7 @@ pub fn inkstrike_bolt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26719,6 +27246,7 @@ pub fn withering_spores() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26776,6 +27304,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26822,6 +27351,7 @@ pub fn pestilent_brambletwig() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26875,6 +27405,7 @@ pub fn witherbloom_soothsayer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26920,6 +27451,7 @@ pub fn lorehold_vanquisher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -26973,6 +27505,7 @@ pub fn lorehold_burnscholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27029,6 +27562,7 @@ pub fn pillardrop_cultivator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27068,6 +27602,7 @@ pub fn prismari_skywatcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27118,6 +27653,7 @@ pub fn brewmaster_pyrologist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27160,6 +27696,7 @@ pub fn prismari_spell_smith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27208,6 +27745,7 @@ pub fn quandrix_botanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27260,6 +27798,7 @@ pub fn quandrix_augur() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27306,6 +27845,7 @@ pub fn fractal_trefoil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27360,6 +27900,7 @@ pub fn quandrix_equationist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27418,6 +27959,7 @@ pub fn pyrokinetic_insight() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27464,6 +28006,7 @@ pub fn lorehold_spirit_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27522,6 +28065,7 @@ pub fn strixhaven_sanctum() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27578,6 +28122,7 @@ pub fn strixhaven_bloomstadium() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27653,6 +28198,7 @@ pub fn mystic_slate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27700,6 +28246,7 @@ pub fn silverquill_verseweaver() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27760,6 +28307,7 @@ pub fn inkling_choirmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27838,6 +28386,7 @@ pub fn bramble_brewer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27885,6 +28434,7 @@ pub fn witherbloom_decanter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -27956,6 +28506,7 @@ pub fn pestbrood_grovecaller() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28022,6 +28573,7 @@ pub fn lorehold_cathedral() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28073,6 +28625,7 @@ pub fn lorehold_bannerbearer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28139,6 +28692,7 @@ pub fn lorehold_pyromage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28203,6 +28757,7 @@ pub fn quandrix_geomancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28250,6 +28805,7 @@ pub fn quandrix_fractalist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28298,6 +28854,7 @@ pub fn quandrix_skybinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28354,6 +28911,7 @@ pub fn prismari_mistcaller() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28403,6 +28961,7 @@ pub fn prismari_conflagration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28456,6 +29015,7 @@ pub fn prismari_treasurewright() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28497,6 +29057,7 @@ pub fn silverquill_auctioneer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28565,6 +29126,7 @@ pub fn witherbloom_reanimist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28617,6 +29179,7 @@ pub fn lorehold_skirmisher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28667,6 +29230,7 @@ pub fn quandrix_landmapper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28736,6 +29300,7 @@ pub fn prismari_spellsong() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28782,6 +29347,7 @@ pub fn silverquill_reaper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28853,6 +29419,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28915,6 +29482,7 @@ pub fn lone_rider() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -28954,6 +29522,7 @@ pub fn spelltongue_statute() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29020,6 +29589,7 @@ pub fn solo_striker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29085,6 +29655,7 @@ pub fn lorehold_tomb_robber() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29147,6 +29718,7 @@ pub fn quandrix_loremind() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29198,6 +29770,7 @@ pub fn prismari_sparkbinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29257,6 +29830,7 @@ pub fn witherbloom_hexweaver() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29320,6 +29894,7 @@ pub fn lorehold_phantasmist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29380,6 +29955,7 @@ pub fn lorehold_bookburner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29424,6 +30000,7 @@ pub fn prismari_lightcaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29467,6 +30044,7 @@ pub fn prismari_stormbringer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29507,6 +30085,7 @@ pub fn quandrix_counterspeaker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29595,6 +30174,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29655,6 +30235,7 @@ pub fn witherbloom_wanderer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29717,6 +30298,7 @@ pub fn witherbloom_pestbinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29775,6 +30357,7 @@ pub fn strixhaven_vault() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29814,6 +30397,7 @@ pub fn strixhaven_acolyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29855,6 +30439,7 @@ pub fn strixhaven_scholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29898,6 +30483,7 @@ pub fn strixhaven_quill_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29937,6 +30523,7 @@ pub fn strixhaven_initiate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -29982,6 +30569,7 @@ pub fn strixhaven_burnscholar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30027,6 +30615,7 @@ pub fn strixhaven_necropact() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30091,6 +30680,7 @@ pub fn lorehold_stonebrand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30139,6 +30729,7 @@ pub fn quandrix_geometer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30172,6 +30763,7 @@ pub fn silverquill_sentinel_cleric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30223,6 +30815,7 @@ pub fn witherbloom_soilshaper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30276,6 +30869,7 @@ pub fn prismari_fireshaper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30321,6 +30915,7 @@ pub fn strixhaven_scry_wizard() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30374,6 +30969,7 @@ pub fn lorehold_bookbinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30420,6 +31016,7 @@ pub fn quandrix_wavecaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30463,6 +31060,7 @@ pub fn silverquill_embodiment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30501,6 +31099,7 @@ pub fn witherbloom_plagueweaver() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30553,6 +31152,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30596,6 +31196,7 @@ pub fn lorehold_pyresmith() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30642,6 +31243,7 @@ pub fn prismari_sparkbender() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30687,6 +31289,7 @@ pub fn quandrix_mathmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30731,6 +31334,7 @@ pub fn silverquill_adjudicator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30764,6 +31368,7 @@ pub fn witherbloom_drain_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30809,6 +31414,7 @@ pub fn strixhaven_pop_quiz_sage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30854,6 +31460,7 @@ pub fn lorehold_spirit_champion() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30905,6 +31512,7 @@ pub fn witherbloom_pest_spawner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -30963,6 +31571,7 @@ pub fn prismari_wave_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31015,6 +31624,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31056,6 +31666,7 @@ pub fn silverquill_drain_lord() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31097,6 +31708,7 @@ pub fn strixhaven_battle_cleric() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31137,6 +31749,7 @@ pub fn strixhaven_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31180,6 +31793,7 @@ pub fn strixhaven_combatant() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31223,6 +31837,7 @@ pub fn strixhaven_druid() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31260,6 +31875,7 @@ pub fn strixhaven_drainsong() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31309,6 +31925,7 @@ pub fn strixhaven_honor_guard() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31348,6 +31965,7 @@ pub fn strixhaven_sapper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31393,6 +32011,7 @@ pub fn strixhaven_cartographer_b32() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31429,6 +32048,7 @@ pub fn strixhaven_glyphmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31474,6 +32094,7 @@ pub fn strixhaven_mentor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31540,6 +32161,7 @@ pub fn strixhaven_banner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31577,6 +32199,7 @@ pub fn strixhaven_apprentice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31619,6 +32242,7 @@ pub fn strixhaven_sorcerer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31672,6 +32296,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31716,6 +32341,7 @@ pub fn strixhaven_field_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31750,6 +32376,7 @@ pub fn strixhaven_quartermaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31781,6 +32408,7 @@ pub fn strixhaven_library_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31813,6 +32441,7 @@ pub fn strixhaven_demonstrator() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31859,6 +32488,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31903,6 +32533,7 @@ pub fn strixhaven_anthemcaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31941,6 +32572,7 @@ pub fn strixhaven_stormsage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -31972,6 +32604,7 @@ pub fn strixhaven_skylancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32018,6 +32651,7 @@ pub fn silverquill_ledgerkeeper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32052,6 +32686,7 @@ pub fn inkling_aerospread() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32085,6 +32720,7 @@ pub fn silverquill_brushmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32123,6 +32759,7 @@ pub fn inkling_glaivemaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32157,6 +32794,7 @@ pub fn silverquill_lecturer_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32203,6 +32841,7 @@ pub fn witherbloom_necromage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32236,6 +32875,7 @@ pub fn witherbloom_toxinsage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32271,6 +32911,7 @@ pub fn witherbloom_wildmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32311,6 +32952,7 @@ pub fn witherbloom_pestcaller_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32344,6 +32986,7 @@ pub fn witherbloom_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32396,6 +33039,7 @@ pub fn lorehold_battlemage_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32444,6 +33088,7 @@ pub fn lorehold_embertusk() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32478,6 +33123,7 @@ pub fn lorehold_pyrescholar_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32523,6 +33169,7 @@ pub fn lorehold_spirit_reclaimer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32568,6 +33215,7 @@ pub fn lorehold_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32613,6 +33261,7 @@ pub fn prismari_sparkblade() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32661,6 +33310,7 @@ pub fn prismari_aetherweaver() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32695,6 +33345,7 @@ pub fn prismari_sparkpoet() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32729,6 +33380,7 @@ pub fn prismari_tidemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32771,6 +33423,7 @@ pub fn prismari_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32820,6 +33473,7 @@ pub fn quandrix_aetherist_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32862,6 +33516,7 @@ pub fn quandrix_cycloid() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32895,6 +33550,7 @@ pub fn quandrix_symmetrybard() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32938,6 +33594,7 @@ pub fn quandrix_numeromancer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -32976,6 +33633,7 @@ pub fn silverquill_confessor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33012,6 +33670,7 @@ pub fn witherbloom_toxicpath_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33047,6 +33706,7 @@ pub fn inkling_sigilbearer_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33082,6 +33742,7 @@ pub fn pest_bannerlord() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33117,6 +33778,7 @@ pub fn spirit_of_counterpoint() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33152,6 +33814,7 @@ pub fn fractal_conductor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33195,6 +33858,7 @@ pub fn silverquill_maelstrom() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33229,6 +33893,7 @@ pub fn witherbloom_brewmage_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33279,6 +33944,7 @@ pub fn lorehold_resurrectionist_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33319,6 +33985,7 @@ pub fn prismari_pyrocaster_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33367,6 +34034,7 @@ pub fn quandrix_calculator_b103() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33412,6 +34080,7 @@ pub fn quandrix_lecturer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33455,6 +34124,7 @@ pub fn silverquill_inkblade_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33498,6 +34168,7 @@ pub fn inkling_loremaster_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33540,6 +34211,7 @@ pub fn silverquill_anointment_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33574,6 +34246,7 @@ pub fn inkling_crusader_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33614,6 +34287,7 @@ pub fn silverquill_anthemcaster_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33651,6 +34325,7 @@ pub fn witherbloom_pestbrood_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33692,6 +34367,7 @@ pub fn pest_bloodscribe_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33735,6 +34411,7 @@ pub fn witherbloom_mireseer_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33772,6 +34449,7 @@ pub fn pest_engorger_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33813,6 +34491,7 @@ pub fn witherbloom_cultmaster_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33851,6 +34530,7 @@ pub fn lorehold_pyromancer_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33897,6 +34577,7 @@ pub fn spirit_of_the_archive_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33931,6 +34612,7 @@ pub fn lorehold_fireseer_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -33975,6 +34657,7 @@ pub fn lorehold_battlecaster_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34016,6 +34699,7 @@ pub fn lorehold_sparkstrike_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34062,6 +34746,7 @@ pub fn prismari_pyromage_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34102,6 +34787,7 @@ pub fn prismari_elementalist_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34148,6 +34834,7 @@ pub fn prismari_sparkcaller_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34192,6 +34879,7 @@ pub fn prismari_stormburst_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34231,6 +34919,7 @@ pub fn prismari_crackleburst_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34280,6 +34969,7 @@ pub fn quandrix_theorist_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34321,6 +35011,7 @@ pub fn fractal_whelp_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34368,6 +35059,7 @@ pub fn quandrix_mathematician_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34428,6 +35120,7 @@ pub fn fractal_bloom_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34472,6 +35165,7 @@ pub fn quandrix_symmetrist_b104() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34516,6 +35210,7 @@ pub fn inkling_coursecaller_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34549,6 +35244,7 @@ pub fn silverquill_loresmith_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34596,6 +35292,7 @@ pub fn inkling_vanguard_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34638,6 +35335,7 @@ pub fn silverquill_embolden_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34669,6 +35367,7 @@ pub fn silverquill_quillsweep_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34711,6 +35410,7 @@ pub fn witherbloom_cradlemage_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34750,6 +35450,7 @@ pub fn pest_hivewatcher_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34807,6 +35508,7 @@ pub fn witherbloom_harvester_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34846,6 +35548,7 @@ pub fn witherbloom_mulchcaster_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34883,6 +35586,7 @@ pub fn pest_mawcrawler_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34931,6 +35635,7 @@ pub fn lorehold_battlescribe_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34965,6 +35670,7 @@ pub fn lorehold_spelldrake_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -34999,6 +35705,7 @@ pub fn lorehold_skirmisher_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35047,6 +35754,7 @@ pub fn lorehold_reliquary_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35082,6 +35790,7 @@ pub fn spirit_battlecry_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35118,6 +35827,7 @@ pub fn prismari_tutorgeyst_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35152,6 +35862,7 @@ pub fn prismari_flamescholar_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35196,6 +35907,7 @@ pub fn prismari_inferno_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35233,6 +35945,7 @@ pub fn prismari_magmaweaver_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35275,6 +35988,7 @@ pub fn prismari_reshape_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35310,6 +36024,7 @@ pub fn quandrix_polymath_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35356,6 +36071,7 @@ pub fn fractal_spawnmaster_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35390,6 +36106,7 @@ pub fn quandrix_druid_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35430,6 +36147,7 @@ pub fn quandrix_calculus_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35471,6 +36189,7 @@ pub fn fractal_hatchling_b119() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35513,6 +36232,7 @@ pub fn inkling_lawscribe_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35550,6 +36270,7 @@ pub fn silverquill_devotee_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35591,6 +36312,7 @@ pub fn silverquill_censurer_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35625,6 +36347,7 @@ pub fn inkling_battlescribe_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35661,6 +36384,7 @@ pub fn silverquill_verdict_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35706,6 +36430,7 @@ pub fn witherbloom_apprentice_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35740,6 +36465,7 @@ pub fn pest_brooder_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35778,6 +36504,7 @@ pub fn witherbloom_saprooter_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35810,6 +36537,7 @@ pub fn witherbloom_grafter_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35841,6 +36569,7 @@ pub fn pest_reaper_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35874,6 +36603,7 @@ pub fn lorehold_tactician_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35908,6 +36638,7 @@ pub fn lorehold_loreseeker_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35945,6 +36676,7 @@ pub fn lorehold_bondbreaker_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -35976,6 +36708,7 @@ pub fn spirit_stonewright_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36008,6 +36741,7 @@ pub fn lorehold_flameherald_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36044,6 +36778,7 @@ pub fn prismari_apprentice_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36081,6 +36816,7 @@ pub fn prismari_pyrocaster_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36120,6 +36856,7 @@ pub fn prismari_tempest_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36152,6 +36889,7 @@ pub fn prismari_stormwright_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36189,6 +36927,7 @@ pub fn prismari_crucible_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36224,6 +36963,7 @@ pub fn quandrix_apprentice_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36254,6 +36994,7 @@ pub fn fractal_brood_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36296,6 +37037,7 @@ pub fn quandrix_equation_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36329,6 +37071,7 @@ pub fn quandrix_tutor_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36374,6 +37117,7 @@ pub fn witherbloom_cultivator_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36412,6 +37156,7 @@ pub fn fractal_bloomwright_b120() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36459,6 +37204,7 @@ pub fn pest_cultmaster_b121() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36505,6 +37251,7 @@ pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36550,6 +37297,7 @@ pub fn witherbloom_bonechanter_b121() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36590,6 +37338,7 @@ pub fn pest_ringleader_b121() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36636,6 +37385,7 @@ pub fn witherbloom_reaper_b121() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36692,6 +37442,7 @@ pub fn pest_cultcaller_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36740,6 +37491,7 @@ pub fn witherbloom_bloodgrafter_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36788,6 +37540,7 @@ pub fn witherbloom_composter_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36820,6 +37573,7 @@ pub fn pest_swarmcaller_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36855,6 +37609,7 @@ pub fn witherbloom_sapdrainer_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36903,6 +37658,7 @@ pub fn witherbloom_necrotutor_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36942,6 +37698,7 @@ pub fn witherbloom_spinecaster_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -36992,6 +37749,7 @@ pub fn pest_brewmaster_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37037,6 +37795,7 @@ pub fn inkling_quillstrike_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37084,6 +37843,7 @@ pub fn silverquill_mentor_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37127,6 +37887,7 @@ pub fn silverquill_verdict_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37161,6 +37922,7 @@ pub fn inkling_glyphwarden_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37192,6 +37954,7 @@ pub fn silverquill_reverence_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37230,6 +37993,7 @@ pub fn lorehold_pyroscholar_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37267,6 +38031,7 @@ pub fn lorehold_reliquaer_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37310,6 +38075,7 @@ pub fn lorehold_battlescryer_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37346,6 +38112,7 @@ pub fn prismari_loresage_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37389,6 +38156,7 @@ pub fn prismari_inferno_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37424,6 +38192,7 @@ pub fn prismari_sparkmage_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37466,6 +38235,7 @@ pub fn fractal_multiplier_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37502,6 +38272,7 @@ pub fn quandrix_coursemage_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37544,6 +38315,7 @@ pub fn quandrix_expansion_b122() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37611,6 +38383,7 @@ pub fn pest_marrowfeast_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37646,6 +38419,7 @@ pub fn witherbloom_vinegrowth_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37696,6 +38470,7 @@ pub fn witherbloom_crypttender_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37734,6 +38509,7 @@ pub fn pest_mawlord_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37778,6 +38554,7 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37829,6 +38606,7 @@ pub fn witherbloom_tombrooter_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37875,6 +38653,7 @@ pub fn witherbloom_beetlecaller_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37910,6 +38689,7 @@ pub fn witherbloom_saproot_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37941,6 +38721,7 @@ pub fn pest_hivekeeper_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -37976,6 +38757,7 @@ pub fn inkling_crusader_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38014,6 +38796,7 @@ pub fn silverquill_adjudicator_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38049,6 +38832,7 @@ pub fn silverquill_sermonizer_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38082,6 +38866,7 @@ pub fn inkling_pamphletter_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38118,6 +38903,7 @@ pub fn lorehold_vanguard_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38157,6 +38943,7 @@ pub fn lorehold_spiritsong_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38195,6 +38982,7 @@ pub fn lorehold_skirmisher_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38240,6 +39028,7 @@ pub fn prismari_tutor_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38280,6 +39069,7 @@ pub fn prismari_sparkshow_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38327,6 +39117,7 @@ pub fn quandrix_surveyor_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38374,6 +39165,7 @@ pub fn fractal_pondlord_b123() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38418,6 +39210,7 @@ pub fn lorehold_pyromancer_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38451,6 +39244,7 @@ pub fn lorehold_skydefender_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38485,6 +39279,7 @@ pub fn lorehold_champion_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38523,6 +39318,7 @@ pub fn lorehold_cremate_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38559,6 +39355,7 @@ pub fn prismari_stormbreaker_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38594,6 +39391,7 @@ pub fn prismari_burnmage_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38633,6 +39431,7 @@ pub fn prismari_tempest_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38683,6 +39482,7 @@ pub fn quandrix_forester_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38733,6 +39533,7 @@ pub fn quandrix_mathematician_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38779,6 +39580,7 @@ pub fn fractal_coursemate_b124() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38829,6 +39631,7 @@ pub fn strixhaven_cycle_decree_b145() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38871,6 +39674,7 @@ pub fn strixhaven_cycle_glyph_b143() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38911,6 +39715,7 @@ pub fn strixhaven_stasis_glyph_b160() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38951,6 +39756,7 @@ pub fn back_to_basics() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -38988,6 +39794,7 @@ pub fn collector_ouphe() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39027,6 +39834,7 @@ pub fn arclight_phoenix() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39062,6 +39870,7 @@ pub fn opposition() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39095,6 +39904,7 @@ pub fn omniscience() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39150,6 +39960,7 @@ pub fn blustersquall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39207,6 +40018,7 @@ pub fn electrickery() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39283,6 +40095,7 @@ pub fn teleportal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -39343,5 +40156,6 @@ pub fn street_spasm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }

@@ -2673,6 +2673,13 @@ pub fn handle_game_input(
                 let is_decision = targeting.pending_decision_target;
                 for (game_id, _owner) in &hovered_bf {
                     let target = Target::Permanent(game_id.0);
+                    // Equip (CR 702.6) takes precedence: the pending session
+                    // is moving an Equipment onto the clicked creature.
+                    if let Some(equipment) = targeting.pending_equip_source {
+                        outbox.submit(GameAction::Equip { equipment, target: game_id.0 });
+                        cancel_targeting(&mut commands, targeting, legal_targets, &valid_targets);
+                        return;
+                    }
                     if is_decision {
                         // Engine-driven `ChooseTarget`: only submit when
                         // the click lands on an enumerated legal target,
@@ -2940,6 +2947,26 @@ pub fn handle_game_input(
             }
         }
 
+        // Keyboard-specific: E begins equip targeting on the hovered
+        // viewer-controlled Equipment (CR 702.6). Sets
+        // `pending_equip_source`; the next battlefield-creature click
+        // submits `GameAction::Equip { equipment, target }`.
+        if keyboard.just_pressed(KeyCode::KeyE)
+            && let Some((game_id, owner)) = hovered_bf.iter().next()
+            && owner.0 == your_seat
+        {
+            let card_id = game_id.0;
+            let is_equippable = cv
+                .battlefield
+                .iter()
+                .find(|c| c.id == card_id)
+                .is_some_and(|c| c.equippable);
+            if is_equippable {
+                targeting.active = true;
+                targeting.pending_equip_source = Some(card_id);
+            }
+        }
+
         // Close the ability menu when the user clicks anywhere else.
         // Not bound to Enter — the menu itself is mouse-driven today
         // and pressing Enter to close it would conflict with future
@@ -3172,6 +3199,7 @@ fn cancel_targeting(
     targeting.back_face_pending = false;
     targeting.pending_decision_target = false;
     targeting.pending_mode = None;
+    targeting.pending_equip_source = None;
     legal.permanents.clear();
     legal.players.clear();
     legal.source_name.clear();

@@ -1121,6 +1121,45 @@ impl GameState {
             }
             all_effects.extend(effects);
         }
+        // CR 702.6 — Equipment attachment statics. Each Equipment with a
+        // live `attached_to` link and an `equipped_bonus` confers +P/+T
+        // (layer 7c) and keyword grants (layer 6) on the creature it's
+        // attached to, for as long as the Equipment stays on the battlefield.
+        // The stale-link SBA in `stack.rs` clears `attached_to` when the
+        // equipped creature leaves, so a dangling link can't leak a bonus.
+        for card in &self.battlefield {
+            let Some(bonus) = &card.definition.equipped_bonus else { continue };
+            let Some(target) = card.attached_to else { continue };
+            // Only apply while the target is still a creature on the bf.
+            if !self.battlefield.iter().any(|c| c.id == target) {
+                continue;
+            }
+            if bonus.power != 0 || bonus.toughness != 0 {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![target]),
+                    layer: Layer::L7PowerTough,
+                    sublayer: Some(PtSublayer::Modify),
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::ModifyPowerToughness(
+                        bonus.power,
+                        bonus.toughness,
+                    ),
+                });
+            }
+            for kw in &bonus.keywords {
+                all_effects.push(ContinuousEffect {
+                    timestamp: card.id.0 as u64,
+                    source: card.id,
+                    affected: AffectedPermanents::Specific(vec![target]),
+                    layer: Layer::L6Ability,
+                    sublayer: None,
+                    duration: EffectDuration::WhileSourceOnBattlefield,
+                    modification: Modification::AddKeyword(kw.clone()),
+                });
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -1705,6 +1744,7 @@ impl GameState {
             GameAction::PassPriority => self.pass_priority(),
             GameAction::SubmitDecision(_) => unreachable!(),
             GameAction::Cycle { card_id } => self.cycle_card(card_id),
+            GameAction::Equip { equipment, target } => self.equip(equipment, target),
         }?;
         self.dispatch_triggers_for_events(&events);
         Ok(events)
@@ -1767,6 +1807,72 @@ impl GameState {
             });
         }
         Ok(events)
+    }
+
+    /// CR 702.6 — Activate an Equipment's equip ability, attaching it to a
+    /// creature its controller controls. Equip is a special activated
+    /// ability usable only at sorcery speed (CR 702.6e) and only targeting a
+    /// creature you control (CR 702.6c). The equip cost (`Keyword::Equip`) is
+    /// paid from the controller's floated mana pool; on success the
+    /// Equipment's `attached_to` is repointed at `target`, and its
+    /// `equipped_bonus` flows onto the equipped creature via the layer
+    /// system (see `compute_battlefield`). Re-equipping a creature that's
+    /// already wearing the Equipment is legal (it just re-pays the cost);
+    /// moving from one creature to another silently detaches the old link.
+    fn equip(
+        &mut self,
+        equipment: crate::card::CardId,
+        target: crate::card::CardId,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        // Sorcery-speed gate (CR 702.6e).
+        if !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // Locate the Equipment; it must be on the battlefield, controlled by
+        // the activating player, and actually be an Equipment with an equip
+        // cost.
+        let equip_pos = self
+            .battlefield
+            .iter()
+            .position(|c| c.id == equipment)
+            .ok_or(GameError::CardNotOnBattlefield(equipment))?;
+        if self.battlefield[equip_pos].controller != p {
+            return Err(GameError::NotYourPriority);
+        }
+        if !self.battlefield[equip_pos].definition.is_equipment() {
+            return Err(GameError::NotEquipment(equipment));
+        }
+        let equip_cost = self.battlefield[equip_pos]
+            .definition
+            .has_equip()
+            .cloned()
+            .ok_or(GameError::NotEquipment(equipment))?;
+        // The target must be a creature the activating player controls
+        // (CR 702.6c). Use the computed view so animated/becomes-a-creature
+        // permanents are honored.
+        let target_ok = self
+            .compute_battlefield()
+            .iter()
+            .any(|c| {
+                c.id == target
+                    && c.controller == p
+                    && c.card_types.contains(&crate::card::CardType::Creature)
+            });
+        if !target_ok {
+            return Err(GameError::InvalidTarget);
+        }
+        // Pay the equip cost from the floated mana pool.
+        self.players[p]
+            .mana_pool
+            .pay(&equip_cost)
+            .map_err(GameError::Mana)?;
+        // Attach.
+        self.battlefield[equip_pos].attached_to = Some(target);
+        Ok(vec![GameEvent::AttachmentMoved {
+            attachment: equipment,
+            attached_to: Some(target),
+        }])
     }
 
     /// Walk the battlefield looking for triggered abilities whose `EventSpec`

@@ -150,6 +150,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             max_counters_of_kind: None,
             exile_on_resolve: false,
             affinity_filter: None,
+            equipped_bonus: None,
         }
     }
 
@@ -4538,6 +4539,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

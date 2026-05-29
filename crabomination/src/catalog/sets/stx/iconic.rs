@@ -62,6 +62,7 @@ pub fn strict_proctor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -105,6 +106,7 @@ pub fn sedgemoor_witch() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -147,6 +149,7 @@ pub fn spectacle_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -192,6 +195,7 @@ pub fn mage_hunters_onslaught() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -250,6 +254,7 @@ pub fn heroic_defiance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -299,6 +304,7 @@ pub fn tome_shredder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -351,6 +357,7 @@ pub fn mascot_acolyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -406,6 +413,7 @@ pub fn lorehold_strikeforce() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -450,6 +458,7 @@ pub fn hunt_the_library() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -503,6 +512,7 @@ pub fn field_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -548,6 +558,7 @@ pub fn spellbook_studier() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -596,6 +607,7 @@ pub fn strixhaven_vigil() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -651,6 +663,7 @@ pub fn bombastic_strixhaven_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -691,6 +704,7 @@ pub fn mage_hunters_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -750,6 +764,7 @@ pub fn mascot_researcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -799,6 +814,7 @@ pub fn strixhaven_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -845,6 +861,7 @@ pub fn strixhaven_archmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -884,6 +901,7 @@ pub fn mage_hunters_riposte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -935,6 +953,7 @@ pub fn strixhaven_field_trip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -980,6 +999,7 @@ pub fn lorehold_spiritbringer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1019,6 +1039,7 @@ pub fn witherbloom_pestcaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1065,6 +1086,7 @@ pub fn silverquill_novice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1102,6 +1124,7 @@ pub fn silverquill_headmaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1139,6 +1162,7 @@ pub fn witherbloom_neophyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1196,6 +1220,7 @@ pub fn pestpod_lurker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1253,6 +1278,7 @@ pub fn lorehold_neophyte() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1300,6 +1326,7 @@ pub fn lorehold_recallmage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1343,6 +1370,7 @@ pub fn quandrix_reach_mage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1388,6 +1416,7 @@ pub fn fractal_sumcaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1426,6 +1455,7 @@ pub fn prismari_vandal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1475,6 +1505,7 @@ pub fn prismari_flameseeker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1520,6 +1551,7 @@ pub fn strixhaven_basicseeker() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1563,6 +1595,7 @@ pub fn strixhaven_pondkeeper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1607,6 +1640,7 @@ pub fn strixhaven_rotcaster() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1645,6 +1679,7 @@ pub fn strixhaven_spellfletcher() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1682,6 +1717,7 @@ pub fn strixhaven_forager() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1718,6 +1754,7 @@ pub fn magecraft_volley() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1759,6 +1796,7 @@ pub fn strixhaven_curriculum() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1811,6 +1849,7 @@ pub fn witherbloom_recursion() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1855,6 +1894,7 @@ pub fn lorehold_battle_banner() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1893,6 +1933,7 @@ pub fn silverquill_inkpact() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 

@@ -498,6 +498,12 @@ pub struct PermanentView {
     /// client can badge a "regen-shielded" creature.
     #[serde(default)]
     pub regeneration_shields: u32,
+    /// True when this permanent is an Equipment that carries an equip ability
+    /// (`Keyword::Equip`). Lets the client offer the "equip" action (CR
+    /// 702.6) on the permanent without decoding its keyword list. Populated
+    /// by `project_permanent`.
+    #[serde(default)]
+    pub equippable: bool,
 }
 
 impl PermanentView {

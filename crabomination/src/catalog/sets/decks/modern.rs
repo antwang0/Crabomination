@@ -50,6 +50,7 @@ pub fn ponder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -87,6 +88,7 @@ pub fn manamorphose() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -122,6 +124,7 @@ pub fn sleight_of_hand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -162,6 +165,7 @@ pub fn faithless_looting() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -205,6 +209,7 @@ pub fn sign_in_blood() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -235,6 +240,7 @@ pub fn nights_whisper() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -267,6 +273,7 @@ pub fn duress() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -302,6 +309,7 @@ pub fn lava_spike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -336,6 +344,7 @@ pub fn lava_dart() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -381,6 +390,7 @@ pub fn unburial_rites() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -434,6 +444,7 @@ pub fn exhume() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -475,6 +486,7 @@ pub fn buried_alive() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -507,6 +519,7 @@ pub fn entomb() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -552,6 +565,7 @@ pub fn burning_tree_emissary() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -613,6 +627,7 @@ pub fn putrid_imp() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -649,6 +664,7 @@ pub fn tarmogoyf() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -685,6 +701,7 @@ pub fn veil_of_summer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -734,6 +751,7 @@ pub fn crop_rotation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -811,6 +829,7 @@ pub fn karakas() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -848,6 +867,7 @@ pub fn cathartic_reunion() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -882,6 +902,7 @@ pub fn gitaxian_probe() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -922,6 +943,7 @@ pub fn force_spike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -965,6 +987,7 @@ pub fn vampiric_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1000,6 +1023,7 @@ pub fn sylvan_scrying() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1037,6 +1061,7 @@ pub fn abrupt_decay() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1087,6 +1112,7 @@ pub fn kodamas_reach() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1137,6 +1163,7 @@ pub fn lotus_petal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1190,6 +1217,7 @@ pub fn tormods_crypt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1249,6 +1277,7 @@ pub fn mishras_bauble() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1297,6 +1326,7 @@ pub fn stoneforge_mystic() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1349,6 +1379,7 @@ pub fn qasali_pridemage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1413,6 +1444,7 @@ pub fn greater_good() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1483,6 +1515,7 @@ pub fn bojuka_bog() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1519,6 +1552,7 @@ pub fn lightning_strike() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1576,6 +1610,7 @@ pub fn goblin_bombardment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1647,6 +1682,7 @@ pub fn wasteland() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1710,6 +1746,7 @@ pub fn strip_mine() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1763,6 +1800,7 @@ pub fn snuff_out() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1802,6 +1840,7 @@ pub fn pyroclasm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1838,6 +1877,7 @@ pub fn day_of_judgment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1883,6 +1923,7 @@ pub fn mystical_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1919,6 +1960,7 @@ pub fn worldly_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1957,6 +1999,7 @@ pub fn enlightened_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1992,6 +2035,7 @@ pub fn diabolic_tutor() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2034,6 +2078,7 @@ pub fn imperial_seal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2071,6 +2116,7 @@ pub fn damnation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2106,6 +2152,7 @@ pub fn memnite() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2158,6 +2205,7 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2248,6 +2296,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2292,6 +2341,7 @@ pub fn mine_collapse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2343,6 +2393,7 @@ pub fn elvish_spirit_guide() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2388,6 +2439,7 @@ pub fn satyr_wayfinder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2467,6 +2519,7 @@ pub fn talisman_of_progress() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2535,6 +2588,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2578,6 +2632,7 @@ pub fn fireblast() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2647,6 +2702,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2700,6 +2756,7 @@ pub fn innocent_blood() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2735,6 +2792,7 @@ pub fn diabolic_edict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2776,6 +2834,7 @@ pub fn geths_verdict() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2810,6 +2869,7 @@ pub fn magma_jet() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2854,6 +2914,7 @@ pub fn remand() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2886,6 +2947,7 @@ pub fn read_the_bones() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2918,6 +2980,7 @@ pub fn storm_crow() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2953,6 +3016,7 @@ pub fn ancient_grudge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3007,6 +3071,7 @@ pub fn tragic_slip() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3048,6 +3113,7 @@ pub fn tormenting_voice() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3088,6 +3154,7 @@ pub fn wild_guess() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3125,6 +3192,7 @@ pub fn thrill_of_possibility() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3160,6 +3228,7 @@ pub fn volcanic_hammer() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3209,6 +3278,7 @@ pub fn slagstorm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3241,6 +3311,7 @@ pub fn cancel() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3277,6 +3348,7 @@ pub fn annul() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3316,6 +3388,7 @@ pub fn heros_downfall() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3355,6 +3428,7 @@ pub fn cast_down() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3393,6 +3467,7 @@ pub fn mind_rot() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3427,6 +3502,7 @@ pub fn raise_dead() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3464,6 +3540,7 @@ pub fn healing_salve() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3514,6 +3591,7 @@ pub fn raise_the_alarm() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3564,6 +3642,7 @@ pub fn reclamation_sage() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3611,6 +3690,7 @@ pub fn acidic_slime() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3646,6 +3726,7 @@ pub fn unsummon() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3679,6 +3760,7 @@ pub fn boomerang() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3738,6 +3820,7 @@ pub fn cyclonic_rift() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3788,6 +3871,7 @@ pub fn repeal() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3825,6 +3909,7 @@ pub fn stoke_the_flames() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3859,6 +3944,7 @@ pub fn murder() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3895,6 +3981,7 @@ pub fn go_for_the_throat() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3930,6 +4017,7 @@ pub fn disfigure() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3969,6 +4057,7 @@ pub fn languish() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4006,6 +4095,7 @@ pub fn lay_down_arms() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4038,6 +4128,7 @@ pub fn smelt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4077,6 +4168,7 @@ pub fn banefire() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4136,6 +4228,7 @@ pub fn spectral_procession() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4173,6 +4266,7 @@ pub fn regrowth() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4232,6 +4326,7 @@ pub fn beast_within() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4268,6 +4363,7 @@ pub fn grasp_of_darkness() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4301,6 +4397,7 @@ pub fn shatter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10368,6 +10465,7 @@ pub fn dreadhorde_arcanist() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10450,6 +10548,7 @@ pub fn parallax_nexus() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10710,11 +10809,14 @@ pub fn coveted_jewel() -> CardDefinition {
 /// Lightning Greaves — {2} Artifact — Equipment.
 /// Equipped creature has haste and shroud. Equip {0}.
 ///
-/// Approximation: a {2} artifact with Equip {0} that grants Haste
-/// to a target creature on activation. Shroud is listed in the
-/// keyword hint but the attach/equip static is not wired.
+/// Wired via the real attach path (`GameAction::Equip`): the
+/// `equipped_bonus` grants Haste + Shroud to the equipped creature through
+/// the layer system. Shroud is enforced by the targeting layer
+/// (`GameError::TargetHasShroud`), so an equipped creature can't be the
+/// target of any spell or ability — the classic Greaves "protect your
+/// commander" pattern.
 pub fn lightning_greaves() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::EquipBonus;
     CardDefinition {
         name: "Lightning Greaves",
         cost: cost(&[generic(2)]),
@@ -10724,21 +10826,88 @@ pub fn lightning_greaves() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(ManaCost::default())],
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: false,
-            mana_cost: ManaCost::default(),
-            effect: Effect::GrantKeyword {
-                what: target_filtered(SelectionRequirement::Creature),
-                keyword: Keyword::Haste,
-                duration: Duration::Permanent,
-            },
-            once_per_turn: false,
-            sorcery_speed: true,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
+        equipped_bonus: Some(EquipBonus {
+            power: 0,
+            toughness: 0,
+            keywords: vec![Keyword::Haste, Keyword::Shroud],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Bonesplitter — {1} Artifact — Equipment.
+/// Equipped creature gets +2/+0. Equip {1}.
+///
+/// First card to use the real attach-based equip path: the `equipped_bonus`
+/// flows onto the equipped creature via the layer system (CR 702.6) instead
+/// of the older grant-on-activate approximation.
+pub fn bonesplitter() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Bonesplitter",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
             ..Default::default()
-        }],
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 2,
+            toughness: 0,
+            keywords: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Shuko — {1} Artifact — Equipment.
+/// Equipped creature gets +1/+0. Equip {0}.
+///
+/// The free equip cost ({0}) makes Shuko a notorious "toughness/untap"
+/// engine piece; the engine honors the zero-mana equip via the standard
+/// `GameAction::Equip` path (empty `ManaCost` pays for free).
+pub fn shuko() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Shuko",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(ManaCost::default())],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 0,
+            keywords: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Lavaspur Boots — {1} Artifact — Equipment.
+/// Equipped creature gets +1/+1 and has haste. Equip {1}.
+///
+/// (The printed "Equip — pay {1} less if it targets a creature that entered
+/// this turn" discount rider is omitted; the base equip {1} always applies.)
+pub fn lavaspur_boots() -> CardDefinition {
+    use crate::card::EquipBonus;
+    CardDefinition {
+        name: "Lavaspur Boots",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes {
+            artifact_subtypes: vec![ArtifactSubtype::Equipment],
+            ..Default::default()
+        },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Haste],
+        }),
         ..Default::default()
     }
 }

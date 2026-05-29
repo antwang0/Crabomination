@@ -226,6 +226,12 @@ pub enum GameAction {
     /// 702.29c, "When you cycle this card" triggers fire from
     /// whatever zone the card winds up in after the discard.
     Cycle { card_id: CardId },
+    /// CR 702.6 — Activate an Equipment's equip ability, moving it onto
+    /// `target` (a creature you control). Sorcery-speed only (CR 702.6e):
+    /// legal only during the controller's main phase with an empty stack.
+    /// Pays the `Keyword::Equip(cost)` mana cost, then attaches the
+    /// Equipment, conferring its `equipped_bonus` via the layer system.
+    Equip { equipment: CardId, target: CardId },
 }
 
 // ── Delayed triggers ─────────────────────────────────────────────────────────
@@ -727,4 +733,6 @@ pub enum GameError {
     FlashbackTapInvalid,
     #[error("Card {0:?} has Ward — cannot pay the ward cost")]
     TargetHasWard(CardId),
+    #[error("Card {0:?} is not an Equipment you can equip")]
+    NotEquipment(CardId),
 }

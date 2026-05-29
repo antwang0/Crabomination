@@ -71,6 +71,12 @@ pub struct TargetingState {
     /// `CastSpell` carries the right mode index. `None` for non-modal
     /// casts.
     pub pending_mode: Option<usize>,
+    /// When `Some`, this targeting session is moving an Equipment (CR 702.6)
+    /// onto a creature. The picked creature is submitted via
+    /// `GameAction::Equip { equipment, target }`. Set by the `E` keybind on a
+    /// controlled Equipment; cleared once the equip is submitted (or
+    /// cancelled). Takes precedence over the spell/ability target paths.
+    pub pending_equip_source: Option<CardId>,
 }
 
 /// Legal targets surfaced by the engine's `Decision::ChooseTarget`.

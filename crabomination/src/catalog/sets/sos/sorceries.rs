@@ -170,6 +170,7 @@ pub fn dig_site_inventory() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -238,6 +239,7 @@ pub fn daydream() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -306,6 +308,7 @@ pub fn practiced_offense() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -392,6 +395,7 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -438,6 +442,7 @@ pub fn group_project() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -482,6 +487,7 @@ pub fn procrastinate() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -522,6 +528,7 @@ pub fn mathemagics() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -573,6 +580,7 @@ pub fn oracles_restoration() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -620,6 +628,7 @@ pub fn send_in_the_pest() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -668,6 +677,7 @@ pub fn dinas_guidance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -708,6 +718,7 @@ pub fn grapple_with_death() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -762,6 +773,7 @@ pub fn pull_from_the_grave() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -814,6 +826,7 @@ pub fn end_of_the_hunt() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -879,6 +892,7 @@ pub fn vicious_rivalry() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -955,6 +969,7 @@ pub fn borrowed_knowledge() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1018,6 +1033,7 @@ pub fn pursue_the_past() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1073,6 +1089,7 @@ pub fn render_speechless() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1131,6 +1148,7 @@ pub fn moment_of_reckoning() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1169,6 +1187,7 @@ pub fn arcane_omens() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1225,6 +1244,7 @@ pub fn together_as_one() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1279,6 +1299,7 @@ pub fn wisdom_of_ages() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1334,6 +1355,7 @@ pub fn rapturous_moment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1378,6 +1400,7 @@ pub fn visionarys_dance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1422,6 +1445,7 @@ pub fn splatter_technique() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1481,6 +1505,7 @@ pub fn cost_of_brilliance() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1547,6 +1572,7 @@ pub fn mind_roots() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1621,6 +1647,7 @@ pub fn mind_into_matter() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1674,6 +1701,7 @@ pub fn growth_curve() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1744,6 +1772,7 @@ pub fn killians_confidence() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1798,6 +1827,7 @@ pub fn planar_engineering() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1859,6 +1889,7 @@ pub fn pox_plague() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1914,6 +1945,7 @@ pub fn withering_curse() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1988,6 +2020,7 @@ pub fn root_manipulation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2056,6 +2089,7 @@ pub fn chelonian_tackle() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2129,6 +2163,7 @@ pub fn steal_the_show() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2196,6 +2231,7 @@ pub fn snarl_song() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2250,6 +2286,7 @@ pub fn wild_hypothesis() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2339,6 +2376,7 @@ pub fn artistic_process() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2386,6 +2424,7 @@ pub fn decorum_dissertation() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2433,6 +2472,7 @@ pub fn germination_practicum() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2476,6 +2516,7 @@ pub fn restoration_seminar() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2537,6 +2578,7 @@ pub fn zimones_experiment() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2608,6 +2650,7 @@ pub fn flow_state() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2862,6 +2905,7 @@ pub fn follow_the_lumarets() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2936,6 +2980,7 @@ pub fn echocasting_symposium() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3071,6 +3116,7 @@ pub fn improvisation_capstone() -> CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: true,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 

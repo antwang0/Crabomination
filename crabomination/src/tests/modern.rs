@@ -12659,29 +12659,22 @@ fn thought_erasure_strips_nonland_and_surveils() {
 }
 
 /// Lightning Greaves: {2} artifact with Equipment subtype.
-/// Lightning Greaves: activated ability grants haste to a creature.
+/// Lightning Greaves: equipping ({0}) grants haste and shroud to the
+/// equipped creature via the layer system.
 #[test]
-fn lightning_greaves_grants_haste() {
+fn lightning_greaves_grants_haste_and_shroud_when_equipped() {
     let mut g = two_player_game();
     let greaves = g.add_card_to_battlefield(0, catalog::lightning_greaves());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     // Bear is summoning sick by default.
     assert!(g.battlefield_find(bear).unwrap().summoning_sick);
 
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: greaves,
-        ability_index: 0,
-        target: Some(Target::Permanent(bear)),
-        x_value: None,
-    }).expect("Greaves ability activates at {0}");
-    drain_stack(&mut g);
+    g.perform_action(GameAction::Equip { equipment: greaves, target: bear })
+        .expect("Greaves equips for {0}");
 
-    // The bear now has a haste grant (continuous effect), so
-    // the battlefield permanent itself reflects the grant.
-    let bear_card = g.battlefield_find(bear).unwrap();
-    assert!(bear_card.has_keyword(&crate::card::Keyword::Haste)
-        || !bear_card.summoning_sick,
-        "bear should have haste granted or no longer be summoning-sick");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Haste), "haste granted");
+    assert!(cp.keywords.contains(&crate::card::Keyword::Shroud), "shroud granted");
 }
 
 /// Tasigur, the Golden Fang: 4/5 Legendary creature.
@@ -14211,4 +14204,112 @@ fn arid_mesa_fetches_mountain() {
 #[test]
 fn marsh_flats_fetches_plains() {
     assert_fetchland_fetches(catalog::marsh_flats, catalog::plains);
+}
+
+// ── Equipment (CR 702.6) — attach-based equip via GameAction::Equip ─────────
+
+/// Bonesplitter equips a creature for {1} and grants +2/+0 via the layer
+/// system.
+#[test]
+fn bonesplitter_equips_and_grants_plus_two_zero() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: boner, target: bear })
+        .expect("equip {1} should succeed");
+    let cp = g.computed_permanent(bear).expect("bear alive");
+    assert_eq!(cp.power, 4, "2/2 + 2/0 = 4 power");
+    assert_eq!(cp.toughness, 2, "toughness unchanged");
+    // The equipment link is recorded.
+    let eq = g.battlefield.iter().find(|c| c.id == boner).unwrap();
+    assert_eq!(eq.attached_to, Some(bear));
+}
+
+/// Shuko equips for free ({0}) and grants +1/+0.
+#[test]
+fn shuko_equips_for_free_and_grants_plus_one_zero() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let shuko = g.add_card_to_battlefield(0, catalog::shuko());
+    // No mana floated — equip {0} should still succeed.
+    g.perform_action(GameAction::Equip { equipment: shuko, target: bear })
+        .expect("equip {0} should succeed with no mana");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3, "2/2 + 1/0 = 3 power");
+    assert_eq!(cp.toughness, 2);
+}
+
+/// Lavaspur Boots grants +1/+1 and haste while attached.
+#[test]
+fn lavaspur_boots_grants_haste_and_plus_one_one() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boots = g.add_card_to_battlefield(0, catalog::lavaspur_boots());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: boots, target: bear })
+        .expect("equip {1} should succeed");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!(cp.power, 3);
+    assert_eq!(cp.toughness, 3);
+    assert!(cp.keywords.contains(&crate::card::Keyword::Haste), "boots grant haste");
+}
+
+/// Equip rejects a creature you don't control (CR 702.6c).
+#[test]
+fn equip_rejects_creature_you_dont_control() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    let err = g
+        .perform_action(GameAction::Equip { equipment: boner, target: opp_bear })
+        .expect_err("cannot equip an opponent's creature");
+    assert!(matches!(err, GameError::InvalidTarget), "got {err:?}");
+}
+
+/// Equipping a non-Equipment artifact is rejected.
+#[test]
+fn equip_rejects_non_equipment() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Coveted Jewel is an artifact but not Equipment.
+    let jewel = g.add_card_to_battlefield(0, catalog::coveted_jewel());
+    let err = g
+        .perform_action(GameAction::Equip { equipment: jewel, target: bear })
+        .expect_err("Coveted Jewel is not Equipment");
+    assert!(matches!(err, GameError::NotEquipment(_)), "got {err:?}");
+}
+
+/// When the equipped creature dies, the equipment's link is cleared by the
+/// SBA scan and the bonus stops applying (the equipment stays on the bf).
+#[test]
+fn equip_bonus_falls_off_when_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::Equip { equipment: boner, target: bear })
+        .expect("equip ok");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 4);
+    // Kill the bear (move to graveyard) and run SBAs.
+    g.remove_from_battlefield_to_graveyard(bear);
+    g.check_state_based_actions();
+    let eq = g.battlefield.iter().find(|c| c.id == boner).unwrap();
+    assert_eq!(eq.attached_to, None, "stale link cleared by SBA");
+}
+
+/// Equip is sorcery-speed only — rejected when it isn't the controller's
+/// main phase.
+#[test]
+fn equip_rejects_at_instant_speed() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let boner = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    g.players[0].mana_pool.add_colorless(1);
+    g.step = TurnStep::DeclareAttackers;
+    let err = g
+        .perform_action(GameAction::Equip { equipment: boner, target: bear })
+        .expect_err("equip is sorcery speed only");
+    assert!(matches!(err, GameError::SorcerySpeedOnly), "got {err:?}");
 }

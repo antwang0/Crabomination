@@ -265,6 +265,7 @@ fn project_permanent(
         stun_counter_count: card.counter_count(crate::card::CounterType::Stun),
         finality_counter_count: card.counter_count(crate::card::CounterType::Finality),
         regeneration_shields: card.regeneration_shields,
+        equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
     }
 }
 

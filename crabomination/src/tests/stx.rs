@@ -3615,6 +3615,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -6186,6 +6187,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -6269,6 +6271,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -10743,6 +10746,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -16883,6 +16887,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -16929,6 +16934,7 @@ fn set_life_total_higher_emits_life_gained() {
         enters_with_counters: None, exile_on_resolve: false,
         max_counters_of_kind: None,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -16986,6 +16992,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
 
     let mut g = two_player_game();
@@ -49520,6 +49527,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -49562,6 +49570,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -49601,6 +49610,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -49731,6 +49741,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 

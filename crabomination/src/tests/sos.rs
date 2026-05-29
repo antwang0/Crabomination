@@ -150,6 +150,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1893,6 +1894,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2380,6 +2382,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,
+        equipped_bonus: None,
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 

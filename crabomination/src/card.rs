@@ -638,6 +638,30 @@ pub struct CardDefinition {
     /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub affinity_filter: Option<SelectionRequirement>,
+    /// "Equipped creature gets +P/+T and has [keywords]." Read by
+    /// `compute_battlefield` for any Equipment whose `attached_to` points at
+    /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
+    /// and layer-6 (keyword) continuous effects on the equipped creature.
+    /// `None` for non-Equipment cards (and for Equipment whose only relevant
+    /// effect is an activated ability, e.g. Lightning Greaves' grant-on-
+    /// activate approximation). Defaults to `None` for snapshot back-compat.
+    #[serde(default)]
+    pub equipped_bonus: Option<EquipBonus>,
+}
+
+/// The static bonus an Equipment confers on the creature it's attached to.
+/// Mirrors the printed "Equipped creature gets +P/+T and has [keywords]"
+/// clause. Stored on `CardDefinition.equipped_bonus`; applied by
+/// `compute_battlefield` only while the Equipment is attached to a creature
+/// that's currently on the battlefield.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EquipBonus {
+    /// Power modification granted to the equipped creature (layer 7c).
+    pub power: i32,
+    /// Toughness modification granted to the equipped creature (layer 7c).
+    pub toughness: i32,
+    /// Keywords granted to the equipped creature (layer 6).
+    pub keywords: Vec<Keyword>,
 }
 
 /// Characteristic-defining dynamic P/T formula. Read by

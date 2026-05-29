@@ -523,7 +523,49 @@ fn main_phase_action(state: &GameState, seat: usize) -> GameAction {
         return action;
     }
 
+    // Equip (CR 702.6): if the bot controls an Equipment that isn't yet
+    // attached to one of its creatures, and it controls a creature to wear
+    // it, move the Equipment onto the biggest such creature. Dry-run-gated
+    // so the equip cost / sorcery timing / target legality all bottom out
+    // in `would_accept`.
+    if let Some(action) = pick_equip(state, seat) {
+        return action;
+    }
+
     GameAction::PassPriority
+}
+
+/// Pick an equip activation: the first controlled Equipment that's either
+/// unattached or attached to a permanent the bot doesn't control, paired
+/// with the highest-power creature the bot controls. Returns `None` when
+/// there's nothing worth equipping. Dry-run gated by the caller's
+/// `would_accept` is bypassed here (we gate inline) so the bot doesn't
+/// thrash re-equipping the same creature.
+fn pick_equip(state: &GameState, seat: usize) -> Option<GameAction> {
+    // Best creature to wear an Equipment: highest current power.
+    let target = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_creature())
+        .max_by_key(|c| c.power())
+        .map(|c| c.id)?;
+    for eq in &state.battlefield {
+        if eq.controller != seat || !eq.definition.is_equipment() {
+            continue;
+        }
+        if eq.definition.has_equip().is_none() {
+            continue;
+        }
+        // Skip if already on the chosen target (no point re-equipping).
+        if eq.attached_to == Some(target) {
+            continue;
+        }
+        let action = GameAction::Equip { equipment: eq.id, target };
+        if state.would_accept(action.clone()) {
+            return Some(action);
+        }
+    }
+    None
 }
 
 /// Walk every planeswalker the bot controls and pick the first activatable
