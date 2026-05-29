@@ -10839,10 +10839,10 @@ fn applied_geometry_mints_a_six_six_fractal() {
 // ── Prismari Opus rider promotions ──────────────────────────────────────────
 //
 // Spectacular Skywhale fully wires its Opus rider (small: +3/+0 EOT;
-// big: 3 +1/+1 counters instead). Colorstorm Stallion and Elemental
-// Mascot wire the +1/+_ small body; the big-body conditional clauses
-// (token-copy / cast-from-exile) remain noted gaps but the small body
-// is exercised here.
+// big: 3 +1/+1 counters instead). Colorstorm Stallion (copy-token) and
+// Elemental Mascot (exile-top + may-play) now wire their big-body
+// conditional clauses too via CreateTokenCopyOf / ExileTopAndGrantMayPlay
+// — see the dedicated `*_opus_*` tests later in this file.
 
 #[test]
 fn spectacular_skywhale_opus_small_body_pumps_three_zero_eot() {
@@ -12555,30 +12555,11 @@ fn quandrix_the_proof_enters_as_6_6_flying_trample() {
         "Quandrix should have trample");
 }
 
-// ── Applied Geometry ────────────────────────────────────────────────────
-
-#[test]
-fn applied_geometry_creates_fractal_with_six_counters() {
-    let mut g = two_player_game();
-    let id = g.add_card_to_hand(0, catalog::applied_geometry());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.players[0].mana_pool.add(Color::Blue, 1);
-    g.players[0].mana_pool.add_colorless(2);
-
-    g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    })
-    .expect("Applied Geometry castable for {2}{G}{U}");
-    drain_stack(&mut g);
-
-    let frac = g.battlefield.iter().find(|c| c.definition.name == "Fractal")
-        .expect("Fractal token should be on the battlefield");
-    assert_eq!(frac.counter_count(CounterType::PlusOnePlusOne), 6,
-        "Fractal should have six +1/+1 counters");
-    // 0/0 base + 6 counters = 6/6.
-    assert_eq!(frac.power(), 6);
-    assert_eq!(frac.toughness(), 6);
-}
+// (Applied Geometry's copy behavior is covered by
+// `applied_geometry_mints_a_six_six_fractal` and
+// `applied_geometry_copies_creature_as_six_six_fractal`. The old
+// no-target "vanilla Fractal" test was removed when the card was
+// promoted to the real `CreateTokenCopyOf` primitive.)
 
 // ── Push XVII: Ward MDFCs + Modern supplement ──────────────────────────────
 
@@ -12987,4 +12968,130 @@ fn intervention_pact_gains_five_life_and_has_pact_trigger() {
     assert_eq!(g.players[0].life, life_before + 5, "Should gain 5 life");
     // A delayed trigger should be registered for the pact payment.
     assert!(!g.delayed_triggers.is_empty(), "Pact delayed trigger should be registered");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// modern_decks: copy-permanent / Opus copy-token / cast-from-exile
+// promotions (Applied Geometry, Colorstorm Stallion, Elemental Mascot).
+// These cards previously stubbed their copy/exile riders; they now wire
+// the engine's CreateTokenCopyOf / ExileTopAndGrantMayPlay primitives.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn applied_geometry_copies_creature_as_six_six_fractal() {
+    use crate::card::CreatureType;
+    let mut g = two_player_game();
+    // A 2/2 Grizzly Bears to copy.
+    let bear = place_creature(&mut g, 0, catalog::grizzly_bears());
+    let ag = g.add_card_to_hand(0, catalog::applied_geometry());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ag,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Applied Geometry castable for {2}{G}{U}");
+    drain_stack(&mut g);
+    // Two "Grizzly Bears" on the battlefield now: the original + the copy.
+    let bears: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Grizzly Bears")
+        .collect();
+    assert_eq!(bears.len(), 2, "original + minted copy");
+    let token = bears
+        .iter()
+        .find(|c| c.is_token)
+        .expect("copy is a token");
+    assert!(
+        token.definition.has_creature_type(CreatureType::Fractal),
+        "copy gains Fractal 'in addition to its other types'",
+    );
+    assert_eq!(token.power(), 6, "0/0 base + six +1/+1 counters → 6/6");
+    assert_eq!(token.toughness(), 6);
+}
+
+#[test]
+fn colorstorm_stallion_opus_mints_copy_at_five_mana() {
+    let mut g = two_player_game();
+    let _stallion = place_creature(&mut g, 0, catalog::colorstorm_stallion());
+    // Divergent Equation with X=2 → {2}{2}{U} = 5 mana spent (an IS spell).
+    let big = g.add_card_to_hand(0, catalog::divergent_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Divergent Equation castable with X=2");
+    drain_stack(&mut g);
+    let stallions: Vec<_> = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Colorstorm Stallion")
+        .collect();
+    assert_eq!(stallions.len(), 2, "Opus ≥5 mana mints a copy of itself");
+    assert!(
+        stallions.iter().any(|c| c.is_token),
+        "the minted copy is a token",
+    );
+}
+
+#[test]
+fn colorstorm_stallion_opus_no_copy_below_five_mana() {
+    let mut g = two_player_game();
+    let stallion = place_creature(&mut g, 0, catalog::colorstorm_stallion());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let count = g
+        .battlefield
+        .iter()
+        .filter(|c| c.definition.name == "Colorstorm Stallion")
+        .count();
+    assert_eq!(count, 1, "small body (<5 mana) only pumps, no copy");
+    // Small body still pumped +1/+1: 3/3 → 4/4.
+    let c = g.battlefield_find(stallion).unwrap();
+    assert_eq!(c.power(), 4, "small body +1/+1");
+}
+
+#[test]
+fn elemental_mascot_opus_exiles_top_and_grants_may_play_at_five_mana() {
+    let mut g = two_player_game();
+    let _mascot = place_creature(&mut g, 0, catalog::elemental_mascot());
+    // Seed a known top card to exile.
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    // Divergent Equation with X=2 → 5 mana spent.
+    let big = g.add_card_to_hand(0, catalog::divergent_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("Divergent Equation castable with X=2");
+    drain_stack(&mut g);
+    // The seeded top card should now be in exile (Opus big body).
+    assert!(
+        g.exile.iter().any(|c| c.id == top),
+        "Opus ≥5 mana exiles the top card of the library",
+    );
 }

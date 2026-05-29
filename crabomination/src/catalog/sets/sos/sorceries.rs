@@ -3063,11 +3063,24 @@ pub fn applied_geometry() -> CardDefinition {
         name: "Applied Geometry",
         cost: cost(&[generic(2), g(), u()]),
         card_types: vec![CardType::Sorcery],
+        // "Create a token that's a copy of target non-Aura permanent you
+        // control, except it's a 0/0 Fractal creature in addition to its
+        // other types. Put six +1/+1 counters on it." Wired faithfully via
+        // `Effect::CreateTokenCopyOf` (override P/T to 0/0, add the Fractal
+        // creature type "in addition to" the copied types), then six +1/+1
+        // counters on the freshly-minted token. The previous approximation
+        // (mint a vanilla 0/0 Fractal) is retired now that the
+        // copy-permanent primitive exists.
         effect: Effect::Seq(vec![
-            Effect::CreateToken {
+            Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: fractal_token(),
+                source: crate::effect::shortcut::target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                extra_creature_types: vec![crate::card::CreatureType::Fractal],
+                override_pt: Some((0, 0)),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,

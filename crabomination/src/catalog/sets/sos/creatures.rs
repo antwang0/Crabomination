@@ -4384,11 +4384,14 @@ pub fn spectacular_skywhale() -> CardDefinition {
 /// this creature gets +1/+1 until end of turn. If five or more mana was
 /// spent to cast that spell, create a token that's a copy of this creature."
 ///
-/// 🟡 Body wired with Ward {1}, haste, and the magecraft +1/+1 self-pump.
-/// The "if five or more mana was spent" copy-token rider is omitted (no
-/// copy-permanent primitive). The base body and pump are still strong.
+/// Body wired with Ward {1}, haste, plus the full Opus payoff: the
+/// magecraft +1/+1 self-pump, and — when five or more mana was spent to
+/// cast the instant/sorcery — a token that's a copy of this creature
+/// (via `Effect::CreateTokenCopyOf { source: This }`). The copy-token
+/// rider was previously omitted for lack of a copy-permanent primitive;
+/// it now uses the engine's `CreateTokenCopyOf`.
 pub fn colorstorm_stallion() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Colorstorm Stallion",
@@ -4404,12 +4407,31 @@ pub fn colorstorm_stallion() -> CardDefinition {
         keywords: vec![Keyword::Ward(crate::card::WardCost::generic(1)), Keyword::Haste],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: Selector::This,
-            power: Value::Const(1),
-            toughness: Value::Const(1),
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![opus_trigger(
+            // Small body: +1/+1 until end of turn.
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            // Big body (≥5 mana spent): pump, then mint a copy token.
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                },
+            ]),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -4426,11 +4448,14 @@ pub fn colorstorm_stallion() -> CardDefinition {
 /// to cast that spell, exile the top card of your library. You may play that
 /// card until the end of your next turn."
 ///
-/// 🟡 Body wired with Flying, Vigilance, and the magecraft +1/+0 self-pump.
-/// The "five or more mana" exile-top-card-and-play rider is omitted (no
-/// cast-from-exile pipeline).
+/// Body wired with Flying, Vigilance, plus the full Opus payoff: the
+/// magecraft +1/+0 self-pump, and — when five or more mana was spent to
+/// cast the instant/sorcery — exile the top card of the library and grant
+/// "you may play that card until the end of your next turn" via
+/// `Effect::ExileTopAndGrantMayPlay`. The cast-from-exile rider was
+/// previously omitted; it now uses the engine's existing primitive.
 pub fn elemental_mascot() -> CardDefinition {
-    use crate::effect::shortcut::magecraft;
+    use crate::effect::shortcut::opus_trigger;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Elemental Mascot",
@@ -4446,12 +4471,28 @@ pub fn elemental_mascot() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::PumpPT {
-            what: Selector::This,
-            power: Value::Const(1),
-            toughness: Value::Const(0),
-            duration: Duration::EndOfTurn,
-        })],
+        triggered_abilities: vec![opus_trigger(
+            // Small body: +1/+0 until end of turn.
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            // Big body (≥5 mana spent): pump, then exile-top + may-play.
+            Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(0),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::ExileTopAndGrantMayPlay {
+                    who: PlayerRef::You,
+                    duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                },
+            ]),
+        )],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
