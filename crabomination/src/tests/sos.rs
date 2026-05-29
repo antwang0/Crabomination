@@ -12396,39 +12396,124 @@ fn auto_tap_hybrid_card_casts_with_off_color_lands() {
 
 // ── Manual mana tapping (UI players) ────────────────────────────────────────
 //
-// For a UI player (`wants_ui = true`), the engine auto-taps only when the
-// payment is forced; if the player has a real choice of which sources to
-// tap, the cast is rejected with `ManualTapRequired` and they tap manually.
-// Bots (`wants_ui = false`) keep full auto-tap (covered implicitly by the
-// rest of the suite + the regression test below).
+// For a UI player (`wants_ui = true`), the engine auto-taps the *forced*
+// parts of a cost (a colour only one kind of source can make, or
+// interchangeable basics) and only requires a manual tap when there's a
+// genuine choice of which sources to tap (leaving different mana behind).
+// Bots (`wants_ui = false`) keep full auto-tap.
 
 #[test]
-fn ui_player_must_tap_manually_when_spare_lands_exist() {
-    // 3 Forests, casting Grizzly Bears {1}{G} (needs 2 mana). Auto-tap
-    // would use 2 and leave a third untapped Forest that could also have
-    // paid — a genuine choice — so the cast is rejected and rolled back.
+fn ui_player_auto_taps_forced_green_with_spare_mountains() {
+    // The reported case: a {4}{G}{G} card (Craw Wurm) where the only green
+    // sources are Forests, plus spare Mountains for the generic. The two
+    // green pips are forced onto the Forests, and the leftover Mountains
+    // are interchangeable, so the whole cost auto-taps and the cast goes
+    // through — no manual prompt.
     let mut g = two_player_game();
     g.players[0].wants_ui = true;
-    let mut forests = Vec::new();
-    for _ in 0..3 {
-        forests.push(g.add_card_to_battlefield(0, catalog::forest()));
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    for _ in 0..5 {
+        g.add_card_to_battlefield(0, catalog::mountain());
     }
-    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::craw_wurm());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{4}{G}{G} should auto-tap the only green sources (Forests) + Mountains");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Craw Wurm resolves");
+    assert!(
+        g.battlefield.iter().find(|c| c.id == f1).unwrap().tapped
+            && g.battlefield.iter().find(|c| c.id == f2).unwrap().tapped,
+        "both Forests auto-tapped for the forced green pips"
+    );
+}
+
+#[test]
+fn ui_player_must_tap_when_generic_has_a_color_choice() {
+    // {4}{G}{G} with 2 Forests (green) + 4 Mountains + 1 Island. Green is
+    // forced onto the Forests (auto-tapped, {G}{G} floats), but the generic
+    // {4} can hold back either a Mountain or the Island — a real choice — so
+    // the cast stops for a manual tap of the generic part.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut lands = Vec::new();
+    lands.push(g.add_card_to_battlefield(0, catalog::forest()));
+    lands.push(g.add_card_to_battlefield(0, catalog::forest()));
+    for _ in 0..4 {
+        lands.push(g.add_card_to_battlefield(0, catalog::mountain()));
+    }
+    lands.push(g.add_card_to_battlefield(0, catalog::island()));
+    let id = g.add_card_to_hand(0, catalog::craw_wurm());
 
     let result = g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     });
     assert!(
         matches!(result, Err(GameError::ManualTapRequired { .. })),
-        "spare lands → engine must require a manual tap, got {result:?}"
+        "a real generic color-choice must require a manual tap, got {result:?}"
     );
-    // Rolled back: spell still in hand, no land tapped, pool empty.
+    // Partial: spell returns to hand, but the forced green auto-tapped —
+    // the two Forests are tapped with {G}{G} floating; the ambiguous
+    // generic lands stay untapped for the player to choose.
     assert!(g.players[0].hand.iter().any(|c| c.id == id), "spell returns to hand");
+    let forests = [lands[0], lands[1]];
     assert!(
-        forests.iter().all(|fid| !g.battlefield.iter().find(|c| c.id == *fid).unwrap().tapped),
-        "no Forest should be tapped after a rejected cast"
+        forests.iter().all(|fid| g.battlefield.iter().find(|c| c.id == *fid).unwrap().tapped),
+        "the two Forests (only green sources) auto-tapped for the forced {{G}}{{G}}"
     );
-    assert_eq!(g.players[0].mana_pool.total(), 0, "pool unchanged");
+    assert!(
+        lands[2..].iter().all(|lid| !g.battlefield.iter().find(|c| c.id == *lid).unwrap().tapped),
+        "the ambiguous generic lands (Mountains + Island) stay untapped"
+    );
+    assert_eq!(
+        g.players[0].mana_pool.amount(Color::Green), 2,
+        "{{G}}{{G}} floats in the pool, ready once the generic is tapped"
+    );
+}
+
+#[test]
+fn ui_player_partial_tap_then_manual_generic_completes_cast() {
+    // Full flow: forced green auto-taps the Forests, then the player taps
+    // the Mountains they choose for the generic and the re-submitted cast
+    // (what the client's pending-cast driver does) goes through.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    let mut mountains = Vec::new();
+    for _ in 0..4 {
+        mountains.push(g.add_card_to_battlefield(0, catalog::mountain()));
+    }
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::craw_wurm());
+
+    let r = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(matches!(r, Err(GameError::ManualTapRequired { .. })));
+    assert!(g.battlefield.iter().find(|c| c.id == f1).unwrap().tapped);
+    assert!(g.battlefield.iter().find(|c| c.id == f2).unwrap().tapped);
+
+    // Player taps the 4 Mountains for the generic (holding the Island).
+    for m in &mountains {
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: *m, ability_index: 0, target: None, x_value: None,
+        })
+        .expect("tap a Mountain for mana");
+    }
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("green floating + 4 Mountains tapped pays {4}{G}{G}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Craw Wurm resolves");
+    assert!(
+        !g.battlefield.iter().find(|c| c.id == island).unwrap().tapped,
+        "the Island the player chose to hold stays untapped"
+    );
 }
 
 #[test]
