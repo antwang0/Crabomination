@@ -2192,13 +2192,13 @@ pub fn greasewrench_goblin() -> CardDefinition {
 }
 
 /// Orcish Lumberjack — {R} Creature — Orc Druid. 1/1.
-/// "{T}, Sacrifice a Forest: Add {G}{G}{G}."
+/// "{T}, Sacrifice a Forest: Add {R}{R}{R}."
 ///
-/// Sacrifice cost is folded into the resolved effect: tap, then on
-/// resolution sacrifice a Forest you control and add {G}{G}{G}. Same
-/// pattern Crop Rotation uses (sacrifice-as-first-effect-step). The bot
-/// auto-picks the first Forest via `Effect::Sacrifice`'s deterministic
-/// selector resolver.
+/// The "Sacrifice a Forest" cost is now a proper pre-resolution
+/// activation cost via `sac_other_filter: Some((Forest, 1))` (rejects
+/// when the controller has no Forest), and the mana produced is the
+/// printed `{R}{R}{R}` (the prior `{G}{G}{G}` was a transcription bug —
+/// a mono-red Forest-sacrificer that made green mana made no sense).
 pub fn orcish_lumberjack() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -2217,18 +2217,10 @@ pub fn orcish_lumberjack() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Land
-                        .and(SelectionRequirement::HasLandType(crate::card::LandType::Forest)),
-                },
-                Effect::AddMana {
-                    who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Green, Color::Green, Color::Green]),
-                },
-            ]),
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![Color::Red, Color::Red, Color::Red]),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -2236,7 +2228,13 @@ pub fn orcish_lumberjack() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            // Sacrifice a Forest as an activation cost.
+            sac_other_filter: Some((
+                SelectionRequirement::Land
+                    .and(SelectionRequirement::HasLandType(crate::card::LandType::Forest)),
+                1,
+            )),
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -6131,11 +6129,13 @@ pub fn chaos_warp() -> CardDefinition {
 /// {T}, Sacrifice a land: Search your library for a land card and put it
 /// onto the battlefield.
 ///
-/// Land-tutor activated ability. Sacrifice-a-land cost is folded into
-/// resolution as the first step (`Sacrifice(Land)` filtered to your side),
-/// then a normal `Search(Land → BF)`. The Oracle "Threshold pump" rider
-/// (P/T 3/4 if seven-or-more cards in your graveyard) is dropped — the cube
-/// runs Reclaimer for the activated ability, not the body.
+/// Land-tutor activated ability. The "Sacrifice a land" cost is now a
+/// proper pre-resolution activation cost (`sac_other_filter: Some((Land,
+/// 1))`), with the body just `Search(Land → BF)`; activation is rejected
+/// when the controller has no land to sacrifice. The Oracle "Threshold
+/// pump" rider (P/T 3/4 with seven-or-more cards in your graveyard) is
+/// dropped — the cube runs Reclaimer for the activated ability, not the
+/// body.
 pub fn elvish_reclaimer() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -6151,22 +6151,14 @@ pub fn elvish_reclaimer() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Land
-                        .and(SelectionRequirement::ControlledByYou),
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Land,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::You,
+                    tapped: false,
                 },
-                Effect::Search {
-                    who: PlayerRef::You,
-                    filter: SelectionRequirement::Land,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
-                },
-            ]),
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -6174,7 +6166,9 @@ pub fn elvish_reclaimer() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            // Sacrifice a land as an activation cost.
+            sac_other_filter: Some((SelectionRequirement::Land, 1)),
         }],
         ..Default::default()
     }

@@ -4474,7 +4474,7 @@ fn greasewrench_goblin_enters_with_haste() {
 /// since `is_mana_ability` only matches pure-AddMana effects. Drain the
 /// stack to resolve.
 #[test]
-fn orcish_lumberjack_sacrifices_forest_for_three_green() {
+fn orcish_lumberjack_sacrifices_forest_for_three_red() {
     let mut g = two_player_game();
     let lj = g.add_card_to_battlefield(0, catalog::orcish_lumberjack());
     g.clear_sickness(lj);
@@ -4483,9 +4483,22 @@ fn orcish_lumberjack_sacrifices_forest_for_three_green() {
         card_id: lj, ability_index: 0, target: None, x_value: None }).expect("Lumberjack should activate for {T}");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == forest),
-        "Forest should be sacrificed by the activation");
-    assert_eq!(g.players[0].mana_pool.amount(Color::Green), 3,
-        "Activation should add {{G}}{{G}}{{G}}");
+        "Forest should be sacrificed as the activation cost");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3,
+        "Activation should add {{R}}{{R}}{{R}}");
+}
+
+#[test]
+fn orcish_lumberjack_cannot_activate_without_a_forest() {
+    let mut g = two_player_game();
+    let lj = g.add_card_to_battlefield(0, catalog::orcish_lumberjack());
+    g.clear_sickness(lj);
+    // A non-Forest land doesn't satisfy the Sacrifice-a-Forest cost.
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: lj, ability_index: 0, target: None, x_value: None });
+    assert!(res.is_err(), "no Forest to sacrifice → activation rejected");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 0, "no mana made");
 }
 
 /// Mine Collapse: {2}{R} sorcery, sacrifice a Mountain on resolution,
