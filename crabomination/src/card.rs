@@ -348,6 +348,19 @@ pub enum Keyword {
     /// artifact creature until end of turn." Activated via
     /// `GameAction::Crew`; the value is the required total power.
     Crew(u32),
+    /// CR 702.35 — Madness `cost`. Two linked abilities: (1) a static
+    /// ability in the hand — "If a player would discard this card, they
+    /// discard it, but exile it instead of putting it into their
+    /// graveyard"; (2) a triggered ability in exile — "its owner may cast
+    /// it by paying its madness cost rather than putting it into their
+    /// graveyard." Wired centrally in `GameState::discard_card`: a
+    /// discarded madness card is exiled (still a discard — `CardDiscarded`
+    /// fires and discard-matters counters bump), then its owner is offered
+    /// a yes/no cast for the madness cost from their floated pool. Declining
+    /// or being unable to pay sends it on to the graveyard. The
+    /// `AutoDecider` declines by default (so ordinary bot games are
+    /// unaffected); tests pre-float the cost and feed `Bool(true)`.
+    Madness(crate::mana::ManaCost),
 }
 
 /// Composable filter for valid targets of a spell or ability.
@@ -832,6 +845,12 @@ impl CardDefinition {
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Kicker(cost) = kw { Some(cost) } else { None }
+        })
+    }
+    /// CR 702.35 — the Madness cost if this card has `Keyword::Madness`.
+    pub fn madness_cost(&self) -> Option<&ManaCost> {
+        self.keywords.iter().find_map(|kw| {
+            if let Keyword::Madness(cost) = kw { Some(cost) } else { None }
         })
     }
     pub fn has_equip(&self) -> Option<&ManaCost> {

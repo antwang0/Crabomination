@@ -10789,10 +10789,11 @@ pub fn corpse_dance() -> CardDefinition {
 /// "{1}{G}: Basking Rootwalla gets +2/+2 until end of turn. Activate
 /// only once each turn." Madness {0}.
 ///
-/// 🟡 Body-only: Madness omitted. Wired as 1/1 Lizard with a
-/// once-per-turn {1}{G} activated pump (+2/+2 until EOT).
+/// ✅ Madness {0} wired via `Keyword::Madness` (CR 702.35): discarding
+/// Basking Rootwalla exiles it and offers a free ({0}) cast. The
+/// once-per-turn {1}{G} activated pump (+2/+2 until EOT) is unchanged.
 pub fn basking_rootwalla() -> CardDefinition {
-    use crate::card::ActivatedAbility;
+    use crate::card::{ActivatedAbility, Keyword};
     CardDefinition {
         name: "Basking Rootwalla",
         cost: cost(&[generic(1), g()]),
@@ -10803,6 +10804,7 @@ pub fn basking_rootwalla() -> CardDefinition {
         },
         power: 1,
         toughness: 1,
+        keywords: vec![Keyword::Madness(ManaCost::default())],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
             mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Green)]),

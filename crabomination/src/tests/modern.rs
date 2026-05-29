@@ -527,6 +527,128 @@ fn putrid_imp_discard_grants_menace_eot() {
         "Putrid Imp should have menace until end of turn");
 }
 
+// ── Madness (CR 702.35) ──────────────────────────────────────────────────────
+
+/// Helper: build a test-only Madness instant ("deal 1 to any target") with
+/// the given madness cost. Lets the non-zero-cost payment paths be exercised
+/// without depending on an unverified printed card.
+fn test_madness_bolt(madness: crate::mana::ManaCost) -> crate::card::CardDefinition {
+    use crate::card::{CardType, Keyword, SelectionRequirement};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{ManaCost, ManaSymbol, Color};
+    crate::card::CardDefinition {
+        name: "Test Madness Bolt",
+        cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Madness(madness)],
+        effect: Effect::DealDamage {
+            to: Selector::TargetFiltered { slot: 0, filter: SelectionRequirement::Any },
+            amount: Value::Const(1),
+        },
+        ..Default::default()
+    }
+}
+
+#[test]
+fn madness_zero_cost_basking_rootwalla_cast_from_exile_when_accepted() {
+    // CR 702.35a/b — discarding Basking Rootwalla (Madness {0}) exiles it
+    // and offers a free cast; accepting puts the 1/1 onto the battlefield.
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let rw = g.add_card_to_hand(0, catalog::basking_rootwalla());
+
+    let mut events = vec![];
+    assert!(g.discard_card(0, rw, &mut events), "card found + discarded");
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == rw),
+        "Accepted madness should cast Basking Rootwalla onto the battlefield");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == rw),
+        "Madness-cast card is not in the graveyard");
+    assert!(!g.exile.iter().any(|c| c.id == rw),
+        "Resolved madness creature left exile for the battlefield");
+}
+
+#[test]
+fn madness_declined_sends_card_to_graveyard() {
+    // The AutoDecider declines "you may" prompts by default, so an ordinary
+    // discard of a Madness card still lands it in the graveyard (CR 702.35b).
+    let mut g = two_player_game();
+    let rw = g.add_card_to_hand(0, catalog::basking_rootwalla());
+
+    let mut events = vec![];
+    g.discard_card(0, rw, &mut events);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == rw),
+        "Declined madness sends the card to the graveyard");
+    assert!(!g.exile.iter().any(|c| c.id == rw), "card not left stranded in exile");
+    assert!(!g.battlefield.iter().any(|c| c.id == rw), "card not cast");
+}
+
+#[test]
+fn madness_nonzero_cost_paid_from_pool_then_cast() {
+    use crate::mana::{ManaCost, ManaSymbol, Color};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, test_madness_bolt(
+        ManaCost::new(vec![ManaSymbol::Colored(Color::Red)])));
+    // Float the {R} madness cost up front.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let opp_life_before = g.players[1].life;
+
+    let mut events = vec![];
+    g.discard_card(0, bolt, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    // The {R} was consumed and the bolt resolved (auto-targeted the opp).
+    assert_eq!(g.players[0].mana_pool.total(), 0, "madness cost was paid");
+    assert!(g.players[1].life < opp_life_before || g.battlefield.is_empty(),
+        "madness instant resolved (dealt its 1 damage)");
+    assert!(!g.exile.iter().any(|c| c.id == bolt),
+        "resolved instant left exile (to graveyard)");
+}
+
+#[test]
+fn madness_nonzero_cost_unaffordable_goes_to_graveyard() {
+    // Accepting the prompt but lacking the mana to pay falls through to the
+    // graveyard (CR 702.35b — "if they don't, they put it into graveyard").
+    use crate::mana::{ManaCost, ManaSymbol, Color};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let bolt = g.add_card_to_hand(0, test_madness_bolt(
+        ManaCost::new(vec![ManaSymbol::Colored(Color::Red)])));
+    // No mana floated → can't pay the {R}.
+
+    let mut events = vec![];
+    g.discard_card(0, bolt, &mut events);
+
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "unaffordable madness goes to the graveyard");
+    assert!(!g.exile.iter().any(|c| c.id == bolt));
+}
+
+#[test]
+fn cr_70235_madness_exile_still_counts_as_a_discard() {
+    // CR 701.8b / 702.35a — the discard still happens (CardDiscarded fires)
+    // even though the card is exiled rather than going to the graveyard.
+    use crate::game::GameEvent;
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let rw = g.add_card_to_hand(0, catalog::basking_rootwalla());
+
+    let before = g.cards_discarded_this_resolution;
+    let mut events = vec![];
+    g.discard_card(0, rw, &mut events);
+
+    assert!(events.iter().any(|e| matches!(e,
+        GameEvent::CardDiscarded { player: 0, card_id } if *card_id == rw)),
+        "CardDiscarded fires for a madness discard");
+    assert_eq!(g.cards_discarded_this_resolution, before + 1,
+        "discard-matters counter bumped even though the card was exiled");
+}
+
 #[test]
 fn tarmogoyf_pt_scales_with_card_types_in_graveyards() {
     let mut g = two_player_game();

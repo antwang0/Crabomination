@@ -1751,6 +1751,111 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 701.8 / 702.35 — discard `card_id` from player `p`'s hand. This
+    /// is the single hand-to-graveyard discard path; the random/chosen
+    /// `Effect::Discard` branches both route through it so the discard
+    /// bookkeeping and the Madness replacement live in one place.
+    ///
+    /// The discard itself always happens (`CardDiscarded` fires and the
+    /// per-resolution discard-matters counters bump) regardless of where
+    /// the card ends up. CR 702.35a: a discarded card with
+    /// `Keyword::Madness` is exiled instead of going to the graveyard, then
+    /// its owner is offered a cast for the madness cost (see
+    /// `offer_madness_cast`); declining or being unable to pay sends it on
+    /// to the graveyard (CR 702.35b). Returns `true` if the card was found
+    /// and discarded.
+    pub(crate) fn discard_card(
+        &mut self,
+        p: usize,
+        card_id: crate::card::CardId,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let Some(card) = self.players[p].remove_from_hand(card_id) else {
+            return false;
+        };
+        let was_creature = card
+            .definition
+            .card_types
+            .contains(&crate::card::CardType::Creature);
+        let madness = card.definition.madness_cost().cloned();
+
+        // The discard happens regardless of the destination zone (CR
+        // 701.8b), so emit the event + bump the discard-matters counters
+        // up front, before resolving the Madness replacement.
+        events.push(GameEvent::CardDiscarded { player: p, card_id });
+        self.cards_discarded_this_resolution += 1;
+        *self
+            .cards_discarded_per_player_this_resolution
+            .entry(p)
+            .or_insert(0) += 1;
+        self.discarded_card_ids_this_resolution.push(card_id);
+        if was_creature {
+            self.creature_cards_discarded_this_resolution += 1;
+        }
+
+        match madness {
+            None => {
+                self.players[p].graveyard.push(card);
+            }
+            Some(cost) => {
+                // CR 702.35a — exile instead of graveyard, then offer the
+                // cast for the madness cost.
+                self.exile.push(card);
+                if !self.offer_madness_cast(p, card_id, &cost, events) {
+                    // CR 702.35b — declined / unaffordable: the card goes
+                    // from exile to its owner's graveyard.
+                    if let Some(pos) = self.exile.iter().position(|c| c.id == card_id) {
+                        let c = self.exile.remove(pos);
+                        let owner = c.owner;
+                        self.players[owner].graveyard.push(c);
+                    }
+                }
+            }
+        }
+        true
+    }
+
+    /// CR 702.35b — offer the owner of an exiled Madness card a yes/no cast
+    /// for `cost`, paid from their floated mana pool. Returns `true` if the
+    /// spell was cast (it is now on the stack, sourced from exile). Mirrors
+    /// the `Effect::MayPay` decision/payment shape; the `AutoDecider`
+    /// declines by default so ordinary bot games never auto-cast.
+    fn offer_madness_cast(
+        &mut self,
+        p: usize,
+        card_id: crate::card::CardId,
+        cost: &crate::mana::ManaCost,
+        events: &mut Vec<GameEvent>,
+    ) -> bool {
+        let answer = self.decider.decide(&Decision::OptionalTrigger {
+            source: card_id,
+            description: "Cast for madness".to_string(),
+        });
+        if !matches!(answer, DecisionAnswer::Bool(true)) {
+            return false;
+        }
+        // Pre-flight: try paying. On failure (unaffordable pool), decline.
+        if self.players[p].mana_pool.pay(cost).is_err() {
+            return false;
+        }
+        match self.cast_card_for_free(
+            p,
+            card_id,
+            crate::card::Zone::Exile,
+            None,
+            vec![],
+            None,
+            None,
+            false,
+        ) {
+            Ok(mut ev) => {
+                events.append(&mut ev);
+                true
+            }
+            Err(_) => false,
+        }
+    }
+
     /// CR 702.29a — Activate Cycling on `card_id` from the active
     /// player's hand. Pre-flight gates: card must be in someone's hand
     /// (we use the priority holder's hand), must carry
@@ -2980,31 +3085,10 @@ impl GameState {
                 };
                 let mut events = Vec::with_capacity(card_ids.len());
                 for cid in card_ids {
-                    if let Some(pos) = self.players[target_player]
-                        .hand
-                        .iter()
-                        .position(|c| c.id == *cid)
-                    {
-                        let card = self.players[target_player].hand.remove(pos);
-                        let card_id = card.id;
-                        let was_creature = card
-                            .definition
-                            .card_types
-                            .contains(&crate::card::CardType::Creature);
-                        self.players[target_player].graveyard.push(card);
-                        events.push(GameEvent::CardDiscarded {
-                            player: target_player,
-                            card_id,
-                        });
-                        self.cards_discarded_this_resolution += 1;
-                        *self.cards_discarded_per_player_this_resolution
-                            .entry(target_player)
-                            .or_insert(0) += 1;
-                        self.discarded_card_ids_this_resolution.push(card_id);
-                        if was_creature {
-                            self.creature_cards_discarded_this_resolution += 1;
-                        }
-                    }
+                    // The zone move + CardDiscarded + discard-matters
+                    // counters + Madness replacement (CR 702.35) are all
+                    // centralized in `discard_card`.
+                    self.discard_card(target_player, *cid, &mut events);
                 }
                 Ok(events)
             }

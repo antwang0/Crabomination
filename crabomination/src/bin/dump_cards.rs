@@ -87,6 +87,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Echo(_) => "Echo",
         Keyword::CumulativeUpkeep(_) => "Cumulative upkeep",
         Keyword::Cycling(_) => "Cycling",
+        Keyword::Madness(_) => "Madness",
         Keyword::Morph(_) => "Morph",
         Keyword::Megamorph(_) => "Megamorph",
         Keyword::Equip(_) => "Equip",
