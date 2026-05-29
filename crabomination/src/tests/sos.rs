@@ -12394,6 +12394,132 @@ fn auto_tap_hybrid_card_casts_with_off_color_lands() {
     );
 }
 
+// ── Manual mana tapping (UI players) ────────────────────────────────────────
+//
+// For a UI player (`wants_ui = true`), the engine auto-taps only when the
+// payment is forced; if the player has a real choice of which sources to
+// tap, the cast is rejected with `ManualTapRequired` and they tap manually.
+// Bots (`wants_ui = false`) keep full auto-tap (covered implicitly by the
+// rest of the suite + the regression test below).
+
+#[test]
+fn ui_player_must_tap_manually_when_spare_lands_exist() {
+    // 3 Forests, casting Grizzly Bears {1}{G} (needs 2 mana). Auto-tap
+    // would use 2 and leave a third untapped Forest that could also have
+    // paid — a genuine choice — so the cast is rejected and rolled back.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut forests = Vec::new();
+    for _ in 0..3 {
+        forests.push(g.add_card_to_battlefield(0, catalog::forest()));
+    }
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    let result = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(
+        matches!(result, Err(GameError::ManualTapRequired { .. })),
+        "spare lands → engine must require a manual tap, got {result:?}"
+    );
+    // Rolled back: spell still in hand, no land tapped, pool empty.
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "spell returns to hand");
+    assert!(
+        forests.iter().all(|fid| !g.battlefield.iter().find(|c| c.id == *fid).unwrap().tapped),
+        "no Forest should be tapped after a rejected cast"
+    );
+    assert_eq!(g.players[0].mana_pool.total(), 0, "pool unchanged");
+}
+
+#[test]
+fn ui_player_auto_taps_when_no_choice_remains() {
+    // Exactly 2 Forests for a {1}{G} cost: the player must tap both, so
+    // there's no choice — the engine auto-taps and the cast succeeds.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut forests = Vec::new();
+    for _ in 0..2 {
+        forests.push(g.add_card_to_battlefield(0, catalog::forest()));
+    }
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("no spare lands → engine auto-taps and the cast succeeds");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Grizzly Bears resolves");
+    assert!(
+        forests.iter().all(|fid| g.battlefield.iter().find(|c| c.id == *fid).unwrap().tapped),
+        "both Forests tapped"
+    );
+}
+
+#[test]
+fn ui_player_casts_from_prefilled_pool_ignoring_spare_lands() {
+    // The player has already arranged their mana (pool covers the cost),
+    // so the cast goes through the fast path even with spare untapped
+    // lands on the board — those stay untapped.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let mut forests = Vec::new();
+    for _ in 0..3 {
+        forests.push(g.add_card_to_battlefield(0, catalog::forest()));
+    }
+    g.players[0].mana_pool.add(Color::Green, 2); // covers {1}{G}
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("pool already covers the cost → no manual tap needed");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Grizzly Bears resolves");
+    assert!(
+        forests.iter().all(|fid| !g.battlefield.iter().find(|c| c.id == *fid).unwrap().tapped),
+        "lands stay untapped — the spell was paid from the pool"
+    );
+}
+
+#[test]
+fn ui_player_irrelevant_spare_source_does_not_force_manual_tap() {
+    // {G} (Llanowar Elves) with a Forest + an Island. Only the Forest can
+    // pay {G}; the leftover Island is irrelevant to this cost, so there's
+    // no real choice — the engine auto-taps the Forest and casts.
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let island = g.add_card_to_battlefield(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::llanowar_elves());
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("an off-color spare land is not a real choice for a mono-color cost");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Llanowar Elves resolves");
+    assert!(g.battlefield.iter().find(|c| c.id == forest).unwrap().tapped, "Forest tapped for {{G}}");
+    assert!(!g.battlefield.iter().find(|c| c.id == island).unwrap().tapped, "Island left untapped");
+}
+
+#[test]
+fn bot_still_auto_taps_with_spare_lands() {
+    // Regression: a non-UI payer (bot / default) keeps full auto-tap even
+    // when spare lands exist — the manual-tap gate is UI-only.
+    let mut g = two_player_game();
+    assert!(!g.players[0].wants_ui, "default player is non-UI");
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    let id = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("non-UI payer auto-taps regardless of spare lands");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Grizzly Bears resolves for the bot");
+}
+
 // ── Mica, Reader of Ruins ─────────────────────────────────────────────────
 
 // ── The Dawning Archaic ───────────────────────────────────────────────────

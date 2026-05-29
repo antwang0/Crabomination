@@ -694,6 +694,20 @@ lacks. Highest-value next targets, each unlocking multiple cards:
   hybrid pips, and `MonoHybrid` covers `{2/C}`. Any card still printed
   with a single-color approximation of a hybrid pip should be migrated
   to `hybrid(a, b)` / `mono_hybrid(n, c)`.
+- **Manual mana tapping for UI players** (CR 601.2g): for a human-initiated
+  cast/activation (`players[payer].wants_ui`), the engine auto-taps **only
+  when the payment is forced** — the pool already covers it, or every
+  untapped source relevant to the cost has to be tapped. If a relevant
+  untapped source would be left over (a real choice of which to tap), the
+  cast is rejected with `GameError::ManualTapRequired` (rolled back) and the
+  player taps sources manually, then re-submits. Bots and engine-driven
+  auto-pays (Counter-unless-paid, "pay X or sacrifice") keep full auto-tap;
+  bots are unaffected because they tap all lands into the pool before
+  casting (fast path). Implemented as the `forced_only` arm of
+  `try_pay_after_snapshot_mode` + `untapped_relevant_source_exists`; tests
+  in `tests_sos::ui_player_*` / `bot_still_auto_taps_with_spare_lands`. A
+  fully interactive per-pip tap *prompt* (suspend/resume + client modal)
+  remains a future upgrade.
 - **Lesson sideboard model**: Quandrix Cantrip is *not* a Lesson but
   shares the IS-cantrip shape — Lessons themselves still gate on the
   sideboard model.

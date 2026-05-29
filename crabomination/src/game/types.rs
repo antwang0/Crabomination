@@ -693,6 +693,12 @@ pub enum GameError {
     TargetHasProtection(CardId),
     #[error("Mana: {0}")]
     Mana(#[from] ManaError),
+    /// The payer (a UI player) has more than one way to tap mana for this
+    /// cost, so the engine declines to choose for them — they tap the
+    /// sources they want, then re-submit. Only raised for human-initiated
+    /// casts/activations; bots and engine-driven auto-pays still auto-tap.
+    #[error("Tap mana to pay {cost} — you have more than one way to pay, so choose your sources")]
+    ManualTapRequired { cost: String },
     #[error("Wrong step for this action (currently {actual:?})")]
     WrongStep { actual: TurnStep },
     #[error("This action requires a target")]

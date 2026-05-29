@@ -932,7 +932,8 @@ impl GameState {
             self.players[p].mana_pool.add_colorless(1);
         }
 
-        let receipt = match self.try_pay_after_snapshot(p, &cost, snapshot) {
+        let forced_only = self.players[p].wants_ui;
+        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -1350,7 +1351,8 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
-        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        let forced_only = self.players[p].wants_ui;
+        let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
         }
@@ -1705,7 +1707,8 @@ impl GameState {
         }
 
         // Pay. On failure put the card back in the command zone.
-        let receipt = match self.try_pay_with_auto_tap(p, &cost) {
+        let forced_only = self.players[p].wants_ui;
+        let receipt = match self.try_pay_with_auto_tap_mode(p, &cost, forced_only) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].command.push(card);
@@ -1928,7 +1931,8 @@ impl GameState {
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
-        let receipt = match self.try_pay_with_auto_tap(p, &mana_cost) {
+        let forced_only = self.players[p].wants_ui;
+        let receipt = match self.try_pay_with_auto_tap_mode(p, &mana_cost, forced_only) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -2260,20 +2264,84 @@ impl GameState {
         payer: usize,
         cost: &crate::mana::ManaCost,
     ) -> Result<PaymentReceipt, GameError> {
-        let snapshot = self.snapshot_payment_state(payer);
-        self.try_pay_after_snapshot(payer, cost, snapshot)
+        self.try_pay_with_auto_tap_mode(payer, cost, false)
     }
 
-    /// Same as `try_pay_with_auto_tap` but uses a snapshot the caller
-    /// already captured — for paths that mutate state between snapshot and
-    /// payment (e.g. convoke taps creatures in between, activate_ability
-    /// applies its tap-cost in between).
-    pub(crate) fn try_pay_after_snapshot(
+    /// `try_pay_with_auto_tap`, but `forced_only` gates manual tapping.
+    /// When `forced_only` is true (human-initiated casts/activations), the
+    /// engine auto-taps *only* when the payment is forced — see
+    /// `try_pay_after_snapshot_mode`.
+    pub(crate) fn try_pay_with_auto_tap_mode(
+        &mut self,
+        payer: usize,
+        cost: &crate::mana::ManaCost,
+        forced_only: bool,
+    ) -> Result<PaymentReceipt, GameError> {
+        let snapshot = self.snapshot_payment_state(payer);
+        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only)
+    }
+
+    /// Pay `cost` for `payer`, auto-tapping mana sources as needed.
+    /// Used with a snapshot the caller already captured — for paths that
+    /// mutate state between snapshot and payment (convoke taps creatures
+    /// in between, `activate_ability` applies its tap-cost in between).
+    ///
+    /// `forced_only` implements "proper tapping" for human players (CR
+    /// 601.2g — the active player chooses which mana sources to tap):
+    /// - If the pool already covers the cost, pay from it directly (the
+    ///   player has arranged their mana).
+    /// - Otherwise the engine auto-taps **only if the payment is forced** —
+    ///   i.e. after a full auto-tap, no untapped source the player controls
+    ///   *could have contributed to this cost* remains. If a relevant
+    ///   untapped source is left over, the player had a real choice, so the
+    ///   cast is rejected with `ManualTapRequired` (rolled back) and they
+    ///   tap manually before re-submitting.
+    ///
+    /// `forced_only` is false for bots, scripted tests, and engine-driven
+    /// auto-pays (Counter-unless-paid, "pay X or sacrifice"), which keep
+    /// the original full auto-tap behavior.
+    pub(crate) fn try_pay_after_snapshot_mode(
         &mut self,
         payer: usize,
         cost: &crate::mana::ManaCost,
         snapshot: PaymentSnapshot,
+        forced_only: bool,
     ) -> Result<PaymentReceipt, GameError> {
+        if forced_only {
+            // Fast path: the player already has the mana floating — pay it.
+            if self.players[payer].mana_pool.clone().pay(cost).is_ok() {
+                let pool_before = self.players[payer].mana_pool.clone();
+                let side_effects = self.players[payer]
+                    .mana_pool
+                    .pay(cost)
+                    .expect("pool covered the cost a line ago");
+                return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
+            }
+            // Must tap. Auto-tap fully, then decide whether a choice existed.
+            let auto_events = self.auto_tap_for_cost(payer, cost);
+            let pool_after_auto_tap = self.players[payer].mana_pool.clone();
+            match self.players[payer].mana_pool.clone().pay(cost) {
+                Err(e) => {
+                    // Unaffordable even after tapping everything.
+                    self.restore_payment_state(payer, snapshot);
+                    return Err(GameError::Mana(e));
+                }
+                Ok(_) => {}
+            }
+            if self.untapped_relevant_source_exists(payer, cost) {
+                // A relevant untapped source remains → the player had a
+                // genuine choice. Roll back and make them tap manually.
+                self.restore_payment_state(payer, snapshot);
+                return Err(GameError::ManualTapRequired { cost: cost.summary() });
+            }
+            // No choice — every relevant source had to be tapped. Commit.
+            let side_effects = self.players[payer]
+                .mana_pool
+                .pay(cost)
+                .expect("payability checked above");
+            return Ok(PaymentReceipt { auto_events, side_effects, pool_before: pool_after_auto_tap });
+        }
+
         let auto_events = self.auto_tap_for_cost(payer, cost);
         // Snapshot the pool *after* auto-tap so `pool_before` reflects the
         // mana actually available to `pay()`. Without this, a player who
@@ -2293,6 +2361,42 @@ impl GameState {
                 Err(GameError::Mana(e))
             }
         }
+    }
+
+    /// True if `player` controls an untapped mana source that *could have
+    /// contributed* to `cost` — used by the forced-only payment path to
+    /// detect that a manual tapping choice existed. A source is relevant
+    /// when the cost has a generic (or monocolored-hybrid) pip that any
+    /// mana satisfies, or when the source can produce a color the cost
+    /// requires.
+    fn untapped_relevant_source_exists(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
+        use crate::mana::ManaSymbol;
+        let flexible = cost.symbols.iter().any(|s| {
+            matches!(s, ManaSymbol::Generic(n) if *n > 0) || matches!(s, ManaSymbol::MonoHybrid(_, _))
+        });
+        let cost_colors = cost.colors();
+        self.battlefield.iter().any(|c| {
+            if c.controller != player || c.tapped {
+                return false;
+            }
+            let mana_abilities: Vec<_> = c
+                .definition
+                .activated_abilities
+                .iter()
+                .filter(|a| is_mana_ability(&a.effect))
+                .collect();
+            if mana_abilities.is_empty() {
+                return false;
+            }
+            // Any mana pays a generic / mono-hybrid-generic pip.
+            if flexible {
+                return true;
+            }
+            // Otherwise the source must make a color the cost needs.
+            cost_colors
+                .iter()
+                .any(|col| mana_abilities.iter().any(|a| effect_produces_color(&a.effect, *col)))
+        })
     }
 
     // ── Auto-tap mana sources ─────────────────────────────────────────────────
@@ -2834,7 +2938,9 @@ impl GameState {
 
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
-            let receipt = self.try_pay_after_snapshot(p, &effective_mana_cost, snapshot)?;
+            let forced_only = self.players[p].wants_ui;
+            let receipt =
+                self.try_pay_after_snapshot_mode(p, &effective_mana_cost, snapshot, forced_only)?;
             if receipt.side_effects.life_lost > 0 {
                 self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
             }
