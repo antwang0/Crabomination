@@ -524,6 +524,9 @@ fn predicate_short_label(p: &crate::card::Predicate) -> String {
         Predicate::CreaturesDiedThisTurnAtLeast {
             at_least: Value::Const(1), ..
         } => "after creature death".into(),
+        Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) } => {
+            "morbid".into()
+        }
         Predicate::CastSpellHasX => "cast spell w/ {X}".into(),
         Predicate::CastSpellTargetsMatch(_) => "cast spell targets match".into(),
         Predicate::CastSpellManaSpentAtLeast(n) => format!("if ≥{n} mana spent"),

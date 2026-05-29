@@ -5223,3 +5223,29 @@ fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
     assert!(!g.battlefield.iter().any(|c| c.id == b3));
     assert!(!g.battlefield.iter().any(|c| c.id == attacker), "attacker takes 15");
 }
+
+#[test]
+fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
+    use crate::effect::Predicate;
+    use crate::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let morbid = Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least: Value::Const(1) };
+    let ctx = EffectContext {
+        controller: 0,
+        source: None,
+        targets: vec![],
+        trigger_source: None,
+        mode: 0,
+        x_value: 0,
+        converged_value: 0,
+        mana_spent: 0,
+        source_name: None,
+        cast_from_hand: false,
+        event_amount: 0,
+    };
+    assert!(!g.evaluate_predicate(&morbid, &ctx), "no deaths yet → morbid off");
+    // A creature died under the opponent's control (seat 1).
+    g.players[1].creatures_died_this_turn = 1;
+    assert!(g.evaluate_predicate(&morbid, &ctx),
+        "an opponent's creature dying this turn satisfies global morbid");
+}

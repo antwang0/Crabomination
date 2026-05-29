@@ -201,6 +201,16 @@ struct MatchStats {
     /// concession — is skipped in the cumulative sum but still counted
     /// in `wins`).
     win_life_samples: u64,
+    /// Bucketed histogram of final turn counts, parallel to
+    /// `duration_buckets`. Buckets: `[0]` = 1-2 turns, `[1]` = 3-5,
+    /// `[2]` = 6-8, `[3]` = 9-12, `[4]` = 13-20, `[5]` = 21+. The
+    /// turn-count envelope (`min_turns`/`max_turns`/average) gives the
+    /// extremes and centre; this histogram gives the distribution
+    /// *shape* — e.g. a fat `[0]` bucket flags a concession regression
+    /// even when one long outlier keeps the average high. Mirrors the
+    /// duration histogram so operators read both in the same summary
+    /// line. Push (claude/modern_decks).
+    turn_buckets: [u32; 6],
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -260,6 +270,34 @@ impl MatchStats {
             None => turns,
             Some(m) => m.min(turns),
         });
+        let idx = Self::turn_bucket_index(turns);
+        self.turn_buckets[idx] = self.turn_buckets[idx].saturating_add(1);
+    }
+
+    /// Map a final turn count to its `turn_buckets` index.
+    /// `[0]` = 1-2, `[1]` = 3-5, `[2]` = 6-8, `[3]` = 9-12, `[4]` =
+    /// 13-20, `[5]` = 21+.
+    fn turn_bucket_index(turns: u32) -> usize {
+        match turns {
+            0..=2 => 0,
+            3..=5 => 1,
+            6..=8 => 2,
+            9..=12 => 3,
+            13..=20 => 4,
+            _ => 5,
+        }
+    }
+
+    /// Human-readable label for each `turn_buckets` index.
+    fn turn_bucket_label(i: usize) -> &'static str {
+        match i {
+            0 => "1-2",
+            1 => "3-5",
+            2 => "6-8",
+            3 => "9-12",
+            4 => "13-20",
+            _ => "21+",
+        }
     }
     /// Bump the win/draw counters based on the MatchOutcome.winner
     /// shape. `None` (pre-game-over exit — channel disconnect or
@@ -537,6 +575,17 @@ fn format_match_stats(s: &MatchStats) -> String {
             out.push_str(" | format=");
             out.push_str(&format_chunks.join(" "));
         }
+        // Turn-count histogram — same shape as the duration histogram so
+        // operators can spot distribution drift in game length. Format:
+        // " | turns=1-2:3 3-5:5 6-8:7 9-12:2 13-20:0 21+:0".
+        out.push_str(" | turns=");
+        let turn_chunks: Vec<String> = s
+            .turn_buckets
+            .iter()
+            .enumerate()
+            .map(|(i, &count)| format!("{}:{}", MatchStats::turn_bucket_label(i), count))
+            .collect();
+        out.push_str(&turn_chunks.join(" "));
     }
     out
 }
@@ -1427,6 +1476,37 @@ mod tests {
         assert_eq!(MatchStats::bucket_index(Duration::from_secs(599)), 4);
         assert_eq!(MatchStats::bucket_index(Duration::from_secs(600)), 5);
         assert_eq!(MatchStats::bucket_index(Duration::from_secs(3600)), 5);
+    }
+
+    #[test]
+    fn turn_bucket_index_partitions_turn_counts_into_six_buckets() {
+        assert_eq!(MatchStats::turn_bucket_index(1), 0);
+        assert_eq!(MatchStats::turn_bucket_index(2), 0);
+        assert_eq!(MatchStats::turn_bucket_index(3), 1);
+        assert_eq!(MatchStats::turn_bucket_index(5), 1);
+        assert_eq!(MatchStats::turn_bucket_index(6), 2);
+        assert_eq!(MatchStats::turn_bucket_index(8), 2);
+        assert_eq!(MatchStats::turn_bucket_index(9), 3);
+        assert_eq!(MatchStats::turn_bucket_index(12), 3);
+        assert_eq!(MatchStats::turn_bucket_index(13), 4);
+        assert_eq!(MatchStats::turn_bucket_index(20), 4);
+        assert_eq!(MatchStats::turn_bucket_index(21), 5);
+        assert_eq!(MatchStats::turn_bucket_index(99), 5);
+    }
+
+    #[test]
+    fn observe_turns_increments_turn_histogram_and_renders() {
+        let mut s = MatchStats::default();
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(2); // bucket 0
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(7); // bucket 2
+        s.record_bot(Duration::from_secs(60), Format::Demo);
+        s.observe_turns(25); // bucket 5
+        assert_eq!(s.turn_buckets, [1, 0, 1, 0, 0, 1]);
+        let line = format_match_stats(&s);
+        assert!(line.contains("turns=1-2:1"), "histogram in line: {line}");
+        assert!(line.contains("21+:1"), "long-game bucket in line: {line}");
     }
 
     #[test]

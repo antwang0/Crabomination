@@ -427,6 +427,13 @@ pub enum Predicate {
     /// Witherbloom "if a creature died under your control this turn, …"
     /// end-step payoffs (Essenceknit Scholar).
     CreaturesDiedThisTurnAtLeast { who: PlayerRef, at_least: Value },
+    /// At least `at_least` creatures died this turn under **any** player's
+    /// control — the global "Morbid" condition (CR 700.4 "a creature died
+    /// this turn"). Sums `Player.creatures_died_this_turn` across all
+    /// players, so a removal spell that killed an opponent's creature
+    /// earlier this turn satisfies it. Cleaner than OR-ing
+    /// `CreaturesDiedThisTurnAtLeast` over each seat. Used by Tragic Slip.
+    CreaturesDiedThisTurnTotalAtLeast { at_least: Value },
     /// `who` has caused at least `at_least` cards to be exiled this turn.
     /// Backed by `Player.cards_exiled_this_turn`. Used by Strixhaven
     /// "if one or more cards were put into exile this turn" payoffs

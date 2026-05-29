@@ -2967,17 +2967,11 @@ pub fn ancient_grudge() -> CardDefinition {
 /// under either player's control this turn. Without morbid it's a modest
 /// -1/-1; with morbid it's the full -13/-13.
 pub fn tragic_slip() -> CardDefinition {
-    use crate::effect::{PlayerRef, Predicate};
-    let morbid = Predicate::Any(vec![
-        Predicate::CreaturesDiedThisTurnAtLeast {
-            who: PlayerRef::You,
-            at_least: Value::Const(1),
-        },
-        Predicate::CreaturesDiedThisTurnAtLeast {
-            who: PlayerRef::EachOpponent,
-            at_least: Value::Const(1),
-        },
-    ]);
+    use crate::effect::Predicate;
+    // Morbid — "if a creature died this turn" (any player's creature).
+    let morbid = Predicate::CreaturesDiedThisTurnTotalAtLeast {
+        at_least: Value::Const(1),
+    };
     CardDefinition {
         name: "Tragic Slip",
         cost: cost(&[b()]),

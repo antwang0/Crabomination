@@ -285,6 +285,15 @@ impl GameState {
                     .map(|p| self.players[p].creatures_died_this_turn >= n)
                     .unwrap_or(false)
             }
+            Predicate::CreaturesDiedThisTurnTotalAtLeast { at_least } => {
+                let n = self.evaluate_value(at_least, ctx).max(0) as u32;
+                let total: u32 = self
+                    .players
+                    .iter()
+                    .map(|p| p.creatures_died_this_turn)
+                    .sum();
+                total >= n
+            }
             Predicate::CardsExiledThisTurnAtLeast { who, at_least } => {
                 let n = self.evaluate_value(at_least, ctx).max(0) as u32;
                 self.resolve_player(who, ctx)
