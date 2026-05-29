@@ -40,7 +40,13 @@ pub struct GraveyardCardNameTooltip;
 pub struct RevealPopup;
 
 #[derive(Component)]
-pub struct PileTooltip;
+pub struct PileTooltip {
+    /// The message currently rendered. Tracked so `pile_tooltip` can
+    /// detect when the hovered pile changes and refresh the text instead
+    /// of leaving a stale tooltip pinned (e.g. dragging the cursor from
+    /// one player's deck to the other's graveyard).
+    pub msg: String,
+}
 
 pub fn highlight_hovered_cards(
     mut commands: Commands,
@@ -326,7 +332,7 @@ pub fn pile_tooltip(
     deck_hovered: Query<(), (With<DeckCard>, With<CardHovered>)>,
     pile_hovered: Query<&DeckPile, With<PileHovered>>,
     gy_hovered: Query<&GraveyardPile, With<PileHovered>>,
-    existing: Query<Entity, With<PileTooltip>>,
+    existing: Query<(Entity, &PileTooltip)>,
 ) {
     let cv = view.0.as_ref();
     let lib_size = |owner: usize| -> usize {
@@ -361,7 +367,14 @@ pub fn pile_tooltip(
     };
 
     if let Some(msg) = text {
-        if existing.is_empty() {
+        // If a tooltip is already pinned with the *same* text, leave it.
+        // Otherwise despawn the stale one so we can respawn with the
+        // current message (fixes the cursor-moved-between-piles staleness).
+        let up_to_date = existing.iter().any(|(_, t)| t.msg == msg);
+        if !up_to_date {
+            for (e, _) in existing.iter() {
+                commands.entity(e).despawn();
+            }
             // Pin the tooltip's *center* to the screen midline. Without
             // the negative margin Bevy positions the node's left edge at
             // 50% and the tooltip drifts right of center (worse the
@@ -380,7 +393,7 @@ pub fn pile_tooltip(
                     ..default()
                 },
                 BackgroundColor(theme::OVERLAY_BG_HEAVY),
-                PileTooltip,
+                PileTooltip { msg: msg.clone() },
             ))
             .with_children(|p| {
                 p.spawn((
@@ -390,12 +403,9 @@ pub fn pile_tooltip(
                     Pickable::IGNORE,
                 ));
             });
-        } else {
-            // Tooltip exists but we can't easily update the child text here,
-            // so just leave it; it'll despawn and respawn on next frame if needed.
         }
     } else {
-        for entity in &existing {
+        for (entity, _) in &existing {
             commands.entity(entity).despawn();
         }
     }

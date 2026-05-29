@@ -128,6 +128,13 @@ pub struct MatchOutcome {
     /// bucket is the one the new dredge/mill shells push on. Empty if
     /// the match aborted before the game state was inspected.
     pub loss_reasons: Vec<Option<LossReason>>,
+    /// Per-seat library size observed at match end, parallel to
+    /// `final_life_totals`. Lets operator metrics see "how close to
+    /// decking out" each seat was — the natural companion to the
+    /// `LossReason::Decked` bucket and the dredge / mill ladders, where
+    /// the winner often ends a hair above an empty library. Empty if the
+    /// match aborted before the game state was inspected.
+    pub final_library_sizes: Vec<usize>,
 }
 
 /// How an eliminated player lost, inferred from their final state.
@@ -173,6 +180,7 @@ fn capture_outcome(state: &GameState) -> MatchOutcome {
         winner: state.game_over,
         final_life_totals: state.players.iter().map(|p| p.life).collect(),
         loss_reasons: state.players.iter().map(classify_loss).collect(),
+        final_library_sizes: state.players.iter().map(|p| p.library.len()).collect(),
     }
 }
 
@@ -709,6 +717,12 @@ mod tests {
         assert_eq!(outcome.loss_reasons.len(), state.players.len());
         assert_eq!(outcome.loss_reasons[0], None, "winner has no loss reason");
         assert_eq!(outcome.loss_reasons[1], Some(LossReason::LifeDepleted));
+        // Library sizes are captured parallel to the seats.
+        assert_eq!(outcome.final_library_sizes.len(), state.players.len());
+        assert_eq!(
+            outcome.final_library_sizes[0],
+            state.players[0].library.len()
+        );
     }
 
     fn drain_initial(seat: &ClientChannel) {
