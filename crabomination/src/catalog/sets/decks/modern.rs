@@ -9978,7 +9978,8 @@ pub fn golgari_brownscale() -> CardDefinition {
 
 /// Golgari Grave-Troll — {X}{B}{B} Creature — Skeleton Troll. 0/0, enters
 /// with X +1/+1 counters. Dredge 6. The "{T}, remove four +1/+1 counters:
-/// regenerate" ability is omitted (document); the X-body + Dredge 6 ship.
+/// regenerate" ability is omitted (tracked in TODO.md); the X-body +
+/// Dredge 6 ship.
 pub fn golgari_grave_troll() -> CardDefinition {
     CardDefinition {
         name: "Golgari Grave-Troll",

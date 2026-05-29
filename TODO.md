@@ -5,6 +5,63 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XLI — claude/modern_decks: Cascade + Dredge + Auras)
+
+Three new mechanics, 12 cards, 24 tests, 3 CR lock-ins, and one
+improvement in each of engine / UI / server.
+
+- **Cascade (CR 702.85)** ✅ — `Effect::Cascade { max_mv }` +
+  `shortcut::cascade(mv)`. Trigger fires on cast, exiles from the top
+  of the library until a nonland card with MV < the spell's MV, lets
+  the controller cast it free, and bottoms the rest. Cards: Bloodbraid
+  Elf (promoted from a draw-1 proxy), Apex Devastator (×4), Shardless
+  Agent, Enlisted Wurm, Maelstrom Wanderer (×2 + team-haste static).
+- **Dredge (CR 702.52)** ✅ (was the open TODO at the bottom of this
+  file) — `GameState::draw_one` applies the dredge replacement across
+  every draw site (turn draw, `Effect::Draw`, cycling); the
+  `AutoDecider` declines by default so ordinary games are unaffected.
+  Cards: Golgari Thug, Golgari Grave-Troll (🟡 — regen omitted),
+  Life from the Loam, Stinkweed Imp, Golgari Brownscale.
+- **Auras / attach-on-resolve (CR 303.4)** ✅ — Aura permanent spells
+  now set `attached_to` from their target on resolution, so
+  `equipped_bonus` flows onto the enchanted creature (first Aura
+  support in the catalog). Cards: Gift of Orzhova, Rancor.
+- **Engine fix** — `ExileTopAndGrantMayPlay` read `library.last()`
+  (the bottom card) while documenting "top"; corrected to `.first()`
+  (index 0 = top). Regression test added.
+- **CR lock-ins** — 702.85b (cascade strict-MV gate), 702.52e (dredge
+  replaces the draw), 702.2c (deathtouch blocker destroys a larger
+  attacker — advances the in-progress CR 510 combat-damage section).
+- **UI** — the Deck HUD chip turns amber at ≤3 library cards
+  (deck-out warning, CR 104.3a) — relevant to the new dredge/mill
+  shells.
+- **Server** — `MatchOutcome.loss_reasons` classifies each elimination
+  as LifeDepleted / Poison / Decked / Other for ladder metrics.
+
+### Follow-ups noticed this run (not yet done)
+
+- **Maelstrom Nexus** (cube) — "first spell each turn has cascade"
+  static. The `Effect::Cascade` primitive exists; needs first-spell-of-
+  turn tracking + a static that injects a cascade trigger.
+- **Golgari Grave-Troll regen** — "{T}, remove four +1/+1 counters:
+  regenerate" (needs a remove-N-counters activation cost).
+- **The Gitrog Monster** — dredge/land-discard engine (dredge now
+  exists; the rest of the card is still ⏳).
+- **Madness (CR 702.35)** — Blazing/Basking Rootwalla, Anje's Ravager.
+  Deferred: needs a centralized discard→graveyard helper (the discard
+  bookkeeping is currently duplicated across `Effect::Discard`
+  random/chosen branches, cycling, and the DiscardChosenPending resume)
+  + a cast-from-exile-paying-madness-cost path. Worth doing as a
+  discard-centralization refactor.
+- **Attacker-chosen combat-damage assignment order (CR 510.1c)** —
+  still auto-ordered by CardId; needs a `Decision` variant routed
+  through the synchronous combat-damage path (and the UI suspend infra
+  if a human is to choose).
+- **Scryfall fetch is blocked** by the environment network policy
+  (`api.scryfall.com` not in the allowlist) — cards whose printed
+  stats couldn't be confirmed from the md files or comments (e.g.
+  Bloodbraid Challenger) were intentionally left ⏳ rather than guessed.
+
 ## Recent additions (Push XL — modern_decks: Equipment + Vehicles + Manlands)
 
 Three new permanent mechanics + 21 card tests + 3 CR sections, plus
@@ -278,9 +335,9 @@ engine/server/UI.
 - **Tasigur, the Golden Fang** (Delve creature with an activated
   graveyard-recursion ability) — body+delve would be easy; the activated
   ability needs the random-opponent-choice picker.
-- Dredge (CR 702.52 — Golgari Thug/Grave-Troll, Life from the Loam) needs
-  a draw-replacement decision hook in both the turn-draw and `Effect::Draw`
-  paths; deferred as too invasive for this run.
+- Dredge (CR 702.52 — Golgari Thug/Grave-Troll, Life from the Loam) ✅ DONE
+  in Push XLI: `GameState::draw_one` is the single draw-replacement hook,
+  used by the turn-draw, `Effect::Draw`, and cycling paths.
 
 ## Recent additions (Push XXXVI — modern_decks, batch 207: Exalted + deaths-this-turn payoffs)
 

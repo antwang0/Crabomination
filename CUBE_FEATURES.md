@@ -100,7 +100,7 @@ still ⏳.
 | Moonshadow | ✅ | Faerie / discard support. |
 | Bitterbloom Bearer | ✅ | {1}{B} 1/2 Faerie Wizard with Flying. Self-source ETB creates a 1/1 black Faerie creature token with flying via `Effect::CreateToken` + a one-off `TokenDefinition`. Test: `bitterbloom_bearer_etb_creates_a_faerie_token`. |
 | Bloodghast | ✅ | {B}{B} 2/1 Vampire Spirit. Wired via the new `EventScope::FromYourGraveyard`: a `LandPlayed` + `FromYourGraveyard` trigger fires off the graveyard copy and `Move`s `Selector::This` back to the battlefield. The "haste while opp ≤ 10 life" rider is omitted (no conditional-keyword static). Tests: `bloodghast_returns_from_graveyard_when_you_play_a_land`, `bloodghast_has_landfall_return_trigger`. |
-| Golgari Thug | ⏳ | Dredge 4. Needs Dredge primitive. |
+| Golgari Thug | ✅ (was ⏳) | Push (claude/modern_decks): {1}{B} 1/1 Human Mercenary, Dredge 4 (CR 702.52), dies → put a creature card from your graveyard on top of your library. Dredge is now a first-class mechanic (`GameState::draw_one` replacement). Tests: `golgari_thug_death_puts_creature_on_top_of_library`, `dredge_replaces_draw_by_milling_and_returning`. |
 | Mai, Scornful Striker | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{B} 2/1 Human Rogue with Menace. Attack trigger drains 1 life from each opponent. Test: `mai_scornful_striker_drains_opp_on_attack`. |
 | Mutated Cultist | ⏳ | Mutate primitive needed. |
 | Silversmote Ghoul | ✅ | {1}{B} 2/1 Zombie. `LifeGained` + `FromYourGraveyard` trigger returns Selector::This from graveyard to battlefield. Test: `silversmote_ghoul_returns_from_graveyard_on_lifegain`. |
@@ -214,18 +214,18 @@ still ⏳.
 | Sowing Mycospawn | ✅ | Eldrazi land-search. |
 | Vengevine | ✅ | Recurring on two-creatures-cast-this-turn. |
 | Elder Gargaroth | ✅ | Trigger-on-attack/block creature. |
-| Golgari Grave-Troll | ⏳ | Dredge 6. |
+| Golgari Grave-Troll | 🟡 (was ⏳) | Push (claude/modern_decks): {X}{B}{B} 0/0 Skeleton Troll, enters with X +1/+1 counters (`Value::XFromCost`), Dredge 6. The "{T}, remove four +1/+1 counters: regenerate" ability is omitted. Test: `golgari_grave_troll_enters_with_x_plus_one_counters`. |
 | Railway Brawler | ⏳ | Train (vehicle-like). |
 | Conclave Sledge-Captain | 🟡 | 6/6 Trample Elephant Soldier. ETB puts +1/+1 counter on each creature you control. Static grants trample to creatures with +1/+1 counters. |
 | Lumra, Bellow of the Woods | ✅ | {4}{G}{G} 6/6 Trample Legendary Elemental. ETB returns every land card in your graveyard via `Move(EachMatching(Graveyard(You), Land) → Battlefield(You, tapped))`. Tests: `lumra_returns_all_lands_from_your_graveyard`, `lumra_etb_with_empty_graveyard_is_a_noop`. |
 | Zopandrel, Hunger Dominus | 🟡 | 4/6 Reach Legendary Phyrexian Horror. Begin-combat +4/+4 pump to each creature you control (approximation of double-power). Phyrexian-mana sac activation omitted. |
-| Apex Devastator | ⏳ | Cascade x4 (cascade primitive). |
+| Apex Devastator | ✅ (was ⏳) | Push (claude/modern_decks): {8}{G}{G} 10/10 Trample Kavu with four `shortcut::cascade(10)` triggers (CR 702.85). Test: `apex_devastator_cascades_four_times`. |
 | Summoner's Pact | ✅ | Already wired (search green creature + delayed Pact upkeep). |
 | Eternal Witness | ✅ | `{1}{G}{G}` 2/1 Human Shaman with ETB "return target card from your graveyard to your hand". Auto-target now picks the graveyard card via the new `Effect::prefers_graveyard_source` classification (`Move(target → Hand(You))` is reanimate-class). Tests: `eternal_witness_etb_trigger_present`, `eternal_witness_etb_returns_graveyard_card_via_auto_target`. |
 | Nature's Claim | ✅ | `{G}` Instant. Destroy target artifact or enchantment; its controller gains 4 life (`Destroy + GainLife(ControllerOf(target), 4)`). Lives in `mod_set::natures_claim`. |
 | Archdruid's Charm | ✅ | Modal — destroy land/artifact, search creature, +1/+1 counters. |
 | Finale of Devastation | ✅ | Tutor + pump scaling with X. |
-| Life from the Loam | ⏳ | Return up-to-3 lands; Dredge 3. |
+| Life from the Loam | ✅ (was ⏳) | Push (claude/modern_decks): {1}{B}{G} Sorcery, returns up to three land cards from your graveyard to hand + Dredge 3. Test: `life_from_the_loam_returns_lands_from_graveyard`. |
 | Nature's Lore | ✅ | Search Forest, put onto battlefield untapped. |
 | Kodama's Reach | ✅ | Two-basic ramp. |
 | Biorhythm | 🟡 | {4}{G}{G}{G} Sorcery. `LoseLife(EachOpponent, 20) + GainLife(You, count(your creatures))`. Set-life-total-to-X primitive doesn't exist; we drop each opp by a chunk that beats their starting life total instead. Test: `biorhythm_drops_each_opponent_to_zero_or_below`. |
@@ -302,14 +302,14 @@ still ⏳.
 | Kolaghan's Command | 🟡 | Push (claude/modern_decks batch 102): {1}{B}{R} Instant. Modal — `ChooseMode([discard+reanimate, ping+destroy-artifact, discard+ping])`. The printed "choose two of four" multi-mode picker (CR 700.2d) collapses to three bundled pairs. AutoDecider picks mode 0. Test: `kolaghans_command_mode_zero_discard_plus_reanimate`. |
 | Master of Cruelties | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 1/4 First Strike Deathtouch Demon. Attack trigger sets the defending player's life to 1 (via `Effect::SetLifeTotal`). The "can attack only alone" combat restriction and "deals no combat damage this turn" rider are dropped (no engine primitives) — combined with the deathtouch ping, the net play pattern matches the printed kill condition. Test: `master_of_cruelties_attack_sets_opp_life_to_one`. |
 | Territorial Kavu | ✅ | Push (claude/modern_decks batch 102): {2}{R}{G} 3/2 Kavu. `LandPlayed` + `OpponentControl` trigger → `AddCounter(+1/+1, Self)`. Test: `territorial_kavu_grows_when_opponent_plays_a_land`. |
-| Bloodbraid Challenger | ⏳ | Cascade. |
+| Bloodbraid Challenger | ⏳ | Cascade. The `Effect::Cascade`/`shortcut::cascade(mv)` primitive now exists (Bloodbraid Elf, Apex Devastator); this card was left ⏳ only because its exact printed stats could not be Scryfall-verified this run (the api.scryfall.com host is blocked by the environment network policy). |
 | Qasali Pridemage | ✅ | Exalted + sac to destroy artifact/enchantment. |
 | Knight of the Reliquary | ✅ | Sac-land tutor scaling P/T. |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Growing Ranks | ✅ | Populate token-copy on upkeep. |
 | Torsten, Founder of Benalia | 🟡 | 7/7 Legendary Human Soldier. ETB searches 3 basic lands to battlefield tapped. |
 | Tidehollow Sculler | 🟡 | {W}{B} 2/2 Zombie. ETB picks a nonland card from a target opponent's hand and sends it to their graveyard (approximation of "exile until this leaves"). The "return when this leaves" clause is omitted (no exile-until-LTB primitive yet). Reuses `DiscardChosen`. Test: `tidehollow_sculler_etb_takes_an_opponent_card`. |
-| Gift of Orzhova | ⏳ | Aura — flying + lifelink. |
+| Gift of Orzhova | ✅ (was ⏳) | Push (claude/modern_decks): {1}{W}{B} Aura. First Aura in the catalog — the new Aura attach-on-resolve path (CR 303.4) sets `attached_to` from the spell target, and `equipped_bonus` grants +1/+1, flying, and lifelink. Tests: `gift_of_orzhova_attaches_and_buffs_the_creature`, `gift_of_orzhova_falls_off_when_host_leaves`. |
 | Stillmoon Cavalier | ✅ | Push (claude/modern_decks batch 102): {1}{W}{B} 2/2 Zombie Knight with four activated abilities — `{W}: gain flying EOT`, `{B}: gain first strike EOT`, `{1}{W}: gain protection from black EOT`, `{1}{B}: gain protection from white EOT`. All four use `Effect::GrantKeyword(EndOfTurn)`. Tests: `stillmoon_cavalier_grants_flying_eot`, `stillmoon_cavalier_grants_protection_from_black_eot`. |
 | Sorin, Grim Nemesis | 🟡 | Push (claude/modern_decks batch 102): {4}{B}{B} 6-loyalty Planeswalker. **+1**: Draw 1 + Lose 3 life (approximation; reveal/MV-life-loss/conditional-token chain dropped). **-X**: ping (the X-cost loyalty path uses `Value::XFromCost` against creature/PW + 1 gain life). **-9**: drain 10 from each opponent (the printed "X = cards in opp's graveyard" scaling collapses). Tests: `sorin_grim_nemesis_plus_one_draws_and_loses_three_life`, `sorin_grim_nemesis_minus_nine_drains_each_opponent`. |
 | Expressive Iteration | ✅ | UR look-at-top-3 multi-pick. |
@@ -353,7 +353,7 @@ still ⏳.
 | Leyline of the Guildpact | ⏳ | "Your permanents are all colors." Needs is-all-colors primitive. |
 | Golos, Tireless Pilgrim | ✅ | ETB land-search; activated cast-from-top. |
 | Maelstrom Archangel | ✅ | Combat-damage cast-free trigger. |
-| Maelstrom Nexus | ⏳ | Cascade-on-first-spell static. |
+| Maelstrom Nexus | ⏳ | Cascade-on-first-spell static. Needs first-spell-of-turn tracking + a static that injects a cascade trigger; the `Effect::Cascade` primitive now exists (used by Bloodbraid Elf / Apex Devastator), so this is "wire the static + the per-turn gate". |
 | Ramos, Dragon Engine | ✅ | Charge counters per-color spells; convert to mana. |
 
 ### Lands
@@ -439,7 +439,7 @@ are listed in `DECK_FEATURES.md`.
 | Cycling | ⏳ | Aether Spellbomb (cycle), Sundering Eruption-adjacent. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |
-| Cascade | ⏳ | Bloodbraid Challenger, Apex Devastator, Maelstrom Nexus. |
+| Cascade | ✅ (was ⏳) | Push (claude/modern_decks): `Effect::Cascade { max_mv }` + `shortcut::cascade(mv)` (CR 702.85). Bloodbraid Elf (promoted from a draw-1 proxy), Apex Devastator (×4), Shardless Agent, Enlisted Wurm, Maelstrom Wanderer (×2). Maelstrom Nexus (static cascade) still ⏳. |
 | Storm count + cast-from-top | ⏳ | Mind's Desire (Storm), Amped Raptor / Robber of the Rich (cast-from-top). |
 | Delve cost reduction | ✅ | CR 702.66 — `Keyword::Delve` + `GameAction::CastSpellDelve`. Each graveyard card exiled while casting pays {1} of the generic cost (generic-only clamp, mirrors convoke); cards exile only after the reduced cost is paid. Wired on Treasure Cruise, Dig Through Time, Lose Focus, Murderous Cut, Gurmag Angler, Hooting Mandrills, Become Immense. The bot delves automatically when it can't afford a Delve spell at full cost. |
 | Ninjitsu | ⏳ | Fallen Shinobi (any future ninjas). |
@@ -459,7 +459,7 @@ are listed in `DECK_FEATURES.md`.
 | Token-copy of permanent | ⏳ | Phantasmal Image, Helm of the Host, Mockingbird, Growing Ranks (populate). |
 | Multi-pick decisions over revealed library cards | 🟡 | Atraxa Draw-4 stand-in is wired. Reveal-and-sort by card type, Dig Through Time, Mind's Desire all need a richer multi-pick decision. |
 | Investigate + Clue token | ⏳ | Tireless Tracker, Lonis, Proft's Eidetic Memory. |
-| Dredge | ⏳ | Golgari Grave-Troll, Golgari Thug, Life from the Loam, Gitrog. |
+| Dredge | ✅ (was ⏳) | Push (claude/modern_decks): `GameState::draw_one` applies the CR 702.52 replacement across every draw site (turn draw, `Effect::Draw`, cycling); AutoDecider declines by default. Golgari Thug, Golgari Grave-Troll, Life from the Loam, Stinkweed Imp, Golgari Brownscale. The Gitrog Monster still ⏳. |
 | Landfall trigger | 🟡 | Bloodghast wired via the new `EventScope::FromYourGraveyard` (graveyard-source `LandPlayed` trigger). Standard battlefield-side landfall (Omnath) still uses the existing `LandPlayed` + `YourControl` path; both are functional. |
 | Pact-style upkeep cost (`PayOrLoseGame`) | ✅ | Engine primitive already exists; reuse for Slaughter Pact, Pact of the Titan, Intervention Pact, etc. |
 | Counter-spell / counter-ability primitives | ✅ | `CounterSpell`, `CounterUnlessPaid`, `CounterAbility` are all wired (Spell Snare, Daze, Tishana's Tidebinder, Mystical Dispute reuse them). |
