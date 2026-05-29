@@ -2755,10 +2755,17 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   carries the rolled face. AutoDecider returns the die's midpoint
   ((sides+1)/2, so 3 for d6, 10 for d20) for deterministic tests;
   ScriptedDecider can script any face 1..=sides).
-  (b) **706.2** — ⏳
-  (no modifier-application layer; no reroll primitive. The current
-  primitive treats the natural result AS the final result, which is
-  exact for any card without printed roll modifiers).
+  (b) **706.2** — ✅ (push claude/modern_decks): `Effect::RollDie` now
+  carries a `modifier: Value` field (serde-defaulted to 0 for snapshot
+  back-compat). The resolver evaluates the modifier once per resolution
+  and applies it to every natural roll before consulting the results
+  table, flooring the modified result at 1 (a die result is never
+  reduced below 1) and allowing it to exceed `sides` so a top "N+" arm
+  catches boosted rolls — the canonical "roll a d20 and add N" shape.
+  Reroll (706.2b) is still ⏳. Tests:
+  `cr_706_2_positive_modifier_reaches_high_arm` (natural 6 + 2 → 7+
+  arm), `cr_706_2_no_modifier_stays_in_low_arm` (control),
+  `cr_706_2_negative_modifier_floors_at_one` (1 − 5 floors at 1).
   (c) **706.3** — ✅ (`Effect::RollDie.results: Vec<(u8, u8, Effect)>` encodes
   the results table; the resolver walks the arms and runs the FIRST
   matching `[low, high]` band. Out-of-range rolls run no effect for

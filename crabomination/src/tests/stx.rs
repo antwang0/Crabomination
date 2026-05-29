@@ -49499,6 +49499,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         effect: Effect::RollDie {
             sides: 6,
             count: Value::Const(1),
+            modifier: Value::Const(0),
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(1) }),
                 (3, 6, Effect::LoseLife {
@@ -49540,6 +49541,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         effect: Effect::RollDie {
             sides: 6,
             count: Value::Const(1),
+            modifier: Value::Const(0),
             results: vec![
                 (1, 2, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 (3, 6, Effect::LoseLife {
@@ -49581,6 +49583,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         effect: Effect::RollDie {
             sides: 6,
             count: Value::Const(1),
+            modifier: Value::Const(0),
             results: vec![
                 (1, 3, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
                 // 4-6 intentionally unmapped.
@@ -49665,6 +49668,7 @@ fn roll_die_serde_round_trip() {
     let original = Effect::RollDie {
         sides: 20,
         count: Value::Const(2),
+        modifier: Value::Const(0),
         results: vec![
             (1, 1, Effect::Discard {
                 who: Selector::You, amount: Value::Const(1), random: false,
@@ -49676,7 +49680,8 @@ fn roll_die_serde_round_trip() {
     let json = serde_json::to_string(&original).expect("serialize");
     let parsed: Effect = serde_json::from_str(&json).expect("deserialize");
     match parsed {
-        Effect::RollDie { sides, count, results } => {
+        Effect::RollDie { sides, count, modifier, results } => {
+            assert!(matches!(modifier, Value::Const(0)));
             assert_eq!(sides, 20);
             assert!(matches!(count, Value::Const(2)));
             assert_eq!(results.len(), 3);
@@ -49687,6 +49692,98 @@ fn roll_die_serde_round_trip() {
         }
         other => panic!("expected RollDie, got {:?}", other),
     }
+}
+
+/// Test-only fixture: "roll a d6 and add `modifier`. 7+: gain 5 life.
+/// 1-6: lose 1 life." Exercises CR 706.2 result modifiers — only a
+/// boosted roll can reach the 7+ arm on a six-sided die.
+fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
+    use crate::card::{CardDefinition, CardType, Subtypes};
+    use crate::effect::{Effect, Selector, Value};
+    use crate::mana::{cost, generic};
+    CardDefinition {
+        name: "Test Die Roll d6 Plus N",
+        cost: cost(&[generic(1)]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::RollDie {
+            sides: 6,
+            count: Value::Const(1),
+            modifier: Value::Const(modifier),
+            results: vec![
+                (1, 6, Effect::LoseLife { who: Selector::You, amount: Value::Const(1) }),
+                (7, 255, Effect::GainLife { who: Selector::You, amount: Value::Const(5) }),
+            ],
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+#[test]
+fn cr_706_2_positive_modifier_reaches_high_arm() {
+    // Natural 6 + a +2 modifier = 8, which lands in the 7+ arm (gain 5).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::DieRoll(6)]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_plus(2));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before + 5,
+        "6 + 2 = 8 reaches the 7+ arm (gain 5)");
+}
+
+#[test]
+fn cr_706_2_no_modifier_stays_in_low_arm() {
+    // Control: natural 6 with a +0 modifier stays in the 1-6 arm (lose 1).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::DieRoll(6)]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_plus(0));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before - 1,
+        "6 + 0 = 6 stays in the 1-6 arm (lose 1)");
+}
+
+#[test]
+fn cr_706_2_negative_modifier_floors_at_one() {
+    // Natural 1 with a -5 modifier floors at 1 (a die result is never
+    // reduced below 1), so it lands in the 1-6 arm (lose 1).
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::DieRoll(1)]));
+    let you_before = g.players[0].life;
+    let id = g.add_card_to_hand(0, test_card_die_roll_d6_plus(-5));
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("die roll sorcery castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, you_before - 1,
+        "1 - 5 floors at 1, still in the 1-6 arm");
 }
 
 // ── Batch 126 — 26 new STX cards across all 5 schools + new shortcut helpers
@@ -58558,6 +58655,28 @@ fn cr_119_8_player_cannot_lose_life_blocks_lose_life_paths() {
     g.adjust_life(1, -3);
     assert_eq!(g.players[1].life, life_before,
         "CR 119.8: locked player can't lose life from adjust_life");
+}
+
+#[test]
+fn cr_119_8_player_cannot_lose_life_blocks_burn_damage() {
+    // CR 119.8 via the damage path: a player that can't lose life takes
+    // no life loss from direct damage (the damage is still dealt, but
+    // the life-loss it would cause is prevented). Exercises the
+    // adjust_life gate from the Effect::DealDamage → lose-life route,
+    // which the adjust_life-only test above does not cover.
+    let mut g = two_player_game();
+    g.players[1].life = 5;
+    g.add_card_to_battlefield(0, catalog::silverquill_lifeward_b146());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 5,
+        "CR 119.8: locked player loses no life to 3 damage from a bolt");
 }
 
 #[test]
@@ -75691,4 +75810,41 @@ fn unwilling_ingredient_dies_no_draw_when_declined() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), 1,
         "default decline → no draw");
+}
+
+#[test]
+fn cr_122_1d_academic_probation_stun_persists_through_untap() {
+    // End-to-end CR 122.1d via a real card: Academic Probation taps a
+    // creature and gives it a stun counter; the creature does not untap
+    // on its controller's next untap step and instead removes one stun
+    // counter, untapping only on the following untap.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Academic Probation castable for {1}{W}");
+    drain_stack(&mut g);
+    {
+        let bear = g.battlefield_find(opp_bear).unwrap();
+        assert!(bear.tapped);
+        assert_eq!(bear.counter_count(CounterType::Stun), 1);
+    }
+    // Untap step for the stunned creature's controller (seat 1): the
+    // stun counter is consumed instead of untapping.
+    g.active_player_idx = 1;
+    g.do_untap();
+    {
+        let bear = g.battlefield_find(opp_bear).unwrap();
+        assert!(bear.tapped, "stun keeps the creature tapped through one untap");
+        assert_eq!(bear.counter_count(CounterType::Stun), 0, "the stun counter is consumed");
+    }
+    // Next untap: counter gone, untaps normally.
+    g.do_untap();
+    assert!(!g.battlefield_find(opp_bear).unwrap().tapped,
+        "untaps normally once the stun counter is gone");
 }

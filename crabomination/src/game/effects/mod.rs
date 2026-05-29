@@ -384,21 +384,29 @@ impl GameState {
             // range covers `rolled`. AutoDecider returns the midpoint;
             // ScriptedDecider can script any face. Mirrors FlipCoin's
             // resolver shape.
-            Effect::RollDie { sides, count, results } => {
+            Effect::RollDie { sides, count, modifier, results } => {
                 let n = self.evaluate_value(count, ctx).max(0);
                 let sides = (*sides).max(2);
+                // CR 706.2 — the flat result modifier applied to every die
+                // this resolution.
+                let modifier = self.evaluate_value(modifier, ctx);
                 for _ in 0..n {
                     let answer = self.decider.decide(&crate::decision::Decision::DieRoll {
                         player: ctx.controller,
                         sides,
                     });
-                    let rolled = match answer {
+                    let natural = match answer {
                         crate::decision::DecisionAnswer::DieRoll(face) => face.clamp(1, sides),
                         // Decider returned the wrong shape — degrade to
                         // midpoint rather than panicking. Real clients
                         // should always return DieRoll(n).
                         _ => (sides as u32).div_ceil(2) as u8,
                     };
+                    // CR 706.2 — add the modifier, flooring the modified
+                    // result at 1 (a die result is never reduced below 1).
+                    // The result may exceed `sides`, letting a top "N+"
+                    // arm catch boosted rolls.
+                    let rolled = (natural as i32 + modifier).max(1).min(u8::MAX as i32) as u8;
                     // CR 706.3a — first matching arm fires. If no arm
                     // matches the roll, the die has no result-table
                     // effect (per CR 706.3a "If the result was in this

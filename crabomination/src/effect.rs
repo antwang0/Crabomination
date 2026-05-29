@@ -886,9 +886,9 @@ pub enum Effect {
     /// runs for that die. Mirrors `FlipCoin`'s shape for the die
     /// equivalent. Used by Goblin Goliath, Wand of the Elements, and
     /// future Krark / Aether Sphere Harvester-style "roll N dice with
-    /// a results table" cards. CR 706.1 + 706.3 covered; modifiers
-    /// (706.2) and reroll (706.2b) are engine-wide ⏳ — the natural
-    /// result IS the final result in this primitive.
+    /// a results table" cards. CR 706.1 + 706.3 covered; CR 706.2
+    /// result modifiers are now applied via `modifier` (reroll /
+    /// 706.2b is still engine-wide ⏳).
     RollDie {
         /// Number of sides on each die (e.g. 6 for d6, 20 for d20).
         /// Must be at least 2.
@@ -896,6 +896,15 @@ pub enum Effect {
         /// Number of dice to roll. Each die rolls independently and
         /// runs its own results-table dispatch.
         count: Value,
+        /// CR 706.2 — a flat modifier added to each natural die result
+        /// before the results table is consulted (e.g. "roll a d20 and
+        /// add 2"). The modified result is floored at 1 (a die's result
+        /// is never reduced below 1) but may exceed `sides`, which lets
+        /// an "N+" top arm catch boosted rolls. Defaults to 0 (no
+        /// modifier) for snapshot back-compat. The natural roll is still
+        /// what the decider returns; the modifier is applied on top.
+        #[serde(default = "crate::effect::zero_value")]
+        modifier: Value,
         /// CR 706.3a — the results table. Each arm is `(low, high,
         /// effect)`; the first arm with `low <= rolled <= high` fires
         /// for that die. Use `(low, sides, effect)` for an "N+" arm,
@@ -2324,6 +2333,13 @@ impl Effect {
     pub fn target_filter_for_slot(&self, slot: u8) -> Option<&SelectionRequirement> {
         self.target_filter_for_slot_in_mode(slot, None)
     }
+}
+
+/// Serde default for `Effect::RollDie.modifier` — a zero (no-op) die-roll
+/// modifier, so snapshots written before CR 706.2 modifiers existed still
+/// deserialize cleanly.
+pub fn zero_value() -> Value {
+    Value::Const(0)
 }
 
 fn zonedest_has_target(z: &ZoneDest) -> bool {
