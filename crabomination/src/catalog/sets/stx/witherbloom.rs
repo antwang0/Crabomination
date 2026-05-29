@@ -24347,3 +24347,262 @@ pub fn witherbloom_fungalbeast_b206() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Witherbloom (B/G) "harvest" payoffs that scale
+// off `Value::CreaturesDiedThisTurn`, plus standard aristocrat/drain bodies.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Witherbloom Reaping (b207) — {2}{B}{G} Sorcery.
+/// "Draw a card for each creature that died under your control this turn."
+/// The first card that scales off the new `Value::CreaturesDiedThisTurn`
+/// turn-counter — the natural Witherbloom-sacrifice payoff.
+pub fn witherbloom_reaping_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Reaping (b207)",
+        cost: cost(&[generic(2), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Draw {
+            who: Selector::You,
+            amount: Value::CreaturesDiedThisTurn(PlayerRef::You),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Gravecaller (b207) — {3}{B} 2/3 Zombie Warlock.
+/// ETB — each opponent loses life equal to the number of creatures that
+/// died this turn across the table, and you gain that much life.
+pub fn witherbloom_gravecaller_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Gravecaller (b207)",
+        cost: cost(&[generic(3), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Drain {
+            from: Selector::Player(PlayerRef::EachOpponent),
+            to: Selector::You,
+            amount: Value::CreaturesDiedThisTurnTotal,
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Bloodfeast (b207) — {1}{B}{G} Instant.
+/// You gain 2 life for each creature that died under your control this
+/// turn. The Witherbloom "fling fodder, then drink" instant-speed payoff.
+pub fn witherbloom_bloodfeast_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Bloodfeast (b207)",
+        cost: cost(&[generic(1), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::GainLife {
+            who: Selector::You,
+            amount: Value::Times(
+                Box::new(Value::Const(2)),
+                Box::new(Value::CreaturesDiedThisTurn(PlayerRef::You)),
+            ),
+        },
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Saplinglord (b207) — {2}{G} 2/2 Plant Druid.
+/// "Whenever another creature you control dies, put a +1/+1 counter on
+/// this creature." A growth-on-death body for the sacrifice shell.
+pub fn witherbloom_saplinglord_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Saplinglord (b207)",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Plant, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![on_other_dies(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::Const(1),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Toxicult (b207) — {1}{B} 1/3 Human Warlock.
+/// ETB mints a Pest token; magecraft drains 1.
+pub fn witherbloom_toxicult_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Toxicult (b207)",
+        cost: cost(&[generic(1), b()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Warlock],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: stx_pest_token(),
+            }),
+            magecraft_drain_each_opp(1),
+        ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Rotcaller (b207) — {3}{B}{G} 4/4 Fungus Shaman.
+/// ETB — create two Pest tokens.
+pub fn witherbloom_rotcaller_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Rotcaller (b207)",
+        cost: cost(&[generic(3), b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fungus, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(2),
+            definition: stx_pest_token(),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Witherbloom Sapsiphon (b207) — {B}{G} 2/2 Insect Druid.
+/// Whenever this creature deals combat damage to a player, you gain 2
+/// life. A lifelink-adjacent aggressive two-drop.
+pub fn witherbloom_sapsiphon_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Witherbloom Sapsiphon (b207)",
+        cost: cost(&[b(), g()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Insect, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(
+                EventKind::DealsCombatDamageToPlayer,
+                EventScope::SelfSource,
+            ),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        }],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

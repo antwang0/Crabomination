@@ -4127,5 +4127,42 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_purge_b206,
         super::prismari::prismari_inferno_b206,
         super::prismari::prismari_windscholar_b206,
+        // ── batch 207 — Witherbloom (B/G) creatures-died-this-turn payoffs ──
+        super::witherbloom::witherbloom_reaping_b207,
+        super::witherbloom::witherbloom_gravecaller_b207,
+        super::witherbloom::witherbloom_bloodfeast_b207,
+        super::witherbloom::witherbloom_saplinglord_b207,
+        super::witherbloom::witherbloom_toxicult_b207,
+        super::witherbloom::witherbloom_rotcaller_b207,
+        super::witherbloom::witherbloom_sapsiphon_b207,
+        // ── batch 207 — Lorehold (R/W) Spirit / magecraft staples ──
+        super::lorehold::lorehold_soulkindler_b207,
+        super::lorehold::lorehold_cinderscribe_b207,
+        super::lorehold::lorehold_battlecaller_b207,
+        super::lorehold::lorehold_emberbolt_b207,
+        super::lorehold::lorehold_relicsmith_b207,
+        super::lorehold::lorehold_charge_ii_b207,
+        super::lorehold::lorehold_vanguard_b207,
+        // ── batch 207 — Quandrix (G/U) Fractal / draw-matters staples ──
+        super::quandrix::quandrix_tidecaller_b207,
+        super::quandrix::quandrix_theorist_b207,
+        super::quandrix::quandrix_fractalsurge_b207,
+        super::quandrix::quandrix_studymate_b207,
+        super::quandrix::quandrix_currentweaver_b207,
+        super::quandrix::quandrix_bigmind_b207,
+        // ── batch 207 — Prismari (U/R) spells-matter / Treasure staples ──
+        super::prismari::prismari_pyrologist_b207,
+        super::prismari::prismari_goldcaster_b207,
+        super::prismari::prismari_firebolt_ii_b207,
+        super::prismari::prismari_goldsmith_b207,
+        super::prismari::prismari_stormloot_ii_b207,
+        super::prismari::prismari_galeblaster_b207,
+        // ── batch 207 — Silverquill (W/B) Inkling / drain staples ──
+        super::silverquill::silverquill_inkbinder_b207,
+        super::silverquill::silverquill_eulogist_b207,
+        super::silverquill::silverquill_edict_ii_b207,
+        super::silverquill::inkling_highflier_b207,
+        super::silverquill::silverquill_sanction_b207,
+        super::silverquill::silverquill_coursemate_b207,
     ]
 }

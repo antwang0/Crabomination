@@ -372,6 +372,18 @@ pub enum Value {
     /// resolution contexts (spells, activated abilities, delayed
     /// triggers that have moved past the original event).
     TriggerEventAmount,
+    /// Number of creatures that died under `who`'s control so far this
+    /// turn. Backed by `Player.creatures_died_this_turn` (bumped from the
+    /// SBA death loop). Powers Witherbloom "harvest" payoffs that scale
+    /// off the turn's carnage (e.g. "draw a card for each creature that
+    /// died under your control this turn"). The companion predicate is
+    /// `Predicate::CreaturesDiedThisTurnAtLeast`.
+    CreaturesDiedThisTurn(PlayerRef),
+    /// Number of creatures that died this turn across **every** player.
+    /// Sums `Player.creatures_died_this_turn` over all seats. Powers
+    /// table-wide aristocrat scaling, mirroring
+    /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
+    CreaturesDiedThisTurnTotal,
 }
 
 impl Value {

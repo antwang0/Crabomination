@@ -220,6 +220,15 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].cards_drawn_this_turn as i32)
                 .unwrap_or(0),
+            Value::CreaturesDiedThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].creatures_died_this_turn as i32)
+                .unwrap_or(0),
+            Value::CreaturesDiedThisTurnTotal => self
+                .players
+                .iter()
+                .map(|p| p.creatures_died_this_turn as i32)
+                .sum(),
             Value::Pow2(inner) => {
                 let exp = self.evaluate_value(inner, ctx).clamp(0, 30);
                 1i32.checked_shl(exp as u32).unwrap_or(i32::MAX)

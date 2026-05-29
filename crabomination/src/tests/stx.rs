@@ -74720,3 +74720,558 @@ fn prismari_windscholar_b206_etb_scrys_and_draws() {
     // -1 cast, +1 ETB draw = net same.
     assert_eq!(g.players[0].hand.len(), hand_before, "ETB scry+draw netted a card");
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Witherbloom (B/G) creatures-died-this-turn
+// payoffs (`Value::CreaturesDiedThisTurn` / `CreaturesDiedThisTurnTotal`).
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Kill a creature controlled by `seat` via a Lightning Bolt so the SBA
+/// death loop bumps `creatures_died_this_turn`. Returns after the bolt has
+/// fully resolved.
+fn bolt_own_creature(g: &mut GameState, seat: usize, target: CardId) {
+    let bolt = g.add_card_to_hand(seat, catalog::lightning_bolt());
+    g.players[seat].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(target)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(g);
+}
+
+#[test]
+fn witherbloom_reaping_b207_draws_per_creature_died_this_turn() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    // Two of our creatures die this turn.
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    bolt_own_creature(&mut g, 0, b1);
+    bolt_own_creature(&mut g, 0, b2);
+    assert_eq!(g.players[0].creatures_died_this_turn, 2, "two creatures died");
+
+    let id = g.add_card_to_hand(0, catalog::witherbloom_reaping_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reaping castable");
+    drain_stack(&mut g);
+    // -1 for casting Reaping, +2 drawn = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2,
+        "Reaping draws one per creature that died this turn");
+}
+
+#[test]
+fn witherbloom_gravecaller_b207_etb_drains_per_total_deaths() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    bolt_own_creature(&mut g, 0, mine);
+    bolt_own_creature(&mut g, 0, theirs); // a creature controlled by p1 also dies
+    assert_eq!(g.players[0].creatures_died_this_turn, 1);
+    assert_eq!(g.players[1].creatures_died_this_turn, 1);
+
+    let p1_life = g.players[1].life;
+    let p0_life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_gravecaller_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gravecaller castable");
+    drain_stack(&mut g);
+    // Total deaths this turn = 2 → opponent loses 2, we gain 2.
+    assert_eq!(g.players[1].life, p1_life - 2, "drain scales with total deaths");
+    assert_eq!(g.players[0].life, p0_life + 2, "we gain that much");
+}
+
+#[test]
+fn witherbloom_bloodfeast_b207_gains_two_per_creature_died() {
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    bolt_own_creature(&mut g, 0, b1);
+    let p0_life = g.players[0].life;
+    let id = g.add_card_to_hand(0, catalog::witherbloom_bloodfeast_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bloodfeast castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 2, "2 life per creature that died (1 died)");
+}
+
+#[test]
+fn witherbloom_saplinglord_b207_grows_when_other_creature_dies() {
+    let mut g = two_player_game();
+    let lord = g.add_card_to_battlefield(0, catalog::witherbloom_saplinglord_b207());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    bolt_own_creature(&mut g, 0, fodder);
+    let c = g.battlefield_find(lord).expect("lord alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1,
+        "+1/+1 counter when another creature dies");
+}
+
+#[test]
+fn witherbloom_toxicult_b207_etb_mints_pest_and_drains_on_magecraft() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_toxicult_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Toxicult castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Pest"),
+        "ETB mints a Pest token");
+    // Magecraft drain on instant cast.
+    let p1_life = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "bolt 3 + magecraft drain 1");
+}
+
+#[test]
+fn witherbloom_rotcaller_b207_etb_mints_two_pests() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_rotcaller_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rotcaller castable");
+    drain_stack(&mut g);
+    let pests = g.battlefield.iter().filter(|c| c.definition.name == "Pest").count();
+    assert_eq!(pests, 2, "ETB mints two Pest tokens");
+}
+
+#[test]
+fn witherbloom_sapsiphon_b207_gains_life_on_combat_damage() {
+    use crate::game::Attack;
+    let mut g = two_player_game();
+    let sap = g.add_card_to_battlefield(0, catalog::witherbloom_sapsiphon_b207());
+    g.clear_sickness(sap);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: sap, target: AttackTarget::Player(1),
+    }])).expect("declare attackers");
+    drain_stack(&mut g);
+    while g.step != crate::game::types::TurnStep::CombatDamage {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.resolve_combat().expect("combat damage");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, p0_life + 2,
+        "combat damage to player gains 2 life");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Lorehold (R/W) Spirit / magecraft staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn lorehold_soulkindler_b207_etb_mints_a_spirit() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_soulkindler_b207());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Soulkindler castable");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1, "ETB mints one Spirit token");
+}
+
+#[test]
+fn lorehold_cinderscribe_b207_magecraft_pings_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_cinderscribe_b207());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "bolt 3 + magecraft ping 1");
+}
+
+#[test]
+fn lorehold_battlecaller_b207_mints_spirit_on_attack() {
+    let mut g = two_player_game();
+    let bc = g.add_card_to_battlefield(0, catalog::lorehold_battlecaller_b207());
+    g.clear_sickness(bc);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bc, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let spirits = g.battlefield.iter().filter(|c| c.definition.name == "Spirit").count();
+    assert_eq!(spirits, 1, "attacking mints a Spirit");
+}
+
+#[test]
+fn lorehold_emberbolt_b207_deals_three_to_any_target() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lorehold_emberbolt_b207());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Emberbolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3, "3 damage to face");
+}
+
+#[test]
+fn lorehold_relicsmith_b207_returns_low_mv_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_relicsmith_b207());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Relicsmith castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear),
+        "low-MV creature returned to hand");
+}
+
+#[test]
+fn lorehold_charge_ii_b207_pumps_and_grants_first_strike() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::lorehold_charge_ii_b207());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let pwr = g.battlefield_find(bear).unwrap().power();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Charge castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!(c.power(), pwr + 1, "+1/+0 team pump");
+    assert!(c.has_keyword(&Keyword::FirstStrike), "granted first strike");
+}
+
+#[test]
+fn lorehold_vanguard_b207_is_a_four_mana_haste_spirit_knight() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::lorehold_vanguard_b207());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 3));
+    assert!(c.has_keyword(&Keyword::Haste));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Spirit));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Quandrix (G/U) Fractal / draw-matters staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn quandrix_tidecaller_b207_mints_two_counter_fractal() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_tidecaller_b207());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Tidecaller castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal")
+        .expect("Fractal token minted");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 2,
+        "Fractal enters with two +1/+1 counters");
+    assert_eq!((fractal.power(), fractal.toughness()), (2, 2));
+}
+
+#[test]
+fn quandrix_theorist_b207_magecraft_scrys_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::quandrix_theorist_b207());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    // -1 bolt + 1 magecraft draw = net same hand size.
+    assert_eq!(g.players[0].hand.len(), hand_before, "magecraft scry+draw netted a card");
+}
+
+#[test]
+fn quandrix_fractalsurge_b207_makes_x_counter_fractal() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::quandrix_fractalsurge_b207());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Fractalsurge castable");
+    drain_stack(&mut g);
+    let fractal = g.battlefield.iter().find(|c| c.definition.name == "Fractal")
+        .expect("Fractal token minted");
+    assert_eq!(fractal.counter_count(CounterType::PlusOnePlusOne), 3,
+        "X=3 → three +1/+1 counters");
+}
+
+#[test]
+fn quandrix_studymate_b207_grows_with_cards_drawn_this_turn() {
+    let mut g = two_player_game();
+    // Two cards drawn this turn so the ETB sees the tally.
+    g.players[0].cards_drawn_this_turn = 2;
+    let id = g.add_card_to_hand(0, catalog::quandrix_studymate_b207());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Studymate castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Quandrix Studymate (b207)")
+        .expect("Studymate on bf");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2,
+        "+1/+1 counter per card drawn this turn");
+}
+
+#[test]
+fn quandrix_currentweaver_b207_etb_draws_and_scrys() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::quandrix_currentweaver_b207());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Currentweaver castable");
+    drain_stack(&mut g);
+    // -1 cast + 1 ETB draw = net same.
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw netted a card");
+}
+
+#[test]
+fn quandrix_bigmind_b207_is_a_five_mana_trampler() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::quandrix_bigmind_b207());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 5));
+    assert!(c.has_keyword(&Keyword::Trample));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Prismari (U/R) spells-matter / Treasure staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn prismari_pyrologist_b207_magecraft_pings_each_opp() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_pyrologist_b207());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "bolt 3 + magecraft ping 1");
+}
+
+#[test]
+fn prismari_goldcaster_b207_magecraft_mints_treasure() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_goldcaster_b207());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "magecraft mints a Treasure token");
+}
+
+#[test]
+fn prismari_firebolt_ii_b207_deals_four_to_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::prismari_firebolt_ii_b207());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Firebolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "4 damage kills the 2/2");
+}
+
+#[test]
+fn prismari_goldsmith_b207_etb_mints_two_treasures() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::prismari_goldsmith_b207());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Goldsmith castable");
+    drain_stack(&mut g);
+    let treasures = g.battlefield.iter().filter(|c| c.definition.name == "Treasure").count();
+    assert_eq!(treasures, 2, "ETB mints two Treasure tokens");
+}
+
+#[test]
+fn prismari_stormloot_ii_b207_draws_two_discards_one() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::prismari_stormloot_ii_b207());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stormloot castable");
+    drain_stack(&mut g);
+    // -1 cast + 2 draw - 1 discard = net +0 from hand_before? hand_before counted the spell.
+    // After cast: hand = hand_before - 1; then +2 -1 = +1 over that => hand_before + 0.
+    assert_eq!(g.players[0].hand.len(), hand_before, "draw 2, discard 1 net +1 over post-cast");
+}
+
+#[test]
+fn prismari_galeblaster_b207_magecraft_self_pumps() {
+    let mut g = two_player_game();
+    let gb = g.add_card_to_battlefield(0, catalog::prismari_galeblaster_b207());
+    let pwr = g.battlefield_find(gb).unwrap().power();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(gb).unwrap().power(), pwr + 1, "magecraft +1/+0");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Silverquill (W/B) Inkling / drain staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn silverquill_inkbinder_b207_magecraft_drains_one() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_inkbinder_b207());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "bolt 3 + drain 1");
+    assert_eq!(g.players[0].life, p0_life + 1, "drain gains 1");
+}
+
+#[test]
+fn silverquill_eulogist_b207_etb_drains_two() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::silverquill_eulogist_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p1_life = g.players[1].life;
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Eulogist castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2);
+    assert_eq!(g.players[0].life, p0_life + 2);
+}
+
+#[test]
+fn silverquill_edict_ii_b207_makes_opp_sacrifice_and_draws() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::silverquill_edict_ii_b207());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Edict castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "opponent sacrificed their creature");
+    // -1 cast + 1 draw = net same as hand_before.
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew a card");
+}
+
+#[test]
+fn inkling_highflier_b207_is_a_four_mana_flying_vigilance_inkling() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_highflier_b207());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.power(), c.toughness()), (2, 3));
+    assert!(c.has_keyword(&Keyword::Flying));
+    assert!(c.has_keyword(&Keyword::Vigilance));
+    assert!(c.definition.subtypes.creature_types.contains(&CreatureType::Inkling));
+}
+
+#[test]
+fn silverquill_sanction_b207_exiles_creature_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::silverquill_sanction_b207());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sanction castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "target exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear), "exiled, not destroyed");
+    assert_eq!(g.players[0].life, p0_life + 2, "gain 2 life");
+}
+
+#[test]
+fn silverquill_coursemate_b207_gains_life_when_other_creature_dies() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::silverquill_coursemate_b207());
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let p0_life = g.players[0].life;
+    bolt_own_creature(&mut g, 0, fodder);
+    assert_eq!(g.players[0].life, p0_life + 1, "gain 1 when another creature dies");
+}

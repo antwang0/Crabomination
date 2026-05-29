@@ -19,7 +19,7 @@ use crate::effect::shortcut::{
     target_filtered,
 };
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{cost, generic, g, u, Color, ManaCost};
+use crate::mana::{cost, generic, g, u, x, Color, ManaCost};
 
 // ── Quandrix Apprentice ─────────────────────────────────────────────────────
 
@@ -19831,6 +19831,227 @@ pub fn quandrix_megafractal_b206() -> CardDefinition {
             ..Default::default()
         },
         power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 207 (modern_decks) — Quandrix (G/U) Fractal / draw-matters staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Quandrix Tidecaller (b207) — {2}{G}{U} 3/3 Merfolk Wizard.
+/// When this creature enters, create a 0/0 Fractal token with two +1/+1
+/// counters on it.
+pub fn quandrix_tidecaller_b207() -> CardDefinition {
+    use crate::effect::shortcut::create_token_with_counter;
+    CardDefinition {
+        name: "Quandrix Tidecaller (b207)",
+        cost: cost(&[generic(2), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(create_token_with_counter(
+            PlayerRef::You,
+            1,
+            quandrix_fractal_token(),
+            CounterType::PlusOnePlusOne,
+            2,
+        ))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Theorist (b207) — {1}{U} 1/3 Human Wizard.
+/// Magecraft — scry 1, then draw a card.
+pub fn quandrix_theorist_b207() -> CardDefinition {
+    use crate::effect::shortcut::magecraft_scry_and_draw;
+    CardDefinition {
+        name: "Quandrix Theorist (b207)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Fractalsurge (b207) — {X}{G}{U} Sorcery.
+/// Create a 0/0 Fractal token, then put X +1/+1 counters on it.
+pub fn quandrix_fractalsurge_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Fractalsurge (b207)",
+        cost: cost(&[x(), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Sorcery],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: quandrix_fractal_token(),
+            },
+            Effect::AddCounter {
+                what: Selector::LastCreatedToken,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::XFromCost,
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Studymate (b207) — {G}{U} 2/2 Otter Wizard.
+/// When this creature enters, put a +1/+1 counter on it for each card you
+/// have drawn this turn (`Value::CardsDrawnThisTurn`).
+pub fn quandrix_studymate_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Studymate (b207)",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::AddCounter {
+            what: Selector::This,
+            kind: CounterType::PlusOnePlusOne,
+            amount: Value::CardsDrawnThisTurn(PlayerRef::You),
+        })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Currentweaver (b207) — {2}{U} 2/3 Merfolk Wizard.
+/// When this creature enters, draw a card, then scry 1.
+pub fn quandrix_currentweaver_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Currentweaver (b207)",
+        cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(1),
+            },
+        ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Bigmind (b207) — {3}{G}{U} 4/5 Fractal Wizard, Trample.
+/// A sturdy Quandrix top-end body that closes games once counters pile up.
+pub fn quandrix_bigmind_b207() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Bigmind (b207)",
+        cost: cost(&[generic(3), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 4,
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
