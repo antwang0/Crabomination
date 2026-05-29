@@ -651,10 +651,12 @@ pub fn goldspan_dragon() -> CardDefinition {
 /// Wired via the new trigger-filter enforcement: scope is
 /// `YourControl + EntersBattlefield`, filter is
 /// `Predicate::EntityMatches { what: TriggerSource, filter: Land }` so
-/// the trigger fires only for land-typed entrants. The "Sacrifice a Clue:
-/// put a +1/+1 counter on this" activated ability is omitted (no
-/// sac-of-other-permanent activation primitive yet).
+/// the trigger fires only for land-typed entrants. The "Whenever you
+/// sacrifice a Clue, put a +1/+1 counter on Tireless Tracker" half is
+/// now wired via a `PermanentSacrificed + YourControl` trigger filtered
+/// on the sacrificed permanent being a Clue (HasArtifactSubtype(Clue)).
 pub fn tireless_tracker() -> CardDefinition {
+    use crate::card::{ArtifactSubtype, CounterType};
     use crate::effect::Predicate;
     use crate::game::effects::clue_token;
     CardDefinition {
@@ -671,18 +673,32 @@ pub fn tireless_tracker() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
-                    what: Selector::TriggerSource,
-                    filter: SelectionRequirement::Land,
-                }),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(1),
-                definition: clue_token(),
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Land,
+                    }),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    definition: clue_token(),
+                },
             },
-        }],
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::PermanentSacrificed, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Clue),
+                    }),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            },
+        ],
         static_abilities: vec![],
         base_loyalty: 0,
         loyalty_abilities: vec![],
@@ -699,10 +715,13 @@ pub fn tireless_tracker() -> CardDefinition {
 /// Bloodtithe Harvester — {1}{B}{R}, 3/2 Vampire Rogue. Whenever this
 /// enters or attacks, create a Blood token.
 ///
-/// Approximation: the activated ability `{1}, Sacrifice a Blood: deals 2
-/// damage to any target` is omitted (sac-of-other-permanent activation
-/// primitive isn't yet wired). Both ETB and attack triggers fire.
+/// The activated ability `{1}, Sacrifice a Blood: deals 2 damage to any
+/// target` is now wired via `sac_other_filter:
+/// HasArtifactSubtype(Blood)` — the sac-of-another-permanent activation
+/// cost. Both ETB and attack triggers fire.
 pub fn bloodtithe_harvester() -> CardDefinition {
+    use crate::card::{ActivatedAbility, ArtifactSubtype};
+    use crate::effect::shortcut::target_any;
     use crate::game::effects::blood_token;
     use crate::mana::r;
     let blood_etb = TriggeredAbility {
@@ -734,7 +753,28 @@ pub fn bloodtithe_harvester() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::DealDamage {
+                to: target_any(),
+                amount: Value::Const(2),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            // {1}, Sacrifice a Blood: deals 2 damage to any target.
+            sac_other_filter: Some((
+                SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
+                1,
+            )),
+        }],
         triggered_abilities: vec![blood_etb, blood_attack],
         static_abilities: vec![],
         base_loyalty: 0,

@@ -12900,3 +12900,80 @@ fn inquisitive_puppet_etb_scrys_one() {
     assert_eq!(puppet.definition.toughness, 2);
 }
 
+
+// ── modern_decks: sac-a-Blood activated ability (Bloodtithe Harvester) ──────
+
+#[test]
+fn bloodtithe_harvester_sacs_blood_to_deal_two_damage() {
+    use crate::game::effects::blood_token;
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bh = g.add_card_to_battlefield(0, catalog::bloodtithe_harvester());
+    g.clear_sickness(bh);
+    // Give the controller a Blood token to feed the sacrifice cost.
+    let blood = g.add_token_to_battlefield(0, &blood_token());
+    g.players[0].mana_pool.add_colorless(1);
+    let opp_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bh,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    })
+    .expect("{1}, Sacrifice a Blood: 2 damage activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, opp_life - 2, "deals 2 to the targeted player");
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == blood),
+        "the Blood token was sacrificed to pay the cost",
+    );
+}
+
+#[test]
+fn bloodtithe_harvester_cannot_activate_without_a_blood() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bh = g.add_card_to_battlefield(0, catalog::bloodtithe_harvester());
+    g.clear_sickness(bh);
+    g.players[0].mana_pool.add_colorless(1);
+    // No Blood token on the battlefield → the sac cost cannot be paid.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: bh,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        x_value: None,
+    });
+    assert!(res.is_err(), "no Blood to sacrifice → activation rejected");
+}
+
+// ── modern_decks: Tireless Tracker sac-a-Clue counter trigger ───────────────
+
+#[test]
+fn tireless_tracker_gains_counter_when_a_clue_is_sacrificed() {
+    use crate::game::effects::clue_token;
+    let mut g = two_player_game();
+    let tracker = g.add_card_to_battlefield(0, catalog::tireless_tracker());
+    g.clear_sickness(tracker);
+    let clue = g.add_token_to_battlefield(0, &clue_token());
+    // Clue's ability: {2}, Sacrifice this artifact: Draw a card.
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::island());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: clue,
+        ability_index: 0,
+        target: None,
+        x_value: None,
+    })
+    .expect("Clue sacrifices for {2}");
+    drain_stack(&mut g);
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == clue),
+        "Clue was sacrificed",
+    );
+    assert_eq!(
+        g.battlefield_find(tracker).unwrap().counter_count(CounterType::PlusOnePlusOne),
+        1,
+        "sacrificing a Clue puts a +1/+1 counter on Tireless Tracker",
+    );
+}
+
