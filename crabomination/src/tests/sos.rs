@@ -3610,6 +3610,74 @@ fn vicious_rivalry_destroys_creatures_at_or_below_x() {
     );
 }
 
+// ── Fix What's Broken ─────────────────────────────────────────────────────────
+
+#[test]
+fn fix_whats_broken_pays_x_life_and_returns_exact_mv() {
+    let mut g = two_player_game();
+    // Two CMC-2 creatures in the graveyard. X=2 returns BOTH (mass
+    // reanimation at the chosen mana value).
+    let bear1 = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // CMC 2
+    let bear2 = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // CMC 2
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // 2 generic + 2 for X
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Fix What's Broken castable for {2}{2}{W}{B} (X=2)");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear1),
+        "First CMC-2 creature returned to battlefield",
+    );
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear2),
+        "Second CMC-2 creature also returned (mass reanimation)",
+    );
+    assert_eq!(
+        g.players[0].life,
+        life_before - 2,
+        "Caster pays X (=2) life as the additional cost",
+    );
+}
+
+#[test]
+fn fix_whats_broken_only_returns_cards_at_exact_mv() {
+    let mut g = two_player_game();
+    // X=2 returns the CMC-2 bear but NOT the CMC-6 wurm — the printed
+    // card matches mana value EXACTLY, not "≤ X".
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // CMC 2
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm()); // CMC 6
+    let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4); // 2 generic + 2 for X
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Fix What's Broken castable (X=2)");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield.iter().any(|c| c.id == bear),
+        "CMC-2 bear returns at X=2",
+    );
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == wurm),
+        "CMC-6 wurm does NOT return at X=2 (exact mana-value match)",
+    );
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == wurm),
+        "CMC-6 wurm stays in the graveyard",
+    );
+}
+
 // ── Proctor's Gaze ──────────────────────────────────────────────────────────
 
 #[test]
@@ -10255,32 +10323,29 @@ fn skycoach_waypoint_then_biblioplex_tomekeeper_round_trip() {
 
 #[test]
 fn fix_whats_broken_returns_mana_value_x_artifact_from_graveyard() {
-    // Engine approximation: Fix What's Broken collapses the printed
-    // X-cost to a fixed `{2}{W}{B}` shape (LoseLife(2) + return MV ≤ 2
-    // artifacts/creatures). At X=2, this matches the gameplay outcome;
-    // at X≠2 the engine over- or under-returns. See TODO.md for the
-    // X-cost-with-MV-equals-X gap.
+    // Faithful X-cost: `{X}{2}{W}{B}`, pay X life, return artifact/creature
+    // cards with mana value EXACTLY X. At X=1 the MV-1 Sol Ring returns but
+    // the MV-2 Bear stays — confirming the exact-MV match for artifacts.
     let mut g = two_player_game();
-    let sol = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let sol = g.add_card_to_graveyard(0, catalog::sol_ring()); // MV 1
     let bear_id = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // MV 2
     let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(3); // 2 generic + 1 for X
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(1),
     })
-    .expect("Fix What's Broken castable for {2}{W}{B}");
+    .expect("Fix What's Broken castable for {1}{2}{W}{B} (X=1)");
     drain_stack(&mut g);
 
-    assert_eq!(g.players[0].life, life_before - 2, "Fixed life-loss of 2");
-    // Both MV-1 Sol Ring and MV-2 Bear should return (filter is MV ≤ 2).
+    assert_eq!(g.players[0].life, life_before - 1, "Pays X (=1) life");
     assert!(g.battlefield.iter().any(|c| c.id == sol),
-        "Sol Ring (MV 1) returns");
-    assert!(g.battlefield.iter().any(|c| c.id == bear_id),
-        "Grizzly Bears (MV 2) returns");
+        "Sol Ring (MV 1) returns at X=1");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear_id),
+        "Grizzly Bears (MV 2) does NOT return at X=1 (exact match)");
 }
 
 #[test]
@@ -12345,18 +12410,18 @@ fn fix_whats_broken_returns_creatures_from_gy() {
     let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(4); // 2 generic + 2 for X
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Fix What's Broken castable");
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Fix What's Broken castable (X=2)");
     drain_stack(&mut g);
 
-    // Bear (MV 2) should be on battlefield.
+    // Bear (MV 2) should be on battlefield (matches X=2).
     assert!(g.battlefield.iter().any(|c| c.id == bear),
         "Bear should be returned from graveyard to battlefield");
-    // 2 life lost.
+    // X (=2) life lost.
     assert_eq!(g.players[0].life, life_before - 2);
 }
 
@@ -12857,16 +12922,16 @@ fn fix_whats_broken_loses_life_and_returns_from_gy() {
     let id = g.add_card_to_hand(0, catalog::fix_whats_broken());
     g.players[0].mana_pool.add(Color::White, 1);
     g.players[0].mana_pool.add(Color::Black, 1);
-    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add_colorless(4); // 2 generic + 2 for X
     let life_before = g.players[0].life;
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
     })
     .expect("castable");
     drain_stack(&mut g);
 
-    // Should have lost 2 life (the hardcoded X=2 approximation).
+    // Should have lost X (=2) life.
     assert_eq!(g.players[0].life, life_before - 2);
 }
 
@@ -13149,4 +13214,251 @@ fn prismari_the_inspiration_ward_pay_life_counters_when_payer_too_low() {
         .expect("Ward—Pay 5 life counters the Bolt — dragon survives");
     assert_eq!(card.damage, 0, "bolt countered, no damage");
     assert_eq!(g.players[1].life, 3, "ward life wasn't paid (couldn't afford)");
+}
+
+// ── Hybrid mana pips: off-color payment ───────────────────────────────────────
+// These cards print a two-color hybrid pip (e.g. {W/B}). The engine models
+// the pip with `ManaSymbol::Hybrid`, so the pip can be paid with EITHER half.
+// Each test casts the card paying the hybrid pip with the *off-color* (the
+// half that the prior mono-color approximation did not accept).
+
+#[test]
+fn essenceknit_scholar_hybrid_pip_payable_with_green() {
+    // {B}{B/G}{G}: pay the B/G pip with green → B + G + G.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::essenceknit_scholar());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Essenceknit Scholar castable for {B}{G}{G} via hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Scholar resolves when the hybrid pip is paid with green");
+}
+
+#[test]
+fn paradox_surveyor_hybrid_pip_payable_with_blue() {
+    // {G}{G/U}{U}: pay the G/U pip with blue → G + U + U.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::paradox_surveyor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::Blue, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Paradox Surveyor castable for {G}{U}{U} via hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
+fn abstract_paintmage_hybrid_pip_payable_with_red() {
+    // {U}{U/R}{R}: pay the U/R pip with red → U + R + R.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::abstract_paintmage());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Abstract Paintmage castable for {U}{R}{R} via hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
+fn practiced_scrollsmith_hybrid_pip_payable_with_white() {
+    // {R}{R/W}{W}: pay the R/W pip with white → R + W + W.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::practiced_scrollsmith());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Practiced Scrollsmith castable for {R}{W}{W} via hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
+fn stirring_honormancer_hybrid_pip_payable_with_black() {
+    // {2}{W}{W/B}{B}: pay the W/B pip with black → {2} + W + B + B.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::stirring_honormancer());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Stirring Honormancer castable for {2}{W}{B}{B} via hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
+fn heroic_stanza_back_hybrid_pip_payable_with_white() {
+    // Abigale's back face Heroic Stanza is {1}{W/B}: pay the hybrid pip
+    // with white → {1}{W}. Target creature gets +2/+2 and lifelink EOT.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::abigale_poet_laureate());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Heroic Stanza castable for {1}{W} via hybrid pip");
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(bear).expect("bear still on bf");
+    assert_eq!(view.power, 4, "Bear pumped +2/+2 by Heroic Stanza");
+    assert_eq!(view.toughness, 4);
+}
+
+#[test]
+fn pest_friend_back_hybrid_pip_payable_with_green() {
+    // Lluwen's back face Pest Friend is {B/G}: pay the hybrid pip with
+    // green. Creates a 1/1 Pest token.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::lluwen_exchange_student());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let bf_before = g.battlefield.len();
+
+    g.perform_action(GameAction::CastSpellBack {
+        card_id: id,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Pest Friend castable for {G} via hybrid pip");
+    drain_stack(&mut g);
+
+    assert_eq!(g.battlefield.len(), bf_before + 1, "Pest token created");
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Pest"));
+}
+
+#[test]
+fn spectacle_mage_castable_with_two_red() {
+    // {U/R}{U/R}: both hybrid pips payable with red → cast for {R}{R}.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spectacle_mage());
+    g.players[0].mana_pool.add(Color::Red, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Spectacle Mage castable for {R}{R} via hybrid pips");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id));
+}
+
+#[test]
+fn fervent_strike_castable_with_green() {
+    // {R/G}: hybrid pip payable with green.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::fervent_strike());
+    g.players[0].mana_pool.add(Color::Green, 1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Fervent Strike castable for {G} via hybrid pip");
+    drain_stack(&mut g);
+
+    let view = g.computed_permanent(bear).expect("bear on bf");
+    assert_eq!(view.power, 4, "Fervent Strike pumps +2/+0");
+    assert!(view.keywords.contains(&Keyword::Trample));
+}
+
+// ── Monocolored hybrid pips ({n/C}) ───────────────────────────────────────────
+// The "Archaic" Avatars print {2/R} / {2/G} pips — payable with {2}
+// generic OR one mana of the color. Modeled via `ManaSymbol::MonoHybrid`.
+
+#[test]
+fn magmablood_archaic_mana_value_is_six() {
+    // {2/R}{2/R}{2/R}: CR 202.3f — monocolored hybrid MV uses the
+    // generic side, so the total mana value is 6 (not 9).
+    let def = catalog::magmablood_archaic();
+    assert_eq!(def.cost.cmc(), 6, "Magmablood Archaic MV = 6");
+}
+
+#[test]
+fn magmablood_archaic_castable_with_three_red() {
+    // Pay each {2/R} pip with a single red → 3 mana total.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::magmablood_archaic());
+    g.players[0].mana_pool.add(Color::Red, 3);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Magmablood castable for {R}{R}{R} via mono-hybrid pips");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == id),
+        "Magmablood resolves paying the colored side of each pip");
+}
+
+#[test]
+fn magmablood_archaic_castable_with_six_generic() {
+    // Pay each {2/R} pip with {2} generic → 6 mana, zero colors spent.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::magmablood_archaic());
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Magmablood castable for {6} via the generic side of mono-hybrid pips");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(id).expect("Magmablood on bf");
+    // Zero colors of mana spent → no Converge counters → base 2/2.
+    assert_eq!(view.power, 2, "0 colors spent → no +1/+1 counters");
+    assert_eq!(view.toughness, 2);
+}
+
+#[test]
+fn magmablood_archaic_not_castable_with_two_mana() {
+    // {2/R}{2/R}{2/R} needs at least 3 mana (one per pip via the red
+    // side). Two mana is insufficient.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::magmablood_archaic());
+    g.players[0].mana_pool.add(Color::Red, 2);
+
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "Magmablood uncastable with only 2 mana");
+}
+
+#[test]
+fn wildgrowth_archaic_castable_with_two_green() {
+    // {2/G}{2/G}: pay each pip with a single green → 2 mana, 1 color.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::wildgrowth_archaic());
+    g.players[0].mana_pool.add(Color::Green, 2);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Wildgrowth castable for {G}{G} via mono-hybrid pips");
+    drain_stack(&mut g);
+    let view = g.computed_permanent(id).expect("Wildgrowth on bf");
+    // 1 color (green) spent → 1 Converge counter → survives as 1/1.
+    assert_eq!(view.power, 1, "1 color spent → 1 +1/+1 counter");
 }

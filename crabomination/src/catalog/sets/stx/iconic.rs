@@ -114,15 +114,17 @@ pub fn sedgemoor_witch() -> CardDefinition {
 /// "Prowess (Whenever you cast a noncreature spell, this creature gets
 /// +1/+1 until end of turn.)"
 ///
-/// Hybrid {U/R}{U/R} is approximated as `{U}{R}` (engine has no hybrid
-/// mana resolver). The Prowess keyword is **now functionally wired**
-/// via the new `effect::shortcut::prowess()` helper — fires on every
-/// non-creature spell you cast, pumping the source +1/+1 EOT.
+/// The {U/R}{U/R} cost uses real `ManaSymbol::Hybrid(Blue, Red)` pips,
+/// each payable with either blue or red. The Prowess keyword is
+/// functionally wired via the `effect::shortcut::prowess()` helper —
+/// fires on every non-creature spell you cast, pumping the source
+/// +1/+1 EOT.
 pub fn spectacle_mage() -> CardDefinition {
     use crate::effect::shortcut::prowess;
+    use crate::mana::{hybrid, Color};
     CardDefinition {
         name: "Spectacle Mage",
-        cost: cost(&[u(), r()]),
+        cost: cost(&[hybrid(Color::Blue, Color::Red), hybrid(Color::Blue, Color::Red)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

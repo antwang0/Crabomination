@@ -139,6 +139,10 @@ pub enum ManaSymbol {
     Hybrid(Color, Color),
     /// {C/P}: pay the colored cost or 2 life.
     Phyrexian(Color),
+    /// {n/C}: monocolored hybrid — pay either {n} generic mana or one
+    /// mana of the given color (e.g. {2/R}). Mana value is `n`
+    /// (CR 202.3f). Used by the SOS "Archaic" Avatar cycle.
+    MonoHybrid(u32, Color),
     /// {S}: pay with mana from a snow source.
     Snow,
     /// {X}: variable cost determined at cast time.
@@ -166,6 +170,8 @@ impl ManaCost {
                 ManaSymbol::Colorless(n) => *n,
                 ManaSymbol::Hybrid(_, _) => 1,
                 ManaSymbol::Phyrexian(_) => 1,
+                // CR 202.3f: monocolored hybrid MV is the generic amount.
+                ManaSymbol::MonoHybrid(n, _) => *n,
                 ManaSymbol::Snow => 1,
                 ManaSymbol::X => 0, // X is 0 everywhere except on the stack
             })
@@ -199,6 +205,9 @@ impl ManaCost {
                 ManaSymbol::Hybrid(a, b) => {
                     seen[idx(*a)] = true;
                     seen[idx(*b)] = true;
+                }
+                ManaSymbol::MonoHybrid(_, c) => {
+                    seen[idx(*c)] = true;
                 }
                 _ => {}
             }
@@ -238,6 +247,9 @@ impl ManaCost {
                 ManaSymbol::Phyrexian(c) => {
                     s.push_str(&format!("{{{}/P}}", color_pip_letter(*c)));
                 }
+                ManaSymbol::MonoHybrid(n, c) => {
+                    s.push_str(&format!("{{{}/{}}}", n, color_pip_letter(*c)));
+                }
                 ManaSymbol::Snow => s.push_str("{S}"),
                 ManaSymbol::X => s.push_str("{X}"),
             }
@@ -261,6 +273,11 @@ impl ManaCost {
                     }
                     if !result.contains(b) {
                         result.push(*b);
+                    }
+                }
+                ManaSymbol::MonoHybrid(_, c) => {
+                    if !result.contains(c) {
+                        result.push(*c);
                     }
                 }
                 _ => {}
@@ -470,6 +487,38 @@ impl ManaPool {
             }
         }
 
+        // Pass 3.5: monocolored hybrid pips ({n/C}). Prefer paying the
+        // colored side (1 mana) when a matching colored mana is on hand;
+        // otherwise pay {n} generic from any remaining bucket. This is
+        // greedy but optimal for the single-pip "Archaic" costs.
+        for sym in &cost.symbols {
+            if let ManaSymbol::MonoHybrid(n, c) = sym {
+                if tmp.amount(*c) > 0 {
+                    *tmp.slot_mut(*c) -= 1;
+                } else {
+                    // Pay {n} generic from any bucket (colors then colorless).
+                    let mut rem = *n;
+                    for color in Color::ALL {
+                        if rem == 0 { break; }
+                        let drain = rem.min(tmp.amount(color));
+                        *tmp.slot_mut(color) -= drain;
+                        rem -= drain;
+                    }
+                    if rem > 0 {
+                        let drain = rem.min(tmp.colorless);
+                        tmp.colorless -= drain;
+                        rem -= drain;
+                    }
+                    if rem > 0 {
+                        return Err(ManaError::InsufficientGeneric {
+                            needed: *n,
+                            have: *n - rem,
+                        });
+                    }
+                }
+            }
+        }
+
         // Pass 4: phyrexian pips (pay color if available, else 2 life)
         for sym in &cost.symbols {
             if let ManaSymbol::Phyrexian(c) = sym {
@@ -639,6 +688,10 @@ pub fn hybrid(a: Color, b: Color) -> ManaSymbol {
 
 pub fn phyrexian(color: Color) -> ManaSymbol {
     ManaSymbol::Phyrexian(color)
+}
+
+pub fn mono_hybrid(n: u32, color: Color) -> ManaSymbol {
+    ManaSymbol::MonoHybrid(n, color)
 }
 
 pub fn snow_mana() -> ManaSymbol {

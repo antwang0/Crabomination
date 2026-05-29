@@ -10434,16 +10434,16 @@ pub fn search_for_glory() -> CardDefinition {
 /// "Target creature gets +2/+0 and gains trample until end of turn."
 ///
 /// Push (modern_decks, NEW, `stx::extras`): Lorehold's small-curve
-/// combat trick. The hybrid `{R/G}` pip is approximated as `{R}` (same
-/// convention as Practiced Scrollsmith and Essenceknit Scholar). Wired
-/// as `Seq(PumpPT(+2/+0 EOT), GrantKeyword(Trample EOT))` against a
+/// combat trick. The `{R/G}` pip is a real `ManaSymbol::Hybrid(Red,
+/// Green)`, payable with either red or green. Wired as
+/// `Seq(PumpPT(+2/+0 EOT), GrantKeyword(Trample EOT))` against a
 /// `Creature` target. Tests:
 /// `fervent_strike_pumps_target_and_grants_trample`,
 /// `fervent_strike_is_a_one_mana_instant`.
 pub fn fervent_strike() -> CardDefinition {
     CardDefinition {
         name: "Fervent Strike",
-        cost: cost(&[r()]),
+        cost: cost(&[crate::mana::hybrid(Color::Red, Color::Green)]),
         supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),

@@ -2350,6 +2350,12 @@ impl GameState {
                     let have = avail.entry(*c).or_default();
                     if *have > 0 { *have -= 1; }
                 }
+                ManaSymbol::MonoHybrid(n, c) => {
+                    // {n/C}: spend a matching colored mana if on hand;
+                    // otherwise treat the pip as {n} generic to tap for.
+                    let have = avail.entry(*c).or_default();
+                    if *have > 0 { *have -= 1; } else { generic += n; }
+                }
                 ManaSymbol::Generic(n) => generic += n,
                 ManaSymbol::Colorless(n) => {
                     // {C} must be paid from the colorless bucket.

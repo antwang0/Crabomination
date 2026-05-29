@@ -304,6 +304,7 @@ fn union_cost_identity(out: &mut ColorSet, def: &CardDefinition) {
                 out.insert(*a);
                 out.insert(*b);
             }
+            ManaSymbol::MonoHybrid(_, c) => out.insert(*c),
             ManaSymbol::Generic(_)
             | ManaSymbol::Colorless(_)
             | ManaSymbol::Snow

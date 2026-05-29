@@ -31,6 +31,7 @@ fn format_mana_cost(cost: &ManaCost) -> String {
             ManaSymbol::Colorless(n) => "{C}".repeat(*n as usize),
             ManaSymbol::Hybrid(a, b) => format!("{{{}/{}}}", a.short_name(), b.short_name()),
             ManaSymbol::Phyrexian(c) => format!("{{{}/P}}", c.short_name()),
+            ManaSymbol::MonoHybrid(n, c) => format!("{{{}/{}}}", n, c.short_name()),
             ManaSymbol::Snow => "{S}".to_string(),
             ManaSymbol::X => "{X}".to_string(),
         })

@@ -1087,11 +1087,9 @@ pub fn stirring_honormancer() -> CardDefinition {
     use crate::effect::ZoneDest;
     CardDefinition {
         name: "Stirring Honormancer",
-        // {2}{W}{W/B}{B}: hybrid pip approximated as {W} for cost
-        // calculation, so we cast it for {2}{W}{W}{B} (same total CMC
-        // 5; one extra mandatory white pip). The engine has no hybrid
-        // mana primitive yet for spell costs.
-        cost: cost(&[generic(2), w(), w(), b()]),
+        // {2}{W}{W/B}{B}: the {W/B} pip is a real `ManaSymbol::Hybrid`
+        // (CMC 5), payable with either white or black.
+        cost: cost(&[generic(2), w(), crate::mana::hybrid(Color::White, Color::Black), b()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -3839,16 +3837,15 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 /// spend metadata yet (tracked as **Spend-Restricted Mana** in TODO.md),
 /// so the produced {U}{R} behaves like normal mana and can fund any
 /// spell. The trigger fires on the active player's PreCombatMain step
-/// (the controller's "first" main phase). The hybrid `{U/R}` pip in the
-/// cost is approximated as `{U}` so the printed cost effectively becomes
-/// `{U}{U}{R}` for cube purposes.
+/// (the controller's "first" main phase). The `{U/R}` pip is a real
+/// `ManaSymbol::Hybrid(Blue, Red)`, payable with either blue or red.
 pub fn abstract_paintmage() -> CardDefinition {
     use crate::effect::ManaPayload;
     use crate::game::types::TurnStep;
     use crate::mana::{r, u};
     CardDefinition {
         name: "Abstract Paintmage",
-        cost: cost(&[u(), u(), r()]),
+        cost: cost(&[u(), crate::mana::hybrid(Color::Blue, Color::Red), r()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -4131,8 +4128,8 @@ pub fn exhibition_tidecaller() -> CardDefinition {
 /// the lifted card so the permission targets exactly the card that just
 /// went to exile. The controller then invokes
 /// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
-/// window to recur the card for free. The hybrid `{R/W}` pip is still
-/// approximated as `{R}` (cost: `{R}{R}{W}`).
+/// window to recur the card for free. The `{R/W}` pip is a real
+/// `ManaSymbol::Hybrid(Red, White)`, payable with either red or white.
 pub fn practiced_scrollsmith() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{r, w as wm};
@@ -4148,7 +4145,7 @@ pub fn practiced_scrollsmith() -> CardDefinition {
     );
     CardDefinition {
         name: "Practiced Scrollsmith",
-        cost: cost(&[r(), r(), wm()]),
+        cost: cost(&[r(), crate::mana::hybrid(Color::Red, Color::White), wm()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -5063,13 +5060,14 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
 /// new `SelectionRequirement::HasXInCost` predicate ORed with `Land`.
 /// Misses go to graveyard (engine default for `RevealUntilFind`); the
 /// printed "rest on bottom random order" rider is approximated. The
-/// hybrid `{G/U}` pip stays approximated as `{G}` (cost: `{G}{G}{U}`).
+/// `{G/U}` pip is a real `ManaSymbol::Hybrid(Green, Blue)`, payable with
+/// either green or blue.
 pub fn paradox_surveyor() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::mana::{g, u};
     CardDefinition {
         name: "Paradox Surveyor",
-        cost: cost(&[g(), g(), u()]),
+        cost: cost(&[g(), crate::mana::hybrid(Color::Green, Color::Blue), u()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -5114,11 +5112,10 @@ pub fn paradox_surveyor() -> CardDefinition {
 /// +1/+0 until end of turn for each color of mana spent to cast that
 /// spell."
 ///
-/// Hybrid `{2/R}` pips approximated as `{R}`-or-{generic 2} — engine's
-/// hybrid-cost expansion lets the pip pay either way. We choose
-/// generic 2 ×3 + R ×3 simplifies the printed cost by always paying the
-/// {R} half. Trample + reach + Converge ETB counter are wired exactly
-/// like Rancorous Archaic. The spell-cast pump uses
+/// The `{2/R}` pips are real `ManaSymbol::MonoHybrid(2, Red)` — each pip
+/// is payable with either {2} generic or one red, and the mana value is
+/// 6 (CR 202.3f). Trample + reach + Converge ETB counter are wired
+/// exactly like Rancorous Archaic. The spell-cast pump uses
 /// `Value::ConvergedValue` for the iterated cast — but the engine
 /// re-uses the *current cast's* converge value, not the just-cast
 /// spell's. We approximate by reading the trigger source's
@@ -5129,10 +5126,14 @@ pub fn paradox_surveyor() -> CardDefinition {
 pub fn magmablood_archaic() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::magecraft;
-    use crate::mana::r;
+    use crate::mana::mono_hybrid;
     CardDefinition {
         name: "Magmablood Archaic",
-        cost: cost(&[generic(2), generic(2), generic(2), r(), r(), r()]),
+        cost: cost(&[
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::Red),
+        ]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -5190,8 +5191,9 @@ pub fn magmablood_archaic() -> CardDefinition {
 /// to cast it."
 ///
 /// Body + Converge ETB wired (same pattern as Rancorous Archaic /
-/// Magmablood Archaic). Hybrid `{2/G}` pips approximated as
-/// `{generic 2} + {G}` per pip ({2}{2}{G}{G}). The printed 0/0 means
+/// Magmablood Archaic). The `{2/G}` pips are real
+/// `ManaSymbol::MonoHybrid(2, Green)` (CMC 4, payable with {2} or {G}
+/// per pip). The printed 0/0 means
 /// the creature dies to SBA without enough Converge counters; mono-G
 /// or off-color casts will die immediately, while a 2-color cast lands
 /// it as a 2/2. The "creature spells you cast enter with X extra
@@ -5202,10 +5204,10 @@ pub fn magmablood_archaic() -> CardDefinition {
 pub fn wildgrowth_archaic() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::{StaticAbility, StaticEffect};
-    use crate::mana::g;
+    use crate::mana::mono_hybrid;
     CardDefinition {
         name: "Wildgrowth Archaic",
-        cost: cost(&[generic(2), generic(2), g(), g()]),
+        cost: cost(&[mono_hybrid(2, Color::Green), mono_hybrid(2, Color::Green)]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
@@ -5970,7 +5972,8 @@ pub fn page_loose_leaf() -> CardDefinition {
 /// beginning of your end step, if a creature died under your control
 /// this turn, draw a card."
 ///
-/// Hybrid `{B/G}` pip approximated as `{B}` (cost: `{B}{B}{G}`). Both
+/// The `{B/G}` pip is a real `ManaSymbol::Hybrid(Black, Green)`, payable
+/// with either black or green. Both
 /// triggers wired faithfully — the ETB Pest token rides on the shared
 /// `pest_token()` helper (so its on-attack lifegain rider trickles into
 /// Witherbloom payoffs); the end-step draw uses the new
@@ -5983,7 +5986,7 @@ pub fn essenceknit_scholar() -> CardDefinition {
     use crate::mana::g;
     CardDefinition {
         name: "Essenceknit Scholar",
-        cost: cost(&[b(), b(), g()]),
+        cost: cost(&[b(), crate::mana::hybrid(Color::Black, Color::Green), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {

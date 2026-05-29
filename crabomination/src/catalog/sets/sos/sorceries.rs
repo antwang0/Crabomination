@@ -1688,15 +1688,15 @@ pub fn growth_curve() -> CardDefinition {
 /// extension on `fire_combat_damage_to_player_triggers` (push XXV).
 /// When your creature connects, every Killian's Confidence sitting in
 /// your graveyard fires; controller is asked yes/no via `MayPay`, and
-/// on yes + sufficient mana the card moves back to hand. Hybrid {W/B}
-/// pip approximated as {W} (matches Practiced Scrollsmith's hybrid
-/// collapse).
+/// on yes + sufficient mana the card moves back to hand. The {W/B}
+/// may-pay pip is a real `ManaSymbol::Hybrid(White, Black)`, payable
+/// with either color.
 pub fn killians_confidence() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::mana::{Color, ManaCost, ManaSymbol};
-    // Hybrid {W/B} approximated as {W} for the may-pay return cost.
+    // {W/B} may-pay return cost — payable with white or black.
     let return_cost = ManaCost {
-        symbols: vec![ManaSymbol::Colored(Color::White)],
+        symbols: vec![ManaSymbol::Hybrid(Color::White, Color::Black)],
     };
     CardDefinition {
         name: "Killian's Confidence",
@@ -2722,19 +2722,25 @@ pub fn social_snub() -> CardDefinition {
 /// Return each artifact and creature card with mana value X from your
 /// graveyard to the battlefield."
 ///
-/// 🟡 The "pay X life" additional cost is approximated by having X in
-/// the mana cost and using the X value for both the life payment and
-/// the MV filter. The effect pays X life then returns matching cards.
-/// The actual printed card uses X as a separate life-payment cost, not
-/// a mana-cost X pip, but this gives the closest behavior with current
-/// engine primitives.
+/// The "pay X life" additional cost is modeled with the same convention
+/// as Vicious Rivalry: an `{X}` pip is inserted at the front of the mana
+/// cost so the caster chooses X at cast time, and the resolution pays
+/// `Value::XFromCost` life. The reanimation now matches the printed
+/// **exact mana value X** (not the prior `≤ 2` approximation): a
+/// per-iteration `Predicate::ValueEquals(ManaValueOf(card), XFromCost)`
+/// gate over every artifact/creature card in the graveyard returns all
+/// of them — a true mass reanimation at the chosen X. Tests:
+/// `fix_whats_broken_pays_x_life_and_returns_exact_mv`,
+/// `fix_whats_broken_only_returns_cards_at_exact_mv`.
 pub fn fix_whats_broken() -> CardDefinition {
-    use crate::effect::ZoneDest;
-    use crate::mana::{w, b};
+    use crate::effect::{Predicate, ZoneDest};
+    use crate::mana::{w, b, ManaSymbol};
     use crate::card::Zone;
+    let mut spell_cost = cost(&[generic(2), w(), b()]);
+    spell_cost.symbols.insert(0, ManaSymbol::X);
     CardDefinition {
         name: "Fix What's Broken",
-        cost: cost(&[generic(2), w(), b()]),
+        cost: spell_cost,
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
@@ -2742,22 +2748,36 @@ pub fn fix_whats_broken() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![
+            // Additional cost: pay X life (X read off the {X} pip).
             Effect::LoseLife {
                 who: Selector::You,
-                amount: Value::Const(2),
+                amount: Value::XFromCost,
             },
-            Effect::Move {
-                what: Selector::CardsInZone {
+            // Return EACH artifact/creature card with mana value exactly X
+            // from your graveyard to the battlefield. We iterate over the
+            // matching cards in the graveyard and return those whose MV
+            // equals X, so multiple cards at the chosen X all come back.
+            Effect::ForEach {
+                selector: Selector::CardsInZone {
                     who: PlayerRef::You,
                     zone: Zone::Graveyard,
-                    filter: (SelectionRequirement::Creature
-                        .or(SelectionRequirement::HasCardType(CardType::Artifact)))
-                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                    filter: SelectionRequirement::Creature
+                        .or(SelectionRequirement::HasCardType(CardType::Artifact)),
                 },
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
+                body: Box::new(Effect::If {
+                    cond: Predicate::ValueEquals(
+                        Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+                        Value::XFromCost,
+                    ),
+                    then: Box::new(Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
+                    else_: Box::new(Effect::Noop),
+                }),
             },
         ]),
         activated_abilities: no_abilities(),

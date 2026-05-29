@@ -999,11 +999,11 @@ pub fn kirol_history_buff() -> CardDefinition {
 ///
 /// Front: 2/3 Legendary Bird Bard with Flying. Back: sorcery — Heroic
 /// Stanza: target creature gets +2/+2 and gains lifelink until end of
-/// turn. (The `{W/B}` hybrid pip is approximated as `{B}`.)
+/// turn. (The `{W/B}` pip is a real `ManaSymbol::Hybrid(White, Black)`.)
 pub fn abigale_poet_laureate() -> CardDefinition {
     let back = spell_back(
         "Heroic Stanza",
-        cost(&[generic(1), b()]),
+        cost(&[generic(1), crate::mana::hybrid(Color::White, Color::Black)]),
         CardType::Sorcery,
         Effect::Seq(vec![
             pump_target(2, 2),
@@ -1034,19 +1034,18 @@ pub fn abigale_poet_laureate() -> CardDefinition {
 /// Front: 3/4 Legendary Elf Druid (vanilla body for Witherbloom finisher
 /// curve). Back: sorcery — create a 1/1 black-and-green Pest creature
 /// token with the printed "Whenever this token attacks, you gain 1 life"
-/// rider. The hybrid `{B/G}` pip is approximated as `{B}` for cost-pay
-/// (matches the Witherbloom convention used by Essenceknit Scholar's
-/// `{B/G}` and Practiced Scrollsmith's `{R/W}` pips).
+/// rider. The `{B/G}` pip is a real `ManaSymbol::Hybrid(Black, Green)`,
+/// payable with either black or green (matches the Witherbloom convention
+/// used by Essenceknit Scholar's `{B/G}` and Practiced Scrollsmith's
+/// `{R/W}` pips).
 ///
 /// This MDFC closes out the Witherbloom (B/G) school in `STRIXHAVEN2.md`
 /// — the only ⏳ row left for the school before this push.
 pub fn lluwen_exchange_student() -> CardDefinition {
     use super::sorceries::pest_token;
-    use crate::effect::ManaPayload;
-    let _ = ManaPayload::Colors(vec![]); // suppress unused if not used elsewhere
     let back = spell_back(
         "Pest Friend",
-        cost(&[b()]),
+        cost(&[crate::mana::hybrid(Color::Black, Color::Green)]),
         CardType::Sorcery,
         Effect::CreateToken {
             who: PlayerRef::You,
