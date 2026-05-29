@@ -5162,7 +5162,8 @@ fn ancient_grudge_flashback_destroys_second_artifact_and_exiles() {
 
 /// Tragic Slip: target creature gets -13/-13 EOT (effectively lethal).
 #[test]
-fn tragic_slip_kills_creature_via_minus_thirteen() {
+fn tragic_slip_without_morbid_only_shrinks_minus_one() {
+    // No creature has died this turn → Morbid is off → only -1/-1.
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let ts = g.add_card_to_hand(0, catalog::tragic_slip());
@@ -5174,10 +5175,30 @@ fn tragic_slip_kills_creature_via_minus_thirteen() {
         mode: None, x_value: None,
     }).expect("Tragic Slip castable for {B}");
     drain_stack(&mut g);
-    // Either dead via state-based action (toughness ≤ 0), or pumped to
-    // -11/-11 — both end with the bear gone after SBAs run.
+    let c = g.battlefield.iter().find(|c| c.id == bear)
+        .expect("2/2 bear survives a -1/-1 (becomes 1/1)");
+    assert_eq!(c.power(), 1, "Morbid off: -1/-1 only");
+    assert_eq!(c.toughness(), 1);
+}
+
+#[test]
+fn tragic_slip_with_morbid_kills_via_minus_thirteen() {
+    // A creature died this turn → Morbid is on → full -13/-13.
+    let mut g = two_player_game();
+    // A creature died this turn so Morbid is satisfied.
+    g.players[0].creatures_died_this_turn = 1;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ts = g.add_card_to_hand(0, catalog::tragic_slip());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ts,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Tragic Slip castable for {B}");
+    drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
-        "Grizzly Bears should be dead from -13/-13");
+        "Morbid on: -13/-13 kills the bear");
 }
 
 // ── New cards: rummagers, burn, counters, removal, white tokens, ETB destroy ──

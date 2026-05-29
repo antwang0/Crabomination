@@ -2957,12 +2957,27 @@ pub fn ancient_grudge() -> CardDefinition {
     }
 }
 
-/// Sign in Blood is already wired in this module, but its sibling
-/// **Tragic Slip** — {B} Instant — Target creature gets -13/-13 until end
-/// of turn — fits the same mono-black removal slot. The Morbid rider is
-/// dropped (no morbid trigger primitive yet); the spell always applies the
-/// full -13/-13.
+/// **Tragic Slip** — {B} Instant. "Target creature gets -1/-1 until end of
+/// turn. Morbid — That creature gets -13/-13 until end of turn instead if a
+/// creature died this turn."
+///
+/// The Morbid rider is now wired via `Effect::If` gated on
+/// `Predicate::Any([CreaturesDiedThisTurnAtLeast{You,1},
+/// CreaturesDiedThisTurnAtLeast{EachOpponent,1}])` — i.e. a creature died
+/// under either player's control this turn. Without morbid it's a modest
+/// -1/-1; with morbid it's the full -13/-13.
 pub fn tragic_slip() -> CardDefinition {
+    use crate::effect::{PlayerRef, Predicate};
+    let morbid = Predicate::Any(vec![
+        Predicate::CreaturesDiedThisTurnAtLeast {
+            who: PlayerRef::You,
+            at_least: Value::Const(1),
+        },
+        Predicate::CreaturesDiedThisTurnAtLeast {
+            who: PlayerRef::EachOpponent,
+            at_least: Value::Const(1),
+        },
+    ]);
     CardDefinition {
         name: "Tragic Slip",
         cost: cost(&[b()]),
@@ -2972,11 +2987,20 @@ pub fn tragic_slip() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::PumpPT {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(-13),
-            toughness: Value::Const(-13),
-            duration: Duration::EndOfTurn,
+        effect: Effect::If {
+            cond: morbid,
+            then: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-13),
+                toughness: Value::Const(-13),
+                duration: Duration::EndOfTurn,
+            }),
+            else_: Box::new(Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(-1),
+                toughness: Value::Const(-1),
+                duration: Duration::EndOfTurn,
+            }),
         },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
