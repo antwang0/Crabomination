@@ -5,6 +5,82 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
+## Recent additions (Push XXXIX — modern_decks: coverage backfill + ETB-counter fix + CR 706.2)
+
+This session focused on test-coverage backfill, two engine fixes
+surfaced by that coverage, three CR sections, and one improvement each to
+engine/UI/server.
+
+- **49 cards with new functionality tests** (all previously wired but
+  untested by name):
+  - **SOS (14)**: Lecturing Scornmage, Melancholic Poet, Muse Seeker,
+    Poisoner's Apprentice, Rearing Embermare, Rehearsed Debater, Tester
+    of the Tangential, Brush Off, Zaffai and the Tempests, and the five
+    school lands (Fields of Strife, Forum of Amity, Paradox Gardens,
+    Spectacle Summit, Titan's Grave).
+  - **STX (6)**: Dina Soul Steeper, Professor Onyx, Strixhaven
+    Pondkeeper, Zimone Quandrix Prodigy, Academic Probation, Unwilling
+    Ingredient.
+  - **Modern decks (20)**: Wall of Blossoms, Monastery Swiftspear, Relic
+    of Progenitus, Stonecoil Serpent, Decree of Justice, Spell Queller,
+    Amped Raptor, Bonecrusher Giant, Magda anthem, Three Tree City, Wight
+    of the Reliquary, and the dual-land cycle (Godless Shrine, Hallowed
+    Fountain, Overgrown Tomb, Blooming Marsh, Copperline Gorge, Meticulous
+    Archive, Shadowy Backstreet, Undercity Sewers, Darkbore Pathway).
+  - **Zendikar (9)**: the full fetchland cycle (Polluted Delta,
+    Bloodstained Mire, Wooded Foothills, Windswept Heath, Misty
+    Rainforest, Scalding Tarn, Verdant Catacombs, Arid Mesa, Marsh Flats).
+
+- **Engine fix — ETB/triggered counter auto-targeting**: `auto_target_
+  for_effect` now walks the stack for counter-class effects (gated on the
+  `IsSpellOnStack` filter), preferring the topmost spell not cast by the
+  controller. Previously Spell Queller / Mystic Snake-style ETB counters
+  fizzled because the auto-target picker only walked players, graveyards,
+  and the battlefield — never the stack.
+
+- **Card fix — Stonecoil Serpent** now enters via `enters_with_counters`
+  (CR 614.12 replacement) instead of an ETB AddCounter trigger, so its
+  0/0 base body never hits the SBA death check counter-less.
+
+- **Two card promotions**: Academic Probation (Noop stub → tap + stun
+  mode 0; the mana-value spell-lock mode 1 is omitted — no per-player
+  cast-restriction primitive) and Unwilling Ingredient (free MayDo →
+  MayPay {2}{B} on its death-draw).
+
+- **CR 706.2 — Rolling a Die (modifiers)**: `Effect::RollDie` gains a
+  serde-defaulted `modifier: Value` applied to each natural roll before
+  the results table (floored at 1, may exceed `sides`). Promotes 706.2
+  to ✅. Tests: `cr_706_2_*`.
+
+- **CR 122.1d (near Academic Probation)** + **CR 119.8 (burn-damage
+  path)**: new end-to-end lock-in tests
+  (`cr_122_1d_academic_probation_stun_persists_through_untap`,
+  `cr_119_8_player_cannot_lose_life_blocks_burn_damage`).
+
+- **UI (server/view.rs)**: `trigger_event_label` no longer falls through
+  to `""` for unenumerated EventKind×EventScope pairs — a scope-aware
+  fallback guarantees no blank trigger chip on the client.
+
+- **Server (crabomination_server)**: `MatchStats` tracks alternate/deckout
+  wins (clean wins where every loser ended with life > 0) and surfaces
+  `alt_wins=N` in the rolling summary.
+
+### Follow-ups noticed this run (not yet tackled)
+
+- **Academic Probation mode 1** ("until your next turn, target player
+  can't cast spells with mana value 3 or less") needs a per-player
+  `CantCastSpellsWithMvAtMost(n)` restriction primitive consulted in the
+  cast-legality path. Same shape would unlock similar "Silence"-class
+  lockdowns.
+- **Miracle / may-play alt-cost**: Lorehold the Historian's miracle and
+  any future Miracle card cast for free via `GrantMayPlay`. A
+  `MayPlayPermission.alt_cost: Option<ManaCost>` field + a cast-from-
+  may-play payment gate would make the {2} miracle cost faithful
+  (currently free). Touches ~34 GrantMayPlay construction sites.
+- **Spell Queller mana-value filter**: the wired ETB counters *any*
+  spell; the printed card only hits MV ≤ 4. Needs an
+  `IsSpellOnStack`-with-MV-cap target filter.
+
 ## Recent additions (Push XXXVIII — modern_decks: real hybrid mana + 3 CR sections)
 
 This session discovered the engine already supported two-color hybrid

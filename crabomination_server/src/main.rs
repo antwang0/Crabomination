@@ -355,17 +355,16 @@ impl MatchStats {
     fn observe_win_kind(&mut self, winner: usize, final_life: &[i32]) {
         // Gather every non-winner seat's life. With no opponents in the
         // array we can't classify the win, so bail.
-        let mut saw_loser = false;
-        let all_losers_alive = final_life
+        let mut losers = final_life
             .iter()
             .enumerate()
             .filter(|&(i, _)| i != winner)
-            .map(|(_, &l)| {
-                saw_loser = true;
-                l > 0
-            })
-            .all(|alive| alive);
-        if saw_loser && all_losers_alive {
+            .map(|(_, &l)| l)
+            .peekable();
+        if losers.peek().is_none() {
+            return;
+        }
+        if losers.all(|l| l > 0) {
             self.deckout_wins = self.deckout_wins.saturating_add(1);
         }
     }

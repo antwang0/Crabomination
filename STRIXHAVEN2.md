@@ -22,6 +22,20 @@ Two adjacent catalogs:
 | STX (327 cards) | 3144 (incl. synthesised variants — batches 155–206 add 902 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
+Push (claude/modern_decks, Push XXXIX — coverage backfill): added
+functionality tests for 20 previously-untested-by-name SOS/STX cards (14
+SOS: Lecturing Scornmage, Melancholic Poet, Muse Seeker, Poisoner's
+Apprentice, Rearing Embermare, Rehearsed Debater, Tester of the
+Tangential, Brush Off, Zaffai, and the five school lands; 6 STX: Dina,
+Professor Onyx, Strixhaven Pondkeeper, Zimone, Academic Probation,
+Unwilling Ingredient). Promoted **Academic Probation** (Noop stub → tap +
+stun mode 0; MV spell-lock mode 1 omitted) and **Unwilling Ingredient**
+(free MayDo → MayPay {2}{B} death-draw). Engine fix surfaced by Spell
+Queller (decks): `auto_target_for_effect` now walks the stack for
+counter-class effects so ETB/triggered counters can target a spell. See
+TODO.md (Push XXXIX) for the full breakdown including CR 706.2 die-roll
+modifiers and the UI/server improvements.
+
 Push (claude/modern_decks, batches 207-208): 40 STX cards across all five
 colleges + the **Exalted** mechanic (CR 702.83). (Batch 208 adds 7
 cross-school follow-ups: a second Exalted body, ETB burn/lifegain Spirits,
