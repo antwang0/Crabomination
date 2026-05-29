@@ -4114,5 +4114,18 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::silverquill::silverquill_deathscribe_b205,
         super::prismari::prismari_pyrosmith_b205,
         super::prismari::prismari_galemage_b205,
+        // ── batch 206 — cross-school staples ──
+        super::lorehold::lorehold_skirmisher_b206,
+        super::lorehold::lorehold_archivekeeper_b206,
+        super::lorehold::lorehold_ember_veteran_b206,
+        super::witherbloom::witherbloom_grim_harvest_b206,
+        super::witherbloom::witherbloom_sporecaller_b206,
+        super::witherbloom::witherbloom_fungalbeast_b206,
+        super::quandrix::quandrix_scholar_b206,
+        super::quandrix::quandrix_megafractal_b206,
+        super::silverquill::silverquill_dictator_b206,
+        super::silverquill::silverquill_purge_b206,
+        super::prismari::prismari_inferno_b206,
+        super::prismari::prismari_windscholar_b206,
     ]
 }

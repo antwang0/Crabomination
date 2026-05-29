@@ -5,7 +5,20 @@ Items are grouped by area and roughly ordered by impact within each group.
 See `CUBE_FEATURES.md` (cube-card implementation status) and
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
 
-## Recent additions (Push XXXIV — 2026-05-29, session 18, batch 205)
+## Recent additions (Push XXXIV — 2026-05-29, session 18, batches 205-206)
+
+### New cards (12 more across batch 206, all tested)
+- **Lorehold (3)** — Skirmisher (on-attack ping), Archivekeeper (ETB
+  draw), Ember Veteran (Trample + magecraft self-pump).
+- **Witherbloom (3)** — Grim Harvest (drain 4), Sporecaller
+  (aristocrats lifegain), Fungalbeast (ETB gain 2).
+- **Quandrix (2)** — Scholar (magecraft self-pump), Megafractal (5/5
+  Trample Fractal).
+- **Silverquill (2)** — Dictator (3/3 flying lifelink Inkling), Purge
+  (exile a ≤2-power creature).
+- **Prismari (2)** — Inferno (4-dmg sorcery), Windscholar (ETB scry+draw).
+- Total this session: **42 cards** across batches 205-206.
+
 
 ### Engine — NEW mechanic: Enrage (CR 702.130)
 - **`EventKind::DealtDamage`** — the first damage-recipient-keyed

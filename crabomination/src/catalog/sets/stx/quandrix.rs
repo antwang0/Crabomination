@@ -19781,3 +19781,70 @@ pub fn quandrix_mistcaller_b205() -> CardDefinition {
         affinity_filter: None,
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Batch 206 (modern_decks) — Quandrix (G/U) staples.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Quandrix Scholar (b206) — {1}{U} 1/2 Vedalken Wizard.
+/// Magecraft — whenever you cast or copy an instant or sorcery, this
+/// creature gets +1/+1 until end of turn.
+pub fn quandrix_scholar_b206() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Scholar (b206)",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
+/// Quandrix Megafractal (b206) — {4}{G}{U} 5/5 Fractal with Trample.
+/// A big curve-topper for the Fractal shell.
+pub fn quandrix_megafractal_b206() -> CardDefinition {
+    CardDefinition {
+        name: "Quandrix Megafractal (b206)",
+        cost: cost(&[generic(4), g(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![Keyword::Trample],
+        effect: Effect::Noop,
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}

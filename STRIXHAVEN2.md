@@ -19,10 +19,10 @@ Two adjacent catalogs:
 | Set | ✅ done | 🟡 partial | ⏳ todo |
 |---|---|---|---|
 | SOS (255 cards) | 255 | 0 | 0 |
-| STX (327 cards) | 3132 (incl. synthesised variants — batches 155–205 add 890 cards across all five colleges) | 0 | 0 |
+| STX (327 cards) | 3144 (incl. synthesised variants — batches 155–206 add 902 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (claude/modern_decks, batch 205, claude/modern_decks): 30
+Push (claude/modern_decks, batches 205-206, claude/modern_decks): 42
 additional STX cards across all five colleges + the **Enrage** mechanic
 (new `EventKind::DealtDamage`, CR 702.130). Highlights: the Lorehold
 (R/W) Enrage cycle (Battlescarred, Echovenger, Vengescribe, Grudgebearer,
