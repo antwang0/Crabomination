@@ -8,7 +8,6 @@
 //! are already wired in `mono` / SOS — those compose against the same
 //! `LastCreatedToken` plumbing this module re-uses.
 
-use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
     EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
@@ -35,7 +34,6 @@ pub fn quandrix_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Apprentice",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -45,7 +43,6 @@ pub fn quandrix_apprentice() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -54,17 +51,7 @@ pub fn quandrix_apprentice() -> CardDefinition {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -80,7 +67,6 @@ pub fn quandrix_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pledgemage",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -108,17 +94,7 @@ pub fn quandrix_pledgemage() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -148,7 +124,6 @@ pub fn decisive_denial() -> CardDefinition {
     CardDefinition {
         name: "Decisive Denial",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -179,14 +154,7 @@ pub fn decisive_denial() -> CardDefinition {
                 ),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -203,7 +171,6 @@ pub fn quandrix_command() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Command",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -220,9 +187,7 @@ pub fn quandrix_command() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
         ..Default::default()
     }
 }
@@ -280,7 +245,6 @@ pub fn fractal_summoning() -> CardDefinition {
     CardDefinition {
         name: "Fractal Summoning",
         cost: cost(&[x(), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
@@ -301,19 +265,8 @@ pub fn fractal_summoning() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -341,7 +294,6 @@ pub fn symmathematics() -> CardDefinition {
     CardDefinition {
         name: "Symmathematics",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -353,7 +305,6 @@ pub fn symmathematics() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             // Magecraft: double the +1/+1 counters on Symmathematics.
             magecraft(Effect::AddCounter {
@@ -365,18 +316,9 @@ pub fn symmathematics() -> CardDefinition {
                 },
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         // CR 614.12 "enters with two +1/+1 counters on it" replacement.
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -415,7 +357,6 @@ pub fn quandrix_summoner() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Summoner",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -425,7 +366,6 @@ pub fn quandrix_summoner() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: create_token_with_counter(
@@ -436,17 +376,7 @@ pub fn quandrix_summoner() -> CardDefinition {
                 1,
             ),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -465,7 +395,6 @@ pub fn quandrix_scholar() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scholar",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -475,7 +404,6 @@ pub fn quandrix_scholar() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -483,17 +411,7 @@ pub fn quandrix_scholar() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -511,7 +429,6 @@ pub fn quandrix_ecologist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Ecologist",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
@@ -521,7 +438,6 @@ pub fn quandrix_ecologist() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -536,17 +452,7 @@ pub fn quandrix_ecologist() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -565,7 +471,6 @@ pub fn quandrix_symmetrist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symmetrist",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -575,7 +480,6 @@ pub fn quandrix_symmetrist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -583,17 +487,7 @@ pub fn quandrix_symmetrist() -> CardDefinition {
                 Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -611,7 +505,6 @@ pub fn quandrix_reckoner() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reckoner",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Druid],
@@ -621,7 +514,6 @@ pub fn quandrix_reckoner() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -630,17 +522,7 @@ pub fn quandrix_reckoner() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -658,7 +540,6 @@ pub fn fractal_reinforcement() -> CardDefinition {
     CardDefinition {
         name: "Fractal Reinforcement",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -673,19 +554,8 @@ pub fn fractal_reinforcement() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -705,7 +575,6 @@ pub fn quandrix_tutelary() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tutelary",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -715,7 +584,6 @@ pub fn quandrix_tutelary() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature
                 .and(SelectionRequirement::HasCreatureType(CreatureType::Fractal))
@@ -723,17 +591,7 @@ pub fn quandrix_tutelary() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -752,7 +610,6 @@ pub fn quandrix_fractalflow() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalflow",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -762,7 +619,6 @@ pub fn quandrix_fractalflow() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -778,17 +634,7 @@ pub fn quandrix_fractalflow() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -807,7 +653,6 @@ pub fn quandrix_scrycharmer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scrycharmer",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -833,7 +678,6 @@ pub fn dragonsguard_elite() -> CardDefinition {
     CardDefinition {
         name: "Dragonsguard Elite",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
@@ -868,17 +712,7 @@ pub fn dragonsguard_elite() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -898,7 +732,6 @@ pub fn quandrix_crystallizer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Crystallizer",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Crab],
@@ -928,17 +761,7 @@ pub fn quandrix_crystallizer() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -959,7 +782,6 @@ pub fn quandrix_multibinding() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Multibinding",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::AddCounter {
@@ -992,7 +814,6 @@ pub fn eureka_moment() -> CardDefinition {
     CardDefinition {
         name: "Eureka Moment",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1018,19 +839,8 @@ pub fn eureka_moment() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1049,7 +859,6 @@ pub fn quandrix_geomyst() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geomyst",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -1059,7 +868,6 @@ pub fn quandrix_geomyst() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -1067,17 +875,7 @@ pub fn quandrix_geomyst() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1097,7 +895,6 @@ pub fn quandrix_doublecaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublecaster",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -1107,19 +904,8 @@ pub fn quandrix_doublecaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1138,7 +924,6 @@ pub fn quandrix_wavewright() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavewright",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -1148,7 +933,6 @@ pub fn quandrix_wavewright() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1162,17 +946,7 @@ pub fn quandrix_wavewright() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1191,7 +965,6 @@ pub fn quandrix_sapsprout() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sapsprout",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -1201,19 +974,8 @@ pub fn quandrix_sapsprout() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1233,7 +995,6 @@ pub fn fractal_growth() -> CardDefinition {
     CardDefinition {
         name: "Fractal Growth",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1260,19 +1021,8 @@ pub fn fractal_growth() -> CardDefinition {
                 duration: crate::effect::Duration::EndOfTurn,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1290,7 +1040,6 @@ pub fn quandrix_calculus() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculus",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -1300,7 +1049,6 @@ pub fn quandrix_calculus() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1314,17 +1062,7 @@ pub fn quandrix_calculus() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1343,7 +1081,6 @@ pub fn fractal_multiplier() -> CardDefinition {
     CardDefinition {
         name: "Fractal Multiplier",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1359,19 +1096,8 @@ pub fn fractal_multiplier() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
             },
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1391,7 +1117,6 @@ pub fn fractal_bloom() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloom",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1430,19 +1155,8 @@ pub fn fractal_bloom() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1462,7 +1176,6 @@ pub fn quandrix_spellweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellweaver",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -1472,7 +1185,6 @@ pub fn quandrix_spellweaver() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1487,17 +1199,7 @@ pub fn quandrix_spellweaver() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1515,7 +1217,6 @@ pub fn quandrix_wavedancer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavedancer",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -1525,7 +1226,6 @@ pub fn quandrix_wavedancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -1533,17 +1233,7 @@ pub fn quandrix_wavedancer() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1560,7 +1250,6 @@ pub fn fractal_synthesis() -> CardDefinition {
     CardDefinition {
         name: "Fractal Synthesis",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1577,19 +1266,8 @@ pub fn fractal_synthesis() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1609,7 +1287,6 @@ pub fn quandrix_hatchling() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hatchling",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -1619,19 +1296,9 @@ pub fn quandrix_hatchling() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1649,7 +1316,6 @@ pub fn quandrix_calibrator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calibrator",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -1659,7 +1325,6 @@ pub fn quandrix_calibrator() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -1670,17 +1335,7 @@ pub fn quandrix_calibrator() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1699,7 +1354,6 @@ pub fn fractal_resonance() -> CardDefinition {
     CardDefinition {
         name: "Fractal Resonance",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1710,19 +1364,8 @@ pub fn fractal_resonance() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1740,7 +1383,6 @@ pub fn quandrix_mistweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistweaver",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -1750,22 +1392,11 @@ pub fn quandrix_mistweaver() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1784,7 +1415,6 @@ pub fn fractal_harvest() -> CardDefinition {
     CardDefinition {
         name: "Fractal Harvest",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1800,19 +1430,8 @@ pub fn fractal_harvest() -> CardDefinition {
             ),
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1829,7 +1448,6 @@ pub fn quandrix_sage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sage",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1839,7 +1457,6 @@ pub fn quandrix_sage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -1847,17 +1464,7 @@ pub fn quandrix_sage() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1875,7 +1482,6 @@ pub fn quandrix_counterbalance() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterbalance",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1892,19 +1498,8 @@ pub fn quandrix_counterbalance() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1922,7 +1517,6 @@ pub fn fractal_bloom_caller() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloom-Caller",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -1932,7 +1526,6 @@ pub fn fractal_bloom_caller() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: create_token_with_counter(
@@ -1943,17 +1536,7 @@ pub fn fractal_bloom_caller() -> CardDefinition {
                 2,
             ),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1971,7 +1554,6 @@ pub fn quandrix_synthesist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Synthesist",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -1981,7 +1563,6 @@ pub fn quandrix_synthesist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -1989,17 +1570,7 @@ pub fn quandrix_synthesist() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2020,7 +1591,6 @@ pub fn fractal_tessellation() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tessellation",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2041,19 +1611,8 @@ pub fn fractal_tessellation() -> CardDefinition {
                 )),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2070,7 +1629,6 @@ pub fn quandrix_mistshaper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistshaper",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -2080,19 +1638,8 @@ pub fn quandrix_mistshaper() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2109,7 +1656,6 @@ pub fn quandrix_polymath() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Polymath",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -2119,7 +1665,6 @@ pub fn quandrix_polymath() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2137,17 +1682,7 @@ pub fn quandrix_polymath() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2163,7 +1698,6 @@ pub fn fractal_avenger() -> CardDefinition {
     CardDefinition {
         name: "Fractal Avenger",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Soldier],
@@ -2173,19 +1707,9 @@ pub fn fractal_avenger() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2201,7 +1725,6 @@ pub fn quandrix_cartographer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cartographer",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -2211,7 +1734,6 @@ pub fn quandrix_cartographer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -2221,17 +1743,7 @@ pub fn quandrix_cartographer() -> CardDefinition {
                 to: crate::effect::ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2247,7 +1759,6 @@ pub fn fractal_sovereign() -> CardDefinition {
     CardDefinition {
         name: "Fractal Sovereign",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -2257,7 +1768,6 @@ pub fn fractal_sovereign() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -2272,17 +1782,7 @@ pub fn fractal_sovereign() -> CardDefinition {
                 )),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2297,7 +1797,6 @@ pub fn quandrix_pairweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pairweaver",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2322,19 +1821,8 @@ pub fn quandrix_pairweaver() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2356,7 +1844,6 @@ pub fn quandrix_pondkeeper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondkeeper",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -2366,7 +1853,6 @@ pub fn quandrix_pondkeeper() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2387,17 +1873,7 @@ pub fn quandrix_pondkeeper() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2413,7 +1889,6 @@ pub fn quandrix_counterproof() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterproof",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2432,19 +1907,8 @@ pub fn quandrix_counterproof() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2463,7 +1927,6 @@ pub fn quandrix_logician() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Logician",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -2473,7 +1936,6 @@ pub fn quandrix_logician() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2491,17 +1953,7 @@ pub fn quandrix_logician() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2521,7 +1973,6 @@ pub fn fractal_echoist() -> CardDefinition {
     CardDefinition {
         name: "Fractal Echoist",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -2531,7 +1982,6 @@ pub fn fractal_echoist() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2555,17 +2005,7 @@ pub fn fractal_echoist() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2581,7 +2021,6 @@ pub fn quandrix_mathenotaur() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathenotaur",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Centaur, CreatureType::Wizard],
@@ -2591,7 +2030,6 @@ pub fn quandrix_mathenotaur() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -2605,17 +2043,7 @@ pub fn quandrix_mathenotaur() -> CardDefinition {
                 },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2633,7 +2061,6 @@ pub fn fractal_surge() -> CardDefinition {
     CardDefinition {
         name: "Fractal Surge",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2653,19 +2080,8 @@ pub fn fractal_surge() -> CardDefinition {
                 )),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2680,7 +2096,6 @@ pub fn quandrix_aether_adept() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Aether Adept",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -2707,17 +2122,7 @@ pub fn quandrix_aether_adept() -> CardDefinition {
                     self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2737,7 +2142,6 @@ pub fn quandrix_symmetrycaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symmetrycaster",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -2747,7 +2151,6 @@ pub fn quandrix_symmetrycaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -2756,17 +2159,7 @@ pub fn quandrix_symmetrycaster() -> CardDefinition {
                 amount: Value::HandSizeOf(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2788,7 +2181,6 @@ pub fn quandrix_pondweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondweaver",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -2798,22 +2190,11 @@ pub fn quandrix_pondweaver() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2830,7 +2211,6 @@ pub fn quandrix_fractalseed() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalseed",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -2840,7 +2220,6 @@ pub fn quandrix_fractalseed() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -2854,17 +2233,7 @@ pub fn quandrix_fractalseed() -> CardDefinition {
                 })),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2881,7 +2250,6 @@ pub fn quandrix_mapmaker() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mapmaker",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -2891,7 +2259,6 @@ pub fn quandrix_mapmaker() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -2903,17 +2270,7 @@ pub fn quandrix_mapmaker() -> CardDefinition {
                 },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2930,7 +2287,6 @@ pub fn quandrix_fractalwave() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalwave",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2953,19 +2309,8 @@ pub fn quandrix_fractalwave() -> CardDefinition {
                 })),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2982,7 +2327,6 @@ pub fn fractal_theorist() -> CardDefinition {
     CardDefinition {
         name: "Fractal Theorist",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -2992,7 +2336,6 @@ pub fn fractal_theorist() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -3002,17 +2345,7 @@ pub fn fractal_theorist() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3033,7 +2366,6 @@ pub fn quandrix_sumcaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcaster",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -3043,7 +2375,6 @@ pub fn quandrix_sumcaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "draw a card, then discard a card".to_string(),
             body: Box::new(Effect::Seq(vec![
@@ -3058,17 +2389,7 @@ pub fn quandrix_sumcaster() -> CardDefinition {
                 },
             ])),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3084,7 +2405,6 @@ pub fn fractal_multiplicand() -> CardDefinition {
     CardDefinition {
         name: "Fractal Multiplicand",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3094,19 +2414,9 @@ pub fn fractal_multiplicand() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3121,7 +2431,6 @@ pub fn quandrix_calculus_mage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculus-Mage",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -3131,7 +2440,6 @@ pub fn quandrix_calculus_mage() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3156,17 +2464,7 @@ pub fn quandrix_calculus_mage() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3181,7 +2479,6 @@ pub fn quandrix_tidecaller() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidecaller",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -3191,24 +2488,13 @@ pub fn quandrix_tidecaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Tap {
                 what: target_filtered(SelectionRequirement::Creature),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3224,7 +2510,6 @@ pub fn fractal_spawning() -> CardDefinition {
     CardDefinition {
         name: "Fractal Spawning",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3242,19 +2527,8 @@ pub fn fractal_spawning() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3270,7 +2544,6 @@ pub fn quandrix_hydronaut() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hydronaut",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -3280,7 +2553,6 @@ pub fn quandrix_hydronaut() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -3291,17 +2563,7 @@ pub fn quandrix_hydronaut() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3314,7 +2576,6 @@ pub fn quandrix_fractalweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalweaver",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3324,7 +2585,6 @@ pub fn quandrix_fractalweaver() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3339,17 +2599,7 @@ pub fn quandrix_fractalweaver() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3362,7 +2612,6 @@ pub fn quandrix_geomancer_b30() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geomancer B30",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -3372,7 +2621,6 @@ pub fn quandrix_geomancer_b30() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -3381,17 +2629,7 @@ pub fn quandrix_geomancer_b30() -> CardDefinition {
                 to: crate::effect::ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3404,7 +2642,6 @@ pub fn quandrix_mindforge() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mindforge",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3420,19 +2657,8 @@ pub fn quandrix_mindforge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3445,7 +2671,6 @@ pub fn quandrix_branchwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Branchwarden",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -3455,7 +2680,6 @@ pub fn quandrix_branchwarden() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -3463,17 +2687,7 @@ pub fn quandrix_branchwarden() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3486,7 +2700,6 @@ pub fn quandrix_tidewright() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidewright",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -3496,7 +2709,6 @@ pub fn quandrix_tidewright() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -3506,17 +2718,7 @@ pub fn quandrix_tidewright() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3527,7 +2729,6 @@ pub fn quandrix_wavewriter() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavewriter",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3537,19 +2738,8 @@ pub fn quandrix_wavewriter() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3560,7 +2750,6 @@ pub fn quandrix_scribe() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scribe",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -3570,19 +2759,8 @@ pub fn quandrix_scribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3594,7 +2772,6 @@ pub fn quandrix_handmage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Handmage",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3604,7 +2781,6 @@ pub fn quandrix_handmage() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3620,17 +2796,7 @@ pub fn quandrix_handmage() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3641,7 +2807,6 @@ pub fn quandrix_equipoise() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equipoise",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3660,19 +2825,8 @@ pub fn quandrix_equipoise() -> CardDefinition {
                 amount: Value::HandSizeOf(PlayerRef::You),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3682,7 +2836,6 @@ pub fn quandrix_visionary() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Visionary",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -3692,7 +2845,6 @@ pub fn quandrix_visionary() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -3700,17 +2852,7 @@ pub fn quandrix_visionary() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3723,7 +2865,6 @@ pub fn quandrix_wilderwright() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wilderwright",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -3733,7 +2874,6 @@ pub fn quandrix_wilderwright() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -3746,17 +2886,7 @@ pub fn quandrix_wilderwright() -> CardDefinition {
                 },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3769,7 +2899,6 @@ pub fn quandrix_pulseweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pulseweaver",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3779,19 +2908,8 @@ pub fn quandrix_pulseweaver() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3801,7 +2919,6 @@ pub fn fractal_reckoner() -> CardDefinition {
     CardDefinition {
         name: "Fractal Reckoner",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -3811,7 +2928,6 @@ pub fn fractal_reckoner() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -3819,17 +2935,7 @@ pub fn fractal_reckoner() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3839,7 +2945,6 @@ pub fn quandrix_inquiry() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Inquiry",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3855,19 +2960,8 @@ pub fn quandrix_inquiry() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3878,7 +2972,6 @@ pub fn quandrix_topologist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Topologist",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -3888,7 +2981,6 @@ pub fn quandrix_topologist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3903,17 +2995,7 @@ pub fn quandrix_topologist() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3926,7 +3008,6 @@ pub fn quandrix_wavecharger() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavecharger",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -3936,7 +3017,6 @@ pub fn quandrix_wavecharger() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
@@ -3951,17 +3031,7 @@ pub fn quandrix_wavecharger() -> CardDefinition {
                 }),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3972,7 +3042,6 @@ pub fn fractal_swarm() -> CardDefinition {
     CardDefinition {
         name: "Fractal Swarm",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3994,19 +3063,8 @@ pub fn fractal_swarm() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4016,7 +3074,6 @@ pub fn quandrix_proofwriter() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Proofwriter",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -4026,7 +3083,6 @@ pub fn quandrix_proofwriter() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -4034,17 +3090,7 @@ pub fn quandrix_proofwriter() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4055,7 +3101,6 @@ pub fn quandrix_solver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Solver",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4065,19 +3110,8 @@ pub fn quandrix_solver() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4090,7 +3124,6 @@ pub fn quandrix_b35_geomancer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geomancer II",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -4100,7 +3133,6 @@ pub fn quandrix_b35_geomancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4116,17 +3148,7 @@ pub fn quandrix_b35_geomancer() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4138,7 +3160,6 @@ pub fn fractal_grower() -> CardDefinition {
     CardDefinition {
         name: "Fractal Grower",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -4148,7 +3169,6 @@ pub fn fractal_grower() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -4164,17 +3184,7 @@ pub fn fractal_grower() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4184,7 +3194,6 @@ pub fn quandrix_tideseer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideseer",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4194,22 +3203,11 @@ pub fn quandrix_tideseer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4219,7 +3217,6 @@ pub fn fractal_tidecaller() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tidecaller",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -4229,7 +3226,6 @@ pub fn fractal_tidecaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -4237,17 +3233,7 @@ pub fn fractal_tidecaller() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4260,7 +3246,6 @@ pub fn quandrix_researcher() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Researcher",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -4270,7 +3255,6 @@ pub fn quandrix_researcher() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -4284,17 +3268,7 @@ pub fn quandrix_researcher() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4304,7 +3278,6 @@ pub fn quandrix_scout() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scout",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Scout],
@@ -4314,19 +3287,8 @@ pub fn quandrix_scout() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4337,7 +3299,6 @@ pub fn fractal_reefborn() -> CardDefinition {
     CardDefinition {
         name: "Fractal Reefborn",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -4347,7 +3308,6 @@ pub fn fractal_reefborn() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -4361,17 +3321,7 @@ pub fn fractal_reefborn() -> CardDefinition {
                 },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4382,7 +3332,6 @@ pub fn quandrix_b35_equation() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equation II",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4395,19 +3344,8 @@ pub fn quandrix_b35_equation() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4419,7 +3357,6 @@ pub fn quandrix_pondkeeper_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondkeeper II",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Druid],
@@ -4429,22 +3366,11 @@ pub fn quandrix_pondkeeper_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4454,7 +3380,6 @@ pub fn fractal_emergent() -> CardDefinition {
     CardDefinition {
         name: "Fractal Emergent",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -4464,19 +3389,9 @@ pub fn fractal_emergent() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4486,7 +3401,6 @@ pub fn quandrix_fluctuator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fluctuator",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -4496,7 +3410,6 @@ pub fn quandrix_fluctuator() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -4504,17 +3417,7 @@ pub fn quandrix_fluctuator() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4525,7 +3428,6 @@ pub fn quandrix_doublecaster_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublecaster II",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4535,7 +3437,6 @@ pub fn quandrix_doublecaster_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -4545,17 +3446,7 @@ pub fn quandrix_doublecaster_v2() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4565,7 +3456,6 @@ pub fn quandrix_scaler() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scaler",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -4575,19 +3465,8 @@ pub fn quandrix_scaler() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4599,7 +3478,6 @@ pub fn quandrix_basinkeeper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Basinkeeper",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Druid],
@@ -4609,7 +3487,6 @@ pub fn quandrix_basinkeeper() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: create_token_with_counter(
@@ -4620,17 +3497,7 @@ pub fn quandrix_basinkeeper() -> CardDefinition {
                 2,
             ),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4642,7 +3509,6 @@ pub fn quandrix_counterbearer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterbearer",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -4652,7 +3518,6 @@ pub fn quandrix_counterbearer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::CounterAdded(CounterType::PlusOnePlusOne),
@@ -4670,17 +3535,7 @@ pub fn quandrix_counterbearer() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4692,7 +3547,6 @@ pub fn quandrix_scrymaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scrymaster",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4702,7 +3556,6 @@ pub fn quandrix_scrymaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4716,17 +3569,7 @@ pub fn quandrix_scrymaster() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4737,7 +3580,6 @@ pub fn fractal_burst() -> CardDefinition {
     CardDefinition {
         name: "Fractal Burst",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4755,19 +3597,8 @@ pub fn fractal_burst() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4777,7 +3608,6 @@ pub fn quandrix_aetherwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Aetherwarden",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Wizard],
@@ -4787,7 +3617,6 @@ pub fn quandrix_aetherwarden() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4802,17 +3631,7 @@ pub fn quandrix_aetherwarden() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4822,7 +3641,6 @@ pub fn quandrix_tideshaper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideshaper",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4832,7 +3650,6 @@ pub fn quandrix_tideshaper() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -4842,17 +3659,7 @@ pub fn quandrix_tideshaper() -> CardDefinition {
                 )))),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4863,7 +3670,6 @@ pub fn fractal_catalyst() -> CardDefinition {
     CardDefinition {
         name: "Fractal Catalyst",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -4873,7 +3679,6 @@ pub fn fractal_catalyst() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -4881,17 +3686,7 @@ pub fn fractal_catalyst() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4902,7 +3697,6 @@ pub fn quandrix_equalizer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equalizer",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -4912,7 +3706,6 @@ pub fn quandrix_equalizer() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -4925,17 +3718,7 @@ pub fn quandrix_equalizer() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4950,7 +3733,6 @@ pub fn quandrix_loomweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Loomweaver",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -4960,19 +3742,8 @@ pub fn quandrix_loomweaver() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -4983,7 +3754,6 @@ pub fn fractal_stargazer() -> CardDefinition {
     CardDefinition {
         name: "Fractal Stargazer",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -4993,22 +3763,11 @@ pub fn fractal_stargazer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5020,7 +3779,6 @@ pub fn quandrix_bountycaller() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bountycaller",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog, CreatureType::Druid],
@@ -5030,7 +3788,6 @@ pub fn quandrix_bountycaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -5043,17 +3800,7 @@ pub fn quandrix_bountycaller() -> CardDefinition {
                 amount: Value::Const(4),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5064,7 +3811,6 @@ pub fn quandrix_spellseer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellseer",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5074,7 +3820,6 @@ pub fn quandrix_spellseer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::Scry {
                 who: PlayerRef::You,
@@ -5082,17 +3827,7 @@ pub fn quandrix_spellseer() -> CardDefinition {
             }),
             magecraft_loot(),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5104,7 +3839,6 @@ pub fn quandrix_aquamancer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Aquamancer",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -5114,19 +3848,8 @@ pub fn quandrix_aquamancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5138,7 +3861,6 @@ pub fn fractal_aquanaut() -> CardDefinition {
     CardDefinition {
         name: "Fractal Aquanaut",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -5148,19 +3870,9 @@ pub fn fractal_aquanaut() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5172,7 +3884,6 @@ pub fn quandrix_seedling() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Seedling",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -5182,19 +3893,8 @@ pub fn quandrix_seedling() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5205,7 +3905,6 @@ pub fn quandrix_amplifier() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Amplifier",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5215,22 +3914,11 @@ pub fn quandrix_amplifier() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5242,7 +3930,6 @@ pub fn fractal_bloomweaver() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloomweaver",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -5252,7 +3939,6 @@ pub fn fractal_bloomweaver() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Fractal)
@@ -5262,17 +3948,8 @@ pub fn fractal_bloomweaver() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5286,7 +3963,6 @@ pub fn fractal_mathmage() -> CardDefinition {
     CardDefinition {
         name: "Fractal Mathmage",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -5296,19 +3972,9 @@ pub fn fractal_mathmage() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5320,7 +3986,6 @@ pub fn quandrix_geometer_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometer II",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -5330,7 +3995,6 @@ pub fn quandrix_geometer_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::Seq(vec![
                 Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
@@ -5344,17 +4008,7 @@ pub fn quandrix_geometer_v2() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5366,7 +4020,6 @@ pub fn fractal_sproutling() -> CardDefinition {
     CardDefinition {
         name: "Fractal Sproutling",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -5376,19 +4029,9 @@ pub fn fractal_sproutling() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5400,7 +4043,6 @@ pub fn quandrix_calligrapher_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calligrapher II",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -5410,22 +4052,11 @@ pub fn quandrix_calligrapher_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5437,7 +4068,6 @@ pub fn quandrix_equation_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equation (v2)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5450,19 +4080,8 @@ pub fn quandrix_equation_v2() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5476,7 +4095,6 @@ pub fn quandrix_synthsage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Synthsage",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5486,7 +4104,6 @@ pub fn quandrix_synthsage() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb_gain_life(2),
             magecraft(Effect::AddCounter {
@@ -5495,17 +4112,7 @@ pub fn quandrix_synthsage() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5516,7 +4123,6 @@ pub fn fractal_tidecaller_v2() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tidecaller II",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -5526,19 +4132,9 @@ pub fn fractal_tidecaller_v2() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5551,7 +4147,6 @@ pub fn quandrix_thoughtweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Thoughtweaver",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5561,22 +4156,11 @@ pub fn quandrix_thoughtweaver() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5588,7 +4172,6 @@ pub fn quandrix_geode_smith() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geode Smith",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -5598,19 +4181,8 @@ pub fn quandrix_geode_smith() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5622,7 +4194,6 @@ pub fn quandrix_grand_calculator() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Grand Calculator",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5632,7 +4203,6 @@ pub fn quandrix_grand_calculator() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -5642,17 +4212,7 @@ pub fn quandrix_grand_calculator() -> CardDefinition {
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             )),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5663,7 +4223,6 @@ pub fn fractal_seer() -> CardDefinition {
     CardDefinition {
         name: "Fractal Seer",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -5673,19 +4232,9 @@ pub fn fractal_seer() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5696,7 +4245,6 @@ pub fn quandrix_lifestream() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Lifestream",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5715,19 +4263,8 @@ pub fn quandrix_lifestream() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5738,7 +4275,6 @@ pub fn fractal_aegis() -> CardDefinition {
     CardDefinition {
         name: "Fractal Aegis",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Soldier],
@@ -5748,19 +4284,9 @@ pub fn fractal_aegis() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5773,7 +4299,6 @@ pub fn quandrix_mistforger() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistforger",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -5783,7 +4308,6 @@ pub fn quandrix_mistforger() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -5798,17 +4322,7 @@ pub fn quandrix_mistforger() -> CardDefinition {
                 )),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5821,7 +4335,6 @@ pub fn quandrix_arcanist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Arcanist",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5831,22 +4344,11 @@ pub fn quandrix_arcanist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5857,7 +4359,6 @@ pub fn quandrix_triplecaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Triplecaster",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5867,7 +4368,6 @@ pub fn quandrix_triplecaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -5878,17 +4378,7 @@ pub fn quandrix_triplecaster() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5902,7 +4392,6 @@ pub fn quandrix_snapcaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Snapcaster",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -5912,7 +4401,6 @@ pub fn quandrix_snapcaster() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -5925,17 +4413,7 @@ pub fn quandrix_snapcaster() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5946,7 +4424,6 @@ pub fn quandrix_counterfold() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterfold",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5962,19 +4439,8 @@ pub fn quandrix_counterfold() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
             },
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -5985,7 +4451,6 @@ pub fn quandrix_augurer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Augurer",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -5995,7 +4460,6 @@ pub fn quandrix_augurer() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -6015,17 +4479,7 @@ pub fn quandrix_augurer() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6038,7 +4492,6 @@ pub fn quandrix_pupil() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pupil",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6048,22 +4501,11 @@ pub fn quandrix_pupil() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6075,7 +4517,6 @@ pub fn fractal_tideshaper() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tideshaper",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -6085,19 +4526,9 @@ pub fn fractal_tideshaper() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6108,7 +4539,6 @@ pub fn quandrix_numerologist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Numerologist",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6118,7 +4548,6 @@ pub fn quandrix_numerologist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -6126,17 +4555,7 @@ pub fn quandrix_numerologist() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6147,7 +4566,6 @@ pub fn quandrix_geometer_v3() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometer III",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6157,7 +4575,6 @@ pub fn quandrix_geometer_v3() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::ForEach {
@@ -6171,17 +4588,7 @@ pub fn quandrix_geometer_v3() -> CardDefinition {
                 }),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6193,7 +4600,6 @@ pub fn fractal_cascade() -> CardDefinition {
     CardDefinition {
         name: "Fractal Cascade",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6206,19 +4612,8 @@ pub fn fractal_cascade() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             4,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6231,7 +4626,6 @@ pub fn fractal_wavebreaker() -> CardDefinition {
     CardDefinition {
         name: "Fractal Wavebreaker",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6241,7 +4635,6 @@ pub fn fractal_wavebreaker() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -6249,17 +4642,7 @@ pub fn fractal_wavebreaker() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6271,7 +4654,6 @@ pub fn quandrix_vinepriest() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinepriest",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -6281,7 +4663,6 @@ pub fn quandrix_vinepriest() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Search {
@@ -6290,17 +4671,7 @@ pub fn quandrix_vinepriest() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6312,7 +4683,6 @@ pub fn fractal_anomaly_v2() -> CardDefinition {
     CardDefinition {
         name: "Fractal Anomaly II",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6325,19 +4695,8 @@ pub fn fractal_anomaly_v2() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             5,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6347,7 +4706,6 @@ pub fn quandrix_calculator_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculator II",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6357,7 +4715,6 @@ pub fn quandrix_calculator_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -6365,17 +4722,7 @@ pub fn quandrix_calculator_v2() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6386,7 +4733,6 @@ pub fn quandrix_tide() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tide",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6405,19 +4751,8 @@ pub fn quandrix_tide() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6430,7 +4765,6 @@ pub fn fractal_sentinel() -> CardDefinition {
     CardDefinition {
         name: "Fractal Sentinel",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Soldier],
@@ -6440,19 +4774,9 @@ pub fn fractal_sentinel() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(5))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6465,7 +4789,6 @@ pub fn quandrix_theoremist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Theoremist",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6475,7 +4798,6 @@ pub fn quandrix_theoremist() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -6483,17 +4805,7 @@ pub fn quandrix_theoremist() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6505,7 +4817,6 @@ pub fn fractal_shaper() -> CardDefinition {
     CardDefinition {
         name: "Fractal Shaper",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -6515,7 +4826,6 @@ pub fn fractal_shaper() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -6526,17 +4836,7 @@ pub fn fractal_shaper() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6547,7 +4847,6 @@ pub fn quandrix_foresight() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Foresight",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6566,19 +4865,8 @@ pub fn quandrix_foresight() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6589,7 +4877,6 @@ pub fn fractal_bloomstalker() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloomstalker",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -6599,19 +4886,9 @@ pub fn fractal_bloomstalker() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6622,7 +4899,6 @@ pub fn quandrix_lensbearer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Lensbearer",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6632,7 +4908,6 @@ pub fn quandrix_lensbearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Scry {
@@ -6640,17 +4915,7 @@ pub fn quandrix_lensbearer() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6663,7 +4928,6 @@ pub fn quandrix_scryweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scryweaver",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6673,19 +4937,8 @@ pub fn quandrix_scryweaver() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6696,7 +4949,6 @@ pub fn fractal_bloomthorn() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloomthorn",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -6706,19 +4958,9 @@ pub fn fractal_bloomthorn() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6729,7 +4971,6 @@ pub fn quandrix_pupil_b50() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pupil Adept",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -6739,19 +4980,8 @@ pub fn quandrix_pupil_b50() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6762,7 +4992,6 @@ pub fn quandrix_forge() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Forge",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6775,19 +5004,8 @@ pub fn quandrix_forge() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             4,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6797,7 +5015,6 @@ pub fn quandrix_algorithmist() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Algorithmist",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -6807,7 +5024,6 @@ pub fn quandrix_algorithmist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::HasCreatureType(CreatureType::Fractal)
@@ -6816,17 +5032,7 @@ pub fn quandrix_algorithmist() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6837,7 +5043,6 @@ pub fn quandrix_refractor() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Refractor",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -6847,19 +5052,8 @@ pub fn quandrix_refractor() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6869,7 +5063,6 @@ pub fn quandrix_echocaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echocaster",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -6879,7 +5072,6 @@ pub fn quandrix_echocaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -6889,17 +5081,7 @@ pub fn quandrix_echocaster() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6909,7 +5091,6 @@ pub fn fractal_bloomstone() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloomstone",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -6919,24 +5100,14 @@ pub fn fractal_bloomstone() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::count(Selector::EachPermanent(
                 SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
             )),
         )),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6946,7 +5117,6 @@ pub fn quandrix_reflection() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reflection",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6965,19 +5135,8 @@ pub fn quandrix_reflection() -> CardDefinition {
                 },
             }),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -6989,7 +5148,6 @@ pub fn quandrix_tideseer_adept() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideseer Adept",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6999,7 +5157,6 @@ pub fn quandrix_tideseer_adept() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -7010,17 +5167,7 @@ pub fn quandrix_tideseer_adept() -> CardDefinition {
             },
             magecraft_scry(1),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7030,7 +5177,6 @@ pub fn fractal_geomancer() -> CardDefinition {
     CardDefinition {
         name: "Fractal Geomancer",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -7040,7 +5186,6 @@ pub fn fractal_geomancer() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -7050,17 +5195,7 @@ pub fn fractal_geomancer() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7070,7 +5205,6 @@ pub fn quandrix_cantripper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cantripper",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -7080,19 +5214,8 @@ pub fn quandrix_cantripper() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7102,7 +5225,6 @@ pub fn fractal_bloomanalyst() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bloomanalyst",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -7112,14 +5234,7 @@ pub fn fractal_bloomanalyst() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         // X = creatures you control (excluding self via OtherThanSource).
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
@@ -7129,10 +5244,7 @@ pub fn fractal_bloomanalyst() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
             )),
         )),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7145,7 +5257,6 @@ pub fn fractal_synthmage() -> CardDefinition {
     CardDefinition {
         name: "Fractal Synthmage",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -7155,7 +5266,6 @@ pub fn fractal_synthmage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -7168,17 +5278,7 @@ pub fn fractal_synthmage() -> CardDefinition {
                 )),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7189,7 +5289,6 @@ pub fn quandrix_amplify() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Amplify",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7209,19 +5308,8 @@ pub fn quandrix_amplify() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7232,7 +5320,6 @@ pub fn quandrix_threadbinder() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Threadbinder",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -7242,19 +5329,8 @@ pub fn quandrix_threadbinder() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7267,7 +5343,6 @@ pub fn quandrix_tideturner() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideturner",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7277,7 +5352,6 @@ pub fn quandrix_tideturner() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_scry(1),
             magecraft(Effect::AddCounter {
@@ -7286,17 +5360,7 @@ pub fn quandrix_tideturner() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7307,7 +5371,6 @@ pub fn fractal_overgrowth() -> CardDefinition {
     CardDefinition {
         name: "Fractal Overgrowth",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7327,19 +5390,8 @@ pub fn fractal_overgrowth() -> CardDefinition {
                 },
             }),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7349,7 +5401,6 @@ pub fn quandrix_ectomancer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Ectomancer",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7359,22 +5410,11 @@ pub fn quandrix_ectomancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7386,7 +5426,6 @@ pub fn fractal_resonance_v2() -> CardDefinition {
     CardDefinition {
         name: "Fractal Resonance II",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -7396,22 +5435,12 @@ pub fn fractal_resonance_v2() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::HandSizeOf(PlayerRef::You),
         )),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7425,7 +5454,6 @@ pub fn quandrix_calcographer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calcographer",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -7435,7 +5463,6 @@ pub fn quandrix_calcographer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(create_token_with_counter(
                 PlayerRef::You,
@@ -7450,17 +5477,7 @@ pub fn quandrix_calcographer() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7470,7 +5487,6 @@ pub fn fractal_initiate() -> CardDefinition {
     CardDefinition {
         name: "Fractal Initiate",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -7480,19 +5496,8 @@ pub fn fractal_initiate() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7504,7 +5509,6 @@ pub fn quandrix_splitcaster() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Splitcaster",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -7514,7 +5518,6 @@ pub fn quandrix_splitcaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -7522,17 +5525,7 @@ pub fn quandrix_splitcaster() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             1,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7543,7 +5536,6 @@ pub fn quandrix_calculation() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculation",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7562,19 +5554,8 @@ pub fn quandrix_calculation() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7584,7 +5565,6 @@ pub fn quandrix_bookkeeper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bookkeeper",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7594,7 +5574,6 @@ pub fn quandrix_bookkeeper() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -7605,17 +5584,7 @@ pub fn quandrix_bookkeeper() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7630,7 +5599,6 @@ pub fn quandrix_mathlord() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathlord",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -7640,7 +5608,6 @@ pub fn quandrix_mathlord() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::Seq(vec![
                 Effect::CreateToken {
@@ -7668,17 +5635,7 @@ pub fn quandrix_mathlord() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7689,7 +5646,6 @@ pub fn quandrix_geometer_b56() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometer (b56)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -7699,7 +5655,6 @@ pub fn quandrix_geometer_b56() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -7707,17 +5662,7 @@ pub fn quandrix_geometer_b56() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7728,7 +5673,6 @@ pub fn fractal_trifecta() -> CardDefinition {
     CardDefinition {
         name: "Fractal Trifecta",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7750,19 +5694,8 @@ pub fn fractal_trifecta() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7773,7 +5706,6 @@ pub fn quandrix_tidesower() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidesower",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7783,7 +5715,6 @@ pub fn quandrix_tidesower() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -7796,17 +5727,7 @@ pub fn quandrix_tidesower() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7816,7 +5737,6 @@ pub fn fractal_augmenter() -> CardDefinition {
     CardDefinition {
         name: "Fractal Augmenter",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -7826,22 +5746,12 @@ pub fn fractal_augmenter() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::HandSizeOf(PlayerRef::You),
         )),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7855,7 +5765,6 @@ pub fn fractal_greenstone() -> CardDefinition {
     CardDefinition {
         name: "Fractal Greenstone",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -7867,17 +5776,8 @@ pub fn fractal_greenstone() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7888,7 +5788,6 @@ pub fn quandrix_tideguard() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideguard",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7908,17 +5807,7 @@ pub fn quandrix_tideguard() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7930,7 +5819,6 @@ pub fn quandrix_greenmage() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Greenmage",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -7952,17 +5840,7 @@ pub fn quandrix_greenmage() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -7975,7 +5853,6 @@ pub fn quandrix_spellsplicer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellsplicer",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7987,17 +5864,7 @@ pub fn quandrix_spellsplicer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8007,7 +5874,6 @@ pub fn fractal_bluepetal() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bluepetal",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8019,17 +5885,8 @@ pub fn fractal_bluepetal() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8041,7 +5898,6 @@ pub fn quandrix_mathweaver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathweaver",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8062,17 +5918,7 @@ pub fn quandrix_mathweaver() -> CardDefinition {
                 1,
             ),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8083,7 +5929,6 @@ pub fn quandrix_sumcaster_b58() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcaster II",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8102,17 +5947,7 @@ pub fn quandrix_sumcaster_b58() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8126,7 +5961,6 @@ pub fn quandrix_growth_tutor() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Growth-Tutor",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8145,17 +5979,7 @@ pub fn quandrix_growth_tutor() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8166,7 +5990,6 @@ pub fn fractal_redleaf() -> CardDefinition {
     CardDefinition {
         name: "Fractal Redleaf",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8178,17 +6001,8 @@ pub fn fractal_redleaf() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8199,7 +6013,6 @@ pub fn quandrix_oracle_b59() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Oracle II",
         cost: cost(&[u(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8211,17 +6024,7 @@ pub fn quandrix_oracle_b59() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8233,7 +6036,6 @@ pub fn quandrix_summerkeeper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Summerkeeper",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -8251,17 +6053,7 @@ pub fn quandrix_summerkeeper() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             2,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8274,7 +6066,6 @@ pub fn quandrix_tideborn() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideborn",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8286,17 +6077,7 @@ pub fn quandrix_tideborn() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_surveil(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8306,7 +6087,6 @@ pub fn fractal_stormpetal() -> CardDefinition {
     CardDefinition {
         name: "Fractal Stormpetal",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8318,17 +6098,8 @@ pub fn fractal_stormpetal() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8339,7 +6110,6 @@ pub fn quandrix_pondwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondwarden",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8362,17 +6132,7 @@ pub fn quandrix_pondwarden() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8384,7 +6144,6 @@ pub fn quandrix_skywinder() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skywinder",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8402,17 +6161,7 @@ pub fn quandrix_skywinder() -> CardDefinition {
             ),
             1, 1,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8425,7 +6174,6 @@ pub fn quandrix_seer_b61() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Seer II",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8437,17 +6185,7 @@ pub fn quandrix_seer_b61() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8458,7 +6196,6 @@ pub fn fractal_mosspetal() -> CardDefinition {
     CardDefinition {
         name: "Fractal Mosspetal",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8470,17 +6207,8 @@ pub fn fractal_mosspetal() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8492,7 +6220,6 @@ pub fn quandrix_growkeeper() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Growkeeper",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8515,17 +6242,7 @@ pub fn quandrix_growkeeper() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8535,7 +6252,6 @@ pub fn quandrix_doublecast() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublecast",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -8554,17 +6270,7 @@ pub fn quandrix_doublecast() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8576,7 +6282,6 @@ pub fn quandrix_pondseer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondseer",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8601,17 +6306,7 @@ pub fn quandrix_pondseer() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8625,7 +6320,6 @@ pub fn quandrix_numberminder() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Numberminder",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8637,17 +6331,7 @@ pub fn quandrix_numberminder() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8658,7 +6342,6 @@ pub fn fractal_rookling() -> CardDefinition {
     CardDefinition {
         name: "Fractal Rookling",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8670,17 +6353,8 @@ pub fn fractal_rookling() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8693,7 +6367,6 @@ pub fn quandrix_counterweave() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterweave",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8719,17 +6392,7 @@ pub fn quandrix_counterweave() -> CardDefinition {
         ]),
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8740,7 +6403,6 @@ pub fn quandrix_sumwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumwarden",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8762,17 +6424,7 @@ pub fn quandrix_sumwarden() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8783,7 +6435,6 @@ pub fn fractal_petalcaller() -> CardDefinition {
     CardDefinition {
         name: "Fractal Petalcaller",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -8795,17 +6446,8 @@ pub fn fractal_petalcaller() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8816,7 +6458,6 @@ pub fn quandrix_echoreader() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echoreader",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8828,17 +6469,7 @@ pub fn quandrix_echoreader() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8849,7 +6480,6 @@ pub fn quandrix_synthesizer() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Synthesizer",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8869,17 +6499,7 @@ pub fn quandrix_synthesizer() -> CardDefinition {
         ]),
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8891,7 +6511,6 @@ pub fn quandrix_sumherald() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumherald",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -8901,7 +6520,6 @@ pub fn quandrix_sumherald() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -8911,17 +6529,7 @@ pub fn quandrix_sumherald() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8931,7 +6539,6 @@ pub fn fractal_stridepetal() -> CardDefinition {
     CardDefinition {
         name: "Fractal Stridepetal",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -8941,19 +6548,9 @@ pub fn fractal_stridepetal() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8964,7 +6561,6 @@ pub fn quandrix_streamcaller() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamcaller",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8974,19 +6570,8 @@ pub fn quandrix_streamcaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -8996,7 +6581,6 @@ pub fn quandrix_fractal_forge() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal-Forge",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9016,17 +6600,7 @@ pub fn quandrix_fractal_forge() -> CardDefinition {
         ]),
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9038,7 +6612,6 @@ pub fn quandrix_mistwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistwarden",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9066,17 +6639,7 @@ pub fn quandrix_mistwarden() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9087,7 +6650,6 @@ pub fn quandrix_spellseer_adept() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellseer-Adept",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -9097,19 +6659,8 @@ pub fn quandrix_spellseer_adept() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9119,7 +6670,6 @@ pub fn fractal_floodling() -> CardDefinition {
     CardDefinition {
         name: "Fractal Floodling",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -9129,24 +6679,14 @@ pub fn fractal_floodling() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((
             CounterType::PlusOnePlusOne,
             Value::CountOf(Box::new(Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ))),
         )),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9156,7 +6696,6 @@ pub fn quandrix_sumchant() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumchant",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9175,19 +6714,8 @@ pub fn quandrix_sumchant() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9198,7 +6726,6 @@ pub fn quandrix_sumcaster_b67() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcaster (b67)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -9208,7 +6735,6 @@ pub fn quandrix_sumcaster_b67() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_draw(1),
             magecraft(Effect::AddCounter {
@@ -9217,17 +6743,7 @@ pub fn quandrix_sumcaster_b67() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9240,7 +6756,6 @@ pub fn quandrix_mistshaper_b68() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistshaper (b68)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9250,19 +6765,8 @@ pub fn quandrix_mistshaper_b68() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9272,7 +6776,6 @@ pub fn fractal_pondling() -> CardDefinition {
     CardDefinition {
         name: "Fractal Pondling",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -9282,19 +6785,8 @@ pub fn fractal_pondling() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9305,7 +6797,6 @@ pub fn quandrix_streamwarden() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamwarden",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9315,7 +6806,6 @@ pub fn quandrix_streamwarden() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::HasCreatureType(CreatureType::Fractal)
@@ -9324,17 +6814,7 @@ pub fn quandrix_streamwarden() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9345,7 +6825,6 @@ pub fn quandrix_sumstride() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumstride",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9366,19 +6845,8 @@ pub fn quandrix_sumstride() -> CardDefinition {
                 ))),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9388,7 +6856,6 @@ pub fn quandrix_mistdiver() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistdiver",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9398,19 +6865,8 @@ pub fn quandrix_mistdiver() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9422,7 +6878,6 @@ pub fn quandrix_riverflux() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riverflux",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9445,19 +6900,8 @@ pub fn quandrix_riverflux() -> CardDefinition {
                 })),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9471,7 +6915,6 @@ pub fn quandrix_aetherbinder_b125() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Aetherbinder (b125)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9481,19 +6924,8 @@ pub fn quandrix_aetherbinder_b125() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9504,7 +6936,6 @@ pub fn fractal_treewright_b125() -> CardDefinition {
     CardDefinition {
         name: "Fractal Treewright (b125)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -9514,19 +6945,9 @@ pub fn fractal_treewright_b125() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9539,7 +6960,6 @@ pub fn quandrix_mistsage_b125() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistsage (b125)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9549,7 +6969,6 @@ pub fn quandrix_mistsage_b125() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::Scry {
                 who: PlayerRef::You,
@@ -9557,17 +6976,7 @@ pub fn quandrix_mistsage_b125() -> CardDefinition {
             }),
             magecraft_loot(),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9578,7 +6987,6 @@ pub fn fractal_reflection_b125() -> CardDefinition {
     CardDefinition {
         name: "Fractal Reflection (b125)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9598,19 +7006,8 @@ pub fn fractal_reflection_b125() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9623,7 +7020,6 @@ pub fn quandrix_mistshaper_b126() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistshaper (b126)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9633,19 +7029,8 @@ pub fn quandrix_mistshaper_b126() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9656,7 +7041,6 @@ pub fn fractal_skyrunner_b126() -> CardDefinition {
     CardDefinition {
         name: "Fractal Skyrunner (b126)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -9666,19 +7050,9 @@ pub fn fractal_skyrunner_b126() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9689,7 +7063,6 @@ pub fn quandrix_riftcraftsman_b126() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riftcraftsman (b126)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9699,7 +7072,6 @@ pub fn quandrix_riftcraftsman_b126() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::AddCounter {
                 what: target_filtered(
@@ -9711,17 +7083,7 @@ pub fn quandrix_riftcraftsman_b126() -> CardDefinition {
             }),
             magecraft_loot(),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9732,7 +7094,6 @@ pub fn quandrix_forecaster_adept_b126() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Forecaster-Adept (b126)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9742,19 +7103,8 @@ pub fn quandrix_forecaster_adept_b126() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9766,7 +7116,6 @@ pub fn fractal_petalcaller_b126() -> CardDefinition {
     CardDefinition {
         name: "Fractal Petalcaller (b126)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9784,19 +7133,8 @@ pub fn fractal_petalcaller_b126() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9809,7 +7147,6 @@ pub fn quandrix_greenmage_b127() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Greenmage (b127)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9819,7 +7156,6 @@ pub fn quandrix_greenmage_b127() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
@@ -9829,17 +7165,7 @@ pub fn quandrix_greenmage_b127() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9850,7 +7176,6 @@ pub fn fractal_bedrock_b127() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bedrock (b127)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -9860,19 +7185,9 @@ pub fn fractal_bedrock_b127() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9882,7 +7197,6 @@ pub fn quandrix_sageling_b127() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sageling (b127)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -9892,19 +7206,8 @@ pub fn quandrix_sageling_b127() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9915,7 +7218,6 @@ pub fn fractal_stormcaller_b127() -> CardDefinition {
     CardDefinition {
         name: "Fractal Stormcaller (b127)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9925,19 +7227,8 @@ pub fn fractal_stormcaller_b127() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9947,7 +7238,6 @@ pub fn quandrix_fractus_touch_b127() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractus-Touch (b127)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9967,19 +7257,8 @@ pub fn quandrix_fractus_touch_b127() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -9995,7 +7274,6 @@ pub fn quandrix_bloomforge_b128() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bloomforge (b128)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10005,19 +7283,8 @@ pub fn quandrix_bloomforge_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 4)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10027,7 +7294,6 @@ pub fn quandrix_tideshaper_b128() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideshaper (b128)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10037,19 +7303,8 @@ pub fn quandrix_tideshaper_b128() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10060,7 +7315,6 @@ pub fn quandrix_treebinder_b128() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treebinder (b128)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -10070,19 +7324,8 @@ pub fn quandrix_treebinder_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10096,7 +7339,6 @@ pub fn quandrix_geometer_b128() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometer (b128)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -10106,19 +7348,8 @@ pub fn quandrix_geometer_b128() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10134,7 +7365,6 @@ pub fn quandrix_fractalbinder_b129() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalbinder (b129)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -10144,7 +7374,6 @@ pub fn quandrix_fractalbinder_b129() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Fractal creatures you control get +1/+1.",
@@ -10159,16 +7388,7 @@ pub fn quandrix_fractalbinder_b129() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10180,7 +7400,6 @@ pub fn quandrix_doubler_b129() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doubler (b129)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10190,7 +7409,6 @@ pub fn quandrix_doubler_b129() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -10200,17 +7418,7 @@ pub fn quandrix_doubler_b129() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10221,7 +7429,6 @@ pub fn quandrix_bookworm_b129() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bookworm (b129)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -10231,19 +7438,8 @@ pub fn quandrix_bookworm_b129() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10255,7 +7451,6 @@ pub fn quandrix_bloomscatter_b129() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bloomscatter (b129)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10273,19 +7468,8 @@ pub fn quandrix_bloomscatter_b129() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10299,7 +7483,6 @@ pub fn quandrix_fractalseed_b130() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalseed (b130)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -10309,7 +7492,6 @@ pub fn quandrix_fractalseed_b130() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -10319,17 +7501,7 @@ pub fn quandrix_fractalseed_b130() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10340,7 +7512,6 @@ pub fn quandrix_doubler_ii_b130() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doubler II (b130)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10350,7 +7521,6 @@ pub fn quandrix_doubler_ii_b130() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -10360,17 +7530,7 @@ pub fn quandrix_doubler_ii_b130() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10382,7 +7542,6 @@ pub fn fractal_skybloom_b130() -> CardDefinition {
     CardDefinition {
         name: "Fractal Skybloom (b130)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10392,19 +7551,8 @@ pub fn fractal_skybloom_b130() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10416,7 +7564,6 @@ pub fn quandrix_fractalsage_b131() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalsage (b131)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10426,7 +7573,6 @@ pub fn quandrix_fractalsage_b131() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -10436,17 +7582,7 @@ pub fn quandrix_fractalsage_b131() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10456,7 +7592,6 @@ pub fn quandrix_calculator_b131() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculator (b131)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10466,19 +7601,8 @@ pub fn quandrix_calculator_b131() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10490,26 +7614,14 @@ pub fn fractal_inkfall_b131() -> CardDefinition {
     CardDefinition {
         name: "Fractal Inkfall (b131)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: create_token_with_counter(PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 4),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10521,7 +7633,6 @@ pub fn quandrix_theorymage_b132() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Theorymage (b132)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10531,19 +7642,8 @@ pub fn quandrix_theorymage_b132() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10555,7 +7655,6 @@ pub fn quandrix_mathstudent_b132() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathstudent (b132)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -10565,7 +7664,6 @@ pub fn quandrix_mathstudent_b132() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -10573,17 +7671,7 @@ pub fn quandrix_mathstudent_b132() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10595,7 +7683,6 @@ pub fn quandrix_fractal_tutor_b132() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal-Tutor (b132)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10605,19 +7692,8 @@ pub fn quandrix_fractal_tutor_b132() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10629,7 +7705,6 @@ pub fn fractal_burst_b132() -> CardDefinition {
     CardDefinition {
         name: "Fractal Burst (b132)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10638,19 +7713,8 @@ pub fn fractal_burst_b132() -> CardDefinition {
         effect: create_token_with_counter(
             PlayerRef::You, 1, fractal_token(), CounterType::PlusOnePlusOne, 3,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10663,7 +7727,6 @@ pub fn quandrix_forecaster_b133() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Forecaster (b133)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10673,19 +7736,8 @@ pub fn quandrix_forecaster_b133() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10696,7 +7748,6 @@ pub fn fractal_spore_b133() -> CardDefinition {
     CardDefinition {
         name: "Fractal Spore (b133)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -10706,19 +7757,9 @@ pub fn fractal_spore_b133() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10728,7 +7769,6 @@ pub fn quandrix_numerist_b133() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Numerist (b133)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -10738,19 +7778,8 @@ pub fn quandrix_numerist_b133() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10764,7 +7793,6 @@ pub fn quandrix_insight_mage_b134() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Insight-Mage (b134)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10774,19 +7802,8 @@ pub fn quandrix_insight_mage_b134() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10797,7 +7814,6 @@ pub fn fractal_hatchling_b134() -> CardDefinition {
     CardDefinition {
         name: "Fractal Hatchling (b134)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10807,19 +7823,9 @@ pub fn fractal_hatchling_b134() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10831,7 +7837,6 @@ pub fn quandrix_tracker_b135() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tracker (b135)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -10841,19 +7846,8 @@ pub fn quandrix_tracker_b135() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10864,7 +7858,6 @@ pub fn quandrix_equation_lord_b135() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equation-Lord (b135)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10874,19 +7867,9 @@ pub fn quandrix_equation_lord_b135() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10897,7 +7880,6 @@ pub fn fractal_aspirant_b135() -> CardDefinition {
     CardDefinition {
         name: "Fractal Aspirant (b135)",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10907,19 +7889,9 @@ pub fn fractal_aspirant_b135() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(1))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10931,7 +7903,6 @@ pub fn quandrix_scaleshifter_b135() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scaleshifter (b135)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10941,19 +7912,8 @@ pub fn quandrix_scaleshifter_b135() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_to_friendly()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -10966,7 +7926,6 @@ pub fn fractal_beanstalker_b136() -> CardDefinition {
     CardDefinition {
         name: "Fractal Beanstalker (b136)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -10976,19 +7935,9 @@ pub fn fractal_beanstalker_b136() -> CardDefinition {
         toughness: 0,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(4))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11000,7 +7949,6 @@ pub fn quandrix_mathwarden_b136() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathwarden (b136)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -11010,19 +7958,8 @@ pub fn quandrix_mathwarden_b136() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11035,7 +7972,6 @@ pub fn quandrix_fractal_apprentice_b136() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal-Apprentice (b136)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11045,7 +7981,6 @@ pub fn quandrix_fractal_apprentice_b136() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
@@ -11055,17 +7990,7 @@ pub fn quandrix_fractal_apprentice_b136() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11079,7 +8004,6 @@ pub fn quandrix_mathmaster_b138() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathmaster (b138)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11089,7 +8013,6 @@ pub fn quandrix_mathmaster_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -11097,17 +8020,7 @@ pub fn quandrix_mathmaster_b138() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             2,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11117,7 +8030,6 @@ pub fn fractal_scholar_b138() -> CardDefinition {
     CardDefinition {
         name: "Fractal Scholar (b138)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11127,19 +8039,8 @@ pub fn fractal_scholar_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11152,7 +8053,6 @@ pub fn quandrix_equation_b138() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equation (b138)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11171,19 +8071,8 @@ pub fn quandrix_equation_b138() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11196,7 +8085,6 @@ pub fn fractal_initiate_b139() -> CardDefinition {
     CardDefinition {
         name: "Fractal Initiate (b139)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11206,23 +8094,12 @@ pub fn fractal_initiate_b139() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11233,7 +8110,6 @@ pub fn quandrix_stormcaster_b139() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Stormcaster (b139)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11243,19 +8119,8 @@ pub fn quandrix_stormcaster_b139() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11266,7 +8131,6 @@ pub fn quandrix_geometrymage_b139() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometrymage (b139)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
@@ -11276,19 +8140,8 @@ pub fn quandrix_geometrymage_b139() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_to_friendly()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11300,7 +8153,6 @@ pub fn fractal_outgrowth_b139() -> CardDefinition {
     CardDefinition {
         name: "Fractal Outgrowth (b139)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11313,19 +8165,8 @@ pub fn fractal_outgrowth_b139() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             4,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11338,7 +8179,6 @@ pub fn quandrix_lifestream_b136() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Lifestream (b136)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11351,19 +8191,8 @@ pub fn quandrix_lifestream_b136() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11377,7 +8206,6 @@ pub fn quandrix_symmetrist_ii_b141() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symmetrist II (b141)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11387,7 +8215,6 @@ pub fn quandrix_symmetrist_ii_b141() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -11395,17 +8222,7 @@ pub fn quandrix_symmetrist_ii_b141() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             3,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11416,7 +8233,6 @@ pub fn quandrix_sage_b141() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sage (b141)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11426,19 +8242,8 @@ pub fn quandrix_sage_b141() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11449,7 +8254,6 @@ pub fn quandrix_fractalcraft_b141() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalcraft (b141)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11469,19 +8273,8 @@ pub fn quandrix_fractalcraft_b141() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11491,7 +8284,6 @@ pub fn fractal_wanderer_b141() -> CardDefinition {
     CardDefinition {
         name: "Fractal Wanderer (b141)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -11501,19 +8293,8 @@ pub fn fractal_wanderer_b141() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11526,7 +8307,6 @@ pub fn quandrix_algorithmist_b142() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Algorithmist (b142)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11536,7 +8316,6 @@ pub fn quandrix_algorithmist_b142() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -11548,17 +8327,7 @@ pub fn quandrix_algorithmist_b142() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11570,7 +8339,6 @@ pub fn fractal_tendril_b142() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tendril (b142)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11583,19 +8351,8 @@ pub fn fractal_tendril_b142() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             2,
         ),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11605,7 +8362,6 @@ pub fn quandrix_wavefront_b142() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavefront (b142)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11615,19 +8371,8 @@ pub fn quandrix_wavefront_b142() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11638,7 +8383,6 @@ pub fn quandrix_apex_b142() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Apex (b142)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -11648,7 +8392,6 @@ pub fn quandrix_apex_b142() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -11659,17 +8402,7 @@ pub fn quandrix_apex_b142() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
             )),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11681,7 +8414,6 @@ pub fn quandrix_arithmancer_b143() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Arithmancer (b143)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11691,7 +8423,6 @@ pub fn quandrix_arithmancer_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -11703,17 +8434,7 @@ pub fn quandrix_arithmancer_b143() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11724,7 +8445,6 @@ pub fn fractal_splinter_b143() -> CardDefinition {
     CardDefinition {
         name: "Fractal Splinter (b143)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -11734,23 +8454,12 @@ pub fn fractal_splinter_b143() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11761,7 +8470,6 @@ pub fn quandrix_doubler_b143() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doubler (b143)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11777,19 +8485,8 @@ pub fn quandrix_doubler_b143() -> CardDefinition {
             )),
             duration: Duration::EndOfTurn,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11801,7 +8498,6 @@ pub fn fractal_vinemother_b143() -> CardDefinition {
     CardDefinition {
         name: "Fractal Vinemother (b143)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -11811,7 +8507,6 @@ pub fn fractal_vinemother_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -11824,17 +8519,7 @@ pub fn fractal_vinemother_b143() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11846,7 +8531,6 @@ pub fn quandrix_echoist_b144() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echoist (b144)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11856,7 +8540,6 @@ pub fn quandrix_echoist_b144() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -11867,17 +8550,7 @@ pub fn quandrix_echoist_b144() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11887,7 +8560,6 @@ pub fn fractal_scion_b144() -> CardDefinition {
     CardDefinition {
         name: "Fractal Scion (b144)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -11897,19 +8569,9 @@ pub fn fractal_scion_b144() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11921,7 +8583,6 @@ pub fn quandrix_mage_adept_b144() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mage-Adept (b144)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11931,19 +8592,8 @@ pub fn quandrix_mage_adept_b144() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_to_friendly()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11954,7 +8604,6 @@ pub fn quandrix_treetender_b145() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treetender (b145)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid],
@@ -11964,19 +8613,8 @@ pub fn quandrix_treetender_b145() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Cycling(cost(&[generic(2), g()]))],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -11986,7 +8624,6 @@ pub fn fractal_apex_mage_b145() -> CardDefinition {
     CardDefinition {
         name: "Fractal Apex-Mage (b145)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -11996,7 +8633,6 @@ pub fn fractal_apex_mage_b145() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
@@ -12007,17 +8643,7 @@ pub fn fractal_apex_mage_b145() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
             )),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12026,7 +8652,6 @@ pub fn fractal_bookbearer_b144() -> CardDefinition {
     CardDefinition {
         name: "Fractal Bookbearer (b144)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12036,19 +8661,8 @@ pub fn fractal_bookbearer_b144() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12058,7 +8672,6 @@ pub fn quandrix_numericist_b143() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Numericist (b143)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12068,19 +8681,8 @@ pub fn quandrix_numericist_b143() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12094,7 +8696,6 @@ pub fn fractal_genesis_b142() -> CardDefinition {
     CardDefinition {
         name: "Fractal Genesis (b142)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12104,19 +8705,8 @@ pub fn fractal_genesis_b142() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_token(fractal_token(), 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12129,7 +8719,6 @@ pub fn quandrix_sumcaster_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcaster (b146)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12139,7 +8728,6 @@ pub fn quandrix_sumcaster_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -12152,17 +8740,7 @@ pub fn quandrix_sumcaster_b146() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
             ))),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12173,7 +8751,6 @@ pub fn quandrix_mathwitch_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathwitch (b146)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -12183,19 +8760,8 @@ pub fn quandrix_mathwitch_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12209,7 +8775,6 @@ pub fn fractal_caller_b146() -> CardDefinition {
     CardDefinition {
         name: "Fractal Caller (b146)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12219,23 +8784,12 @@ pub fn fractal_caller_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(
             fractal_token(),
             1,
             2,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12246,7 +8800,6 @@ pub fn quandrix_counterspell_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterspell (b146)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12256,19 +8809,8 @@ pub fn quandrix_counterspell_b146() -> CardDefinition {
             what: Selector::Target(0),
             mana_cost: cost(&[generic(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12279,7 +8821,6 @@ pub fn quandrix_sumstudent_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumstudent (b146)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -12289,19 +8830,8 @@ pub fn quandrix_sumstudent_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12311,7 +8841,6 @@ pub fn quandrix_reflector_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reflector (b146)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -12321,19 +8850,8 @@ pub fn quandrix_reflector_b146() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12345,7 +8863,6 @@ pub fn quandrix_field_trip_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Field Trip (b146)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12359,19 +8876,8 @@ pub fn quandrix_field_trip_b146() -> CardDefinition {
                 tapped: true,
             },
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12381,7 +8887,6 @@ pub fn quandrix_mossbinder_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mossbinder (b146)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -12391,7 +8896,6 @@ pub fn quandrix_mossbinder_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Search {
             who: PlayerRef::You,
             filter: SelectionRequirement::IsBasicLand,
@@ -12400,17 +8904,7 @@ pub fn quandrix_mossbinder_b146() -> CardDefinition {
                 tapped: true,
             },
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12421,7 +8915,6 @@ pub fn quandrix_mage_apprentice_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mage-Apprentice (b146)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -12431,19 +8924,8 @@ pub fn quandrix_mage_apprentice_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(1), magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12453,7 +8935,6 @@ pub fn quandrix_patternseeker_b146() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Patternseeker (b146)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -12463,19 +8944,8 @@ pub fn quandrix_patternseeker_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12487,7 +8957,6 @@ pub fn quandrix_calculator_b147() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculator (b147)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -12497,7 +8966,6 @@ pub fn quandrix_calculator_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
@@ -12507,17 +8975,7 @@ pub fn quandrix_calculator_b147() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12528,7 +8986,6 @@ pub fn quandrix_patternsage_b147() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Patternsage (b147)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -12538,19 +8995,8 @@ pub fn quandrix_patternsage_b147() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12560,7 +9006,6 @@ pub fn fractal_apprentice_b147() -> CardDefinition {
     CardDefinition {
         name: "Fractal Apprentice (b147)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12570,19 +9015,8 @@ pub fn fractal_apprentice_b147() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12592,7 +9026,6 @@ pub fn quandrix_bouncer_b147() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bouncer (b147)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12608,19 +9041,8 @@ pub fn quandrix_bouncer_b147() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12631,7 +9053,6 @@ pub fn quandrix_wallcaller_b147() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wallcaller (b147)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -12641,19 +9062,8 @@ pub fn quandrix_wallcaller_b147() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Defender],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12665,7 +9075,6 @@ pub fn quandrix_spelltwister_b148() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spelltwister (b148)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -12675,7 +9084,6 @@ pub fn quandrix_spelltwister_b148() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -12686,17 +9094,7 @@ pub fn quandrix_spelltwister_b148() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12707,7 +9105,6 @@ pub fn fractal_warrior_b148() -> CardDefinition {
     CardDefinition {
         name: "Fractal Warrior (b148)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Warrior],
@@ -12717,23 +9114,12 @@ pub fn fractal_warrior_b148() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12743,7 +9129,6 @@ pub fn quandrix_symbolic_b148() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symbolic (b148)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12760,19 +9145,8 @@ pub fn quandrix_symbolic_b148() -> CardDefinition {
                 random: false,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12782,7 +9156,6 @@ pub fn quandrix_geometer_b148() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geometer (b148)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -12792,19 +9165,8 @@ pub fn quandrix_geometer_b148() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12814,7 +9176,6 @@ pub fn fractal_apprentice_ii_b148() -> CardDefinition {
     CardDefinition {
         name: "Fractal Apprentice II (b148)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12824,19 +9185,8 @@ pub fn fractal_apprentice_ii_b148() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12848,7 +9198,6 @@ pub fn quandrix_skystreaker_b149() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skystreaker (b149)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -12858,19 +9207,8 @@ pub fn quandrix_skystreaker_b149() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Hexproof],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12880,7 +9218,6 @@ pub fn fractal_eternity_b149() -> CardDefinition {
     CardDefinition {
         name: "Fractal Eternity (b149)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12890,19 +9227,8 @@ pub fn fractal_eternity_b149() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Undying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12914,7 +9240,6 @@ pub fn quandrix_fractalweaver_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalweaver (b150)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -12924,7 +9249,6 @@ pub fn quandrix_fractalweaver_b150() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -12935,17 +9259,7 @@ pub fn quandrix_fractalweaver_b150() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12957,7 +9271,6 @@ pub fn quandrix_spireshape_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spireshape (b150)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -12967,19 +9280,8 @@ pub fn quandrix_spireshape_b150() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(quandrix_fractal_token(), 1, 2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -12989,7 +9291,6 @@ pub fn quandrix_hydromancer_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hydromancer (b150)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -12999,19 +9300,8 @@ pub fn quandrix_hydromancer_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13021,7 +9311,6 @@ pub fn quandrix_skyrider_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skyrider (b150)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Bird],
@@ -13031,19 +9320,8 @@ pub fn quandrix_skyrider_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13053,7 +9331,6 @@ pub fn quandrix_verdant_snake_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Verdant Snake (b150)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Snake],
@@ -13063,19 +9340,8 @@ pub fn quandrix_verdant_snake_b150() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13085,7 +9351,6 @@ pub fn quandrix_snake_egg_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Snake-Egg (b150)",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Snake],
@@ -13095,19 +9360,8 @@ pub fn quandrix_snake_egg_b150() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13120,7 +9374,6 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mind Curl (b150)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13133,19 +9386,8 @@ pub fn quandrix_mind_curl_b150() -> CardDefinition {
             ),
             mana_cost: mc(&[gc(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13157,7 +9399,6 @@ pub fn quandrix_elf_caller_b151() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Elf Caller (b151)",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13167,19 +9408,8 @@ pub fn quandrix_elf_caller_b151() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13190,7 +9420,6 @@ pub fn quandrix_fractal_theorem_b151() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal Theorem (b151)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13210,19 +9439,8 @@ pub fn quandrix_fractal_theorem_b151() -> CardDefinition {
                 ))),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13233,7 +9451,6 @@ pub fn quandrix_spellmage_b151() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellmage (b151)",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -13243,19 +9460,8 @@ pub fn quandrix_spellmage_b151() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13265,7 +9471,6 @@ pub fn quandrix_forest_sprite_b151() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Forest Sprite (b151)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Plant],
@@ -13275,19 +9480,8 @@ pub fn quandrix_forest_sprite_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13297,7 +9491,6 @@ pub fn quandrix_algebraist_b151() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Algebraist (b151)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13307,7 +9500,6 @@ pub fn quandrix_algebraist_b151() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -13318,17 +9510,7 @@ pub fn quandrix_algebraist_b151() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13340,7 +9522,6 @@ pub fn quandrix_counter_squirrel_b153() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counter-Squirrel (b153)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Squirrel],
@@ -13350,19 +9531,8 @@ pub fn quandrix_counter_squirrel_b153() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13371,7 +9541,6 @@ pub fn quandrix_insight_b153() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Insight (b153)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13381,19 +9550,8 @@ pub fn quandrix_insight_b153() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13404,7 +9562,6 @@ pub fn quandrix_sage_b153() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sage (b153)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13414,23 +9571,12 @@ pub fn quandrix_sage_b153() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: tf(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13446,7 +9592,6 @@ pub fn quandrix_fractalsmith_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalsmith (b154)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13456,19 +9601,8 @@ pub fn quandrix_fractalsmith_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_fractal(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13480,7 +9614,6 @@ pub fn quandrix_equationmage_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equationmage (b154)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -13490,19 +9623,8 @@ pub fn quandrix_equationmage_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13515,7 +9637,6 @@ pub fn quandrix_riftguard_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riftguard (b154)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -13525,23 +9646,12 @@ pub fn quandrix_riftguard_b154() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: tf(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13552,7 +9662,6 @@ pub fn quandrix_tidesinger_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidesinger (b154)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -13562,19 +9671,8 @@ pub fn quandrix_tidesinger_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13586,7 +9684,6 @@ pub fn quandrix_calculation_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Calculation (b154)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13601,19 +9698,8 @@ pub fn quandrix_calculation_b154() -> CardDefinition {
             },
             draw(1),
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13624,7 +9710,6 @@ pub fn quandrix_wavebreaker_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavebreaker (b154)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -13634,22 +9719,11 @@ pub fn quandrix_wavebreaker_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: tf(SelectionRequirement::Permanent.and(SelectionRequirement::Nonland)),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13660,7 +9734,6 @@ pub fn quandrix_bloomguard_b154() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bloomguard (b154)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13670,7 +9743,6 @@ pub fn quandrix_bloomguard_b154() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -13678,17 +9750,7 @@ pub fn quandrix_bloomguard_b154() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13701,7 +9763,6 @@ pub fn quandrix_embodiment_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Embodiment (b155)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -13711,23 +9772,12 @@ pub fn quandrix_embodiment_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13737,7 +9787,6 @@ pub fn fractal_magus_b155() -> CardDefinition {
     CardDefinition {
         name: "Fractal Magus (b155)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -13747,19 +9796,8 @@ pub fn fractal_magus_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13769,7 +9807,6 @@ pub fn quandrix_topologist_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Topologist (b155)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13779,19 +9816,8 @@ pub fn quandrix_topologist_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13802,7 +9828,6 @@ pub fn quandrix_forecaster_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Forecaster (b155)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -13812,19 +9837,8 @@ pub fn quandrix_forecaster_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13834,7 +9848,6 @@ pub fn fractal_strider_b155() -> CardDefinition {
     CardDefinition {
         name: "Fractal Strider (b155)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -13844,19 +9857,8 @@ pub fn fractal_strider_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13867,7 +9869,6 @@ pub fn quandrix_symmetrist_ii_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symmetrist II (b155)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13886,19 +9887,8 @@ pub fn quandrix_symmetrist_ii_b155() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13909,7 +9899,6 @@ pub fn quandrix_streamcaller_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamcaller (b155)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -13919,19 +9908,8 @@ pub fn quandrix_streamcaller_b155() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13942,7 +9920,6 @@ pub fn fractal_crusher_b155() -> CardDefinition {
     CardDefinition {
         name: "Fractal Crusher (b155)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Beast],
@@ -13952,19 +9929,8 @@ pub fn fractal_crusher_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -13977,7 +9943,6 @@ pub fn quandrix_mathematician_ii_b156() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathematician II (b156)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -13987,7 +9952,6 @@ pub fn quandrix_mathematician_ii_b156() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::AddCounter {
@@ -13996,17 +9960,7 @@ pub fn quandrix_mathematician_ii_b156() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14017,7 +9971,6 @@ pub fn quandrix_cartographer_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cartographer (b155)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14027,22 +9980,11 @@ pub fn quandrix_cartographer_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14053,7 +9995,6 @@ pub fn quandrix_hatchling_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hatchling (b155)",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -14063,19 +10004,8 @@ pub fn quandrix_hatchling_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14086,7 +10016,6 @@ pub fn quandrix_fractalist_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalist (b155)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14096,19 +10025,8 @@ pub fn quandrix_fractalist_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_fractal(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14118,7 +10036,6 @@ pub fn quandrix_scriptor_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scriptor (b155)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -14128,19 +10045,8 @@ pub fn quandrix_scriptor_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14150,7 +10056,6 @@ pub fn quandrix_verdancer_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Verdancer (b155)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14160,19 +10065,8 @@ pub fn quandrix_verdancer_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14183,7 +10077,6 @@ pub fn quandrix_coursebearer_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Coursebearer (b155)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14193,19 +10086,8 @@ pub fn quandrix_coursebearer_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14215,7 +10097,6 @@ pub fn quandrix_mathwarden_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathwarden (b155)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -14225,22 +10106,11 @@ pub fn quandrix_mathwarden_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Draw a card?".into(),
             body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14252,7 +10122,6 @@ pub fn quandrix_expansor_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Expansor (b155)",
         cost: cost(&[x(), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14270,19 +10139,8 @@ pub fn quandrix_expansor_b155() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14292,7 +10150,6 @@ pub fn quandrix_skygazer_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skygazer (b155)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -14302,19 +10159,8 @@ pub fn quandrix_skygazer_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14324,7 +10170,6 @@ pub fn quandrix_logician_b155() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Logician (b155)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14334,23 +10179,12 @@ pub fn quandrix_logician_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14362,7 +10196,6 @@ pub fn quandrix_coursetaker_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Coursetaker (b158)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14372,19 +10205,8 @@ pub fn quandrix_coursetaker_b158() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14395,7 +10217,6 @@ pub fn quandrix_bigbrain_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bigbrain (b158)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14405,7 +10226,6 @@ pub fn quandrix_bigbrain_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -14413,17 +10233,7 @@ pub fn quandrix_bigbrain_b158() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             2,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14434,7 +10244,6 @@ pub fn quandrix_fractaltender_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractaltender (b158)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -14444,19 +10253,8 @@ pub fn quandrix_fractaltender_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14466,7 +10264,6 @@ pub fn fractal_sprite_b158() -> CardDefinition {
     CardDefinition {
         name: "Fractal Sprite (b158)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -14476,19 +10273,8 @@ pub fn fractal_sprite_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14498,7 +10284,6 @@ pub fn quandrix_researcher_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Researcher (b158)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14508,19 +10293,8 @@ pub fn quandrix_researcher_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14531,7 +10305,6 @@ pub fn quandrix_inquirer_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Inquirer (b158)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -14541,19 +10314,8 @@ pub fn quandrix_inquirer_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14563,7 +10325,6 @@ pub fn fractal_wallflower_b158() -> CardDefinition {
     CardDefinition {
         name: "Fractal Wallflower (b158)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Plant],
@@ -14573,19 +10334,8 @@ pub fn fractal_wallflower_b158() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14595,7 +10345,6 @@ pub fn quandrix_echo_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echo (b158)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14612,19 +10361,8 @@ pub fn quandrix_echo_b158() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14634,7 +10372,6 @@ pub fn quandrix_counterpoint_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterpoint (b158)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14644,19 +10381,8 @@ pub fn quandrix_counterpoint_b158() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14666,7 +10392,6 @@ pub fn fractal_skydweller_b158() -> CardDefinition {
     CardDefinition {
         name: "Fractal Skydweller (b158)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -14676,23 +10401,12 @@ pub fn fractal_skydweller_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14702,7 +10416,6 @@ pub fn quandrix_equalist_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Equalist (b158)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14712,19 +10425,8 @@ pub fn quandrix_equalist_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14735,7 +10437,6 @@ pub fn fractal_researcher_b158() -> CardDefinition {
     CardDefinition {
         name: "Fractal Researcher (b158)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -14745,19 +10446,8 @@ pub fn fractal_researcher_b158() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14768,7 +10458,6 @@ pub fn quandrix_multiplier_ii_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Multiplier II (b158)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -14778,7 +10467,6 @@ pub fn quandrix_multiplier_ii_b158() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -14786,17 +10474,7 @@ pub fn quandrix_multiplier_ii_b158() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             3,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14806,7 +10484,6 @@ pub fn quandrix_sapiens_b158() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sapiens (b158)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14816,19 +10493,8 @@ pub fn quandrix_sapiens_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14839,7 +10505,6 @@ pub fn fractal_recursion_b158() -> CardDefinition {
     CardDefinition {
         name: "Fractal Recursion (b158)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14856,19 +10521,8 @@ pub fn fractal_recursion_b158() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14880,7 +10534,6 @@ pub fn quandrix_bracketscribe_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bracketscribe (b160)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -14890,7 +10543,6 @@ pub fn quandrix_bracketscribe_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -14898,17 +10550,7 @@ pub fn quandrix_bracketscribe_b160() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14919,7 +10561,6 @@ pub fn quandrix_hexer_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hexer (b160)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -14929,19 +10570,8 @@ pub fn quandrix_hexer_b160() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14951,7 +10581,6 @@ pub fn quandrix_counterlord_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterlord (b160)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -14961,7 +10590,6 @@ pub fn quandrix_counterlord_b160() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -14971,17 +10599,7 @@ pub fn quandrix_counterlord_b160() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -14991,7 +10609,6 @@ pub fn quandrix_spirescribe_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spirescribe (b160)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -15001,19 +10618,8 @@ pub fn quandrix_spirescribe_b160() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15023,7 +10629,6 @@ pub fn quandrix_mathadept_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathadept (b160)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -15033,19 +10638,8 @@ pub fn quandrix_mathadept_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15055,7 +10649,6 @@ pub fn quandrix_doublecast_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublecast (b160)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15065,19 +10658,8 @@ pub fn quandrix_doublecast_b160() -> CardDefinition {
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15088,7 +10670,6 @@ pub fn fractal_scaler_b160() -> CardDefinition {
     CardDefinition {
         name: "Fractal Scaler (b160)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -15098,19 +10679,8 @@ pub fn fractal_scaler_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15120,7 +10690,6 @@ pub fn quandrix_tideforge_b160() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideforge (b160)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15130,19 +10699,8 @@ pub fn quandrix_tideforge_b160() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15154,7 +10712,6 @@ pub fn quandrix_wavetiller_b161() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavetiller (b161)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -15164,7 +10721,6 @@ pub fn quandrix_wavetiller_b161() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(crate::effect::shortcut::cast_is_instant_or_sorcery()),
@@ -15178,17 +10734,7 @@ pub fn quandrix_wavetiller_b161() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15198,7 +10744,6 @@ pub fn quandrix_pondkeeper_b161() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondkeeper (b161)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -15208,22 +10753,11 @@ pub fn quandrix_pondkeeper_b161() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15235,7 +10769,6 @@ pub fn quandrix_bricelegate_b161() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bricelegate (b161)",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15256,19 +10789,8 @@ pub fn quandrix_bricelegate_b161() -> CardDefinition {
                 )),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15278,7 +10800,6 @@ pub fn quandrix_spellblossom_b161() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellblossom (b161)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -15288,7 +10809,6 @@ pub fn quandrix_spellblossom_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -15297,17 +10817,7 @@ pub fn quandrix_spellblossom_b161() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15318,7 +10828,6 @@ pub fn fractal_tidemind_b161() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tidemind (b161)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -15328,19 +10837,8 @@ pub fn fractal_tidemind_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15350,7 +10848,6 @@ pub fn quandrix_riverbase_b161() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riverbase (b161)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -15360,19 +10857,8 @@ pub fn quandrix_riverbase_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15384,7 +10870,6 @@ pub fn quandrix_splashweaver_b162() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Splashweaver (b162)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -15394,19 +10879,8 @@ pub fn quandrix_splashweaver_b162() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15416,7 +10890,6 @@ pub fn fractal_echoweaver_b162() -> CardDefinition {
     CardDefinition {
         name: "Fractal Echoweaver (b162)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -15426,19 +10899,8 @@ pub fn fractal_echoweaver_b162() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15448,7 +10910,6 @@ pub fn quandrix_tidemorph_b162() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidemorph (b162)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -15458,22 +10919,11 @@ pub fn quandrix_tidemorph_b162() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15483,7 +10933,6 @@ pub fn quandrix_sumcoach_b162() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcoach (b162)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -15493,7 +10942,6 @@ pub fn quandrix_sumcoach_b162() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -15503,17 +10951,7 @@ pub fn quandrix_sumcoach_b162() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15523,26 +10961,14 @@ pub fn quandrix_wavelet_b162() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavelet (b162)",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15554,7 +10980,6 @@ pub fn quandrix_tideknotter_b164() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideknotter (b164)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -15564,22 +10989,11 @@ pub fn quandrix_tideknotter_b164() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![{
             use crate::effect::shortcut::etb_scry;
             etb_scry(2)
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15589,7 +11003,6 @@ pub fn fractal_tidewatcher_b164() -> CardDefinition {
     CardDefinition {
         name: "Fractal Tidewatcher (b164)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -15599,19 +11012,8 @@ pub fn fractal_tidewatcher_b164() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15621,7 +11023,6 @@ pub fn quandrix_mathseeker_b164() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathseeker (b164)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -15631,19 +11032,8 @@ pub fn quandrix_mathseeker_b164() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15653,7 +11043,6 @@ pub fn quandrix_pondscribe_b164() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pondscribe (b164)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -15663,22 +11052,11 @@ pub fn quandrix_pondscribe_b164() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![{
             use crate::effect::shortcut::etb_loot;
             etb_loot()
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15688,7 +11066,6 @@ pub fn quandrix_naturebind_b164() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Naturebind (b164)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15700,19 +11077,8 @@ pub fn quandrix_naturebind_b164() -> CardDefinition {
                     .or(SelectionRequirement::HasCardType(CardType::Enchantment)),
             ),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15723,7 +11089,6 @@ pub fn fractal_summoner_b164() -> CardDefinition {
     CardDefinition {
         name: "Fractal Summoner (b164)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -15733,21 +11098,10 @@ pub fn fractal_summoner_b164() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(
             crate::catalog::fractal_token(), 1, 2,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15757,7 +11111,6 @@ pub fn quandrix_waveweaver_b164() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Waveweaver (b164)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -15767,19 +11120,8 @@ pub fn quandrix_waveweaver_b164() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15791,7 +11133,6 @@ pub fn quandrix_hydraformer_b165() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hydraformer (b165)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -15801,22 +11142,11 @@ pub fn quandrix_hydraformer_b165() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![{
             use crate::effect::shortcut::etb_draw;
             etb_draw(1)
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15826,7 +11156,6 @@ pub fn quandrix_formulist_b165() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Formulist (b165)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -15836,19 +11165,8 @@ pub fn quandrix_formulist_b165() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15858,7 +11176,6 @@ pub fn quandrix_rootsinger_b165() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Rootsinger (b165)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -15868,19 +11185,8 @@ pub fn quandrix_rootsinger_b165() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15890,7 +11196,6 @@ pub fn quandrix_tidebinder_b165() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidebinder (b165)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15905,19 +11210,8 @@ pub fn quandrix_tidebinder_b165() -> CardDefinition {
                 Box::new(Selector::Target(0)),
             )),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15927,7 +11221,6 @@ pub fn quandrix_spellgrafter_b165() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellgrafter (b165)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -15937,23 +11230,12 @@ pub fn quandrix_spellgrafter_b165() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -15969,7 +11251,6 @@ pub fn quandrix_counterspellbinder_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterspellbinder (b166)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -15979,23 +11260,12 @@ pub fn quandrix_counterspellbinder_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16005,7 +11275,6 @@ pub fn fractal_echofin_b166() -> CardDefinition {
     CardDefinition {
         name: "Fractal Echofin (b166)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -16015,19 +11284,8 @@ pub fn fractal_echofin_b166() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16037,7 +11295,6 @@ pub fn quandrix_echomender_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echomender (b166)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16047,23 +11304,12 @@ pub fn quandrix_echomender_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16073,7 +11319,6 @@ pub fn quandrix_sweep_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sweep (b166)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16087,19 +11332,8 @@ pub fn quandrix_sweep_b166() -> CardDefinition {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16109,7 +11343,6 @@ pub fn quandrix_wavecaster_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavecaster (b166)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16119,19 +11352,8 @@ pub fn quandrix_wavecaster_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16141,7 +11363,6 @@ pub fn quandrix_tideguard_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideguard (b166)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16151,19 +11372,8 @@ pub fn quandrix_tideguard_b166() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16173,7 +11383,6 @@ pub fn quandrix_spellbinder_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Spellbinder (b166)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16187,19 +11396,8 @@ pub fn quandrix_spellbinder_b166() -> CardDefinition {
             toughness: Value::Const(2),
             duration: Duration::EndOfTurn,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16210,7 +11408,6 @@ pub fn quandrix_sumcaller_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcaller (b166)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16228,19 +11425,8 @@ pub fn quandrix_sumcaller_b166() -> CardDefinition {
                 amount: Value::Const(4),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16250,7 +11436,6 @@ pub fn quandrix_mathstrider_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathstrider (b166)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16260,19 +11445,8 @@ pub fn quandrix_mathstrider_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16282,7 +11456,6 @@ pub fn quandrix_splitstone_b166() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Splitstone (b166)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -16292,23 +11465,12 @@ pub fn quandrix_splitstone_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16320,7 +11482,6 @@ pub fn quandrix_tideforge_b167() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideforge (b167)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16330,19 +11491,8 @@ pub fn quandrix_tideforge_b167() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16352,7 +11502,6 @@ pub fn quandrix_pluralizer_b167() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pluralizer (b167)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16362,7 +11511,6 @@ pub fn quandrix_pluralizer_b167() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -16371,17 +11519,7 @@ pub fn quandrix_pluralizer_b167() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16391,7 +11529,6 @@ pub fn quandrix_echobinder_b167() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echobinder (b167)",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16401,19 +11538,8 @@ pub fn quandrix_echobinder_b167() -> CardDefinition {
             what: Selector::Target(0),
             mana_cost: crate::mana::cost(&[generic(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16423,7 +11549,6 @@ pub fn fractal_crusher_b167() -> CardDefinition {
     CardDefinition {
         name: "Fractal Crusher (b167)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -16433,19 +11558,8 @@ pub fn fractal_crusher_b167() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16457,7 +11571,6 @@ pub fn quandrix_echofin_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echofin (b169)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Fish],
@@ -16467,18 +11580,11 @@ pub fn quandrix_echofin_b169() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16489,7 +11595,6 @@ pub fn quandrix_pluralize_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pluralize (b169)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16503,14 +11608,7 @@ pub fn quandrix_pluralize_b169() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16521,7 +11619,6 @@ pub fn quandrix_splitscholar_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Splitscholar (b169)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16531,17 +11628,10 @@ pub fn quandrix_splitscholar_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16552,7 +11642,6 @@ pub fn quandrix_tideforge_b169_v2() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tideforge II (b169)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -16562,7 +11651,6 @@ pub fn quandrix_tideforge_b169_v2() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -16571,12 +11659,6 @@ pub fn quandrix_tideforge_b169_v2() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16587,7 +11669,6 @@ pub fn quandrix_echocaster_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echocaster (b169)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16597,14 +11678,7 @@ pub fn quandrix_echocaster_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16615,7 +11689,6 @@ pub fn quandrix_plantarchitect_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Plantarchitect (b169)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16625,14 +11698,7 @@ pub fn quandrix_plantarchitect_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16643,7 +11709,6 @@ pub fn quandrix_bigwave_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bigwave (b169)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16663,14 +11728,7 @@ pub fn quandrix_bigwave_b169() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16686,7 +11744,6 @@ pub fn quandrix_echocrasher_b171() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echocrasher (b171)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Elemental],
@@ -16696,7 +11753,6 @@ pub fn quandrix_echocrasher_b171() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -16708,12 +11764,6 @@ pub fn quandrix_echocrasher_b171() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16727,7 +11777,6 @@ pub fn quandrix_foragelord_b172() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Foragelord (b172)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16737,14 +11786,7 @@ pub fn quandrix_foragelord_b172() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16755,7 +11797,6 @@ pub fn quandrix_sumcheck_b172() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumcheck (b172)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16765,14 +11806,7 @@ pub fn quandrix_sumcheck_b172() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16783,7 +11817,6 @@ pub fn quandrix_fractalmancer_b171() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalmancer (b171)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Wizard],
@@ -16793,7 +11826,6 @@ pub fn quandrix_fractalmancer_b171() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -16804,12 +11836,6 @@ pub fn quandrix_fractalmancer_b171() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16820,7 +11846,6 @@ pub fn quandrix_hydromancer_b170() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Hydromancer (b170)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16830,7 +11855,6 @@ pub fn quandrix_hydromancer_b170() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::AddCounter {
                 what: Selector::This,
@@ -16839,12 +11863,6 @@ pub fn quandrix_hydromancer_b170() -> CardDefinition {
             }),
             magecraft_draw(1),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16855,7 +11873,6 @@ pub fn quandrix_fractal_whale_b169() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal Whale (b169)",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Whale],
@@ -16865,14 +11882,7 @@ pub fn quandrix_fractal_whale_b169() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16883,7 +11893,6 @@ pub fn quandrix_echodraw_b167() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Echodraw (b167)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16893,19 +11902,8 @@ pub fn quandrix_echodraw_b167() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -16918,7 +11916,6 @@ pub fn quandrix_symbolist_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symbolist (b174)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -16928,14 +11925,7 @@ pub fn quandrix_symbolist_b174() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16946,7 +11936,6 @@ pub fn quandrix_mathshape_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathshape (b174)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16956,14 +11945,7 @@ pub fn quandrix_mathshape_b174() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -16976,7 +11958,6 @@ pub fn quandrix_fractalspinner_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalspinner (b174)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -16986,18 +11967,11 @@ pub fn quandrix_fractalspinner_b174() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(
             fractal_token(),
             1,
             2,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17007,7 +11981,6 @@ pub fn quandrix_riverflow_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riverflow (b174)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17023,14 +11996,7 @@ pub fn quandrix_riverflow_b174() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17043,7 +12009,6 @@ pub fn quandrix_sapcaller_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sapcaller (b174)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -17053,7 +12018,6 @@ pub fn quandrix_sapcaller_b174() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -17066,12 +12030,6 @@ pub fn quandrix_sapcaller_b174() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17085,7 +12043,6 @@ pub fn quandrix_mathwarden_b175() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathwarden (b175)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -17095,7 +12052,6 @@ pub fn quandrix_mathwarden_b175() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -17103,12 +12059,6 @@ pub fn quandrix_mathwarden_b175() -> CardDefinition {
             1,
             1,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17120,7 +12070,6 @@ pub fn quandrix_beastform_b175() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Beastform (b175)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17138,14 +12087,7 @@ pub fn quandrix_beastform_b175() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17159,7 +12101,6 @@ pub fn quandrix_skyfractal_b185() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skyfractal (b185)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17182,14 +12123,7 @@ pub fn quandrix_skyfractal_b185() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17202,7 +12136,6 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamwarden (b182)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -17212,7 +12145,6 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -17224,12 +12156,6 @@ pub fn quandrix_streamwarden_b182() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17257,7 +12183,6 @@ pub fn quandrix_sumtotal_b191() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumtotal (b191)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17276,14 +12201,7 @@ pub fn quandrix_sumtotal_b191() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17294,7 +12212,6 @@ pub fn quandrix_sparkbloomer_b191() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sparkbloomer (b191)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -17304,14 +12221,7 @@ pub fn quandrix_sparkbloomer_b191() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17322,7 +12232,6 @@ pub fn quandrix_vinegrower_b191() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinegrower (b191)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -17332,18 +12241,11 @@ pub fn quandrix_vinegrower_b191() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17356,7 +12258,6 @@ pub fn quandrix_doublegrowth_b190() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Doublegrowth (b190)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17374,14 +12275,7 @@ pub fn quandrix_doublegrowth_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17392,7 +12286,6 @@ pub fn quandrix_riftleaper_b190() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riftleaper (b190)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -17402,18 +12295,11 @@ pub fn quandrix_riftleaper_b190() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddKeywordCounter {
             what: Selector::This,
             keyword: Keyword::Flying,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17424,7 +12310,6 @@ pub fn quandrix_sapleader_b190() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sapleader (b190)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -17434,7 +12319,6 @@ pub fn quandrix_sapleader_b190() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::AddCounter {
                 what: Selector::This,
@@ -17447,12 +12331,6 @@ pub fn quandrix_sapleader_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17465,7 +12343,6 @@ pub fn quandrix_beastcaller_b189() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Beastcaller (b189)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -17475,7 +12352,6 @@ pub fn quandrix_beastcaller_b189() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -17488,12 +12364,6 @@ pub fn quandrix_beastcaller_b189() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17504,7 +12374,6 @@ pub fn quandrix_cantrip_b189() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cantrip (b189)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17514,14 +12383,7 @@ pub fn quandrix_cantrip_b189() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17532,7 +12394,6 @@ pub fn quandrix_vinescaler_ii_b189() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinescaler II (b189)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -17542,14 +12403,7 @@ pub fn quandrix_vinescaler_ii_b189() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach, Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17562,7 +12416,6 @@ pub fn quandrix_mossleaf_b188() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mossleaf (b188)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant],
@@ -17572,14 +12425,7 @@ pub fn quandrix_mossleaf_b188() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17591,7 +12437,6 @@ pub fn quandrix_dataweaver_b188() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Dataweaver (b188)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -17601,14 +12446,7 @@ pub fn quandrix_dataweaver_b188() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17619,7 +12457,6 @@ pub fn quandrix_latticebreaker_b188() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Latticebreaker (b188)",
         cost: cost(&[generic(3), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17629,14 +12466,7 @@ pub fn quandrix_latticebreaker_b188() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(3),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17649,7 +12479,6 @@ pub fn quandrix_tramplerune_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tramplerune (b187)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17662,14 +12491,7 @@ pub fn quandrix_tramplerune_b187() -> CardDefinition {
             keyword: Keyword::Trample,
             amount: Value::Const(1),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17695,7 +12517,6 @@ pub fn quandrix_fractal_tutor_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal-Tutor (b187)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17718,14 +12539,7 @@ pub fn quandrix_fractal_tutor_b187() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17737,7 +12551,6 @@ pub fn quandrix_vinescaler_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinescaler (b187)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -17747,7 +12560,6 @@ pub fn quandrix_vinescaler_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::AddCounter {
                 what: Selector::This,
@@ -17764,12 +12576,6 @@ pub fn quandrix_vinescaler_b187() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17780,7 +12586,6 @@ pub fn quandrix_treestrider_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treestrider (b187)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant],
@@ -17790,14 +12595,7 @@ pub fn quandrix_treestrider_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach, Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17808,7 +12606,6 @@ pub fn quandrix_quickdraw_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Quickdraw (b187)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17818,14 +12615,7 @@ pub fn quandrix_quickdraw_b187() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17836,7 +12626,6 @@ pub fn quandrix_mossglider_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mossglider (b187)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Druid],
@@ -17846,18 +12635,11 @@ pub fn quandrix_mossglider_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17868,7 +12650,6 @@ pub fn quandrix_resonator_b187() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Resonator (b187)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -17878,14 +12659,7 @@ pub fn quandrix_resonator_b187() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17898,7 +12672,6 @@ pub fn quandrix_counterspinner_b180() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterspinner (b180)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17910,14 +12683,7 @@ pub fn quandrix_counterspinner_b180() -> CardDefinition {
                     .and(SelectionRequirement::ManaValueAtMost(2)),
             ),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17930,7 +12696,6 @@ pub fn quandrix_fractal_echocaller_b180() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractal-Echocaller (b180)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -17940,14 +12705,7 @@ pub fn quandrix_fractal_echocaller_b180() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17960,7 +12718,6 @@ pub fn quandrix_drawcaster_b178() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Drawcaster (b178)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -17970,14 +12727,7 @@ pub fn quandrix_drawcaster_b178() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -17991,7 +12741,6 @@ pub fn quandrix_streamcaster_b177() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamcaster (b177)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -18001,14 +12750,7 @@ pub fn quandrix_streamcaster_b177() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -18021,7 +12763,6 @@ pub fn quandrix_fractalkeeper_b177() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalkeeper (b177)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -18031,14 +12772,7 @@ pub fn quandrix_fractalkeeper_b177() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_with_counters(fractal_token(), 1, 4)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -18050,7 +12784,6 @@ pub fn quandrix_tidemind_b175() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidemind (b175)",
         cost: cost(&[generic(3), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Wizard],
@@ -18060,14 +12793,7 @@ pub fn quandrix_tidemind_b175() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -18077,7 +12803,6 @@ pub fn quandrix_wavelock_b174() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Wavelock (b174)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -18087,14 +12812,7 @@ pub fn quandrix_wavelock_b174() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -18109,7 +12827,6 @@ pub fn quandrix_counterleaf_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Counterleaf (b193)",
         cost: cost(&[generic(1), u(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Wizard],
@@ -18119,19 +12836,8 @@ pub fn quandrix_counterleaf_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18141,7 +12847,6 @@ pub fn quandrix_vinescholar_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinescholar (b193)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18151,19 +12856,8 @@ pub fn quandrix_vinescholar_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18173,7 +12867,6 @@ pub fn quandrix_fractalstamp_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalstamp (b193)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -18191,19 +12884,8 @@ pub fn quandrix_fractalstamp_b193() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18213,7 +12895,6 @@ pub fn quandrix_drawmage_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Drawmage (b193)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -18223,19 +12904,8 @@ pub fn quandrix_drawmage_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18245,7 +12915,6 @@ pub fn quandrix_treesage_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treesage (b193)",
         cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Beast],
@@ -18255,19 +12924,8 @@ pub fn quandrix_treesage_b193() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18277,7 +12935,6 @@ pub fn quandrix_skybinder_b193() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skybinder (b193)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird, CreatureType::Wizard],
@@ -18287,19 +12944,8 @@ pub fn quandrix_skybinder_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18310,26 +12956,14 @@ pub fn quandrix_cantrip_ii_b194() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cantrip II (b194)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18340,7 +12974,6 @@ pub fn quandrix_fractalmage_b194() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalmage (b194)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -18350,7 +12983,6 @@ pub fn quandrix_fractalmage_b194() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -18363,17 +12995,7 @@ pub fn quandrix_fractalmage_b194() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18383,7 +13005,6 @@ pub fn quandrix_treeshepherd_b194() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treeshepherd (b194)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18393,19 +13014,8 @@ pub fn quandrix_treeshepherd_b194() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18416,7 +13026,6 @@ pub fn quandrix_multiprover_b194() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Multiprover (b194)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -18426,19 +13035,8 @@ pub fn quandrix_multiprover_b194() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18451,7 +13049,6 @@ pub fn quandrix_algebrick_b195() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Algebrick (b195)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Construct],
@@ -18461,19 +13058,8 @@ pub fn quandrix_algebrick_b195() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_counter_self()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18484,7 +13070,6 @@ pub fn quandrix_reefcleric_b195() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reefcleric (b195)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Cleric],
@@ -18494,19 +13079,8 @@ pub fn quandrix_reefcleric_b195() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18516,7 +13090,6 @@ pub fn quandrix_reefranger_b195() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reefranger (b195)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -18526,7 +13099,6 @@ pub fn quandrix_reefranger_b195() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
             Effect::AddCounter {
@@ -18535,17 +13107,7 @@ pub fn quandrix_reefranger_b195() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18555,7 +13117,6 @@ pub fn quandrix_branchsage_b195() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Branchsage (b195)",
         cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18565,19 +13126,8 @@ pub fn quandrix_branchsage_b195() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18589,7 +13139,6 @@ pub fn quandrix_riverling_b196() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Riverling (b196)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk],
@@ -18599,19 +13148,8 @@ pub fn quandrix_riverling_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18622,7 +13160,6 @@ pub fn quandrix_mathlord_b196() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathlord (b196)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -18632,7 +13169,6 @@ pub fn quandrix_mathlord_b196() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -18645,17 +13181,7 @@ pub fn quandrix_mathlord_b196() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18665,7 +13191,6 @@ pub fn quandrix_vinetwine_b196() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinetwine (b196)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -18677,19 +13202,8 @@ pub fn quandrix_vinetwine_b196() -> CardDefinition {
             toughness: Value::Const(2),
             duration: Duration::EndOfTurn,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18699,7 +13213,6 @@ pub fn quandrix_algescholar_b196() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Algescholar (b196)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18709,7 +13222,6 @@ pub fn quandrix_algescholar_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -18717,17 +13229,7 @@ pub fn quandrix_algescholar_b196() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18739,7 +13241,6 @@ pub fn quandrix_vinestudent_b197() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinestudent (b197)",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18749,19 +13250,8 @@ pub fn quandrix_vinestudent_b197() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18772,7 +13262,6 @@ pub fn quandrix_fractalsense_b197() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalsense (b197)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -18782,23 +13271,12 @@ pub fn quandrix_fractalsense_b197() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18810,7 +13288,6 @@ pub fn quandrix_vinemage_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinemage (b198)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -18820,19 +13297,8 @@ pub fn quandrix_vinemage_b198() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18842,7 +13308,6 @@ pub fn quandrix_mathscholar_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathscholar (b198)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -18852,19 +13317,8 @@ pub fn quandrix_mathscholar_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18874,7 +13328,6 @@ pub fn quandrix_treegrower_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Treegrower (b198)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -18884,7 +13337,6 @@ pub fn quandrix_treegrower_b198() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -18892,17 +13344,7 @@ pub fn quandrix_treegrower_b198() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18913,7 +13355,6 @@ pub fn quandrix_fractalist_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalist (b198)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -18923,19 +13364,8 @@ pub fn quandrix_fractalist_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_fractal(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18946,26 +13376,14 @@ pub fn quandrix_stargazer_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Stargazer (b198)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) }, draw(1)]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -18975,7 +13393,6 @@ pub fn quandrix_reachelm_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Reachelm (b198)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Treefolk, CreatureType::Druid],
@@ -18985,19 +13402,8 @@ pub fn quandrix_reachelm_b198() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19007,26 +13413,14 @@ pub fn quandrix_cipher_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cipher (b198)",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19036,7 +13430,6 @@ pub fn quandrix_beastcaller_b198() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Beastcaller (b198)",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast, CreatureType::Druid],
@@ -19046,19 +13439,8 @@ pub fn quandrix_beastcaller_b198() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19070,7 +13452,6 @@ pub fn quandrix_vinetwist_b199() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinetwist (b199)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Druid],
@@ -19080,19 +13461,8 @@ pub fn quandrix_vinetwist_b199() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19103,7 +13473,6 @@ pub fn quandrix_mathmage_b199() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mathmage (b199)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -19113,19 +13482,8 @@ pub fn quandrix_mathmage_b199() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19135,7 +13493,6 @@ pub fn quandrix_pulse_b199() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Pulse (b199)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19151,19 +13508,8 @@ pub fn quandrix_pulse_b199() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19173,7 +13519,6 @@ pub fn quandrix_geomancer_b199() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geomancer (b199)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -19183,7 +13528,6 @@ pub fn quandrix_geomancer_b199() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -19191,17 +13535,7 @@ pub fn quandrix_geomancer_b199() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19212,7 +13546,6 @@ pub fn quandrix_fractalpath_b199() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalpath (b199)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19226,19 +13559,8 @@ pub fn quandrix_fractalpath_b199() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19249,7 +13571,6 @@ pub fn quandrix_watergrower_b200() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Watergrower (b200)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Druid],
@@ -19259,19 +13580,8 @@ pub fn quandrix_watergrower_b200() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19280,7 +13590,6 @@ pub fn quandrix_anchorvine_b200() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Anchorvine (b200)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Plant, CreatureType::Fractal],
@@ -19290,19 +13599,8 @@ pub fn quandrix_anchorvine_b200() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19314,7 +13612,6 @@ pub fn quandrix_cropping_b201() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cropping (b201)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19327,19 +13624,8 @@ pub fn quandrix_cropping_b201() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19350,7 +13636,6 @@ pub fn quandrix_crystalshard_b201() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Crystalshard (b201)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -19360,19 +13645,8 @@ pub fn quandrix_crystalshard_b201() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Defender],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19385,7 +13659,6 @@ pub fn quandrix_conjurer_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Conjurer (b202)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -19395,19 +13668,8 @@ pub fn quandrix_conjurer_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19418,7 +13680,6 @@ pub fn quandrix_fractalweaver_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalweaver (b202)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -19428,19 +13689,8 @@ pub fn quandrix_fractalweaver_b202() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_fractal(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19450,26 +13700,14 @@ pub fn quandrix_cantrip_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Cantrip (b202)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19479,7 +13717,6 @@ pub fn quandrix_grizzler_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Grizzler (b202)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bear, CreatureType::Druid],
@@ -19489,19 +13726,8 @@ pub fn quandrix_grizzler_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19513,7 +13739,6 @@ pub fn quandrix_sumtotal_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sumtotal (b202)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19524,19 +13749,8 @@ pub fn quandrix_sumtotal_b202() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: count(each_your_creature()),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19546,7 +13760,6 @@ pub fn quandrix_skydiver_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Skydiver (b202)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -19556,19 +13769,8 @@ pub fn quandrix_skydiver_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Hexproof],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19578,7 +13780,6 @@ pub fn quandrix_sparkbender_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Sparkbender (b202)",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19588,19 +13789,8 @@ pub fn quandrix_sparkbender_b202() -> CardDefinition {
         effect: Effect::CounterSpell {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19610,7 +13800,6 @@ pub fn quandrix_vinemage_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Vinemage (b202)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid],
@@ -19620,7 +13809,6 @@ pub fn quandrix_vinemage_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -19628,17 +13816,7 @@ pub fn quandrix_vinemage_b202() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19649,7 +13827,6 @@ pub fn quandrix_fractalspawn_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalspawn (b202)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -19659,7 +13836,6 @@ pub fn quandrix_fractalspawn_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -19675,17 +13851,7 @@ pub fn quandrix_fractalspawn_b202() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19697,7 +13863,6 @@ pub fn quandrix_symmetry_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Symmetry (b202)",
         cost: cost(&[x(), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19715,19 +13880,8 @@ pub fn quandrix_symmetry_b202() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19737,7 +13891,6 @@ pub fn quandrix_streampath_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streampath (b202)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19750,19 +13903,8 @@ pub fn quandrix_streampath_b202() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19773,7 +13915,6 @@ pub fn quandrix_geomant_b202() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Geomant (b202)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid, CreatureType::Wizard],
@@ -19796,17 +13937,7 @@ pub fn quandrix_geomant_b202() -> CardDefinition {
             ..ActivatedAbility::default()
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19819,7 +13950,6 @@ pub fn quandrix_apprentice_ii_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Apprentice II (b203)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid],
@@ -19829,24 +13959,13 @@ pub fn quandrix_apprentice_ii_b203() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             1, 1,
         )],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19855,7 +13974,6 @@ pub fn quandrix_naturist_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Naturist (b203)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid, CreatureType::Beast],
@@ -19865,19 +13983,8 @@ pub fn quandrix_naturist_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19887,7 +13994,6 @@ pub fn quandrix_charmer_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Charmer (b203)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid, CreatureType::Wizard],
@@ -19897,19 +14003,8 @@ pub fn quandrix_charmer_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19919,7 +14014,6 @@ pub fn quandrix_surge_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Surge (b203)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -19930,19 +14024,8 @@ pub fn quandrix_surge_b203() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(3),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19952,7 +14035,6 @@ pub fn quandrix_streamer_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Streamer (b203)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk],
@@ -19962,19 +14044,8 @@ pub fn quandrix_streamer_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -19983,7 +14054,6 @@ pub fn quandrix_verdant_b203() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Verdant (b203)",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid],
@@ -19993,19 +14063,8 @@ pub fn quandrix_verdant_b203() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20018,7 +14077,6 @@ pub fn quandrix_fractaller_b204() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractaller (b204)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -20028,19 +14086,8 @@ pub fn quandrix_fractaller_b204() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_fractal(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20050,7 +14097,6 @@ pub fn quandrix_mentor_b204() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mentor (b204)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Druid, CreatureType::Wizard],
@@ -20060,7 +14106,6 @@ pub fn quandrix_mentor_b204() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -20068,17 +14113,7 @@ pub fn quandrix_mentor_b204() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20087,7 +14122,6 @@ pub fn quandrix_anchor_b204() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Anchor (b204)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -20097,19 +14131,8 @@ pub fn quandrix_anchor_b204() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20125,7 +14148,6 @@ pub fn quandrix_thornfractal_b205() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Thornfractal (b205)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -20135,23 +14157,12 @@ pub fn quandrix_thornfractal_b205() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Defender],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::TriggerEventAmount,
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20161,7 +14172,6 @@ pub fn quandrix_tidecaller_b205() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidecaller (b205)",
         cost: cost(&[generic(1), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -20171,19 +14181,8 @@ pub fn quandrix_tidecaller_b205() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20193,7 +14192,6 @@ pub fn quandrix_growthseer_b205() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Growthseer (b205)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -20203,7 +14201,6 @@ pub fn quandrix_growthseer_b205() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -20211,17 +14208,7 @@ pub fn quandrix_growthseer_b205() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20231,7 +14218,6 @@ pub fn quandrix_mistcaller_b205() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Mistcaller (b205)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -20241,19 +14227,8 @@ pub fn quandrix_mistcaller_b205() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(2)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20268,7 +14243,6 @@ pub fn quandrix_scholar_b206() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Scholar (b206)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
@@ -20278,19 +14252,8 @@ pub fn quandrix_scholar_b206() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20300,7 +14263,6 @@ pub fn quandrix_megafractal_b206() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Megafractal (b206)",
         cost: cost(&[generic(4), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal],
@@ -20310,19 +14272,8 @@ pub fn quandrix_megafractal_b206() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20338,7 +14289,6 @@ pub fn quandrix_tidecaller_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidecaller (b207)",
         cost: cost(&[generic(2), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -20348,7 +14298,6 @@ pub fn quandrix_tidecaller_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_counter(
             PlayerRef::You,
             1,
@@ -20356,17 +14305,7 @@ pub fn quandrix_tidecaller_b207() -> CardDefinition {
             CounterType::PlusOnePlusOne,
             2,
         ))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20377,7 +14316,6 @@ pub fn quandrix_theorist_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Theorist (b207)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -20387,19 +14325,8 @@ pub fn quandrix_theorist_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20409,7 +14336,6 @@ pub fn quandrix_fractalsurge_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Fractalsurge (b207)",
         cost: cost(&[x(), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -20427,19 +14353,8 @@ pub fn quandrix_fractalsurge_b207() -> CardDefinition {
                 amount: Value::XFromCost,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20450,7 +14365,6 @@ pub fn quandrix_studymate_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Studymate (b207)",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Otter, CreatureType::Wizard],
@@ -20460,23 +14374,12 @@ pub fn quandrix_studymate_b207() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::CardsDrawnThisTurn(PlayerRef::You),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20486,7 +14389,6 @@ pub fn quandrix_currentweaver_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Currentweaver (b207)",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -20496,7 +14398,6 @@ pub fn quandrix_currentweaver_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -20507,17 +14408,7 @@ pub fn quandrix_currentweaver_b207() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20527,7 +14418,6 @@ pub fn quandrix_bigmind_b207() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Bigmind (b207)",
         cost: cost(&[generic(3), g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fractal, CreatureType::Wizard],
@@ -20537,19 +14427,8 @@ pub fn quandrix_bigmind_b207() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20564,7 +14443,6 @@ pub fn quandrix_rootmage_b208() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Rootmage (b208)",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -20574,7 +14452,6 @@ pub fn quandrix_rootmage_b208() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -20582,17 +14459,7 @@ pub fn quandrix_rootmage_b208() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -20602,7 +14469,6 @@ pub fn quandrix_tidecantor_b208() -> CardDefinition {
     CardDefinition {
         name: "Quandrix Tidecantor (b208)",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -20612,18 +14478,7 @@ pub fn quandrix_tidecantor_b208() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

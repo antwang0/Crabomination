@@ -189,7 +189,6 @@ fn artifact_land(
     CardDefinition {
         name,
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land, CardType::Artifact],
         subtypes: Subtypes {
             land_types: vec![land_type],
@@ -201,17 +200,7 @@ fn artifact_land(
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(color)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -249,7 +238,6 @@ pub fn darksteel_citadel() -> CardDefinition {
     CardDefinition {
         name: "Darksteel Citadel",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land, CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -273,17 +261,7 @@ pub fn darksteel_citadel() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -300,7 +278,6 @@ pub fn exotic_orchard() -> CardDefinition {
     CardDefinition {
         name: "Exotic Orchard",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -309,16 +286,6 @@ pub fn exotic_orchard() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add_any_color()],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

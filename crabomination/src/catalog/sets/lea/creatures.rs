@@ -1,4 +1,4 @@
-use super::{no_abilities, tap_add};
+use super::tap_add;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, Subtypes, TriggeredAbility,
@@ -12,7 +12,6 @@ pub fn savannah_lions() -> CardDefinition {
     CardDefinition {
         name: "Savannah Lions",
         cost: cost(&[w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Cat, CreatureType::Lion],
@@ -22,19 +21,8 @@ pub fn savannah_lions() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -43,7 +31,6 @@ pub fn white_knight() -> CardDefinition {
     CardDefinition {
         name: "White Knight",
         cost: cost(&[w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Knight],
@@ -53,19 +40,8 @@ pub fn white_knight() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -74,7 +50,6 @@ pub fn serra_angel() -> CardDefinition {
     CardDefinition {
         name: "Serra Angel",
         cost: cost(&[generic(3), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Angel],
@@ -84,19 +59,8 @@ pub fn serra_angel() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -105,7 +69,6 @@ pub fn mahamoti_djinn() -> CardDefinition {
     CardDefinition {
         name: "Mahamoti Djinn",
         cost: cost(&[generic(4), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn],
@@ -115,19 +78,8 @@ pub fn mahamoti_djinn() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -136,7 +88,6 @@ pub fn prodigal_sorcerer() -> CardDefinition {
     CardDefinition {
         name: "Prodigal Sorcerer",
         cost: cost(&[generic(2), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -160,17 +111,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -179,7 +120,6 @@ pub fn black_knight() -> CardDefinition {
     CardDefinition {
         name: "Black Knight",
         cost: cost(&[b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Knight],
@@ -189,19 +129,8 @@ pub fn black_knight() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -213,7 +142,6 @@ pub fn hypnotic_specter() -> CardDefinition {
     CardDefinition {
         name: "Hypnotic Specter",
         cost: cost(&[generic(1), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Specter],
@@ -223,7 +151,6 @@ pub fn hypnotic_specter() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -238,17 +165,7 @@ pub fn hypnotic_specter() -> CardDefinition {
                 random: true,
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -257,7 +174,6 @@ pub fn sengir_vampire() -> CardDefinition {
     CardDefinition {
         name: "Sengir Vampire",
         cost: cost(&[generic(3), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vampire],
@@ -267,19 +183,8 @@ pub fn sengir_vampire() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -288,7 +193,6 @@ pub fn shivan_dragon() -> CardDefinition {
     CardDefinition {
         name: "Shivan Dragon",
         cost: cost(&[generic(4), r(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
@@ -298,19 +202,8 @@ pub fn shivan_dragon() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -319,7 +212,6 @@ pub fn grizzly_bears() -> CardDefinition {
     CardDefinition {
         name: "Grizzly Bears",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bear],
@@ -329,19 +221,8 @@ pub fn grizzly_bears() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -350,7 +231,6 @@ pub fn birds_of_paradise() -> CardDefinition {
     CardDefinition {
         name: "Birds of Paradise",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird],
@@ -377,17 +257,7 @@ pub fn birds_of_paradise() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -396,7 +266,6 @@ pub fn llanowar_elves() -> CardDefinition {
     CardDefinition {
         name: "Llanowar Elves",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Druid],
@@ -408,17 +277,7 @@ pub fn llanowar_elves() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -427,7 +286,6 @@ pub fn elvish_archers() -> CardDefinition {
     CardDefinition {
         name: "Elvish Archers",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elf, CreatureType::Archer],
@@ -437,19 +295,8 @@ pub fn elvish_archers() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -458,7 +305,6 @@ pub fn craw_wurm() -> CardDefinition {
     CardDefinition {
         name: "Craw Wurm",
         cost: cost(&[generic(4), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Wurm],
@@ -468,18 +314,7 @@ pub fn craw_wurm() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

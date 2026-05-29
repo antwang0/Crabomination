@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{cost, g, u};
 
@@ -7,7 +6,6 @@ pub fn gaeas_skyfolk() -> CardDefinition {
     CardDefinition {
         name: "Gaea's Skyfolk",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk],
@@ -17,18 +15,7 @@ pub fn gaeas_skyfolk() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

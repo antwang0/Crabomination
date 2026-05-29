@@ -536,7 +536,7 @@ fn rematch_in_place(
             });
         }
     }
-    commands.insert_resource(NetOutbox(tx));
+    commands.insert_resource(NetOutbox::new(tx));
     commands.insert_resource(NetInbox(Mutex::new(rx)));
     commands.insert_resource(LatestSnapshot(sink));
 }

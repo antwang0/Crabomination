@@ -35,7 +35,6 @@ pub fn cauldron_of_essence() -> CardDefinition {
     CardDefinition {
         name: "Cauldron of Essence",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -69,17 +68,7 @@ pub fn cauldron_of_essence() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -100,7 +89,6 @@ pub fn diary_of_dreams() -> CardDefinition {
     CardDefinition {
         name: "Diary of Dreams",
         cost: cost(&[generic(2)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -134,17 +122,7 @@ pub fn diary_of_dreams() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -172,7 +150,6 @@ pub fn tablet_of_discovery() -> CardDefinition {
     CardDefinition {
         name: "Tablet of Discovery",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -228,17 +205,7 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -257,7 +224,6 @@ pub fn potioners_trove() -> CardDefinition {
     CardDefinition {
         name: "Potioner's Trove",
         cost: cost(&[generic(3)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -307,17 +273,7 @@ pub fn potioners_trove() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -341,7 +297,6 @@ pub fn resonating_lute() -> CardDefinition {
     CardDefinition {
         name: "Resonating Lute",
         cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -368,17 +323,7 @@ pub fn resonating_lute() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -402,7 +347,6 @@ pub fn ark_of_hunger() -> CardDefinition {
     CardDefinition {
         name: "Ark of Hunger",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -446,17 +390,7 @@ pub fn ark_of_hunger() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -478,7 +412,6 @@ pub fn strixhaven_skycoach() -> CardDefinition {
     CardDefinition {
         name: "Strixhaven Skycoach",
         cost: cost(&[generic(3)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
             artifact_subtypes: vec![ArtifactSubtype::Vehicle],
@@ -498,17 +431,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
                 to: ZD::Hand(PR::You),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

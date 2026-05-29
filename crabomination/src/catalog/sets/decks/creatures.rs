@@ -5,7 +5,6 @@
 //! and a doc-comment marking the omission. The bodies (cost, P/T, keywords,
 //! creature subtypes) are correct so they animate and combat properly.
 
-use super::super::no_abilities;
 use crate::card::{
     ActivatedAbility, AlternativeCost, CardDefinition, CardType, CreatureType, Effect, EventKind,
     EventScope, EventSpec, Keyword, PlaneswalkerSubtype, Selector, SelectionRequirement, Subtypes,
@@ -31,7 +30,6 @@ pub fn callous_sell_sword() -> CardDefinition {
     CardDefinition {
         name: "Callous Sell-Sword",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
@@ -41,7 +39,6 @@ pub fn callous_sell_sword() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -58,17 +55,7 @@ pub fn callous_sell_sword() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -87,7 +74,6 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
     CardDefinition {
         name: "Chancellor of the Tangle",
         cost: cost(&[generic(5), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Avatar],
@@ -97,13 +83,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
         toughness: 7,
         keywords: vec![Keyword::Reach, Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             kind: DelayedTriggerKind::YourNextMainPhase,
             body: Effect::AddMana {
@@ -111,11 +91,7 @@ pub fn chancellor_of_the_tangle() -> CardDefinition {
                 pool: ManaPayload::Colors(vec![Color::Green]),
             },
         }),
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -130,7 +106,6 @@ pub fn cosmogoyf() -> CardDefinition {
     CardDefinition {
         name: "Cosmogoyf",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast],
@@ -142,19 +117,8 @@ pub fn cosmogoyf() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -166,7 +130,6 @@ pub fn devourer_of_destiny() -> CardDefinition {
     CardDefinition {
         name: "Devourer of Destiny",
         cost: cost(&[generic(7)]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Eldrazi],
@@ -176,22 +139,11 @@ pub fn devourer_of_destiny() -> CardDefinition {
         toughness: 6,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -226,7 +178,6 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
             Keyword::Lifelink,
         ],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // Draw `DistinctCardTypesInTopN(You, 10)` cards. With the new
@@ -242,17 +193,7 @@ pub fn atraxa_grand_unifier() -> CardDefinition {
                 },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -294,17 +235,7 @@ pub fn griselbrand() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -318,7 +249,6 @@ pub fn psychic_frog() -> CardDefinition {
     CardDefinition {
         name: "Psychic Frog",
         cost: cost(&[u(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Frog],
@@ -380,17 +310,7 @@ pub fn psychic_frog() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -402,7 +322,6 @@ pub fn quantum_riddler() -> CardDefinition {
     CardDefinition {
         name: "Quantum Riddler",
         cost: cost(&[generic(3), u(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Sphinx],
@@ -412,7 +331,6 @@ pub fn quantum_riddler() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -420,17 +338,7 @@ pub fn quantum_riddler() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -451,7 +359,6 @@ pub fn solitude() -> CardDefinition {
         // existing test fixtures and slightly off-flavor (Solitude is a
         // single-white-pip MH2 evoke spell, not a double-white).
         cost: cost(&[generic(3), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Kor, CreatureType::Cleric],
@@ -461,7 +368,6 @@ pub fn solitude() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash, Keyword::Flying, Keyword::Lifelink],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Exile {
@@ -471,9 +377,6 @@ pub fn solitude() -> CardDefinition {
                 ),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
         alternative_cost: Some(AlternativeCost {
             mana_cost: ManaCost::default(),
             life_cost: 0,
@@ -485,13 +388,7 @@ pub fn solitude() -> CardDefinition {
                     exile_from_graveyard_count: 0,
             effect_override: None,
         }),
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -512,7 +409,6 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
     CardDefinition {
         name: "Chancellor of the Annex",
         cost: cost(&[generic(4), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Avatar],
@@ -522,13 +418,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
         opening_hand: Some(OpeningHandEffect::RevealForDelayedTrigger {
             // Fire on the upkeep so the first spell each opponent casts
             // **next turn** is taxed (the engine fires this delayed
@@ -542,11 +432,7 @@ pub fn chancellor_of_the_annex() -> CardDefinition {
                 count: Value::Const(1),
             },
         }),
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -576,7 +462,6 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
         toughness: 7,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         // The ETB-trigger-spotlight static; `etb_trigger_multiplier`
         // scans the battlefield for any permanent carrying this static
@@ -590,16 +475,7 @@ pub fn elesh_norn_mother_of_machines() -> CardDefinition {
                  additional time.",
             effect: crate::effect::StaticEffect::EtbTriggerSpotlight,
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -635,7 +511,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![
             StaticAbility {
@@ -673,13 +548,6 @@ pub fn teferi_time_raveler() -> CardDefinition {
                 ]),
             },
         ],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

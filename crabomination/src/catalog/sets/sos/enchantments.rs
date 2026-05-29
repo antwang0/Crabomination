@@ -5,7 +5,6 @@
 //! is added piecemeal here as the engine acquires the primitives needed
 //! to express its full Oracle text.
 
-use super::no_abilities;
 use super::sorceries::{fractal_token, spirit_token};
 use crate::card::{
     CardDefinition, CardType, CounterType, Effect, EventKind, EventScope, EventSpec, Keyword,
@@ -28,14 +27,12 @@ pub fn graduation_day() -> CardDefinition {
     CardDefinition {
         name: "Graduation Day",
         cost: cost(&[w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![repartee(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -43,17 +40,7 @@ pub fn graduation_day() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -76,14 +63,12 @@ pub fn living_history() -> CardDefinition {
     CardDefinition {
         name: "Living History",
         cost: cost(&[generic(1), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             // ETB: create a 2/2 R/W Spirit creature token.
             TriggeredAbility {
@@ -114,17 +99,7 @@ pub fn living_history() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -144,14 +119,12 @@ pub fn comforting_counsel() -> CardDefinition {
     CardDefinition {
         name: "Comforting Counsel",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -160,17 +133,7 @@ pub fn comforting_counsel() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -196,14 +159,12 @@ pub fn primary_research() -> CardDefinition {
     CardDefinition {
         name: "Primary Research",
         cost: cost(&[generic(4), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             // ETB: return ≤MV3 nonland permanent card from your gy → bf.
             TriggeredAbility {
@@ -238,17 +199,7 @@ pub fn primary_research() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -270,14 +221,12 @@ pub fn additive_evolution() -> CardDefinition {
     CardDefinition {
         name: "Additive Evolution",
         cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             // ETB: create a 0/0 green-blue Fractal token + 3 +1/+1 counters.
             TriggeredAbility {
@@ -318,17 +267,7 @@ pub fn additive_evolution() -> CardDefinition {
                 ]),
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -359,14 +298,12 @@ pub fn top_of_the_class() -> CardDefinition {
     CardDefinition {
         name: "Top of the Class",
         cost: cost(&[generic(2), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![
             StaticAbility {
@@ -385,15 +322,6 @@ pub fn top_of_the_class() -> CardDefinition {
                 },
             },
         ],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

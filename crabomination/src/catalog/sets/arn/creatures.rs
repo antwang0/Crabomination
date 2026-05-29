@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Selector,
     Subtypes, TriggeredAbility, Value,
@@ -12,7 +11,6 @@ pub fn juzam_djinn() -> CardDefinition {
     CardDefinition {
         name: "Juzám Djinn",
         cost: cost(&[generic(2), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn],
@@ -22,21 +20,10 @@ pub fn juzam_djinn() -> CardDefinition {
         toughness: 5,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
             effect: Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

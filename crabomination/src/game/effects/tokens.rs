@@ -50,21 +50,11 @@ pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
         subtypes: token.subtypes.clone(),
         power: token.power,
         toughness: token.toughness,
-        base_loyalty: 0,
         keywords: token.keywords.clone(),
-        static_abilities: vec![],
         effect: Effect::Noop,
         activated_abilities: token.activated_abilities.clone(),
         triggered_abilities: token.triggered_abilities.clone(),
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

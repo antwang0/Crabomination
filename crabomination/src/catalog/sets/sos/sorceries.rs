@@ -1,6 +1,5 @@
 //! Secrets of Strixhaven (SOS) — Sorceries.
 
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, Subtypes,
     TokenDefinition,
@@ -135,7 +134,6 @@ pub fn dig_site_inventory() -> CardDefinition {
     CardDefinition {
         name: "Dig Site Inventory",
         cost: cost(&[w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -155,19 +153,8 @@ pub fn dig_site_inventory() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -199,7 +186,6 @@ pub fn daydream() -> CardDefinition {
     CardDefinition {
         name: "Daydream",
         cost: cost(&[w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -224,19 +210,8 @@ pub fn daydream() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -262,7 +237,6 @@ pub fn practiced_offense() -> CardDefinition {
     CardDefinition {
         name: "Practiced Offense",
         cost: cost(&[generic(2), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -293,19 +267,8 @@ pub fn practiced_offense() -> CardDefinition {
                 },
             ]),
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -349,7 +312,6 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
     CardDefinition {
         name: "Antiquities on the Loose",
         cost: cost(&[generic(1), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -380,19 +342,8 @@ pub fn antiquities_on_the_loose() -> CardDefinition {
                 else_: Box::new(Effect::Noop),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -408,7 +359,6 @@ pub fn group_project() -> CardDefinition {
     CardDefinition {
         name: "Group Project",
         cost: cost(&[generic(1), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -427,19 +377,8 @@ pub fn group_project() -> CardDefinition {
             count: Value::Const(1),
             definition: spirit_token(),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -453,7 +392,6 @@ pub fn procrastinate() -> CardDefinition {
     CardDefinition {
         name: "Procrastinate",
         cost: cost(&[x(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -472,19 +410,8 @@ pub fn procrastinate() -> CardDefinition {
                 ),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -503,7 +430,6 @@ pub fn mathemagics() -> CardDefinition {
     CardDefinition {
         name: "Mathemagics",
         cost: cost(&[x(), x(), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -513,19 +439,8 @@ pub fn mathemagics() -> CardDefinition {
             who: Selector::You,
             amount: Value::Pow2(Box::new(Value::XFromCost)),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -541,7 +456,6 @@ pub fn oracles_restoration() -> CardDefinition {
     CardDefinition {
         name: "Oracle's Restoration",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -565,19 +479,8 @@ pub fn oracles_restoration() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -594,7 +497,6 @@ pub fn send_in_the_pest() -> CardDefinition {
     CardDefinition {
         name: "Send in the Pest",
         cost: cost(&[generic(1), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -612,19 +514,8 @@ pub fn send_in_the_pest() -> CardDefinition {
                 definition: pest_token(),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -641,7 +532,6 @@ pub fn dinas_guidance() -> CardDefinition {
     CardDefinition {
         name: "Dina's Guidance",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -661,19 +551,8 @@ pub fn dinas_guidance() -> CardDefinition {
                 to: ZoneDest::Graveyard,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -684,7 +563,6 @@ pub fn grapple_with_death() -> CardDefinition {
     CardDefinition {
         name: "Grapple with Death",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -702,19 +580,8 @@ pub fn grapple_with_death() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -734,7 +601,6 @@ pub fn pull_from_the_grave() -> CardDefinition {
     CardDefinition {
         name: "Pull from the Grave",
         cost: cost(&[generic(2), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -757,19 +623,8 @@ pub fn pull_from_the_grave() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -796,7 +651,6 @@ pub fn end_of_the_hunt() -> CardDefinition {
     CardDefinition {
         name: "End of the Hunt",
         cost: cost(&[generic(1), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -810,19 +664,8 @@ pub fn end_of_the_hunt() -> CardDefinition {
                     )),
             ),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -843,7 +686,6 @@ pub fn vicious_rivalry() -> CardDefinition {
     CardDefinition {
         name: "Vicious Rivalry",
         cost: spell_cost,
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -876,19 +718,8 @@ pub fn vicious_rivalry() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -919,7 +750,6 @@ pub fn borrowed_knowledge() -> CardDefinition {
     CardDefinition {
         name: "Borrowed Knowledge",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -953,19 +783,8 @@ pub fn borrowed_knowledge() -> CardDefinition {
                 },
             ]),
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -991,7 +810,6 @@ pub fn pursue_the_past() -> CardDefinition {
     CardDefinition {
         name: "Pursue the Past",
         cost: cost(&[r(), w_mana()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1017,19 +835,8 @@ pub fn pursue_the_past() -> CardDefinition {
                 ])),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1050,7 +857,6 @@ pub fn render_speechless() -> CardDefinition {
     CardDefinition {
         name: "Render Speechless",
         cost: cost(&[generic(2), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1073,19 +879,8 @@ pub fn render_speechless() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1109,7 +904,6 @@ pub fn moment_of_reckoning() -> CardDefinition {
     CardDefinition {
         name: "Moment of Reckoning",
         cost: cost(&[generic(3), w(), w(), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1132,19 +926,8 @@ pub fn moment_of_reckoning() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1160,7 +943,6 @@ pub fn arcane_omens() -> CardDefinition {
     CardDefinition {
         name: "Arcane Omens",
         cost: cost(&[generic(4), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1171,19 +953,8 @@ pub fn arcane_omens() -> CardDefinition {
             amount: Value::ConvergedValue,
             random: false,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1201,7 +972,6 @@ pub fn together_as_one() -> CardDefinition {
     CardDefinition {
         name: "Together as One",
         cost: cost(&[generic(6)]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1228,19 +998,8 @@ pub fn together_as_one() -> CardDefinition {
                 amount: Value::ConvergedValue,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1265,7 +1024,6 @@ pub fn wisdom_of_ages() -> CardDefinition {
     CardDefinition {
         name: "Wisdom of Ages",
         cost: cost(&[generic(4), u(), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1283,19 +1041,9 @@ pub fn wisdom_of_ages() -> CardDefinition {
             },
             Effect::SetNoMaxHandSize { who: Selector::You },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1312,7 +1060,6 @@ pub fn rapturous_moment() -> CardDefinition {
     CardDefinition {
         name: "Rapturous Moment",
         cost: cost(&[generic(4), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1339,19 +1086,8 @@ pub fn rapturous_moment() -> CardDefinition {
                 ]),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1373,7 +1109,6 @@ pub fn visionarys_dance() -> CardDefinition {
     CardDefinition {
         name: "Visionary's Dance",
         cost: cost(&[generic(5), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1384,19 +1119,8 @@ pub fn visionarys_dance() -> CardDefinition {
             count: Value::Const(2),
             definition: elemental_token(),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1408,7 +1132,6 @@ pub fn splatter_technique() -> CardDefinition {
     CardDefinition {
         name: "Splatter Technique",
         cost: cost(&[generic(1), u(), u(), r(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1429,19 +1152,8 @@ pub fn splatter_technique() -> CardDefinition {
                 amount: Value::Const(4),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1462,7 +1174,6 @@ pub fn cost_of_brilliance() -> CardDefinition {
     CardDefinition {
         name: "Cost of Brilliance",
         cost: cost(&[generic(2), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1489,19 +1200,8 @@ pub fn cost_of_brilliance() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1525,7 +1225,6 @@ pub fn mind_roots() -> CardDefinition {
     CardDefinition {
         name: "Mind Roots",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1556,19 +1255,8 @@ pub fn mind_roots() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1593,7 +1281,6 @@ pub fn mind_into_matter() -> CardDefinition {
     CardDefinition {
         name: "Mind into Matter",
         cost: spell_cost,
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1631,19 +1318,8 @@ pub fn mind_into_matter() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1662,7 +1338,6 @@ pub fn growth_curve() -> CardDefinition {
     CardDefinition {
         name: "Growth Curve",
         cost: cost(&[g(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1685,19 +1360,8 @@ pub fn growth_curve() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1725,7 +1389,6 @@ pub fn killians_confidence() -> CardDefinition {
     CardDefinition {
         name: "Killian's Confidence",
         cost: cost(&[w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1743,7 +1406,6 @@ pub fn killians_confidence() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -1758,17 +1420,7 @@ pub fn killians_confidence() -> CardDefinition {
                 }),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1787,7 +1439,6 @@ pub fn planar_engineering() -> CardDefinition {
     CardDefinition {
         name: "Planar Engineering",
         cost: cost(&[generic(3), gm()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1811,19 +1462,8 @@ pub fn planar_engineering() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1846,7 +1486,6 @@ pub fn pox_plague() -> CardDefinition {
     CardDefinition {
         name: "Pox Plague",
         cost: cost(&[b(), b(), b(), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1873,19 +1512,8 @@ pub fn pox_plague() -> CardDefinition {
                 },
             ])),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1902,7 +1530,6 @@ pub fn withering_curse() -> CardDefinition {
     CardDefinition {
         name: "Withering Curse",
         cost: cost(&[generic(1), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1929,19 +1556,8 @@ pub fn withering_curse() -> CardDefinition {
                 }),
             }),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -1975,7 +1591,6 @@ pub fn root_manipulation() -> CardDefinition {
     CardDefinition {
         name: "Root Manipulation",
         cost: cost(&[generic(3), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2004,19 +1619,8 @@ pub fn root_manipulation() -> CardDefinition {
                 },
             ])),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2042,7 +1646,6 @@ pub fn chelonian_tackle() -> CardDefinition {
     CardDefinition {
         name: "Chelonian Tackle",
         cost: cost(&[generic(2), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2073,19 +1676,8 @@ pub fn chelonian_tackle() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2117,7 +1709,6 @@ pub fn steal_the_show() -> CardDefinition {
     CardDefinition {
         name: "Steal the Show",
         cost: cost(&[generic(2), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2147,19 +1738,8 @@ pub fn steal_the_show() -> CardDefinition {
                 amount: is_graveyard_count,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2183,7 +1763,6 @@ pub fn snarl_song() -> CardDefinition {
     CardDefinition {
         name: "Snarl Song",
         cost: cost(&[generic(5), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2215,19 +1794,8 @@ pub fn snarl_song() -> CardDefinition {
                 amount: x(),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2248,7 +1816,6 @@ pub fn wild_hypothesis() -> CardDefinition {
     CardDefinition {
         name: "Wild Hypothesis",
         cost: spell_cost,
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2270,19 +1837,8 @@ pub fn wild_hypothesis() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2326,7 +1882,6 @@ pub fn artistic_process() -> CardDefinition {
     CardDefinition {
         name: "Artistic Process",
         cost: cost(&[generic(3), r(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2360,19 +1915,8 @@ pub fn artistic_process() -> CardDefinition {
                 },
             ]),
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2391,7 +1935,6 @@ pub fn decorum_dissertation() -> CardDefinition {
     CardDefinition {
         name: "Decorum Dissertation",
         cost: cost(&[generic(3), b(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2408,19 +1951,9 @@ pub fn decorum_dissertation() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2437,7 +1970,6 @@ pub fn germination_practicum() -> CardDefinition {
     CardDefinition {
         name: "Germination Practicum",
         cost: cost(&[generic(3), g(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2456,19 +1988,9 @@ pub fn germination_practicum() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2484,7 +2006,6 @@ pub fn restoration_seminar() -> CardDefinition {
     CardDefinition {
         name: "Restoration Seminar",
         cost: cost(&[generic(5), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2500,19 +2021,9 @@ pub fn restoration_seminar() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2522,7 +2033,6 @@ pub fn zimones_experiment() -> CardDefinition {
     CardDefinition {
         name: "Zimone's Experiment",
         cost: cost(&[generic(3), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2562,19 +2072,8 @@ pub fn zimones_experiment() -> CardDefinition {
                 miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2594,7 +2093,6 @@ pub fn flow_state() -> CardDefinition {
     CardDefinition {
         name: "Flow State",
         cost: cost(&[generic(1), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2634,19 +2132,8 @@ pub fn flow_state() -> CardDefinition {
                 },
             ])),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2664,7 +2151,6 @@ pub fn molten_note() -> CardDefinition {
     CardDefinition {
         name: "Molten Note",
         cost: cost(&[x(), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2683,14 +2169,7 @@ pub fn molten_note() -> CardDefinition {
                 up_to: None,
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -2709,7 +2188,6 @@ pub fn social_snub() -> CardDefinition {
     CardDefinition {
         name: "Social Snub",
         cost: cost(&[generic(1), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2727,7 +2205,6 @@ pub fn social_snub() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
-        activated_abilities: no_abilities(),
         // On-cast self-trigger. Filter ensures the caster controls a
         // creature at cast time (gate from the printed Oracle).
         triggered_abilities: vec![TriggeredAbility {
@@ -2746,12 +2223,6 @@ pub fn social_snub() -> CardDefinition {
                 }),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -2780,7 +2251,6 @@ pub fn fix_whats_broken() -> CardDefinition {
     CardDefinition {
         name: "Fix What's Broken",
         cost: spell_cost,
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2819,14 +2289,7 @@ pub fn fix_whats_broken() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }
@@ -2870,7 +2333,6 @@ pub fn follow_the_lumarets() -> CardDefinition {
     CardDefinition {
         name: "Follow the Lumarets",
         cost: cost(&[generic(1), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2889,19 +2351,8 @@ pub fn follow_the_lumarets() -> CardDefinition {
             // Mainline: pull one creature/land card.
             else_: Box::new(single_pull),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -2933,7 +2384,6 @@ pub fn echocasting_symposium() -> CardDefinition {
     CardDefinition {
         name: "Echocasting Symposium",
         cost: cost(&[generic(4), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
@@ -2964,19 +2414,9 @@ pub fn echocasting_symposium() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3069,7 +2509,6 @@ pub fn improvisation_capstone() -> CardDefinition {
     CardDefinition {
         name: "Improvisation Capstone",
         cost: cost(&[generic(5), r(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3100,19 +2539,9 @@ pub fn improvisation_capstone() -> CardDefinition {
             },
             Effect::RegisterParadigm,
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
         exile_on_resolve: true,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

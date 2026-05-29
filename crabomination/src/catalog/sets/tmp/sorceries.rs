@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement, Subtypes, Value};
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{PlayerRef, Selector, ZoneDest};
@@ -16,7 +15,6 @@ pub fn reanimate() -> CardDefinition {
     CardDefinition {
         name: "Reanimate",
         cost: cost(&[b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -35,18 +33,7 @@ pub fn reanimate() -> CardDefinition {
                 },
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

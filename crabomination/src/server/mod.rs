@@ -537,6 +537,20 @@ fn handle_action(
             true
         }
         Err(e) => {
+            // `ManualTapRequired` tapped the cost's forced colored sources
+            // before stopping for the player's generic choice — that's a
+            // real state change, so push an updated view (the normal error
+            // path sends none) so the client sees the tapped sources.
+            if matches!(e, crate::game::GameError::ManualTapRequired { .. }) {
+                for (i, maybe_tx) in seat_tx.iter().enumerate() {
+                    if let Some(tx) = maybe_tx {
+                        let _ = tx.send(ServerMsg::View(Box::new(view::project(state, i))));
+                    }
+                }
+                for tx in spectator_tx {
+                    let _ = tx.send(ServerMsg::View(Box::new(view::project(state, 0))));
+                }
+            }
             report_error(seat, &e.to_string(), seat_tx);
             false
         }

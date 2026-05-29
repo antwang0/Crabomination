@@ -28,6 +28,23 @@ fn is_mana_ability(effect: &Effect) -> bool {
     }
 }
 
+/// The set of colours `card`'s untapped mana abilities can produce, in
+/// WUBRG order (a Forest → `[Green]`, a dual → two, Birds → all five, a
+/// colorless rock → `[]`). Used as a source's "signature" so the
+/// manual-tap decision can tell interchangeable sources (same signature)
+/// from genuinely different ones.
+fn source_color_signature(card: &crate::card::CardInstance) -> Vec<ManaColor> {
+    ManaColor::ALL
+        .into_iter()
+        .filter(|c| {
+            card.definition
+                .activated_abilities
+                .iter()
+                .any(|a| is_mana_ability(&a.effect) && effect_produces_color(&a.effect, *c))
+        })
+        .collect()
+}
+
 /// Pull the "when you cast this spell" (`EventKind::SpellCast` +
 /// `EventScope::SelfSource`) triggers off a card. Used by the cast paths
 /// to push these onto the stack above the cast spell so they resolve
@@ -2317,29 +2334,44 @@ impl GameState {
                     .expect("pool covered the cost a line ago");
                 return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
             }
-            // Must tap. Auto-tap fully, then decide whether a choice existed.
-            let auto_events = self.auto_tap_for_cost(payer, cost);
-            let pool_after_auto_tap = self.players[payer].mana_pool.clone();
-            match self.players[payer].mana_pool.clone().pay(cost) {
-                Err(e) => {
-                    // Unaffordable even after tapping everything.
-                    self.restore_payment_state(payer, snapshot);
-                    return Err(GameError::Mana(e));
-                }
-                Ok(_) => {}
-            }
-            if self.untapped_relevant_source_exists(payer, cost) {
-                // A relevant untapped source remains → the player had a
-                // genuine choice. Roll back and make them tap manually.
-                self.restore_payment_state(payer, snapshot);
+            // Eagerly tap for the *forced colored* pips — their colour can
+            // only come from those sources, so there's no choice to leave
+            // the player (which Forest pays {G} doesn't matter). This mana
+            // stays floating in the pool; if the rest of the cost needs a
+            // manual tap, the player only has to tap the ambiguous part.
+            let colored_only = crate::mana::ManaCost {
+                symbols: cost
+                    .symbols
+                    .iter()
+                    .filter(|s| matches!(s, crate::mana::ManaSymbol::Colored(_)))
+                    .copied()
+                    .collect(),
+            };
+            let mut events = if colored_only.symbols.is_empty() {
+                Vec::new()
+            } else {
+                self.auto_tap_for_cost(payer, &colored_only)
+            };
+            // With the colored pips covered, does the remaining (generic)
+            // part still involve a genuine choice of which source to tap?
+            if self.payment_requires_manual_choice(payer, cost) {
+                // Leave the forced colored mana floating; the player taps
+                // the ambiguous remainder, then the cast completes.
                 return Err(GameError::ManualTapRequired { cost: cost.summary() });
             }
-            // No choice — every relevant source had to be tapped. Commit.
-            let side_effects = self.players[payer]
-                .mana_pool
-                .pay(cost)
-                .expect("payability checked above");
-            return Ok(PaymentReceipt { auto_events, side_effects, pool_before: pool_after_auto_tap });
+            // No remaining choice — finish auto-tapping and pay.
+            let mut more = self.auto_tap_for_cost(payer, cost);
+            events.append(&mut more);
+            let pool_after_auto_tap = self.players[payer].mana_pool.clone();
+            return match self.players[payer].mana_pool.pay(cost) {
+                Ok(side_effects) => {
+                    Ok(PaymentReceipt { auto_events: events, side_effects, pool_before: pool_after_auto_tap })
+                }
+                Err(e) => {
+                    self.restore_payment_state(payer, snapshot);
+                    Err(GameError::Mana(e))
+                }
+            };
         }
 
         let auto_events = self.auto_tap_for_cost(payer, cost);
@@ -2397,6 +2429,115 @@ impl GameState {
                 .iter()
                 .any(|col| mana_abilities.iter().any(|a| effect_produces_color(&a.effect, *col)))
         })
+    }
+
+    /// Does paying `cost` for `player` involve a *genuine* choice of which
+    /// mana sources to tap — one the engine shouldn't make for them?
+    ///
+    /// Returns true only when the cost is affordable from untapped sources
+    /// AND the player could tap different sources leaving different mana
+    /// behind. Forced colored pips (a colour only one kind of source can
+    /// make) and interchangeable sources (two of the same basic) are *not*
+    /// choices, so they auto-tap. Hybrid / mono-hybrid costs fall back to
+    /// the conservative "any relevant untapped source remains" check.
+    ///
+    /// Only consulted on the forced-only (human) path when the pool doesn't
+    /// already cover the cost; `pay()` is still the source of truth for
+    /// whether the resulting tap actually pays.
+    fn payment_requires_manual_choice(&self, player: usize, cost: &crate::mana::ManaCost) -> bool {
+        use crate::mana::{Color, ManaSymbol};
+        use std::collections::{HashMap, HashSet};
+        // Hybrids keep the simpler conservative behaviour.
+        if cost
+            .symbols
+            .iter()
+            .any(|s| matches!(s, ManaSymbol::Hybrid(_, _) | ManaSymbol::MonoHybrid(_, _)))
+        {
+            return self.untapped_relevant_source_exists(player, cost);
+        }
+
+        // Colored requirement per colour + generic (folding {C} in as
+        // generic — payable from any source for the choice analysis).
+        let mut need: HashMap<Color, u32> = HashMap::new();
+        let mut generic = 0u32;
+        for s in &cost.symbols {
+            match s {
+                ManaSymbol::Colored(c) => *need.entry(*c).or_default() += 1,
+                ManaSymbol::Generic(n) | ManaSymbol::Colorless(n) => generic += *n,
+                _ => {}
+            }
+        }
+
+        // Pay colored pips from the pool first; what's left needs sources.
+        let pool = &self.players[player].mana_pool;
+        let mut pool_used = 0u32;
+        let mut colored_from_sources: Vec<(Color, u32)> = Vec::new();
+        for (c, k) in &need {
+            let from_pool = (*k).min(pool.amount(*c));
+            pool_used += from_pool;
+            if *k - from_pool > 0 {
+                colored_from_sources.push((*c, *k - from_pool));
+            }
+        }
+
+        // Untapped mana sources, each as its colour-production signature.
+        let sigs: Vec<Vec<Color>> = self
+            .battlefield
+            .iter()
+            .filter(|c| {
+                c.controller == player
+                    && !c.tapped
+                    && c.definition
+                        .activated_abilities
+                        .iter()
+                        .any(|a| is_mana_ability(&a.effect))
+            })
+            .map(source_color_signature)
+            .collect();
+
+        // Reserve sources for each still-needed colored pip (most dedicated
+        // first). A colour with two *different* source types able to make it
+        // is a real choice.
+        let mut reserved = vec![false; sigs.len()];
+        let mut color_choice = false;
+        for (c, rc) in &colored_from_sources {
+            let mut cands: Vec<usize> = (0..sigs.len())
+                .filter(|i| !reserved[*i] && sigs[*i].contains(c))
+                .collect();
+            if (cands.len() as u32) < *rc {
+                return false; // unaffordable for this colour
+            }
+            let distinct: HashSet<&Vec<Color>> = cands.iter().map(|i| &sigs[*i]).collect();
+            if distinct.len() > 1 {
+                color_choice = true;
+            }
+            cands.sort_by_key(|i| sigs[*i].len()); // dedicated (shortest sig) first
+            for &i in cands.iter().take(*rc as usize) {
+                reserved[i] = true;
+            }
+        }
+
+        // Generic: pool leftover first, then the remaining untapped sources.
+        let remaining: Vec<&Vec<Color>> =
+            (0..sigs.len()).filter(|i| !reserved[*i]).map(|i| &sigs[i]).collect();
+        let pool_left = pool.total().saturating_sub(pool_used);
+        let gen_from_sources = generic.saturating_sub(pool_left);
+        if (remaining.len() as u32) < gen_from_sources {
+            return false; // unaffordable
+        }
+        if color_choice {
+            return true;
+        }
+        if gen_from_sources == 0 {
+            return false; // only forced colored taps remain — auto-tap them
+        }
+        // More candidate sources than the generic needs → some are held
+        // back; that's a real choice only if they aren't all interchangeable.
+        if (remaining.len() as u32) > gen_from_sources {
+            let distinct: HashSet<&&Vec<Color>> = remaining.iter().collect();
+            return distinct.len() >= 2;
+        }
+        false
     }
 
     // ── Auto-tap mana sources ─────────────────────────────────────────────────

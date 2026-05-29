@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{Color, cost, generic, hybrid};
 
@@ -7,7 +6,6 @@ pub fn mourning_thrull() -> CardDefinition {
     CardDefinition {
         name: "Mourning Thrull",
         cost: cost(&[generic(1), hybrid(Color::White, Color::Black)]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Thrull],
@@ -17,18 +15,7 @@ pub fn mourning_thrull() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Lifelink],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

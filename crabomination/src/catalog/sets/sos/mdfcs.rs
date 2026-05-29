@@ -25,7 +25,6 @@
 //! - Emeritus of Abundance // Regrowth
 //! - Vastlands Scavenger // Bind to Life
 
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, Keyword, SelectionRequirement,
     Subtypes,
@@ -50,7 +49,6 @@ fn vanilla_front(
     CardDefinition {
         name,
         cost: front_cost,
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types,
@@ -60,19 +58,9 @@ fn vanilla_front(
         toughness,
         keywords,
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
         back_face: Some(Box::new(back)),
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -86,26 +74,14 @@ fn spell_back(
     CardDefinition {
         name,
         cost,
-        supertypes: vec![],
         card_types: vec![card_type],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

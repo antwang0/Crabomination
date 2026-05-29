@@ -1,18 +1,22 @@
 //! Core MTG game engine.
 //!
 //! # Design notes
-//! - **Simplified stack**: instants and sorceries resolve immediately on cast
-//!   (no priority loop between players).  The `stack` field is reserved for
-//!   future expansion.
-//! - **Combat damage**: first-strike/double-strike are not split into separate
-//!   sub-steps; a DoubleStrike creature deals its power damage twice.
+//! - **Stack & priority**: a real LIFO `stack` of spells and abilities, drained
+//!   by a multiplayer priority loop (`pass_priority`). Spells and abilities are
+//!   pushed onto the stack and resolve only once all players pass in succession;
+//!   players can respond while they hold priority.
+//! - **Combat damage**: first-strike and regular combat damage are split into
+//!   separate sub-steps (the `FirstStrikeDamage` step, skipped when no
+//!   first/double-strike creatures are in combat). A DoubleStrike creature
+//!   deals damage in both steps.
 //! - **Hexproof/Shroud**: validated at targeting time.
 //! - **Menace**: enforced in `declare_blockers` — an attacker with Menace must
 //!   be blocked by ≥ 2 creatures or not blocked at all.
 //! - **Dies triggers**: fired when a creature moves from battlefield to
 //!   graveyard (via damage, destroy, or state-based actions).
-//! - All actions are performed by the *active player* except `declare_blockers`
-//!   which is called by whoever controls the defending creatures.
+//! - Actions are performed by whichever player currently holds priority (so a
+//!   non-active player can cast instants / activate abilities in response);
+//!   `declare_blockers` is called by whoever controls the defending creatures.
 
 pub(crate) mod actions;
 pub(crate) mod combat;

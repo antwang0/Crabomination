@@ -8,7 +8,6 @@ pub fn mox_pearl() -> CardDefinition {
     CardDefinition {
         name: "Mox Pearl",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17,17 +16,7 @@ pub fn mox_pearl() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::White)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -36,7 +25,6 @@ pub fn mox_sapphire() -> CardDefinition {
     CardDefinition {
         name: "Mox Sapphire",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -45,17 +33,7 @@ pub fn mox_sapphire() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Blue)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -64,7 +42,6 @@ pub fn mox_jet() -> CardDefinition {
     CardDefinition {
         name: "Mox Jet",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -73,17 +50,7 @@ pub fn mox_jet() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Black)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -92,7 +59,6 @@ pub fn mox_ruby() -> CardDefinition {
     CardDefinition {
         name: "Mox Ruby",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -101,17 +67,7 @@ pub fn mox_ruby() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Red)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -120,7 +76,6 @@ pub fn mox_emerald() -> CardDefinition {
     CardDefinition {
         name: "Mox Emerald",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -129,17 +84,7 @@ pub fn mox_emerald() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(Color::Green)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -148,7 +93,6 @@ pub fn black_lotus() -> CardDefinition {
     CardDefinition {
         name: "Black Lotus",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -172,17 +116,7 @@ pub fn black_lotus() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -191,7 +125,6 @@ pub fn sol_ring() -> CardDefinition {
     CardDefinition {
         name: "Sol Ring",
         cost: cost(&[generic(1)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -215,17 +148,7 @@ pub fn sol_ring() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -234,7 +157,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
     CardDefinition {
         name: "Nevinyrral's Disk",
         cost: cost(&[generic(4)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -265,16 +187,6 @@ pub fn nevinyrrals_disk() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

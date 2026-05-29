@@ -49,7 +49,6 @@ fn fetch_land(
     CardDefinition {
         name,
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -58,17 +57,7 @@ fn fetch_land(
         effect: Effect::Noop,
         activated_abilities: vec![fetch_ability(type_a, type_b)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

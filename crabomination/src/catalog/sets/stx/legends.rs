@@ -8,7 +8,6 @@
 //! tap-for-any-color static) and Velomachus (reveal-and-cast-from-exile)
 //! still stay 🟡 pending those engine primitives.
 
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, Keyword, MayPlayDuration, Selector,
     SelectionRequirement, Subtypes, Supertype,
@@ -44,7 +43,6 @@ pub fn galazeth_prismari() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         // ETB: create a Treasure token. (The "artifacts tap for any color"
         // static is omitted — see doc comment.)
         triggered_abilities: vec![TriggeredAbility {
@@ -55,17 +53,7 @@ pub fn galazeth_prismari() -> CardDefinition {
                 definition: crate::game::effects::treasure_token(),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -125,17 +113,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
         }],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -161,7 +139,6 @@ pub fn velomachus_lorehold() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Haste],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         // Push (modern_decks, batch 74): "Whenever Velomachus attacks,
         // reveal cards from the top of your library until you reveal an
         // instant or sorcery card with mana value less than or equal to
@@ -197,17 +174,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
                 },
             ]),
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -249,7 +216,6 @@ pub fn tanazir_quandrix() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Flying, Keyword::Trample],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             // ETB: double the number of +1/+1 counters on each creature
             // you control.
@@ -284,17 +250,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
                 },
             },
         ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -341,7 +297,6 @@ pub fn shadrix_silverquill() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::DoubleStrike],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             // Choose-two. Picks 1 + 2 by default (counter + Inklings).
@@ -374,16 +329,6 @@ pub fn shadrix_silverquill() -> CardDefinition {
                 ],
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

@@ -200,13 +200,27 @@ pub fn animate_combat_lurch(
     time: Res<Time>,
     speed: Res<AnimationSpeed>,
     mut commands: Commands,
+    // The combat offset is *added* on top of the resting translation that
+    // `animate_hover_lift` rewrites each frame, so this system must skip
+    // exactly the cards `animate_hover_lift` skips — otherwise, while one of
+    // those animations runs (most importantly `TapAnimation`, which every
+    // non-vigilance attacker gets when it taps), nothing resets the base and
+    // the per-frame add accumulates, flinging the attacker across the table.
+    // When skipped, the card simply holds its current (already-lurched)
+    // position until the animation finishes.
     mut q: Query<
         (Entity, &mut Transform, &mut CombatLurch),
         (
             Without<DrawCardAnimation>,
+            Without<DeckShuffleAnimation>,
+            Without<CardFlipAnimation>,
+            Without<HandSlideAnimation>,
             Without<PlayCardAnimation>,
+            Without<TapAnimation>,
             Without<SendToGraveyardAnimation>,
+            Without<ReturnToDeckAnimation>,
             Without<ReturnToHandAnimation>,
+            Without<RevealPeekAnimation>,
         ),
     >,
 ) {

@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, SelectionRequirement,
     StaticAbility, StaticEffect, Subtypes, TriggeredAbility,
@@ -12,14 +11,12 @@ pub fn glorious_anthem() -> CardDefinition {
     CardDefinition {
         name: "Glorious Anthem",
         cost: cost(&[generic(1), w(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1",
@@ -31,16 +28,7 @@ pub fn glorious_anthem() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -56,14 +44,12 @@ pub fn animate_dead() -> CardDefinition {
     CardDefinition {
         name: "Animate Dead",
         cost: cost(&[generic(1), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -74,16 +60,6 @@ pub fn animate_dead() -> CardDefinition {
                 to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

@@ -127,7 +127,6 @@ pub fn dual_land_with(
     CardDefinition {
         name,
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![type_a, type_b],
@@ -139,17 +138,7 @@ pub fn dual_land_with(
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(color_a), tap_add(color_b)],
         triggered_abilities: triggers,
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

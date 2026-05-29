@@ -42,7 +42,6 @@ fn school_land(
     CardDefinition {
         name,
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![type_a, type_b],
@@ -54,17 +53,7 @@ fn school_land(
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(color_a), tap_add(color_b), surveil],
         triggered_abilities: vec![etb_tap()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -182,17 +171,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless(), pay_life_for_any],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -238,7 +217,6 @@ pub fn skycoach_waypoint() -> CardDefinition {
     CardDefinition {
         name: "Skycoach Waypoint",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -247,17 +225,7 @@ pub fn skycoach_waypoint() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless(), prepare_target],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -279,7 +247,6 @@ pub fn petrified_hamlet() -> CardDefinition {
     CardDefinition {
         name: "Petrified Hamlet",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -288,16 +255,6 @@ pub fn petrified_hamlet() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![tap_add_colorless()],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

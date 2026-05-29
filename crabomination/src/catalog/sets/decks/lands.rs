@@ -72,7 +72,6 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
     CardDefinition {
         name,
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes {
             land_types: vec![land_type],
@@ -84,17 +83,7 @@ fn pathway_face(name: &'static str, land_type: LandType, color: Color) -> CardDe
         effect: Effect::Noop,
         activated_abilities: vec![tap_add(color)],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -239,7 +228,6 @@ pub fn gemstone_mine() -> CardDefinition {
     CardDefinition {
         name: "Gemstone Mine",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -291,17 +279,7 @@ pub fn gemstone_mine() -> CardDefinition {
                 amount: Value::Const(3),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -388,11 +366,6 @@ pub fn gemstone_caverns() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
         opening_hand: Some(OpeningHandEffect::StartInPlay {
             tapped: false,
             // The engine has no dedicated `Luck` counter type, so we reuse
@@ -404,11 +377,7 @@ pub fn gemstone_caverns() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }),
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -436,7 +405,6 @@ pub fn cavern_of_souls() -> CardDefinition {
     CardDefinition {
         name: "Cavern of Souls",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -481,16 +449,7 @@ pub fn cavern_of_souls() -> CardDefinition {
                 "Creature spells you cast of the chosen type can't be countered.",
             effect: crate::effect::StaticEffect::UncounterableCreaturesOfChosenType,
         }],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -506,7 +465,6 @@ pub fn cephalid_coliseum() -> CardDefinition {
     CardDefinition {
         name: "Cephalid Coliseum",
         cost: ManaCost::default(),
-        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -547,17 +505,7 @@ pub fn cephalid_coliseum() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![etb_tap()],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

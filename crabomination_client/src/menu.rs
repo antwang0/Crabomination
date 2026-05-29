@@ -819,7 +819,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
-    world.insert_resource(NetOutbox(tx));
+    world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     world.insert_resource(LatestSnapshot(sink));
 }
@@ -856,7 +856,7 @@ fn spawn_spectate_bots(world: &mut World, format: MatchFormat) {
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![server_seat], Some(sink_for_match));
     });
-    world.insert_resource(NetOutbox(tx));
+    world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     world.insert_resource(LatestSnapshot(sink));
 }
@@ -892,7 +892,7 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
         eprintln!("host: match ended");
     });
 
-    world.insert_resource(NetOutbox(tx));
+    world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     Ok(())
 }
@@ -962,7 +962,7 @@ fn spawn_loaded_debug_state(world: &mut World, path: &std::path::Path) -> std::i
         std::thread::spawn(move || {
             run_match_full(restored, occupants, vec![], Some(sink_for_match));
         });
-        world.insert_resource(NetOutbox(tx));
+        world.insert_resource(NetOutbox::new(tx));
         world.insert_resource(NetInbox(Mutex::new(rx)));
         world.insert_resource(LatestSnapshot(sink));
         if let Some(mut log) = world.get_resource_mut::<crate::game::GameLog>() {
@@ -1003,7 +1003,7 @@ fn spawn_join_lan(world: &mut World, addr: &str) -> std::io::Result<()> {
     let stream = std::net::TcpStream::connect(addr)?;
     let ClientChannel { tx, rx } = tcp_client(stream)?;
     let _ = tx.send(ClientMsg::JoinMatch { name: "client".into() });
-    world.insert_resource(NetOutbox(tx));
+    world.insert_resource(NetOutbox::new(tx));
     world.insert_resource(NetInbox(Mutex::new(rx)));
     Ok(())
 }

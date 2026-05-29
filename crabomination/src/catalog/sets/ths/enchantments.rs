@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{CardDefinition, CardType, CreatureType, Effect, Keyword, Subtypes};
 use crate::mana::{cost, w};
 
@@ -7,7 +6,6 @@ pub fn hopeful_eidolon() -> CardDefinition {
     CardDefinition {
         name: "Hopeful Eidolon",
         cost: cost(&[w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -17,18 +15,7 @@ pub fn hopeful_eidolon() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

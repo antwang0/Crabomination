@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement, Subtypes, TriggeredAbility,
@@ -13,7 +12,6 @@ pub fn goblin_guide() -> CardDefinition {
     CardDefinition {
         name: "Goblin Guide",
         cost: cost(&[r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin],
@@ -23,7 +21,6 @@ pub fn goblin_guide() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::RevealTopAndDrawIf {
@@ -33,16 +30,6 @@ pub fn goblin_guide() -> CardDefinition {
                 reveal_filter: SelectionRequirement::Land,
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }

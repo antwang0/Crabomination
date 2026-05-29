@@ -10,7 +10,6 @@
 //!   colorless Spirit token whose P/T equals the exiled card's mana value.
 //! - **Tend the Pests** (B/G) — sacrifice a creature, create X Pest tokens.
 
-use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition,
@@ -80,7 +79,6 @@ pub fn inkling_summoning() -> CardDefinition {
     CardDefinition {
         name: "Inkling Summoning",
         cost: cost(&[generic(3), w(), b()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
@@ -94,19 +92,8 @@ pub fn inkling_summoning() -> CardDefinition {
             count: Value::Const(1),
             definition: inkling,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -129,7 +116,6 @@ pub fn tend_the_pests() -> CardDefinition {
     CardDefinition {
         name: "Tend the Pests",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -150,19 +136,8 @@ pub fn tend_the_pests() -> CardDefinition {
                 }),
             },
         ]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -189,7 +164,6 @@ pub fn spirit_summoning() -> CardDefinition {
     CardDefinition {
         name: "Spirit Summoning",
         cost: cost(&[generic(3), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
@@ -203,14 +177,7 @@ pub fn spirit_summoning() -> CardDefinition {
             count: Value::Const(1),
             definition: spirit,
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }

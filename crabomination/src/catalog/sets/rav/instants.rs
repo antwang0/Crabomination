@@ -1,4 +1,3 @@
-use super::no_abilities;
 use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
 use crate::effect::shortcut::{deal, gain_life, target, target_filtered};
 use crate::effect::Effect;
@@ -9,26 +8,14 @@ pub fn lightning_helix() -> CardDefinition {
     CardDefinition {
         name: "Lightning Helix",
         cost: cost(&[r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![deal(3, target()), gain_life(3)]),
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -41,7 +28,6 @@ pub fn putrefy() -> CardDefinition {
     CardDefinition {
         name: "Putrefy",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -52,18 +38,7 @@ pub fn putrefy() -> CardDefinition {
                 SelectionRequirement::Creature.or(SelectionRequirement::Artifact),
             ),
         },
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
