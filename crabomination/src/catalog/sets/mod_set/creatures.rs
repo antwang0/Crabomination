@@ -340,25 +340,25 @@ pub fn loran_of_the_third_path() -> CardDefinition {
     }
 }
 
-/// Sentinel of the Nameless City — {2}{G}, 3/4 Plant Warrior with Vigilance.
-/// Whenever this creature attacks, create a 1/1 green Citizen creature
-/// token. (Real card also has Ward {2}; the Ward keyword exists on
-/// `Keyword::Ward` but isn't enforced at targeting time yet, so we omit
-/// it.) Plant subtype is dropped — `CreatureType` doesn't enumerate Plant.
+/// Sentinel of the Nameless City — {2}{G}, 3/4 Plant Warrior with Vigilance
+/// and Ward {2}. Whenever this creature attacks, create a 1/1 green Citizen
+/// creature token. Ward {2} is now wired (it's globally enforced at
+/// targeting time per CR 702.21) and the Plant subtype is restored
+/// (`CreatureType::Plant` is enumerated).
 pub fn sentinel_of_the_nameless_city() -> CardDefinition {
-    use crate::card::TokenDefinition;
+    use crate::card::{TokenDefinition, WardCost};
     CardDefinition {
         name: "Sentinel of the Nameless City",
         cost: cost(&[generic(2), g()]),
         supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Warrior],
+            creature_types: vec![CreatureType::Plant, CreatureType::Warrior],
             ..Default::default()
         },
         power: 3,
         toughness: 4,
-        keywords: vec![Keyword::Vigilance],
+        keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::generic(2))],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
@@ -933,13 +933,11 @@ pub fn tishanas_tidebinder() -> CardDefinition {
 /// Sylvan Safekeeper — {G}, 1/1 Human Wizard. Sacrifice a Forest: Target
 /// creature gains shroud until end of turn.
 ///
-/// The sac-of-other-permanent activation primitive isn't yet a thing
-/// (only sac-of-self via `ActivatedAbility::sac_cost` is wired), so the
-/// sacrifice is folded into the resolved effect: the activation runs
-/// `Sacrifice(your-Forest, count=1, filter=Forest) + GrantKeyword(target,
-/// Shroud, EOT)`. Bot/AutoDecider activates only when it controls at
-/// least one Forest, so the cost is paid honestly even though the
-/// engine doesn't gate it pre-resolution.
+/// The "Sacrifice a Forest" cost is now a proper pre-resolution
+/// activation cost via `sac_other_filter: Some((Forest, 1))` — the
+/// engine gates the activation on the controller actually owning a
+/// Forest to sacrifice (rejecting cleanly otherwise) instead of folding
+/// the sacrifice into resolution.
 pub fn sylvan_safekeeper() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType};
     use crate::effect::shortcut::target_filtered;
@@ -960,19 +958,11 @@ pub fn sylvan_safekeeper() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: false,
             mana_cost: ManaCost::default(),
-            effect: Effect::Seq(vec![
-                Effect::Sacrifice {
-                    who: Selector::You,
-                    count: Value::Const(1),
-                    filter: SelectionRequirement::Land
-                        .and(SelectionRequirement::HasLandType(LandType::Forest)),
-                },
-                Effect::GrantKeyword {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    keyword: Keyword::Shroud,
-                    duration: Duration::EndOfTurn,
-                },
-            ]),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::Shroud,
+                duration: Duration::EndOfTurn,
+            },
             once_per_turn: false,
             sorcery_speed: false,
             sac_cost: false,
@@ -980,7 +970,13 @@ pub fn sylvan_safekeeper() -> CardDefinition {
             life_cost: 0,
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
+            self_counter_cost_reduction: None,
+            // Sacrifice a Forest as an activation cost.
+            sac_other_filter: Some((
+                SelectionRequirement::Land
+                    .and(SelectionRequirement::HasLandType(LandType::Forest)),
+                1,
+            )),
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],

@@ -12977,3 +12977,61 @@ fn tireless_tracker_gains_counter_when_a_clue_is_sacrificed() {
     );
 }
 
+
+// ── modern_decks: Sentinel of the Nameless City Ward {2} (CR 702.21) ────────
+
+#[test]
+fn sentinel_of_the_nameless_city_ward_counters_unpaid_spell() {
+    use crate::game::types::{Target, TurnStep};
+    let mut g = two_player_game();
+    let sentinel = g.add_card_to_battlefield(0, catalog::sentinel_of_the_nameless_city());
+    g.clear_sickness(sentinel);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::PreCombatMain;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // Only {R} for the bolt — nothing left for Ward {2}.
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(sentinel)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt casts; Ward is a trigger, not a cast restriction");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.id == sentinel),
+        "Ward 2 counters the unpaid Bolt; Sentinel survives",
+    );
+}
+
+#[test]
+fn sentinel_of_the_nameless_city_is_a_plant_warrior() {
+    use crate::card::CreatureType;
+    let s = catalog::sentinel_of_the_nameless_city();
+    assert!(s.has_creature_type(CreatureType::Plant), "Plant subtype restored");
+    assert!(s.has_creature_type(CreatureType::Warrior));
+}
+
+#[test]
+fn sylvan_safekeeper_cannot_activate_without_a_forest() {
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let sk = g.add_card_to_battlefield(0, catalog::sylvan_safekeeper());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(sk);
+    // No Forest to sacrifice → activation rejected pre-resolution.
+    let res = g.perform_action(GameAction::ActivateAbility {
+        card_id: sk,
+        ability_index: 0,
+        target: Some(Target::Permanent(bear)),
+        x_value: None,
+    });
+    assert!(res.is_err(), "no Forest to sacrifice → activation rejected");
+    use crate::card::Keyword;
+    let computed = g.compute_battlefield();
+    let view = computed.iter().find(|c| c.id == bear).unwrap();
+    assert!(!view.keywords.contains(&Keyword::Shroud), "no shroud granted");
+}
