@@ -718,14 +718,34 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[])
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[])
     }
 
-    /// Internal cast-spell helper with optional convoke creatures. Each
-    /// listed creature must be untapped + controlled by the caster + the
-    /// spell must have `Keyword::Convoke`. Each tap adds {1} generic mana
-    /// to the player's pool so the rest of the cost flow consumes it
-    /// alongside lands.
+    /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
+    /// `delve_cards` from the caster's graveyard to pay {1} of the spell's
+    /// generic cost. Each listed card must be in the caster's graveyard and
+    /// the spell must have `Keyword::Delve`. The graveyard cards are not
+    /// physically exiled until the (reduced) mana cost is successfully paid,
+    /// so a failed payment leaves the graveyard untouched.
+    pub(crate) fn cast_spell_with_delve(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        delve_cards: &[CardId],
+    ) -> Result<Vec<GameEvent>, GameError> {
+        self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], delve_cards)
+    }
+
+    /// Internal cast-spell helper with optional convoke creatures and delve
+    /// cards. Each convoke creature must be untapped + controlled by the
+    /// caster + the spell must have `Keyword::Convoke`; each tap adds {1}
+    /// generic mana to the player's pool. Each delve card must be in the
+    /// caster's graveyard + the spell must have `Keyword::Delve`; each one
+    /// exiled reduces the generic cost by {1} (CR 702.66).
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_spell_with_convoke(
         &mut self,
         card_id: CardId,
@@ -734,6 +754,7 @@ impl GameState {
         mode: Option<usize>,
         x_value: Option<u32>,
         convoke_creatures: &[CardId],
+        delve_cards: &[CardId],
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
 
@@ -760,6 +781,23 @@ impl GameState {
             if bad {
                 self.players[p].hand.push(card);
                 return Err(GameError::CardNotOnBattlefield(*cid));
+            }
+        }
+
+        // Validate delve cards up-front (CR 702.66): the spell must have
+        // Keyword::Delve and every listed card must currently sit in the
+        // caster's graveyard. The cards aren't exiled here — only after the
+        // reduced cost is paid — so a rejected cast leaves them in place.
+        if !delve_cards.is_empty()
+            && !card.definition.keywords.contains(&crate::card::Keyword::Delve)
+        {
+            self.players[p].hand.push(card);
+            return Err(GameError::SorcerySpeedOnly); // reuse: spell doesn't have delve
+        }
+        for cid in delve_cards {
+            if !self.players[p].graveyard.iter().any(|c| c.id == *cid) {
+                self.players[p].hand.push(card);
+                return Err(GameError::CardNotInGraveyard(*cid));
             }
         }
 
@@ -869,6 +907,13 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        // Delve (CR 702.66): each graveyard card to be exiled pays {1} of the
+        // generic cost. The reduction is clamped to the generic portion by
+        // `reduce_generic`; the cards themselves are exiled only after a
+        // successful payment (below).
+        if !delve_cards.is_empty() {
+            cost.reduce_generic(delve_cards.len() as u32);
+        }
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
@@ -896,6 +941,18 @@ impl GameState {
         };
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+
+        // Delve payment succeeded — exile the chosen graveyard cards now
+        // (CR 702.66: they're exiled as part of paying the cost). Bumps the
+        // per-turn exile tally so "if cards were exiled this turn" payoffs see
+        // them.
+        for cid in delve_cards {
+            if let Some(pos) = self.players[p].graveyard.iter().position(|c| c.id == *cid) {
+                let exiled = self.players[p].graveyard.remove(pos);
+                self.exile.push(exiled);
+                self.players[p].cards_exiled_this_turn += 1;
+            }
         }
 
         // Compute converge: count distinct colors of mana drained from the

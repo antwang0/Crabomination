@@ -13082,3 +13082,268 @@ fn zuran_orb_cannot_activate_without_a_land() {
     assert!(res.is_err(), "no land to sacrifice → activation rejected");
     assert_eq!(g.players[0].life, life_before, "no life gained when cost unpayable");
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Delve (CR 702.66) — graveyard cards pay {1} of the generic cost.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Treasure Cruise with seven graveyard cards delved away costs just {U}
+/// and exiles those seven cards.
+#[test]
+fn delve_treasure_cruise_pays_generic_with_graveyard() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    // Seven cards in the graveyard to delve.
+    let gy: Vec<_> = (0..7).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::treasure_cruise());
+    // Only one blue mana — the {7} generic must be paid entirely by delve.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let hand_before = g.players[0].hand.len();
+    let gy_before = g.players[0].graveyard.len();
+    let exile_before = g.exile.len();
+
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("Treasure Cruise castable for U after delving seven");
+    drain_stack(&mut g);
+
+    // Net hand: -1 (cast) +3 (draw) = +2.
+    assert_eq!(g.players[0].hand.len(), hand_before + 2);
+    let _ = gy_before;
+    // None of the seven delved cards remain in the graveyard (the resolved
+    // Cruise itself lands there, so the raw count isn't zero).
+    assert!(gy.iter().all(|id| !g.players[0].graveyard.iter().any(|c| c.id == *id)),
+        "delved cards left the graveyard");
+    assert_eq!(g.exile.len(), exile_before + 7, "delved cards moved to exile");
+    assert_eq!(g.players[0].cards_exiled_this_turn, 7);
+}
+
+/// Partial delve: exiling three cards reduces {7}{U} to {4}{U}.
+#[test]
+fn delve_partial_reduces_generic_portion() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let gy: Vec<_> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::treasure_cruise());
+    // {4} generic + {U} after delving 3.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("4U after delving three");
+    drain_stack(&mut g);
+    assert!(gy.iter().all(|id| !g.players[0].graveyard.iter().any(|c| c.id == *id)),
+        "all three delved out of gy");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "exact mana consumed");
+}
+
+/// Delve can't reduce the colored pip: with no mana, even a full delve
+/// leaves the {U} unpayable and the cast is rejected (card returns to hand,
+/// graveyard untouched).
+#[test]
+fn delve_cannot_pay_colored_pip() {
+    let mut g = two_player_game();
+    let gy: Vec<_> = (0..7).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::treasure_cruise());
+    // No mana at all — the {U} can't be paid by delve.
+    let res = g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    });
+    assert!(res.is_err(), "the colored pip cannot be delved away");
+    assert!(g.players[0].has_in_hand(id), "card returns to hand on failed cast");
+    assert_eq!(g.players[0].graveyard.len(), 7, "graveyard untouched on failed cast");
+    assert_eq!(g.exile.len(), 0, "no cards exiled on failed cast");
+}
+
+/// Delving a card that isn't in the caster's graveyard is rejected.
+#[test]
+fn delve_rejects_card_not_in_graveyard() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::treasure_cruise());
+    let bogus = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let res = g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: vec![bogus],
+    });
+    assert!(matches!(res, Err(GameError::CardNotInGraveyard(_))));
+}
+
+/// Delve listed on a non-Delve spell is rejected.
+#[test]
+fn delve_rejects_spell_without_keyword() {
+    let mut g = two_player_game();
+    let gy = g.add_card_to_graveyard(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let res = g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: vec![gy],
+    });
+    assert!(res.is_err(), "Lightning Bolt has no Delve");
+}
+
+/// Murderous Cut delves to {B} and destroys a creature.
+#[test]
+fn delve_murderous_cut_kills_for_one_black() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gy: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::murderous_cut());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy,
+    }).expect("{B} after delving four");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "bear destroyed");
+}
+
+/// Gurmag Angler — Delve on a creature spell exiles the delve cards as part
+/// of paying its cost, landing a 5/5 on the battlefield.
+#[test]
+fn delve_gurmag_angler_enters_as_five_five() {
+    let mut g = two_player_game();
+    let gy: Vec<_> = (0..6).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::gurmag_angler());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("{B} after delving six");
+    drain_stack(&mut g);
+    let angler = g.battlefield.iter().find(|c| c.definition.name == "Gurmag Angler")
+        .expect("Angler resolved onto the battlefield");
+    assert_eq!((angler.power(), angler.toughness()), (5, 5));
+    assert!(gy.iter().all(|gid| g.exile.iter().any(|c| c.id == *gid)), "delve cards exiled");
+}
+
+/// Dig Through Time delves to {U}{U} and draws two off a Scry 7.
+#[test]
+fn delve_dig_through_time_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let gy: Vec<_> = (0..6).map(|_| g.add_card_to_graveyard(0, catalog::island())).collect();
+    let id = g.add_card_to_hand(0, catalog::dig_through_time());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let hand_before = g.players[0].hand.len();
+
+    g.perform_action(GameAction::CastSpellDelve {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None, delve_cards: gy.clone(),
+    }).expect("UU after delving six");
+    drain_stack(&mut g);
+    // Net hand: -1 (cast) +2 (draw) = +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1);
+    assert!(gy.iter().all(|id| !g.players[0].graveyard.iter().any(|c| c.id == *id)),
+        "six delved out of gy");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Regeneration (CR 701.15) — a shield replaces the next destruction.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// A regeneration shield saves a creature from `Effect::Destroy`: it taps,
+/// heals, and survives, and the shield is consumed (a second destroy kills).
+#[test]
+fn regen_shield_replaces_destroy() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // Stamp a regeneration shield via the {B}: Regenerate ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate activates");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1);
+
+    // Destroy it — the shield replaces the destruction. Murderous Cut has
+    // no color restriction (Doom Blade can't target a black creature).
+    let cut = g.add_card_to_hand(1, catalog::murderous_cut());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cut, target: Some(Target::Permanent(skel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murderous Cut cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(skel).expect("Skeletons survived via regen");
+    assert!(c.tapped, "regenerated creature is tapped");
+    assert_eq!(c.regeneration_shields, 0, "shield consumed");
+}
+
+/// A regeneration shield replaces lethal combat damage: the blocker taps,
+/// heals, and stays on the battlefield.
+#[test]
+fn regen_shield_replaces_lethal_combat_damage() {
+    let mut g = two_player_game();
+    // Bob's Skeletons block Alice's bear; bear deals 2, lethal to the 1/1.
+    let skel = g.add_card_to_battlefield(1, catalog::drudge_skeletons());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("bear attacks");
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(skel, bear)])).expect("skel blocks");
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("combat resolves");
+    let c = g.battlefield_find(skel).expect("Skeletons regenerated out of combat");
+    assert_eq!(c.regeneration_shields, 0, "shield consumed by lethal damage");
+    assert!(c.tapped, "regenerated creature is tapped");
+    assert_eq!(c.damage, 0, "marked damage healed");
+}
+
+/// Regeneration does NOT save a creature whose toughness is reduced to 0
+/// (CR 701.15e — that's not destruction).
+#[test]
+fn regen_does_not_save_zero_toughness() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    // Drop toughness to 0 with two -1/-1 counters.
+    if let Some(c) = g.battlefield_find_mut(skel) {
+        c.add_counters(CounterType::MinusOneMinusOne, 1);
+    }
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(skel).is_none(), "0-toughness death bypasses regeneration");
+}
+
+/// Regeneration shields expire at end of turn (CR 701.15g).
+#[test]
+fn regen_shield_expires_at_cleanup() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1);
+    // End-of-turn cleanup clears the shield.
+    if let Some(c) = g.battlefield_find_mut(skel) {
+        c.clear_end_of_turn_effects();
+    }
+    assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 0);
+}

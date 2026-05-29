@@ -865,6 +865,13 @@ pub struct CardInstance {
     /// with deathtouch since the last time SBAs were checked. Causes
     /// destruction regardless of damage amount vs toughness.
     pub dealt_deathtouch_damage: bool,
+    /// CR 701.15 — Regeneration shields. Each is a one-shot replacement:
+    /// "the next time this permanent would be destroyed this turn, instead
+    /// remove a regeneration shield, tap it, remove it from combat, and
+    /// heal all marked damage." Transient (cleared every cleanup, like
+    /// `granted_keywords_eot`), so it's intentionally **not** serialized —
+    /// a mid-turn snapshot reload defaults shields back to 0.
+    pub regeneration_shields: u32,
 }
 
 impl CardInstance {
@@ -901,6 +908,7 @@ impl CardInstance {
             keyword_counters: std::collections::HashMap::new(),
             may_play_until: None,
             dealt_deathtouch_damage: false,
+            regeneration_shields: 0,
         }
     }
 
@@ -984,6 +992,8 @@ impl CardInstance {
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
         self.dealt_deathtouch_damage = false;
+        // CR 701.15g — unused regeneration shields expire at end of turn.
+        self.regeneration_shields = 0;
     }
 }
 

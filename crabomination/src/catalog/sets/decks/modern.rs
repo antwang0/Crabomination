@@ -9170,23 +9170,82 @@ pub fn lingering_souls() -> CardDefinition {
     }
 }
 
-/// Murderous Cut — {5}{B} Instant. Delve. Destroy target creature.
+/// Murderous Cut — {4}{B} Instant. Delve. Destroy target creature.
 ///
-/// Cube-style approximation: the Delve cost-reduction primitive isn't
-/// wired yet (same gap as Treasure Cruise, Dig Through Time). The card
-/// is castable at full {5}{B} cost; the body is a clean
-/// `Destroy(Creature)`. Promote to ✅ when Delve lands.
-/// Murderous Cut — {4}{B} Instant. Destroy target creature.
-///
-/// Delve cost reduction omitted (Delve not wired); ships at full cost.
+/// Delve (CR 702.66) is wired via `Keyword::Delve` + `CastSpellDelve`:
+/// each graveyard card exiled while casting pays {1} of the {4}, so a
+/// stocked graveyard turns this into a {B} kill spell. Body is a clean
+/// `Destroy(Creature)`.
 pub fn murderous_cut() -> CardDefinition {
     CardDefinition {
         name: "Murderous Cut",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Instant],
+        keywords: vec![crate::card::Keyword::Delve],
         effect: Effect::Destroy {
             what: target_filtered(SelectionRequirement::Creature),
         },
+        ..Default::default()
+    }
+}
+
+/// Gurmag Angler — {6}{B} Creature — Zombie Fish. 5/5 vanilla. Delve.
+///
+/// The canonical Delve creature: with a stocked graveyard the {6} generic
+/// is paid by exiling graveyard cards, dropping the cost toward {B}.
+/// Exercises Delve on a *permanent* spell (the delve cards are exiled as
+/// part of paying the casting cost, not the resolution).
+pub fn gurmag_angler() -> CardDefinition {
+    CardDefinition {
+        name: "Gurmag Angler",
+        cost: cost(&[generic(6), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Fish],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        keywords: vec![crate::card::Keyword::Delve],
+        ..Default::default()
+    }
+}
+
+/// Drudge Skeletons — {1}{B} Creature — Skeleton. 1/1. "{B}: Regenerate
+/// this creature." (CR 701.15)
+///
+/// The classic regenerator: the activated ability stamps a regeneration
+/// shield via `Effect::Regenerate(This)`, so the next destruction this
+/// turn taps it and heals damage instead of killing it. Exercises the
+/// regeneration replacement against both combat damage and `Destroy`.
+pub fn drudge_skeletons() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    use crate::mana::ManaCost;
+    CardDefinition {
+        name: "Drudge Skeletons",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost { symbols: vec![crate::mana::ManaSymbol::Colored(Color::Black)] },
+            effect: Effect::Regenerate { what: Selector::This },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+        }],
         ..Default::default()
     }
 }

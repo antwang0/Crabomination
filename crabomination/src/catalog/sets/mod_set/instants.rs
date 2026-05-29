@@ -1050,11 +1050,10 @@ pub fn blossoming_defense() -> CardDefinition {
 
 /// Treasure Cruise — {7}{U} Instant. Delve. Draw three cards.
 ///
-/// The Delve cost-reduction (exile cards from your graveyard to pay {1}
-/// each toward this cost) isn't modeled yet — Treasure Cruise is castable
-/// at its full {7}{U} cost. The "Draw 3" half is wired faithfully so the
-/// card has a real effect once a player can afford it; Delve support is
-/// tracked as a future engine feature in CUBE_FEATURES.md.
+/// Delve (CR 702.66) is wired via `Keyword::Delve` + the
+/// `GameAction::CastSpellDelve` path: each graveyard card exiled while
+/// casting pays {1} of the {7} generic, so a stocked graveyard turns this
+/// into a one-mana "draw three". The "Draw 3" half is the resolved effect.
 pub fn treasure_cruise() -> CardDefinition {
     CardDefinition {
         name: "Treasure Cruise",
@@ -1064,7 +1063,7 @@ pub fn treasure_cruise() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
+        keywords: vec![Keyword::Delve],
         effect: Effect::Draw {
             who: Selector::You,
             amount: Value::Const(3),
@@ -1084,14 +1083,59 @@ pub fn treasure_cruise() -> CardDefinition {
     }
 }
 
+/// Dig Through Time — {6}{U}{U} Instant. Delve. "Look at the top seven
+/// cards of your library. Put two of them into your hand and the rest on
+/// the bottom of your library in any order."
+///
+/// Delve (CR 702.66) is wired via `Keyword::Delve` — a full graveyard
+/// turns this into {U}{U}. The selection half is approximated as
+/// `Scry 7 → Draw 2`: scrying seven lets the controller see the top seven
+/// and arrange them (the two keepers on top, the rest to the bottom),
+/// then drawing two takes the keepers — gameplay-equivalent to the
+/// printed "put two into your hand, the rest on the bottom". Same
+/// approximation pattern as Stress Dream's "look at top 2, take 1".
+pub fn dig_through_time() -> CardDefinition {
+    CardDefinition {
+        name: "Dig Through Time",
+        cost: cost(&[generic(6), u(), u()]),
+        supertypes: vec![],
+        card_types: vec![CardType::Instant],
+        subtypes: Subtypes::default(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Delve],
+        effect: Effect::Seq(vec![
+            Effect::Scry {
+                who: PlayerRef::You,
+                amount: Value::Const(7),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(2),
+            },
+        ]),
+        activated_abilities: no_abilities(),
+        triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+    }
+}
+
 /// Lose Focus — {U} Instant. Delve. Counter target spell unless its
 /// controller pays {2}.
 ///
-/// Delve is omitted (no cost reduction yet) — Lose Focus is castable at
-/// its full {U} cost as a one-mana "{U}: counter unless they pay {2}".
-/// Reuses `Effect::CounterUnlessPaid`. With Delve disabled the card is
-/// strictly stronger than the printed Oracle (no graveyard exile cost),
-/// but it still functions correctly against the unless-pay clause.
+/// Delve (CR 702.66) is now wired via `Keyword::Delve`. The printed cost is
+/// just {U}, so Delve has no generic to reduce on Lose Focus itself — but
+/// the keyword is present for correctness (and for future graveyard-hate
+/// payoffs that read it). Reuses `Effect::CounterUnlessPaid`.
 pub fn lose_focus() -> CardDefinition {
     CardDefinition {
         name: "Lose Focus",
@@ -1101,7 +1145,7 @@ pub fn lose_focus() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
+        keywords: vec![Keyword::Delve],
         effect: Effect::CounterUnlessPaid {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),

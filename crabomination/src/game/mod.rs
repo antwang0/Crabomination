@@ -1638,7 +1638,15 @@ impl GameState {
                 mode,
                 x_value,
                 convoke_creatures,
-            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures),
+            } => self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &convoke_creatures, &[]),
+            GameAction::CastSpellDelve {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+                delve_cards,
+            } => self.cast_spell_with_delve(card_id, target, additional_targets, mode, x_value, &delve_cards),
             GameAction::CastSpellAlternative {
                 card_id,
                 pitch_card,

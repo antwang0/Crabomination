@@ -867,6 +867,22 @@ impl GameState {
 
     // ── State-based actions ───────────────────────────────────────────────────
 
+    /// CR 701.15 — apply a regeneration shield: remove one shield, tap the
+    /// permanent, remove it from combat (as both attacker and blocker), and
+    /// heal all marked damage. The permanent stays on the battlefield.
+    pub(crate) fn apply_regeneration(&mut self, id: CardId) {
+        if let Some(c) = self.battlefield_find_mut(id) {
+            c.regeneration_shields = c.regeneration_shields.saturating_sub(1);
+            c.tapped = true;
+            c.damage = 0;
+            c.dealt_deathtouch_damage = false;
+        }
+        // Remove from combat: drop it as a declared attacker and as a blocker.
+        self.attacking.retain(|atk| atk.attacker != id);
+        self.block_map.remove(&id);
+        self.block_map.retain(|_, atk| *atk != id);
+    }
+
     pub(crate) fn check_state_based_actions(&mut self) -> Vec<GameEvent> {
         let mut events = vec![];
 
@@ -981,6 +997,35 @@ impl GameState {
             .collect();
 
         for id in dead {
+            // CR 701.15 — regeneration shields replace destruction by
+            // *damage* (lethal damage / deathtouch), but never destruction
+            // from toughness ≤ 0 (that's a separate SBA, not a "destroy").
+            // A surviving shield taps the creature, removes it from combat,
+            // and heals marked damage instead of letting it die.
+            let dies_by_lethal_toughness = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| {
+                    let ct = computed
+                        .iter()
+                        .find(|cp| cp.id == id)
+                        .map(|cp| cp.toughness)
+                        .unwrap_or_else(|| c.toughness());
+                    ct <= 0
+                })
+                .unwrap_or(false);
+            let has_regen = self
+                .battlefield
+                .iter()
+                .find(|c| c.id == id)
+                .map(|c| c.regeneration_shields > 0)
+                .unwrap_or(false);
+            if has_regen && !dies_by_lethal_toughness {
+                self.apply_regeneration(id);
+                continue;
+            }
+
             events.push(GameEvent::CreatureDied { card_id: id });
             // Cache the dying card's snapshot so AnotherOfYours-scope
             // triggers AND printed-type filter predicates fire reliably

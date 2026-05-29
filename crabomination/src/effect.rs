@@ -1082,6 +1082,12 @@ pub enum Effect {
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
+    /// CR 701.15 — add a regeneration shield to each resolved permanent.
+    /// The shield is a one-shot replacement that fires the next time the
+    /// permanent would be destroyed this turn (tap + remove from combat +
+    /// heal damage instead of dying). Powers "{cost}: Regenerate this
+    /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
+    Regenerate { what: Selector },
     Exile   { what: Selector },
     Tap     { what: Selector },
     /// Untap every permanent the selector resolves to. The optional
@@ -1692,6 +1698,7 @@ impl Effect {
                 }
             }
             Effect::Destroy { what }
+            | Effect::Regenerate { what }
             | Effect::Exile { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
@@ -1803,6 +1810,7 @@ impl Effect {
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
+            | Effect::Regenerate { what }
             | Effect::Exile { what }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }

@@ -1034,6 +1034,17 @@ impl GameState {
                             }
                             continue;
                         }
+                        // CR 701.15 — regeneration shield replaces destruction:
+                        // remove a shield, tap the permanent, remove it from
+                        // combat, and heal marked damage instead of dying.
+                        if self
+                            .battlefield_find(cid)
+                            .map(|c| c.regeneration_shields > 0)
+                            .unwrap_or(false)
+                        {
+                            self.apply_regeneration(cid);
+                            continue;
+                        }
                         let is_creature = self.battlefield_find(cid)
                             .map(|c| c.definition.is_creature())
                             .unwrap_or(false);
@@ -1053,6 +1064,20 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::Regenerate { what } => {
+                // CR 701.15 — add one regeneration shield per resolved
+                // permanent. The shield is consumed by the next destruction
+                // (SBA lethal damage / Effect::Destroy) this turn.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id()
+                        && let Some(c) = self.battlefield_find_mut(cid)
+                    {
+                        c.regeneration_shields = c.regeneration_shields.saturating_add(1);
+                    }
+                }
                 Ok(())
             }
 

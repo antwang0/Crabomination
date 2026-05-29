@@ -122,6 +122,20 @@ pub enum GameAction {
         x_value: Option<u32>,
         convoke_creatures: Vec<CardId>,
     },
+    /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
+    /// `delve_cards` from the caster's graveyard to pay {1} of the spell's
+    /// generic cost. Each must currently be in the caster's graveyard. The
+    /// generic-only clamp matches convoke — colored and {X} pips still come
+    /// from real mana.
+    CastSpellDelve {
+        card_id: CardId,
+        target: Option<Target>,
+        #[serde(default)]
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+        delve_cards: Vec<CardId>,
+    },
     /// Cast a spell paying its `alternative_cost` instead of its regular
     /// mana cost. `pitch_card` is the hand card (e.g., a blue card for Force
     /// of Will/Negation) being exiled to satisfy the alt cost — `None` when
@@ -639,6 +653,8 @@ pub enum GameError {
     SorcerySpeedOnly,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),
+    #[error("Card {0:?} not found in graveyard")]
+    CardNotInGraveyard(CardId),
     #[error("Card {0:?} not found on battlefield")]
     CardNotOnBattlefield(CardId),
     #[error("Card {0:?} is not a land")]
