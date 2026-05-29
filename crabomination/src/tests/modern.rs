@@ -650,6 +650,29 @@ fn cr_70235_madness_exile_still_counts_as_a_discard() {
 }
 
 #[test]
+fn cr_5141a_cleanup_discard_routes_through_madness() {
+    // CR 514.1a — the cleanup discard-to-hand-size routes through the
+    // centralized discard path, so a Madness card discarded at cleanup is
+    // exiled and offered for its madness cost (CR 702.35) rather than
+    // going straight to the graveyard.
+    let mut g = two_player_game();
+    let active = g.active_player_idx;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Stuff the active player's hand past the maximum (7) with vanilla
+    // fillers, then a Basking Rootwalla as the head card to be discarded.
+    let rw = g.add_card_to_hand(active, catalog::basking_rootwalla());
+    for _ in 0..8 {
+        g.add_card_to_hand(active, catalog::grizzly_bears());
+    }
+
+    g.do_cleanup();
+    drain_stack(&mut g);
+
+    assert!(g.battlefield.iter().any(|c| c.id == rw),
+        "cleanup discard of a Madness {{0}} card lets it be cast from exile");
+}
+
+#[test]
 fn tarmogoyf_pt_scales_with_card_types_in_graveyards() {
     let mut g = two_player_game();
     let goyf = g.add_card_to_battlefield(0, catalog::tarmogoyf());
@@ -15369,4 +15392,351 @@ fn unholy_and_holy_strength_apply_their_buffs() {
     let v2 = g2.compute_battlefield();
     let c2 = v2.iter().find(|c| c.id == b2).unwrap();
     assert_eq!((c2.power, c2.toughness), (3, 4), "Holy Strength is +1/+2");
+}
+
+// ── Coverage backfill: previously-untested real cards (decks / mod_set) ──────
+
+#[test]
+fn naturalize_destroys_target_artifact() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::pithing_needle()); // a {1} artifact
+    let nat = g.add_card_to_hand(0, catalog::naturalize());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: nat, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Naturalize castable for {1}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == rock), "artifact destroyed");
+}
+
+#[test]
+fn chalice_of_the_void_counters_matching_mana_value_spell() {
+    // Chalice for X=1 → 1 charge counter; a MV-1 spell is countered on cast
+    // (CR 614.12 + the SpellCast/MV-match trigger). Chalice counters *any*
+    // player's matching spell, including its own controller's.
+    let mut g = two_player_game();
+    let chalice = g.add_card_to_hand(0, catalog::chalice_of_the_void());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: chalice, target: None, additional_targets: vec![],
+        mode: None, x_value: Some(1),
+    }).expect("Chalice castable for {X}{X} at X=1");
+    drain_stack(&mut g);
+    assert_eq!(
+        g.battlefield.iter().find(|c| c.id == chalice)
+            .map(|c| c.counter_count(crate::card::CounterType::Charge)),
+        Some(1), "Chalice enters with 1 charge counter");
+
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before, "Chalice counters the MV-1 bolt");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "bolt countered to graveyard");
+}
+
+#[test]
+fn candelabra_of_tawnos_untaps_up_to_x_lands() {
+    let mut g = two_player_game();
+    let cand = g.add_card_to_battlefield(0, catalog::candelabra_of_tawnos());
+    g.clear_sickness(cand);
+    // Two tapped Forests on the battlefield.
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    for id in [f1, f2] {
+        if let Some(c) = g.battlefield.iter_mut().find(|c| c.id == id) { c.tapped = true; }
+    }
+    g.players[0].mana_pool.add_colorless(2); // for {X} = 2
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cand, ability_index: 0, target: None, x_value: Some(2),
+    }).expect("Candelabra activates with X=2");
+    drain_stack(&mut g);
+    assert!([f1, f2].iter().all(|id|
+        g.battlefield.iter().find(|c| c.id == *id).map(|c| !c.tapped).unwrap_or(false)),
+        "both lands untapped by Candelabra");
+}
+
+#[test]
+fn basking_broodscale_etb_makes_two_spawn_and_enters_two_three() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::basking_broodscale());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Basking Broodscale castable for {1}{G}");
+    drain_stack(&mut g);
+    let spawn = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Spawn").count();
+    assert_eq!(spawn, 2, "ETB makes two Eldrazi Spawn");
+    let view = g.compute_battlefield();
+    let bs = view.iter().find(|c| c.id == id).unwrap();
+    assert_eq!((bs.power, bs.toughness), (2, 3), "0/1 + two +1/+1 counters = 2/3");
+}
+
+#[test]
+fn sowing_mycospawn_etb_searches_a_land_to_battlefield() {
+    let mut g = two_player_game();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::sowing_mycospawn());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.is_land()).count();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sowing Mycospawn castable for {4}{G}");
+    drain_stack(&mut g);
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0
+        && c.definition.is_land()).count();
+    assert_eq!(lands_after, lands_before + 1, "ETB tutors a land onto the battlefield");
+}
+
+#[test]
+fn archdruids_charm_mode_one_adds_two_counters_to_your_creature() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::archdruids_charm());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Archdruid's Charm castable for {G}{G}{G}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let b = view.iter().find(|c| c.id == bears).unwrap();
+    assert_eq!((b.power, b.toughness), (4, 4), "2/2 + two +1/+1 counters = 4/4");
+}
+
+#[test]
+fn awaken_the_honored_dead_returns_all_your_creatures() {
+    let mut g = two_player_game();
+    let c1 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let c2 = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::awaken_the_honored_dead());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Awaken the Honored Dead castable");
+    drain_stack(&mut g);
+    assert!([c1, c2].iter().all(|id| g.battlefield.iter().any(|c| c.id == *id)),
+        "both creatures reanimated from the graveyard");
+}
+
+#[test]
+fn summoners_pact_searches_a_green_creature_to_hand() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
+    let id = g.add_card_to_hand(0, catalog::summoners_pact());
+    // Free to cast ({0}).
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Summoner's Pact is free to cast");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf),
+        "a green creature is tutored to hand");
+}
+
+#[test]
+fn finale_of_devastation_searches_creature_to_battlefield() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
+    let id = g.add_card_to_hand(0, catalog::finale_of_devastation());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(2); // X = 2
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("Finale castable at X=2");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == elf),
+        "the tutored creature enters the battlefield");
+}
+
+#[test]
+fn dakkon_shadow_slayer_minus_three_exiles_a_creature() {
+    let mut g = two_player_game();
+    let dakkon = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: dakkon, ability_index: 1, target: Some(Target::Permanent(victim)),
+    }).expect("Dakkon -3 activates");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == victim), "target creature exiled");
+}
+
+#[test]
+fn containment_priest_is_a_two_two_with_flash() {
+    let g_def = catalog::containment_priest();
+    assert_eq!((g_def.power, g_def.toughness), (2, 2));
+    assert!(g_def.keywords.contains(&crate::card::Keyword::Flash),
+        "Containment Priest has Flash");
+}
+
+#[test]
+fn simian_spirit_guide_is_a_two_two_ape_spirit() {
+    let d = catalog::simian_spirit_guide();
+    assert_eq!((d.power, d.toughness), (2, 2));
+    assert!(d.has_creature_type(crate::card::CreatureType::Ape));
+}
+
+#[test]
+fn culling_ritual_destroys_small_nonland_permanents() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    let id = g.add_card_to_hand(0, catalog::culling_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Culling Ritual castable for {2}{B}{G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "MV-2 nonland creature destroyed by Culling Ritual");
+}
+
+#[test]
+fn rushed_rebirth_tutors_a_creature_to_hand() {
+    let mut g = two_player_game();
+    let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
+    let id = g.add_card_to_hand(0, catalog::rushed_rebirth());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rushed Rebirth castable for {B}{G}");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == elf),
+        "Rushed Rebirth tutors a creature to hand");
+}
+
+#[test]
+fn callous_bloodmage_etb_makes_a_pest_token() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(0)]));
+    let id = g.add_card_to_hand(0, catalog::callous_bloodmage());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Callous Bloodmage castable for {2}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Pest"),
+        "ETB mode 0 mints a Pest token");
+}
+
+#[test]
+fn mesmeric_orb_mills_each_player_on_upkeep() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mesmeric_orb());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+        g.add_card_to_library(1, catalog::island());
+    }
+    let gy0 = g.players[0].graveyard.len();
+    let gy1 = g.players[1].graveyard.len();
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), gy0 + 3, "P0 mills 3");
+    assert_eq!(g.players[1].graveyard.len(), gy1 + 3, "P1 mills 3");
+}
+
+#[test]
+fn swords_to_plowshares_exiles_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Swords castable for {W}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled by Swords");
+}
+
+#[test]
+fn hymn_to_tourach_discards_two_at_random() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::hymn_to_tourach());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let opp_hand_before = g.players[1].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Hymn castable for {B}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 2, "target discards two cards");
+}
+
+#[test]
+fn baleful_strix_etb_draws_a_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::baleful_strix());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Baleful Strix castable for {U}{B}");
+    drain_stack(&mut g);
+    // Cast (-1 from hand) + ETB draw (+1) = net unchanged; body on battlefield.
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB draw offsets the cast");
+    assert!(g.battlefield.iter().any(|c| c.id == id), "Strix entered the battlefield");
+}
+
+#[test]
+fn armageddon_destroys_all_lands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::armageddon());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Armageddon castable for {2}{W}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.is_land()), "all lands destroyed");
+}
+
+#[test]
+fn mox_sapphire_taps_for_blue() {
+    let mut g = two_player_game();
+    let mox = g.add_card_to_battlefield(0, catalog::mox_sapphire());
+    g.clear_sickness(mox);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mox, ability_index: 0, target: None, x_value: None,
+    }).expect("Mox Sapphire mana ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "Mox Sapphire adds blue mana");
+}
+
+#[test]
+fn planar_nexus_taps_for_any_color() {
+    let mut g = two_player_game();
+    let nexus = g.add_card_to_battlefield(0, catalog::planar_nexus());
+    g.clear_sickness(nexus);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nexus, ability_index: 0, target: None, x_value: None,
+    }).expect("Planar Nexus mana ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Planar Nexus adds one mana of any color");
 }
