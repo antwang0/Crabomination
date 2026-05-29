@@ -211,6 +211,16 @@ struct MatchStats {
     /// duration histogram so operators read both in the same summary
     /// line. Push (claude/modern_decks).
     turn_buckets: [u32; 6],
+    /// Number of clean wins where every losing seat ended with life > 0
+    /// — i.e. the loser did *not* die to lethal face damage. These are
+    /// "alternate" wins (decking out, poison, mill, or a win-the-game
+    /// effect). Surfaced next to `wins` so operators can see the
+    /// damage-vs-alternate win split: a sudden rise in `deckout_wins`
+    /// relative to `wins` flags a stall regression where bots grind to
+    /// empty libraries instead of closing on life. Counted only on
+    /// `Some(Some(seat))` outcomes with available life data. Push
+    /// (claude/modern_decks).
+    deckout_wins: u64,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -334,6 +344,30 @@ impl MatchStats {
         self.cumulative_win_life_delta =
             self.cumulative_win_life_delta.saturating_add(delta);
         self.win_life_samples = self.win_life_samples.saturating_add(1);
+    }
+    /// Classify one clean win as a damage win or an "alternate" win
+    /// (deckout / poison / mill / win-the-game). `final_life` is the
+    /// per-seat life array; `winner` is the winning seat. If every
+    /// losing seat ended with life > 0, the winner closed via something
+    /// other than lethal face damage, so bump `deckout_wins`. Skipped
+    /// silently when life data is unavailable for the losing seats.
+    /// Push (claude/modern_decks).
+    fn observe_win_kind(&mut self, winner: usize, final_life: &[i32]) {
+        // Gather every non-winner seat's life. With no opponents in the
+        // array we can't classify the win, so bail.
+        let mut saw_loser = false;
+        let all_losers_alive = final_life
+            .iter()
+            .enumerate()
+            .filter(|&(i, _)| i != winner)
+            .map(|(_, &l)| {
+                saw_loser = true;
+                l > 0
+            })
+            .all(|alive| alive);
+        if saw_loser && all_losers_alive {
+            self.deckout_wins = self.deckout_wins.saturating_add(1);
+        }
     }
     /// Average win-by-life delta across all sampled wins. Returns 0
     /// when no win-life samples have been recorded yet.
@@ -541,6 +575,13 @@ fn format_match_stats(s: &MatchStats) -> String {
     // watchdog) — `total - wins - draws` is the unresolved count.
     if s.wins + s.draws > 0 {
         out.push_str(&format!(" wins={} draws={}", s.wins, s.draws));
+        // Alternate-win split: how many of those wins closed via
+        // something other than lethal face damage (deckout / poison /
+        // mill / win-the-game). Only rendered when at least one such
+        // win has been seen so the common all-damage case stays tight.
+        if s.deckout_wins > 0 {
+            out.push_str(&format!(" alt_wins={}", s.deckout_wins));
+        }
         let unresolved = n.saturating_sub(s.wins + s.draws);
         if unresolved > 0 {
             out.push_str(&format!(" unresolved={unresolved}"));
@@ -912,6 +953,7 @@ fn run_bot_match(stream: TcpStream, peer: std::net::SocketAddr, format: Format) 
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
+            s.observe_win_kind(w, &outcome.final_life_totals);
         }
         *s
     };
@@ -964,6 +1006,7 @@ fn run_pair_match(
         s.observe_winner(outcome.winner);
         if let Some(Some(w)) = outcome.winner {
             s.observe_win_life_delta(w, &outcome.final_life_totals);
+            s.observe_win_kind(w, &outcome.final_life_totals);
         }
         *s
     };
@@ -1294,6 +1337,34 @@ mod tests {
         s.observe_winner(Some(Some(7)));
         assert_eq!(s.seat_wins[SEAT_BUCKET_COUNT - 1], 1);
         assert_eq!(s.wins, 1);
+    }
+
+    #[test]
+    fn observe_win_kind_counts_alternate_wins() {
+        let mut s = MatchStats::default();
+        // Loser still alive (life 7) → alternate win (deckout/poison/etc.).
+        s.observe_win_kind(0, &[3, 7]);
+        assert_eq!(s.deckout_wins, 1, "loser alive → alternate win counted");
+        // Loser dead to face damage (life 0) → NOT an alternate win.
+        s.observe_win_kind(0, &[5, 0]);
+        assert_eq!(s.deckout_wins, 1, "damage win must not count");
+        // Loser at negative life → damage win, still no bump.
+        s.observe_win_kind(1, &[-3, 9]);
+        assert_eq!(s.deckout_wins, 1);
+        // Another alternate win → bumps to 2.
+        s.observe_win_kind(1, &[2, 4]);
+        assert_eq!(s.deckout_wins, 2);
+    }
+
+    #[test]
+    fn observe_win_kind_ignores_missing_loser_data() {
+        let mut s = MatchStats::default();
+        // Single-element array: no opponent seat to classify against.
+        s.observe_win_kind(0, &[10]);
+        assert_eq!(s.deckout_wins, 0, "no loser data → no classification");
+        // Empty array likewise.
+        s.observe_win_kind(0, &[]);
+        assert_eq!(s.deckout_wins, 0);
     }
 
     #[test]

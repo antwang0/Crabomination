@@ -427,7 +427,14 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::DealtDamage, EventScope::SelfSource) => "Enrage",
         (EventKind::DealtDamage, EventScope::YourControl) => "Your crea dealt dmg",
         (EventKind::DealtDamage, EventScope::AnyPlayer) => "Any crea dealt dmg",
-        _ => "",
+        // Scope-aware fallback for any EventKind x EventScope pair not
+        // enumerated above. Previously these fell through to "" and
+        // rendered as a blank trigger chip on the client; a scope-tagged
+        // generic ("Triggered" / "Your trigger" / "Opp trigger") is
+        // always non-empty so the tooltip is never blank.
+        (_, EventScope::OpponentControl) => "Opp trigger",
+        (_, EventScope::YourControl | EventScope::AnotherOfYours) => "Your trigger",
+        (_, _) => "Triggered",
     }
 }
 
@@ -893,6 +900,49 @@ mod tests {
         assert_eq!(view0.exile[0].owner, 0);
         assert_eq!(view1.exile.len(), 1);
         assert_eq!(view1.exile[0].name, view0.exile[0].name);
+    }
+
+    #[test]
+    fn trigger_event_label_is_never_blank() {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        // Every EventKind x EventScope pair must produce a non-empty
+        // label so the client never renders a blank trigger chip. This
+        // covers pairs (e.g. LifeGained/OpponentControl,
+        // DealtDamage/OpponentControl) that previously fell through to
+        // the "" catch-all.
+        let kinds = [
+            EventKind::EntersBattlefield,
+            EventKind::CreatureDied,
+            EventKind::LifeGained,
+            EventKind::LifeLost,
+            EventKind::DealtDamage,
+            EventKind::CardDrawn,
+            EventKind::SpellCast,
+            EventKind::Attacks,
+        ];
+        let scopes = [
+            EventScope::SelfSource,
+            EventScope::YourControl,
+            EventScope::OpponentControl,
+            EventScope::AnotherOfYours,
+            EventScope::AnyPlayer,
+        ];
+        for k in &kinds {
+            for s in &scopes {
+                let spec = EventSpec::new(k.clone(), *s);
+                let label = trigger_event_label(&spec);
+                assert!(!label.is_empty(),
+                    "label for {:?}/{:?} must not be blank", k, s);
+            }
+        }
+    }
+
+    #[test]
+    fn trigger_event_label_fallback_is_scope_aware() {
+        use crate::card::{EventKind, EventScope, EventSpec};
+        // A pair with no explicit arm uses the scope-aware fallback.
+        let opp = EventSpec::new(EventKind::LifeGained, EventScope::OpponentControl);
+        assert_eq!(trigger_event_label(&opp), "Opp trigger");
     }
 
     #[test]
