@@ -75533,3 +75533,162 @@ fn quandrix_tidecantor_b208_draws_two() {
     // -1 cast + 2 draw = net +1.
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Coverage backfill (claude/modern_decks): functionality tests for STX cards
+// that were wired but lacked a dedicated test.
+// ════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn dina_soul_steeper_drains_on_lifegain() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    // "Whenever you gain life, each opponent loses 1 life."
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::dina_soul_steeper());
+    // Gain 5 life via Witherbloom Charm's lifegain mode.
+    let charm = g.add_card_to_hand(0, catalog::witherbloom_charm());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: charm, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    })
+    .expect("Witherbloom Charm castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "Dina drains 1 from the opponent on lifegain");
+}
+
+#[test]
+fn professor_onyx_magecraft_drains_two() {
+    // Magecraft: "Whenever you cast or copy an instant or sorcery spell,
+    // each opponent loses 2 life and you gain 2 life."
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // Bolt itself also deals 3 to P1; magecraft drains a further 2.
+    assert_eq!(g.players[0].life, p0 + 2, "Onyx magecraft gains you 2");
+    assert_eq!(g.players[1].life, p1 - 3 - 2, "bolt 3 + magecraft drain 2");
+}
+
+#[test]
+fn professor_onyx_plus_one_drains_two() {
+    let mut g = two_player_game();
+    let onyx = g.add_card_to_battlefield(0, catalog::professor_onyx());
+    let p0 = g.players[0].life;
+    let p1 = g.players[1].life;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: onyx, ability_index: 0, target: None,
+    })
+    .expect("Onyx +1 activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1 - 2);
+    assert_eq!(g.players[0].life, p0 + 2);
+    let pw = g.battlefield_find(onyx).unwrap();
+    assert_eq!(pw.counter_count(CounterType::Loyalty), 6, "5 base + 1 from the +1 ability");
+}
+
+#[test]
+fn strixhaven_pondkeeper_etb_scries_and_has_flash() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::strixhaven_pondkeeper());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Pondkeeper castable for {1}{U}");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).expect("Pondkeeper on battlefield");
+    assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
+    assert!(c.definition.keywords.contains(&Keyword::Flash));
+}
+
+#[test]
+fn zimone_quandrix_prodigy_draws_with_tap_ability() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::zimone_quandrix_prodigy());
+    g.clear_sickness(id);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    })
+    .expect("Zimone {1}, T: draw activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "Zimone draws a card");
+    assert!(g.battlefield_find(id).unwrap().tapped, "tapped by the ability");
+}
+
+#[test]
+fn academic_probation_taps_and_stuns_target_creature() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::academic_probation());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Academic Probation castable for {1}{W}");
+    drain_stack(&mut g);
+    let bear = g.battlefield_find(opp_bear).unwrap();
+    assert!(bear.tapped, "target creature tapped");
+    assert_eq!(bear.counter_count(CounterType::Stun), 1, "one stun counter added");
+}
+
+#[test]
+fn unwilling_ingredient_dies_draws_when_paid() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let ingredient = g.add_card_to_battlefield(0, catalog::unwilling_ingredient());
+    // Pre-stash {2}{B} for the may-pay draw.
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    // Kill the 1/1 Pest with a bolt.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(ingredient)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    // The bolt left hand (-1) and the death trigger's paid draw added one
+    // (+1): net hand size unchanged, but a fresh card was drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "bolt left hand, paid draw replaced it");
+    assert!(g.players[0].library.is_empty(),
+        "Unwilling Ingredient drew the seeded card after paying {{2}}{{B}}");
+}
+
+#[test]
+fn unwilling_ingredient_dies_no_draw_when_declined() {
+    let mut g = two_player_game();
+    let ingredient = g.add_card_to_battlefield(0, catalog::unwilling_ingredient());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(ingredient)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), 1,
+        "default decline → no draw");
+}

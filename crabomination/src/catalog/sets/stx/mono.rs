@@ -805,6 +805,13 @@ pub fn professor_of_symbology() -> CardDefinition {
 /// can't cast spells with the chosen name.
 /// Approximated as Noop (name-choosing not implemented).
 pub fn academic_probation() -> CardDefinition {
+    // Printed: "Choose one — Tap target creature, then put a stun counter
+    // on it. / Until your next turn, target player can't cast spells with
+    // mana value 3 or less." Mode 0 (tap + stun) is wired faithfully. Mode
+    // 1 (the spell-casting lock) is omitted — the engine has no
+    // per-player "can't cast spells with MV <= N" restriction primitive.
+    // The card is reduced to its tap-down mode rather than left as a
+    // do-nothing Noop. Tracked in TODO.md.
     CardDefinition {
         name: "Academic Probation",
         cost: cost(&[generic(1), w()]),
@@ -817,7 +824,16 @@ pub fn academic_probation() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Noop,
+        effect: Effect::Seq(vec![
+            Effect::Tap {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+            Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::Stun,
+                amount: Value::Const(1),
+            },
+        ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -936,8 +952,12 @@ pub fn unwilling_ingredient() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::MayDo {
+            // "When Unwilling Ingredient dies, you may pay {2}{B}. If you
+            // do, draw a card." Modeled with MayPay so the draw is gated
+            // on actually paying the {2}{B} (was previously a free MayDo).
+            effect: Effect::MayPay {
                 description: "Pay {2}{B} to draw a card".into(),
+                mana_cost: cost(&[generic(2), b()]),
                 body: Box::new(Effect::Draw {
                     who: Selector::You,
                     amount: Value::Const(1),

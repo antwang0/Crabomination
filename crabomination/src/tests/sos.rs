@@ -13462,3 +13462,279 @@ fn wildgrowth_archaic_castable_with_two_green() {
     // 1 color (green) spent → 1 Converge counter → survives as 1/1.
     assert_eq!(view.power, 1, "1 color spent → 1 +1/+1 counter");
 }
+
+// ════════════════════════════════════════════════════════════════════════════
+// Coverage backfill (claude/modern_decks): functionality tests for SOS cards
+// that were wired but lacked a dedicated test. One test per card exercising
+// its primary play pattern.
+// ════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn lecturing_scornmage_repartee_adds_counter_on_is_targeting_creature() {
+    // Repartee: when you cast an instant/sorcery targeting a creature,
+    // Lecturing Scornmage gets a +1/+1 counter.
+    let mut g = two_player_game();
+    let scorn = g.add_card_to_battlefield(0, catalog::lecturing_scornmage());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(scorn).unwrap();
+    assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Repartee should land a +1/+1 counter on the Scornmage");
+}
+
+#[test]
+fn lecturing_scornmage_repartee_skips_when_targeting_player() {
+    let mut g = two_player_game();
+    let scorn = g.add_card_to_battlefield(0, catalog::lecturing_scornmage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let s = g.battlefield_find(scorn).unwrap();
+    assert_eq!(s.counter_count(CounterType::PlusOnePlusOne), 0,
+        "Repartee must not fire when the spell targets a player");
+}
+
+#[test]
+fn melancholic_poet_repartee_drains_one() {
+    // Repartee: when you cast an instant/sorcery targeting a creature,
+    // each opponent loses 1 life and you gain 1.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::melancholic_poet());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 1, "opponent drained 1");
+    assert_eq!(g.players[0].life, p0_life + 1, "you gained 1");
+}
+
+#[test]
+fn muse_seeker_opus_small_body_loots() {
+    // Opus (small body, < 5 mana spent): draw a card, then discard a card.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::muse_seeker());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::grizzly_bears()); // something to discard
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let lib_before = g.players[0].library.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].library.len(), lib_before - 1,
+        "Opus small body draws one card");
+    // Discard sent a card to the graveyard (alongside the resolved bolt).
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "Opus small body discards a card");
+}
+
+#[test]
+fn poisoners_apprentice_etb_shrinks_opp_creature_after_lifegain() {
+    // ETB: if you gained life this turn, target creature an opponent
+    // controls gets -4/-4 until end of turn.
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.adjust_life(0, 1); // gain life this turn
+    let id = g.add_card_to_hand(0, catalog::poisoners_apprentice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Poisoner's Apprentice castable for {2}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_bear),
+        "2/2 bear dies to -4/-4 after lifegain");
+}
+
+#[test]
+fn poisoners_apprentice_etb_no_lifegain_leaves_creature_intact() {
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::poisoners_apprentice());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Poisoner's Apprentice castable for {2}{B}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == opp_bear),
+        "without lifegain the ETB does nothing");
+}
+
+#[test]
+fn rearing_embermare_is_a_four_five_reach_haste() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::rearing_embermare());
+    let c = g.battlefield_find(id).unwrap();
+    assert_eq!((c.definition.power, c.definition.toughness), (4, 5));
+    assert!(c.definition.keywords.contains(&Keyword::Reach));
+    assert!(c.definition.keywords.contains(&Keyword::Haste));
+}
+
+#[test]
+fn rehearsed_debater_repartee_self_pumps() {
+    // Repartee: +1/+1 until end of turn when you cast an IS targeting a
+    // creature.
+    let mut g = two_player_game();
+    let deb = g.add_card_to_battlefield(0, catalog::rehearsed_debater());
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable for {R}");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(deb).unwrap();
+    assert_eq!(c.power, 4, "3/3 base + Repartee +1/+1 = 4 power");
+}
+
+#[test]
+fn tester_of_the_tangential_increment_adds_counter_on_three_mana_cast() {
+    // Increment: when you cast a spell with mana spent greater than this
+    // creature's power or toughness (both 1), put a +1/+1 counter on it.
+    let mut g = two_player_game();
+    let tester = g.add_card_to_battlefield(0, catalog::tester_of_the_tangential());
+    // A 2-mana spell satisfies Increment (2 > the tester's power/toughness
+    // of 1) and — being a creature spell — leaves the tester unharmed.
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+    let t = g.battlefield_find(tester).unwrap();
+    assert!(t.counter_count(CounterType::PlusOnePlusOne) >= 1,
+        "2-mana cast satisfies Increment (2 > 1)");
+}
+
+#[test]
+fn brush_off_counters_a_spell() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Lightning Bolt castable for {R}");
+    let spell_id = g.stack.iter().find_map(|s| match s {
+        StackItem::Spell { card, .. } => Some(card.id),
+        _ => None,
+    }).unwrap();
+    g.priority.player_with_priority = 0;
+    let brush = g.add_card_to_hand(0, catalog::brush_off());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: brush, target: Some(Target::Permanent(spell_id)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Brush Off castable for {2}{U}{U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "the bolt was countered — no damage dealt");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
+        "countered spell goes to its owner's graveyard");
+}
+
+#[test]
+fn zaffai_grants_one_free_is_cast_at_first_main() {
+    // Once during each of your turns, you may cast an IS from hand for
+    // free. Wired as a precombat-main grant of MayPlay on one IS card.
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zaffai_and_the_tempests());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    let card = g.players[0].hand.iter().find(|c| c.id == bolt)
+        .expect("bolt still in hand");
+    assert!(card.may_play_until.is_some(),
+        "Zaffai stamps a may-play permission on an instant/sorcery in hand");
+}
+
+// ── SOS school lands (enter tapped, tap for either of two colors) ────────────
+
+fn assert_school_land(def_fn: fn() -> crate::card::CardDefinition, a: Color, b: Color) {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, def_fn());
+    // Mana ability 0 → color a.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("first color mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(a), 1, "ability 0 taps for color a");
+    // Mana ability 1 → color b.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    g.players[0].mana_pool = crate::mana::ManaPool::default();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("second color mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.amount(b), 1, "ability 1 taps for color b");
+}
+
+#[test]
+fn fields_of_strife_taps_for_red_or_white() {
+    assert_school_land(catalog::fields_of_strife, Color::Red, Color::White);
+}
+
+#[test]
+fn forum_of_amity_taps_for_white_or_black() {
+    assert_school_land(catalog::forum_of_amity, Color::White, Color::Black);
+}
+
+#[test]
+fn paradox_gardens_taps_for_green_or_blue() {
+    assert_school_land(catalog::paradox_gardens, Color::Green, Color::Blue);
+}
+
+#[test]
+fn spectacle_summit_taps_for_blue_or_red() {
+    assert_school_land(catalog::spectacle_summit, Color::Blue, Color::Red);
+}
+
+#[test]
+fn titans_grave_taps_for_black_or_green() {
+    assert_school_land(catalog::titans_grave, Color::Black, Color::Green);
+}
+
+#[test]
+fn school_land_enters_tapped() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::fields_of_strife());
+    g.perform_action(GameAction::PlayLand(id))
+        .expect("can play a land");
+    drain_stack(&mut g);
+    let land = g.battlefield_find(id).expect("land on battlefield");
+    assert!(land.tapped, "SOS school lands enter the battlefield tapped");
+}
