@@ -180,3 +180,61 @@ fn mana_cost_summary_renders_each_pip_kind() {
     assert_eq!(cost(&[generic(1), colorless(2)]).summary(), "{1}{C}{C}");
     assert_eq!(ManaCost::new(vec![]).summary(), "{0}", "free spell renders as {{0}}");
 }
+
+// ── Monocolored hybrid pips ({n/C}) — CR 202.3f / CR 107.4f ─────────────────
+
+#[test]
+fn mono_hybrid_mana_value_uses_generic_side() {
+    use crate::mana::mono_hybrid;
+    // CR 202.3f: a monocolored hybrid pip {2/R} contributes 2 to mana value.
+    assert_eq!(cost(&[mono_hybrid(2, Color::Red)]).cmc(), 2);
+    assert_eq!(
+        cost(&[mono_hybrid(2, Color::Red), mono_hybrid(2, Color::Red), mono_hybrid(2, Color::Red)]).cmc(),
+        6,
+        "Magmablood Archaic mono-hybrid cost has mana value 6",
+    );
+}
+
+#[test]
+fn mono_hybrid_summary_renders_n_over_color() {
+    use crate::mana::mono_hybrid;
+    assert_eq!(cost(&[mono_hybrid(2, Color::Red)]).summary(), "{2/R}");
+    assert_eq!(cost(&[mono_hybrid(2, Color::Green)]).summary(), "{2/G}");
+}
+
+#[test]
+fn mono_hybrid_pays_colored_side_when_available() {
+    use crate::mana::mono_hybrid;
+    let mut pool = ManaPool::new();
+    pool.add(Color::Red, 1);
+    // One red pays the colored side of {2/R} (1 mana, not 2).
+    assert!(pool.pay(&cost(&[mono_hybrid(2, Color::Red)])).is_ok());
+    assert_eq!(pool.total(), 0, "exactly the one red was spent");
+}
+
+#[test]
+fn mono_hybrid_pays_generic_side_when_no_color() {
+    use crate::mana::mono_hybrid;
+    let mut pool = ManaPool::new();
+    pool.add_colorless(2);
+    // No red — pay {2} generic for the {2/R} pip.
+    assert!(pool.pay(&cost(&[mono_hybrid(2, Color::Red)])).is_ok());
+    assert_eq!(pool.total(), 0);
+}
+
+#[test]
+fn mono_hybrid_one_generic_is_insufficient() {
+    use crate::mana::mono_hybrid;
+    let mut pool = ManaPool::new();
+    pool.add_colorless(1);
+    // One colorless can't pay {2/R} (needs {2} or one red).
+    assert!(pool.pay(&cost(&[mono_hybrid(2, Color::Red)])).is_err());
+    assert_eq!(pool.total(), 1, "pool unchanged on failed payment");
+}
+
+#[test]
+fn mono_hybrid_contributes_color_identity() {
+    use crate::mana::mono_hybrid;
+    assert_eq!(cost(&[mono_hybrid(2, Color::Red)]).colors(), vec![Color::Red]);
+    assert_eq!(cost(&[mono_hybrid(2, Color::Green)]).distinct_colors(), 1);
+}

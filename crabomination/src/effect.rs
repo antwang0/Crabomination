@@ -1082,6 +1082,11 @@ pub enum Effect {
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
+    /// CR 701.15g — "Destroy ... It can't be regenerated." Behaves like
+    /// `Destroy` but bypasses regeneration shields (Terminate, Putrefy,
+    /// Day of Judgment, Vindicate, ...). Indestructible and Shield-counter
+    /// replacements still apply — only regeneration is denied.
+    DestroyNoRegen { what: Selector },
     /// CR 701.15 — add a regeneration shield to each resolved permanent.
     /// The shield is a one-shot replacement that fires the next time the
     /// permanent would be destroyed this turn (tap + remove from combat +
@@ -1698,6 +1703,7 @@ impl Effect {
                 }
             }
             Effect::Destroy { what }
+            | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::Exile { what }
             | Effect::Tap { what }
@@ -1810,6 +1816,7 @@ impl Effect {
             Effect::GainLife { who, .. } | Effect::LoseLife { who, .. } => sel_filter(who),
             Effect::SetLifeTotal { who, .. } => sel_filter(who),
             Effect::Destroy { what }
+            | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::Exile { what }
             | Effect::Tap { what }
@@ -1987,6 +1994,9 @@ impl Effect {
                 ZoneDest::Library { .. } => "put target into its owner's library".into(),
             },
             Effect::Destroy { .. } => "destroy target".into(),
+            Effect::DestroyNoRegen { .. } => {
+                "destroy target (can't be regenerated)".into()
+            }
             Effect::Exile { .. } => "exile target".into(),
             Effect::DealDamage { amount, .. } => match amount {
                 Value::Const(n) => format!("deal {n} damage to target"),
@@ -2121,6 +2131,7 @@ impl Effect {
             | Effect::CounterUnless { .. } => false,
             // Permanent-targeting effects: skip Player.
             Effect::Destroy { .. }
+            | Effect::DestroyNoRegen { .. }
             | Effect::Exile { .. }
             | Effect::Tap { .. }
             | Effect::Untap { .. }
@@ -2274,6 +2285,7 @@ impl Effect {
                 Effect::SetNoMaxHandSize { who } => sel_find(who, slot),
                 Effect::Move { what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
+                | Effect::DestroyNoRegen { what }
                 | Effect::Exile { what }
                 | Effect::Tap { what }
                 | Effect::Untap { what, .. }
@@ -2732,6 +2744,10 @@ pub mod shortcut {
         Effect::Discard { who, amount: Value::Const(n), random }
     }
     pub fn destroy_target() -> Effect { Effect::Destroy { what: target() } }
+    /// "Destroy target ... It can't be regenerated." (CR 701.15g)
+    pub fn destroy_target_no_regen() -> Effect {
+        Effect::DestroyNoRegen { what: target() }
+    }
     pub fn exile_target() -> Effect { Effect::Exile { what: target() } }
     pub fn return_target_to_hand() -> Effect {
         Effect::Move { what: target(), to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(target()))) }

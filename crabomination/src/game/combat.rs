@@ -255,11 +255,13 @@ impl GameState {
                 .ok_or(GameError::CardNotOnBattlefield(attacker_id))?;
 
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
+            let atk_colors = cp_of(attacker_id).map(|c| c.colors.as_slice()).unwrap_or(&[]);
             if !super::can_block_attacker_computed(
                 blocker,
                 attacker,
                 blocker_cp,
                 kws_of(attacker_id),
+                atk_colors,
             ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }

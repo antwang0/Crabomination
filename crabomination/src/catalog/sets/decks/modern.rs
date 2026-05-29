@@ -2040,8 +2040,9 @@ pub fn imperial_seal() -> CardDefinition {
 /// Damnation — {2}{B}{B} Sorcery. Destroy all creatures. They can't be
 /// regenerated.
 ///
-/// Black mirror of Day of Judgment. Same `ForEach + Destroy` shape; the
-/// "can't be regenerated" rider collapses (no regen primitive).
+/// Black mirror of Wrath of God. Same `ForEach + Destroy` shape; the
+/// "can't be regenerated" rider is wired via `Effect::DestroyNoRegen`
+/// (CR 701.15g).
 pub fn damnation() -> CardDefinition {
     CardDefinition {
         name: "Damnation",
@@ -2054,7 +2055,7 @@ pub fn damnation() -> CardDefinition {
         keywords: vec![],
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(SelectionRequirement::Creature),
-            body: Box::new(Effect::Destroy {
+            body: Box::new(Effect::DestroyNoRegen {
                 what: Selector::TriggerSource,
             }),
         },

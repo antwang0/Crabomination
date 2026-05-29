@@ -3,7 +3,8 @@ use crate::card::{CardDefinition, CardType, Effect, SelectionRequirement, Subtyp
 use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
 use crate::mana::{b, cost, generic, r, w};
 
-/// Wrath of God — {2}{W}{W} Sorcery: destroy all creatures
+/// Wrath of God — {2}{W}{W} Sorcery: destroy all creatures. They can't
+/// be regenerated. (CR 701.15g — wired via `Effect::DestroyNoRegen`.)
 pub fn wrath_of_god() -> CardDefinition {
     CardDefinition {
         name: "Wrath of God",
@@ -14,7 +15,7 @@ pub fn wrath_of_god() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Destroy {
+        effect: Effect::DestroyNoRegen {
             what: Selector::EachPermanent(SelectionRequirement::Creature),
         },
         activated_abilities: no_abilities(),

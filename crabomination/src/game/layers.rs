@@ -373,6 +373,8 @@ fn colors_from_card(card: &crate::card::CardInstance) -> Vec<Color> {
             }
             ManaSymbol::Phyrexian(c) if !colors.contains(c) => { colors.push(*c); }
             ManaSymbol::Phyrexian(_) => {}
+            ManaSymbol::MonoHybrid(_, c) if !colors.contains(c) => { colors.push(*c); }
+            ManaSymbol::MonoHybrid(_, _) => {}
             _ => {}
         }
     }

@@ -1008,7 +1008,12 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::Destroy { what } => {
+            Effect::Destroy { what } | Effect::DestroyNoRegen { what } => {
+                // CR 701.15g — `DestroyNoRegen` ("can't be regenerated")
+                // bypasses regeneration shields; everything else (the
+                // Indestructible check, Shield-counter replacement) is
+                // identical to plain `Destroy`.
+                let no_regen = matches!(effect, Effect::DestroyNoRegen { .. });
                 let entities = self.resolve_selector(what, ctx);
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
@@ -1037,10 +1042,12 @@ impl GameState {
                         // CR 701.15 — regeneration shield replaces destruction:
                         // remove a shield, tap the permanent, remove it from
                         // combat, and heal marked damage instead of dying.
-                        if self
-                            .battlefield_find(cid)
-                            .map(|c| c.regeneration_shields > 0)
-                            .unwrap_or(false)
+                        // Skipped entirely for `DestroyNoRegen` (CR 701.15g).
+                        if !no_regen
+                            && self
+                                .battlefield_find(cid)
+                                .map(|c| c.regeneration_shields > 0)
+                                .unwrap_or(false)
                         {
                             self.apply_regeneration(cid);
                             continue;

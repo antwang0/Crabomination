@@ -1572,13 +1572,11 @@ impl GameState {
         }
         self.attacking.iter().any(|atk| {
             let attacker = self.battlefield.iter().find(|c| c.id == atk.attacker);
-            let atk_kws = computed
-                .iter()
-                .find(|c| c.id == atk.attacker)
-                .map(|c| c.keywords.as_slice())
-                .unwrap_or(&[]);
+            let atk_cp = computed.iter().find(|c| c.id == atk.attacker);
+            let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+            let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
             attacker
-                .map(|a| can_block_attacker_computed(blocker, a, blocker_cp, atk_kws))
+                .map(|a| can_block_attacker_computed(blocker, a, blocker_cp, atk_kws, atk_colors))
                 .unwrap_or(false)
         })
     }
@@ -1599,12 +1597,10 @@ impl GameState {
         if blocker_cp.keywords.contains(&Keyword::CantBlock) {
             return false;
         }
-        let atk_kws = computed
-            .iter()
-            .find(|c| c.id == attacker_id)
-            .map(|c| c.keywords.as_slice())
-            .unwrap_or(&[]);
-        can_block_attacker_computed(blocker, attacker, blocker_cp, atk_kws)
+        let atk_cp = computed.iter().find(|c| c.id == attacker_id);
+        let atk_kws = atk_cp.map(|c| c.keywords.as_slice()).unwrap_or(&[]);
+        let atk_colors = atk_cp.map(|c| c.colors.as_slice()).unwrap_or(&[]);
+        can_block_attacker_computed(blocker, attacker, blocker_cp, atk_kws, atk_colors)
     }
 
     // ── Main action dispatch ──────────────────────────────────────────────────
@@ -3513,6 +3509,7 @@ pub(crate) fn can_block_attacker_computed(
     attacker: &CardInstance,
     blocker_computed: &ComputedPermanent,
     attacker_kws: &[Keyword],
+    attacker_colors: &[crate::mana::Color],
 ) -> bool {
     let blocker_kws = &blocker_computed.keywords;
     // Unblockable: can't be blocked at all.
@@ -3552,29 +3549,27 @@ pub(crate) fn can_block_attacker_computed(
             return false;
         }
     }
-    // Intimidate: can only be blocked by artifact creatures or creatures sharing a color.
+    // Intimidate (CR 702.13): can only be blocked by artifact creatures
+    // or creatures that share a color with the attacker. We compare the
+    // attacker's *computed* colors (which include hybrid / mono-hybrid
+    // pips and color-setting effects, via `ComputedPermanent.colors`)
+    // against the blocker's computed colors — not raw `{C}` cost pips.
     if attacker_kws.contains(&Keyword::Intimidate) {
         let blocker_is_artifact = blocker.definition.is_artifact();
-        let shares_color = blocker_computed.colors.iter().any(|c| {
-            attacker.definition.cost.symbols.iter().any(|s| {
-                use crate::mana::ManaSymbol;
-                matches!(s, ManaSymbol::Colored(ac) if ac == c)
-            })
-        });
+        let shares_color = blocker_computed
+            .colors
+            .iter()
+            .any(|c| attacker_colors.contains(c));
         if !blocker_is_artifact && !shares_color {
             return false;
         }
     }
-    // Protection: attacker has protection from a color that appears in the blocker's cost.
-    use crate::mana::ManaSymbol;
+    // Protection from a color (CR 702.16e): the attacker can't be blocked
+    // by a creature of a color it has protection from. Read the blocker's
+    // computed colors so hybrid-pip and effect-granted colors count.
     for kw in attacker_kws {
         if let Keyword::Protection(color) = kw
-            && blocker
-                .definition
-                .cost
-                .symbols
-                .iter()
-                .any(|s| matches!(s, ManaSymbol::Colored(c) if c == color))
+            && blocker_computed.colors.contains(color)
         {
             return false;
         }

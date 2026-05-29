@@ -13349,6 +13349,120 @@ fn regen_shield_expires_at_cleanup() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Can't be regenerated (CR 701.15g) — DestroyNoRegen bypasses the shield.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// A regeneration shield does NOT save a creature from a "can't be
+/// regenerated" destroy effect like Terminate (CR 701.15g).
+#[test]
+fn terminate_ignores_regeneration_shield() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate activates");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(skel).unwrap().regeneration_shields, 1,
+        "shield is up before Terminate");
+
+    // Terminate destroys it and it can't be regenerated — the shield does
+    // not save it.
+    let term = g.add_card_to_hand(1, catalog::terminate());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: term, target: Some(Target::Permanent(skel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Terminate cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(skel).is_none(),
+        "Skeletons destroyed despite the regeneration shield (can't be regenerated)");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == skel),
+        "Skeletons hit the graveyard");
+}
+
+/// Plain `Destroy` (no can't-regen clause) still honors a shield, proving
+/// the distinction is real and not just "all destroys ignore shields now".
+#[test]
+fn plain_destroy_still_honors_regeneration_shield() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(0, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate activates");
+    drain_stack(&mut g);
+
+    // Murderous Cut is a plain Destroy — the shield saves the creature.
+    let cut = g.add_card_to_hand(1, catalog::murderous_cut());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.players[1].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: cut, target: Some(Target::Permanent(skel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Murderous Cut cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(skel).expect("Skeletons survive plain Destroy via shield");
+    assert_eq!(c.regeneration_shields, 0, "shield consumed");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Intimidate (CR 702.13) — shares-a-color check uses computed colors, so a
+// color from a hybrid pip counts (regression for the raw-pip-scan bug).
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Spectacle Mage's colors (blue + red) come entirely from its {U/R}{U/R}
+/// hybrid pips. With Intimidate, a red creature shares red and CAN block;
+/// a green creature can't. Previously the shares-a-color check only
+/// scanned `{C}` cost pips and would have wrongly treated the hybrid-only
+/// attacker as colorless (blockable by nothing but artifacts).
+#[test]
+fn intimidate_shares_color_counts_hybrid_pip_color() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
+    // Grant Intimidate to the attacker.
+    g.battlefield_find_mut(mage).unwrap().definition.keywords.push(Keyword::Intimidate);
+    g.clear_sickness(mage);
+    let goblin = g.add_card_to_battlefield(1, catalog::goblin_guide()); // red
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: mage, target: AttackTarget::Player(1),
+    }])).expect("Spectacle Mage attacks");
+    g.step = TurnStep::DeclareBlockers;
+    // Red goblin shares red (from the hybrid pip) → legal block.
+    assert!(g.blocker_can_block_attacker(goblin, mage),
+        "red creature can block a red/blue Intimidate attacker (shared color)");
+}
+
+#[test]
+fn intimidate_off_color_creature_cannot_block_hybrid_attacker() {
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage()); // U/R
+    g.battlefield_find_mut(mage).unwrap().definition.keywords.push(Keyword::Intimidate);
+    g.clear_sickness(mage);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: mage, target: AttackTarget::Player(1),
+    }])).expect("attacks");
+    g.step = TurnStep::DeclareBlockers;
+    let res = g.perform_action(GameAction::DeclareBlockers(vec![(bear, mage)]));
+    assert!(matches!(res, Err(GameError::CannotBlock(_))),
+        "green creature shares no color with a U/R Intimidate attacker");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Fear (CR 702.36) — only artifact and/or black creatures can block.
 // ─────────────────────────────────────────────────────────────────────────
 
