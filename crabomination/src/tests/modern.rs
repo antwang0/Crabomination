@@ -14495,3 +14495,232 @@ fn animated_manland_can_attack() {
     }]))
     .expect("animated manland attacks");
 }
+
+// ── Coverage backfill: burn / discard / sacrifice spells ────────────────────
+
+/// Char deals 4 to the targeted player and 2 to its caster.
+#[test]
+fn char_burns_target_and_pings_caster() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::char());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let p0_life = g.players[0].life;
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Char castable for {2}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 4, "target takes 4");
+    assert_eq!(g.players[0].life, p0_life - 2, "caster takes 2");
+}
+
+/// Thud sacrifices a creature and deals damage equal to its power.
+#[test]
+fn thud_sacrifices_and_deals_power_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::thud());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Thud castable for {R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 2, "deals 2 (sacrificed bear's power)");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear sacrificed");
+}
+
+/// Thoughtseize makes an opponent discard a nonland card and costs 2 life.
+#[test]
+fn thoughtseize_discards_nonland_and_costs_two_life() {
+    let mut g = two_player_game();
+    let victim_card = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::thoughtseize());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let p0_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Thoughtseize castable for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == victim_card),
+        "opp's nonland card discarded");
+    assert_eq!(g.players[0].life, p0_life - 2, "caster loses 2 life");
+}
+
+/// Searing Blaze kills a small creature and burns its controller.
+#[test]
+fn searing_blaze_burns_creature_and_player() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::searing_blaze());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Searing Blaze castable for {R}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2/2 dies to 3 damage");
+    assert_eq!(g.players[1].life, p1_life - 3, "opp takes 3");
+}
+
+/// Inquisition of Kozilek makes an opponent discard a chosen nonland card
+/// with mana value 3 or less.
+#[test]
+fn inquisition_of_kozilek_discards_low_cmc_nonland() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears()); // MV 2, nonland
+    let id = g.add_card_to_hand(0, catalog::inquisition_of_kozilek());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Inquisition castable for {B}");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear),
+        "MV-2 nonland discarded");
+}
+
+/// Collective Defiance mode 0 deals 4 damage to a creature.
+#[test]
+fn collective_defiance_mode0_burns_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::collective_defiance());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Collective Defiance mode 0 castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "4 dmg kills the 2/2");
+}
+
+/// Collective Defiance mode 2 deals 3 damage to each opponent.
+#[test]
+fn collective_defiance_mode2_burns_opponent() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::collective_defiance());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("Collective Defiance mode 2 castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life - 3, "each opponent takes 3");
+}
+
+/// Mystical Dispute counters a spell whose controller can't pay {3}.
+#[test]
+fn mystical_dispute_counters_unpaid_spell() {
+    let mut g = two_player_game();
+    // P1 casts a Lightning Bolt at P0.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("P1 bolt on stack");
+    // P0 responds with Mystical Dispute; P1 has no mana to pay {3}.
+    let disp = g.add_card_to_hand(0, catalog::mystical_dispute());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: disp, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mystical Dispute targets the bolt");
+    drain_stack(&mut g);
+    // Bolt countered → P0 took no damage.
+    assert_eq!(g.players[0].life, 20, "bolt was countered, no damage");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "bolt in graveyard");
+}
+
+/// Plunge into Darkness mode 0 sacrifices a creature to gain 3 life.
+#[test]
+fn plunge_into_darkness_mode0_sacrifices_for_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::plunge_into_darkness());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Plunge mode 0 castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear sacrificed");
+    assert_eq!(g.players[0].life, life + 3, "gained 3 life");
+}
+
+/// Coveted Jewel draws three cards when it enters.
+#[test]
+fn coveted_jewel_cast_etb_draws_three_cards() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        let lid = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(
+            lid, catalog::grizzly_bears(), 0));
+    }
+    let id = g.add_card_to_hand(0, catalog::coveted_jewel());
+    g.players[0].mana_pool.add_colorless(6);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Coveted Jewel castable for {6}");
+    drain_stack(&mut g);
+    // -1 for the Jewel leaving hand, +3 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 3, "drew 3 on ETB");
+}
+
+/// The Mightstone and Weakstone draws two cards (ETB mode 0).
+#[test]
+fn the_mightstone_and_weakstone_etb_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..2 {
+        let lid = g.next_id();
+        g.players[0].library.push(crate::card::CardInstance::new(
+            lid, catalog::grizzly_bears(), 0));
+    }
+    let id = g.add_card_to_hand(0, catalog::the_mightstone_and_weakstone());
+    g.players[0].mana_pool.add_colorless(5);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Mightstone castable for {5}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2 on ETB mode 0");
+}
+
+/// Kozilek's Command mode 0 makes X 1/1 Eldrazi Scion tokens.
+#[test]
+fn kozileks_command_mode0_makes_x_scions() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::kozileks_command());
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: Some(2),
+    }).expect("Kozilek's Command castable for X=2");
+    drain_stack(&mut g);
+    let scions = g.battlefield.iter().filter(|c| c.definition.name == "Eldrazi Scion").count();
+    assert_eq!(scions, 2, "X=2 makes two Eldrazi Scions");
+}
+
+/// Eldrazi Confluence mode 1 makes an Eldrazi Scion token.
+#[test]
+fn eldrazi_confluence_mode1_makes_a_scion() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::eldrazi_confluence());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Eldrazi Confluence castable for {4}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Eldrazi Scion"),
+        "mode 1 mints an Eldrazi Scion");
+}

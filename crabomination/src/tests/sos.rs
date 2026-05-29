@@ -13741,3 +13741,21 @@ fn school_land_enters_tapped() {
     let land = g.battlefield_find(id).expect("land on battlefield");
     assert!(land.tapped, "SOS school lands enter the battlefield tapped");
 }
+
+/// Strixhaven Skycoach is a Vehicle (Crew 2): it animates into a 3/2 flier
+/// when crewed by a 2-power creature.
+#[test]
+fn strixhaven_skycoach_crews_into_a_flier() {
+    let mut g = two_player_game();
+    let coach = g.add_card_to_battlefield(0, catalog::strixhaven_skycoach());
+    // Not a creature until crewed.
+    assert!(!g.computed_permanent(coach).unwrap().card_types.contains(&CardType::Creature));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: coach, crew_creatures: vec![bear] })
+        .expect("crew 2 satisfied by a 2/2");
+    let cp = g.computed_permanent(coach).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature));
+    assert!(cp.keywords.contains(&Keyword::Flying));
+    assert_eq!(cp.power, 3);
+    assert_eq!(cp.toughness, 2);
+}

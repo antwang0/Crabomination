@@ -467,12 +467,11 @@ pub fn ark_of_hunger() -> CardDefinition {
 /// a basic land card, reveal it, put it into your hand, then shuffle. /
 /// Crew 2."
 ///
-/// 🟡 Body wired: 3/2 Vehicle artifact (subtype tag) with Flying. The
-/// ETB basic-land tutor-to-hand is wired faithfully via `Effect::Search
-/// { filter: IsBasicLand, to: Hand(You) }`. Crew is not enforced — the
-/// engine has no crew-as-tap-cost primitive (TODO.md), so the Skycoach
-/// stays a non-creature artifact until that lands. Body resolves
-/// end-to-end for the ETB tutor, which is the most impactful clause.
+/// ✅ Body wired: 3/2 Vehicle artifact with Flying and Crew 2 (CR 702.122,
+/// `Keyword::Crew(2)` + `GameAction::Crew`). The ETB basic-land tutor-to-
+/// hand is wired faithfully via `Effect::Search { filter: IsBasicLand, to:
+/// Hand(You) }`. The Vehicle stays a non-creature artifact until crewed,
+/// then animates to a 3/2 flier for the turn.
 pub fn strixhaven_skycoach() -> CardDefinition {
     use crate::card::{ArtifactSubtype, CreatureType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
     use crate::effect::{PlayerRef as PR, ZoneDest as ZD};
@@ -480,7 +479,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         name: "Strixhaven Skycoach",
         cost: cost(&[generic(3)]),
         supertypes: vec![],
-        card_types: vec![CardType::Artifact, CardType::Creature],
+        card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
             artifact_subtypes: vec![ArtifactSubtype::Vehicle],
             creature_types: vec![CreatureType::Construct],
@@ -488,7 +487,7 @@ pub fn strixhaven_skycoach() -> CardDefinition {
         },
         power: 3,
         toughness: 2,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::Crew(2)],
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![TriggeredAbility {
