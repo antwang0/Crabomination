@@ -2976,12 +2976,29 @@ fn gitaxian_probe_pays_two_life_and_draws() {
     g.perform_action(GameAction::CastSpell {
         card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Gitaxian Probe castable for {0}");
+    .expect("Gitaxian Probe castable by paying the {U/P} pip with life");
     drain_stack(&mut g);
 
     // -1 cast +1 draw → net hand 0.
     assert_eq!(g.players[0].hand.len(), hand_before);
-    assert_eq!(g.players[0].life, life_before - 2, "Probe pays 2 life");
+    assert_eq!(g.players[0].life, life_before - 2, "Probe pays the Phyrexian pip with 2 life");
+}
+
+#[test]
+fn gitaxian_probe_paid_with_blue_costs_no_life() {
+    // Paying the {U/P} pip with blue mana costs no life.
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::gitaxian_probe());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Gitaxian Probe castable for {U}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before, "no life lost when the pip is paid with blue");
 }
 
 /// Force Spike counters target spell unless its controller pays {1}.
@@ -7809,6 +7826,7 @@ fn dismember_kills_a_five_toughness_creature() {
     let serra = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flying
     let big = g.add_card_to_battlefield(1, catalog::sengir_vampire()); // 4/4
     let id = g.add_card_to_hand(0, catalog::dismember());
+    // {1}{B/P}{B/P}{B/P}: {1} + two black pips + one pip paid with 2 life.
     g.players[0].mana_pool.add(Color::Black, 2);
     g.players[0].mana_pool.add_colorless(1);
 
@@ -7818,10 +7836,31 @@ fn dismember_kills_a_five_toughness_creature() {
         target: Some(Target::Permanent(big)),
         additional_targets: vec![],
         mode: None, x_value: None,
-    }).expect("Dismember castable for {1}{B}{B}");
+    }).expect("Dismember castable for {1}{B}{B} + 2 life");
     drain_stack(&mut g);
     assert!(!g.battlefield.iter().any(|c| c.id == big),
         "Sengir Vampire (4/4) dies to -5/-5");
+}
+
+#[test]
+fn dismember_castable_for_one_and_six_life() {
+    // All three {B/P} pips paid with life → {1} + 6 life.
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::sengir_vampire());
+    let id = g.add_card_to_hand(0, catalog::dismember());
+    g.players[0].mana_pool.add_colorless(1);
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Permanent(big)),
+        additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Dismember castable for {1} + 6 life");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before - 6,
+        "three Phyrexian pips paid with 2 life each = 6 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == big));
 }
 
 #[test]
@@ -12039,6 +12078,22 @@ fn messenger_falcons_etb_draws_a_card() {
 
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Messenger Falcons"));
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 1, "ETB draws 1");
+}
+
+#[test]
+fn messenger_falcons_hybrid_pip_payable_with_blue() {
+    // {2}{G/U}{W}: pay the hybrid pip with blue instead of green.
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let id = g.add_card_to_hand(0, catalog::messenger_falcons());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Messenger Falcons castable for {2}{U}{W} via the hybrid pip");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Messenger Falcons"));
 }
 
 #[test]

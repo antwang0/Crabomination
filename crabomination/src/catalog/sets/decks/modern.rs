@@ -854,25 +854,22 @@ pub fn cathartic_reunion() -> CardDefinition {
 /// Gitaxian Probe — Phyrexian Sorcery. Look at target opponent's hand. Draw
 /// a card.
 ///
-/// The Phyrexian pip `{U/Φ}` (pay 2 life or {U}) collapses to a flat {0}
-/// cost plus 2 life on resolution — the typical Modern line is to pay the
-/// life. The "look at opponent's hand" half is dropped (information-only
-/// effect with no engine state hook). Net gameplay: lose 2 life, draw a
-/// card — a free cantrip that costs no card slot.
+/// The Phyrexian pip `{U/P}` is a real `ManaSymbol::Phyrexian(Blue)`:
+/// paying it with blue mana costs no life, while paying with life costs 2
+/// (handled by the mana payment side-effect on cast). The "look at
+/// opponent's hand" half is dropped (information-only effect with no
+/// engine state hook), leaving a free-or-2-life cantrip.
 pub fn gitaxian_probe() -> CardDefinition {
     CardDefinition {
         name: "Gitaxian Probe",
-        cost: ManaCost::default(),
+        cost: cost(&[crate::mana::phyrexian(Color::Blue)]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
+        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -5848,14 +5845,16 @@ pub fn mind_twist() -> CardDefinition {
 /// Dismember — {1}{B}{B} Instant. Target creature gets -5/-5 until end of
 /// turn.
 ///
-/// The Phyrexian-mana Oracle ({1}{B/Φ}{B/Φ}{B/Φ}) is collapsed to flat
-/// {1}{B}{B}: the engine has no Phyrexian-pip primitive yet (life-paid
-/// substitution). The body is the gameplay-relevant black-removal answer
-/// to large indestructible threats — -5/-5 kills 5-toughness creatures.
+/// Real Oracle: {1}{B/P}{B/P}{B/P}. The three Phyrexian pips are real
+/// `ManaSymbol::Phyrexian(Black)` — each payable with one black or 2
+/// life, so Dismember can be cast for as little as {1} + 6 life. The
+/// body -5/-5 is the gameplay-relevant black-removal answer to large
+/// indestructible threats.
 pub fn dismember() -> CardDefinition {
+    use crate::mana::phyrexian;
     CardDefinition {
         name: "Dismember",
-        cost: cost(&[generic(1), b(), b()]),
+        cost: cost(&[generic(1), phyrexian(Color::Black), phyrexian(Color::Black), phyrexian(Color::Black)]),
         card_types: vec![CardType::Instant],
         effect: Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
@@ -11093,10 +11092,11 @@ pub fn chain_lightning() -> CardDefinition {
 
 /// Messenger Falcons — {2}{G/U}{W} Creature — Bird 2/2.
 /// "Flying / When Messenger Falcons enters the battlefield, draw a card."
+/// The `{G/U}` pip is a real `ManaSymbol::Hybrid(Green, Blue)`.
 pub fn messenger_falcons() -> CardDefinition {
     CardDefinition {
         name: "Messenger Falcons",
-        cost: cost(&[generic(2), g(), w()]),
+        cost: cost(&[generic(2), crate::mana::hybrid(Color::Green, Color::Blue), w()]),
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Bird],

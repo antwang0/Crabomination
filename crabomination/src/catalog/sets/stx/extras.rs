@@ -3064,11 +3064,9 @@ pub fn eccentric_apprentice() -> CardDefinition {
 /// "Choose one — / • Proliferate. / • Pay 2 life. Draw two cards."
 ///
 /// Printed cost is `{U/P}{B/P}` (Phyrexian: pay 2 life instead of each
-/// pip). We use the strict `{U}{B}` mana cost here because the
-/// alternative-cost variant of casting via life payment for **each**
-/// Phyrexian pip would need a per-pip `pay_life_for_pip` walker on
-/// `ManaCost::pay()`. The mainline `{U}{B}` path is exercised; the
-/// pure-life-cost Phyrexian path is engine-wide ⏳.
+/// pip). Wired with real `ManaSymbol::Phyrexian` pips — `ManaCost::pay()`
+/// pays each pip with the colored mana if available, else 2 life, so the
+/// card can be cast for {U}{B}, {U} + 2 life, or 4 life, etc.
 ///
 /// Two-mode `Effect::ChooseMode`:
 /// * Mode 0 — `Effect::Proliferate` (every permanent and player with a
@@ -3082,7 +3080,7 @@ pub fn eccentric_apprentice() -> CardDefinition {
 pub fn tezzerets_gambit() -> CardDefinition {
     CardDefinition {
         name: "Tezzeret's Gambit",
-        cost: cost(&[u(), b()]),
+        cost: cost(&[crate::mana::phyrexian(Color::Blue), crate::mana::phyrexian(Color::Black)]),
         supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),

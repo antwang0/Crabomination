@@ -5730,6 +5730,24 @@ fn tezzerets_gambit_mode_one_pays_two_life_draws_two() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2);
 }
 
+/// Tezzeret's Gambit's {U/P}{B/P} can be cast with no mana by paying both
+/// Phyrexian pips with life — 4 life total (mode 0 = Proliferate, no
+/// further life cost).
+#[test]
+fn tezzerets_gambit_castable_for_four_life_no_mana() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::tezzerets_gambit());
+    let life_before = g.players[0].life;
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Tezzeret's Gambit castable for 4 life (both Phyrexian pips)");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].life, life_before - 4,
+        "two Phyrexian pips paid with 2 life each = 4 life");
+}
+
 /// Wandering Archaic copies an opponent's instant/sorcery spell when
 /// they cast one. We seed an opponent's Lightning Bolt and verify a
 /// copy lands on the stack.
