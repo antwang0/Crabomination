@@ -9736,6 +9736,39 @@ pub fn bloodbraid_elf() -> CardDefinition {
     }
 }
 
+/// Gift of Orzhova — {1}{W}{B} Enchantment — Aura. "Enchant creature.
+/// Enchanted creature gets +1/+1 and has flying and lifelink."
+///
+/// First Aura in the catalog. The cast-time target (a creature) is driven
+/// by the `Effect::Attach` target slot; the spell-resolution path
+/// (`stack.rs`) sets the Aura's `attached_to` link, and `equipped_bonus`
+/// flows the +1/+1 (layer 7c) and flying/lifelink keywords (layer 6) onto
+/// the enchanted creature for as long as the Aura stays attached.
+pub fn gift_of_orzhova() -> CardDefinition {
+    CardDefinition {
+        name: "Gift of Orzhova",
+        cost: cost(&[generic(1), w(), b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature,
+            },
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            keywords: vec![Keyword::Flying, Keyword::Lifelink],
+        }),
+        ..Default::default()
+    }
+}
+
 /// Apex Devastator — {8}{G}{G} Creature — Kavu. 10/10, Trample.
 /// "Cascade, cascade, cascade, cascade" (CR 702.85 — four independent
 /// cascade triggers on cast).
@@ -9827,6 +9860,168 @@ pub fn golgari_thug() -> CardDefinition {
                 },
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Shardless Agent — {1}{G}{U} Artifact Creature — Human Artificer. 2/2.
+/// Cascade (CR 702.85).
+pub fn shardless_agent() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Shardless Agent",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Artificer],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![cascade(3)],
+        ..Default::default()
+    }
+}
+
+/// Enlisted Wurm — {5}{G}{W} Creature — Wurm. 5/5. Cascade.
+pub fn enlisted_wurm() -> CardDefinition {
+    use crate::effect::shortcut::cascade;
+    CardDefinition {
+        name: "Enlisted Wurm",
+        cost: cost(&[generic(5), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![cascade(7)],
+        ..Default::default()
+    }
+}
+
+/// Maelstrom Wanderer — {5}{U}{R}{G} Legendary Creature — Elemental. 7/5.
+/// "Creatures you control have haste. Cascade, cascade." (two independent
+/// cascade triggers, CR 702.85.)
+///
+/// The team-haste static is wired via `StaticEffect::GrantKeywordToYours`
+/// (the same primitive used by anthem-keyword granters).
+pub fn maelstrom_wanderer() -> CardDefinition {
+    use crate::card::{StaticAbility, Supertype};
+    use crate::effect::shortcut::cascade;
+    use crate::effect::StaticEffect;
+    CardDefinition {
+        name: "Maelstrom Wanderer",
+        cost: cost(&[generic(5), u(), r(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 5,
+        triggered_abilities: vec![cascade(8), cascade(8)],
+        static_abilities: vec![StaticAbility {
+            description: "Creatures you control have haste.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    SelectionRequirement::Creature
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Haste,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Stinkweed Imp — {1}{B} Creature — Imp. 1/2, Flying. Dredge 5.
+/// "Whenever this deals combat damage to a creature, destroy that
+/// creature." Modeled with `Keyword::Deathtouch` (gameplay-equivalent for
+/// combat damage to creatures) + `Keyword::Dredge(5)`.
+pub fn stinkweed_imp() -> CardDefinition {
+    CardDefinition {
+        name: "Stinkweed Imp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Imp],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Dredge(5)],
+        ..Default::default()
+    }
+}
+
+/// Golgari Brownscale — {1}{G} Creature — Lizard Beast. 2/2. Dredge 2.
+/// The "when returned to hand from graveyard, gain 2 life" rider is omitted
+/// (no enters-hand-from-graveyard trigger event); the body + Dredge 2 ship.
+pub fn golgari_brownscale() -> CardDefinition {
+    CardDefinition {
+        name: "Golgari Brownscale",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard, CreatureType::Beast],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Dredge(2)],
+        ..Default::default()
+    }
+}
+
+/// Golgari Grave-Troll — {X}{B}{B} Creature — Skeleton Troll. 0/0, enters
+/// with X +1/+1 counters. Dredge 6. The "{T}, remove four +1/+1 counters:
+/// regenerate" ability is omitted (document); the X-body + Dredge 6 ship.
+pub fn golgari_grave_troll() -> CardDefinition {
+    CardDefinition {
+        name: "Golgari Grave-Troll",
+        cost: cost(&[generic(0), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Skeleton, CreatureType::Troll],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 0,
+        keywords: vec![Keyword::Dredge(6)],
+        enters_with_counters: Some((crate::card::CounterType::PlusOnePlusOne, Value::XFromCost)),
+        ..Default::default()
+    }
+}
+
+/// Rancor — {G} Enchantment — Aura. "Enchant creature. Enchanted creature
+/// gets +2/+0 and has trample." The "when put into a graveyard from the
+/// battlefield, return Rancor to its owner's hand" recursion is omitted
+/// (no leaves-battlefield-to-hand trigger for noncreature permanents yet);
+/// the +2/+0 + trample buff ships via the Aura attach + equipped_bonus path.
+pub fn rancor() -> CardDefinition {
+    CardDefinition {
+        name: "Rancor",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes {
+            enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        effect: Effect::Attach {
+            what: Selector::This,
+            to: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature,
+            },
+        },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 0,
+            keywords: vec![Keyword::Trample],
+        }),
         ..Default::default()
     }
 }

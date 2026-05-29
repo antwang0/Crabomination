@@ -412,6 +412,8 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(mourning_thrull);
         v.push(goldmire_bridge);
         v.push(mortify);
+        // ── modern_decks (aura): Gift of Orzhova ──
+        v.push(gift_of_orzhova);
         // ── modern_decks-14 (WB cross-pool removal) ──
         v.push(vindicate);
         v.push(anguished_unmaking);
@@ -629,6 +631,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         terror,
         doom_blade,
         fatal_push,
+        // ── modern_decks (dredge): Stinkweed Imp ──
+        stinkweed_imp,
         dark_ritual,
         demonic_tutor,
         thoughtseize,
@@ -821,6 +825,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── modern_decks (dredge): Golgari graveyard engine ──
         v.push(golgari_thug);
         v.push(life_from_the_loam);
+        v.push(golgari_brownscale);
+        v.push(golgari_grave_troll);
         // ── SOS Witherbloom (B/G) ──
         v.push(witherbloom_charm);
         v.push(bogwater_lumaret);
@@ -1046,6 +1052,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         craw_wurm,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
+        // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──
+        shardless_agent,
+        rancor,
         birds_of_paradise,
         sylvan_caryatid,
         summoners_pact,
@@ -1166,6 +1175,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         v.push(torsten_founder_of_benalia);
         v.push(horizon_canopy);
         v.push(growing_ranks);
+        // ── modern_decks (cascade): Enlisted Wurm (GW cascade) ──
+        v.push(enlisted_wurm);
         // ── modern_decks batch 102 (GW cube expansion) ──
         v.push(heroic_intervention);
         v.push(knight_of_the_reliquary);

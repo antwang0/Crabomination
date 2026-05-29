@@ -460,6 +460,29 @@ impl GameState {
                     }
                     events.push(GameEvent::PermanentEntered { card_id });
 
+                    // CR 303.4f / 303.4h — an Aura permanent spell enters
+                    // the battlefield attached to the permanent its single
+                    // target chose. Wiring the `attached_to` link makes the
+                    // Aura's `equipped_bonus` (P/T via layer 7c, keywords
+                    // via layer 6) flow onto the enchanted creature, and the
+                    // stale-link SBA in this file moves the Aura to the
+                    // graveyard if its host ever leaves.
+                    if self
+                        .battlefield
+                        .iter()
+                        .any(|c| c.id == card_id && c.definition.is_aura())
+                    {
+                        if let Some(crate::game::types::Target::Permanent(tid)) = target {
+                            if self.battlefield.iter().any(|c| c.id == tid) {
+                                if let Some(aura) =
+                                    self.battlefield.iter_mut().find(|c| c.id == card_id)
+                                {
+                                    aura.attached_to = Some(tid);
+                                }
+                            }
+                        }
+                    }
+
                     // Evoke: schedule a self-sacrifice trigger that resolves
                     // AFTER the ETB triggers (so the ETB exile happens first,
                     // then the creature sacrifices itself).

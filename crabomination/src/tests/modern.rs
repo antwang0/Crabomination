@@ -14963,3 +14963,172 @@ fn golgari_thug_death_puts_creature_on_top_of_library() {
     assert!(g.players[0].library.iter().any(|c| c.id == bears),
         "the recurred creature ends up in the library after the Thug dies");
 }
+
+// ── Auras (attach-on-resolve, CR 303.4) ─────────────────────────────────────
+
+/// Gift of Orzhova attaches to the targeted creature on resolution and
+/// grants +1/+1, flying, and lifelink via its equipped_bonus.
+#[test]
+fn gift_of_orzhova_attaches_and_buffs_the_creature() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 vanilla
+    let gift = g.add_card_to_hand(0, catalog::gift_of_orzhova());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: gift,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    }).expect("Gift of Orzhova castable for {1}{W}{B}");
+    drain_stack(&mut g);
+
+    // The Aura is attached to the bears.
+    let aura = g.battlefield.iter().find(|c| c.id == gift).expect("aura on battlefield");
+    assert_eq!(aura.attached_to, Some(bears), "Aura attaches to its target");
+
+    // Recompute layers and read the buffed stats / keywords.
+    let view = g.compute_battlefield();
+    let buffed = view.iter().find(|c| c.id == bears).expect("bears present");
+    assert_eq!((buffed.power, buffed.toughness), (3, 3), "enchanted creature is +1/+1");
+    assert!(buffed.keywords.contains(&crate::card::Keyword::Flying), "gains flying");
+    assert!(buffed.keywords.contains(&crate::card::Keyword::Lifelink), "gains lifelink");
+}
+
+/// When the enchanted creature leaves, the orphaned Aura is put into the
+/// graveyard (CR 704.5n/5q) and stops buffing.
+#[test]
+fn gift_of_orzhova_falls_off_when_host_leaves() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let gift = g.add_card_to_hand(0, catalog::gift_of_orzhova());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: gift, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Gift");
+    drain_stack(&mut g);
+
+    // Kill the host with a Bolt.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt the host");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == bears), "host died");
+    assert!(!g.battlefield.iter().any(|c| c.id == gift),
+        "orphaned Aura leaves the battlefield");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == gift),
+        "orphaned Aura goes to its owner's graveyard");
+}
+
+// ── More cascade / dredge / aura cards (modern_decks expansion) ─────────────
+
+#[test]
+fn shardless_agent_is_a_two_two_cascade_artifact_creature() {
+    let def = catalog::shardless_agent();
+    assert_eq!((def.power, def.toughness), (2, 2));
+    assert!(def.card_types.contains(&crate::card::CardType::Artifact));
+    assert!(def.triggered_abilities.iter().any(|t|
+        matches!(t.effect, crate::effect::Effect::Cascade { .. })));
+}
+
+#[test]
+fn enlisted_wurm_cascades_when_cast() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    let wurm = g.add_card_to_hand(0, catalog::enlisted_wurm());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, wurm);
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "Enlisted Wurm cascades into the Bears");
+}
+
+#[test]
+fn maelstrom_wanderer_double_cascades_and_grants_haste() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let b1 = g.add_card_to_library(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Bool(true), DecisionAnswer::Bool(true),
+    ]));
+    let mw = g.add_card_to_hand(0, catalog::maelstrom_wanderer());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, mw);
+    let cast_bears = [b1, b2].iter().filter(|&&b| g.battlefield.iter().any(|c| c.id == b)).count();
+    assert_eq!(cast_bears, 2, "both cascades resolve");
+    // The Wanderer's static grants haste to your creatures.
+    let view = g.compute_battlefield();
+    let bear_view = view.iter().find(|c| c.id == b1).expect("bear present");
+    assert!(bear_view.keywords.contains(&crate::card::Keyword::Haste),
+        "creatures you control have haste");
+}
+
+#[test]
+fn stinkweed_imp_has_flying_deathtouch_and_dredge() {
+    let def = catalog::stinkweed_imp();
+    assert!(def.keywords.contains(&crate::card::Keyword::Flying));
+    assert!(def.keywords.contains(&crate::card::Keyword::Deathtouch));
+    assert!(def.keywords.iter().any(|k| matches!(k, crate::card::Keyword::Dredge(5))));
+}
+
+#[test]
+fn golgari_brownscale_can_dredge_two() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    let bs = g.add_card_to_graveyard(0, catalog::golgari_brownscale());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bs), "Brownscale dredges back to hand");
+    assert_eq!(events.iter().filter(|e| matches!(e, GameEvent::CardMilled { .. })).count(), 2,
+        "Dredge 2 mills two");
+}
+
+#[test]
+fn golgari_grave_troll_enters_with_x_plus_one_counters() {
+    let mut g = two_player_game();
+    let troll = g.add_card_to_hand(0, catalog::golgari_grave_troll());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(3); // X = 3
+    g.perform_action(GameAction::CastSpell {
+        card_id: troll, target: None, additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Grave-Troll castable with X=3");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let t = view.iter().find(|c| c.id == troll).expect("troll present");
+    assert_eq!((t.power, t.toughness), (3, 3), "0/0 base + three +1/+1 counters = 3/3");
+}
+
+#[test]
+fn rancor_buffs_plus_two_zero_and_grants_trample() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rancor = g.add_card_to_hand(0, catalog::rancor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rancor, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rancor castable for {G}");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let buffed = view.iter().find(|c| c.id == bears).expect("bears present");
+    assert_eq!((buffed.power, buffed.toughness), (4, 2), "Rancor is +2/+0");
+    assert!(buffed.keywords.contains(&crate::card::Keyword::Trample), "Rancor grants trample");
+}
