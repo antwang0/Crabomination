@@ -1018,7 +1018,7 @@ impl GameState {
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
                         let indestructible = self.battlefield_find(cid)
-                            .map(|c| c.has_keyword(&Keyword::Indestructible))
+                            .map(|c| c.is_indestructible())
                             .unwrap_or(true);
                         if indestructible {
                             continue;

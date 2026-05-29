@@ -476,6 +476,7 @@ fn counter_label(kind: CounterType) -> &'static str {
         CounterType::Growth => "Growth",
         CounterType::Prepared => "Prepared",
         CounterType::Finality => "Finality",
+        CounterType::Indestructible => "Indestructible",
     }
 }
 

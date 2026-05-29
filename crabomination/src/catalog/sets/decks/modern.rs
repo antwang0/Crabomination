@@ -11444,10 +11444,15 @@ pub fn scavenging_ooze() -> CardDefinition {
 ///
 /// Approximation: Reach + combat-step pump doubling is approximated
 /// as a flat +4/+4 to each creature you control (since doubling needs
-/// per-creature power introspection). The Phyrexian-mana sacrifice
-/// activation is omitted.
+/// per-creature power introspection). The `{G/P}{G/P}, Sacrifice two
+/// other creatures: Put an indestructible counter on Zopandrel`
+/// activation is now wired — real Phyrexian pips (pay {G} or 2 life
+/// each), `sac_other_filter: (Creature, 2)` excluding the source, and an
+/// `AddCounter(Indestructible)` via the new counter type.
 pub fn zopandrel_hunger_dominus() -> CardDefinition {
+    use crate::card::{ActivatedAbility, CounterType};
     use crate::game::types::TurnStep;
+    use crate::mana::phyrexian;
     CardDefinition {
         name: "Zopandrel, Hunger Dominus",
         cost: cost(&[generic(5), g(), g()]),
@@ -11460,6 +11465,16 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
         power: 4,
         toughness: 6,
         keywords: vec![Keyword::Reach],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[phyrexian(Color::Green), phyrexian(Color::Green)]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::Indestructible,
+                amount: Value::Const(1),
+            },
+            sac_other_filter: Some((SelectionRequirement::Creature, 2)),
+            ..Default::default()
+        }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::StepBegins(TurnStep::BeginCombat),

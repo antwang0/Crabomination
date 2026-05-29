@@ -178,6 +178,11 @@ pub enum CounterType {
     /// → Graveyard to Battlefield → Exile when the moving card has at
     /// least one finality counter.
     Finality,
+    /// Indestructible counter — CR 122.1 / 702.12. A permanent with one or
+    /// more indestructible counters can't be destroyed (lethal damage and
+    /// "destroy" effects don't kill it), exactly like the Indestructible
+    /// keyword. Used by Zopandrel, Hunger Dominus's activated ability.
+    Indestructible,
 }
 
 /// Every zone a card can occupy.
@@ -961,6 +966,14 @@ impl CardInstance {
         self.definition.keywords.contains(kw)
             || self.granted_keywords_eot.contains(kw)
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
+    }
+
+    /// True if this permanent can't be destroyed — either the
+    /// Indestructible keyword (printed, granted, or via a keyword counter)
+    /// or one or more `CounterType::Indestructible` counters (CR 122.1).
+    pub fn is_indestructible(&self) -> bool {
+        self.has_keyword(&Keyword::Indestructible)
+            || self.counter_count(CounterType::Indestructible) > 0
     }
 
     pub fn has_protection_from(&self, color: Color) -> bool {
