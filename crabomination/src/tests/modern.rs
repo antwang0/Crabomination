@@ -8888,6 +8888,61 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn supreme_verdict_destroys_all_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::supreme_verdict());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == a || c.id == b),
+        "all creatures destroyed");
+}
+
+#[test]
+fn stubborn_denial_counters_unless_paid() {
+    let mut g = two_player_game();
+    // Opponent casts a noncreature spell (Lightning Bolt) we want to counter.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt on stack");
+    // We respond with Stubborn Denial; opponent has no mana to pay {1}.
+    let sd = g.add_card_to_hand(0, catalog::stubborn_denial());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sd, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stubborn Denial on stack");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (unpaid)");
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+}
+
+#[test]
+fn archmages_charm_mode_one_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::archmages_charm());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 for the Charm leaving hand, +2 drawn → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draws two cards");
+}
+
+#[test]
 fn brute_force_pumps_three_three() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

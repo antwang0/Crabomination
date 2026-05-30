@@ -7693,6 +7693,79 @@ pub fn fling() -> CardDefinition {
     }
 }
 
+/// Supreme Verdict — {1}{W}{W}{U} Sorcery. Destroy all creatures. This spell
+/// can't be countered.
+pub fn supreme_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Supreme Verdict",
+        cost: cost(&[generic(1), w(), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Stubborn Denial — {U} Instant. Counter target noncreature spell unless its
+/// controller pays {1}. Ferocious — pays {3} instead if you control a
+/// creature with power 4 or greater.
+pub fn stubborn_denial() -> CardDefinition {
+    let spell_filter =
+        SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Noncreature);
+    CardDefinition {
+        name: "Stubborn Denial",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(spell_filter.clone()),
+                mana_cost: cost(&[generic(3)]),
+            }),
+            else_: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(spell_filter),
+                mana_cost: cost(&[generic(1)]),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Archmage's Charm — {U}{U}{U} Instant. Choose one — counter target spell;
+/// or draw two cards; or gain control of target nonland permanent with mana
+/// value 1 or less.
+pub fn archmages_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Archmage's Charm",
+        cost: cost(&[u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueAtMost(1)),
+                ),
+                duration: Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`
