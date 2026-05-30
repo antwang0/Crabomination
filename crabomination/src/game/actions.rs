@@ -962,6 +962,16 @@ impl GameState {
             }
         }
 
+        // CR 601.2b — additional cast costs ("As an additional cost to cast
+        // this spell, sacrifice / discard …"). Validate payability up front
+        // so an unpayable spell reverts to hand before any mana is spent;
+        // the costs themselves are paid after the mana cost succeeds.
+        let additional_costs = card.definition.additional_cast_cost.clone();
+        if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pay the cost (substitute X if present, then add any
         // static-ability tax such as Damping Sphere's "{1} more after the
         // first spell each turn").
@@ -1051,7 +1061,19 @@ impl GameState {
             card_id,
             face: self.pending_cast_face,
         });
+
+        // CR 601.2h — pay the additional cast costs now (during casting), so
+        // sacrifice/discard triggers fire before the spell resolves. A
+        // sacrifice reports the fodder's power, which becomes the spell's X
+        // for "X = the sacrificed creature's power" riders (Tend the Pests).
+        let mut sac_x = None;
+        if !additional_costs.is_empty() {
+            let (mut cost_events, power) = self.pay_additional_costs(p, &additional_costs);
+            auto_events.append(&mut cost_events);
+            sac_x = power;
+        }
         let events = auto_events;
+        let final_x = x_value.unwrap_or(0).max(sac_x.unwrap_or(0));
 
         self.finalize_cast(
             p,
@@ -1059,12 +1081,93 @@ impl GameState {
             target,
             additional_targets,
             mode,
-            x_value.unwrap_or(0),
+            final_x,
             converged_value,
             mana_spent,
         );
 
         Ok(events)
+    }
+
+    /// CR 601.2b — can every additional cast cost be paid right now? Checked
+    /// before mana so an unpayable spell reverts cleanly.
+    pub(crate) fn additional_costs_payable(
+        &self,
+        p: usize,
+        costs: &[crate::card::AdditionalCastCost],
+    ) -> bool {
+        use crate::card::AdditionalCastCost as A;
+        costs.iter().all(|c| match c {
+            A::SacrificePermanent { filter } => self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+            }),
+            A::Discard { count } => self.players[p].hand.len() >= *count as usize,
+        })
+    }
+
+    /// CR 601.2h — pay each additional cast cost immediately. Returns the
+    /// emitted events plus, for a sacrifice, the sacrificed permanent's
+    /// power (threaded into the spell's X).
+    pub(crate) fn pay_additional_costs(
+        &mut self,
+        p: usize,
+        costs: &[crate::card::AdditionalCastCost],
+    ) -> (Vec<GameEvent>, Option<u32>) {
+        use crate::card::AdditionalCastCost as A;
+        let mut events = Vec::new();
+        let mut sac_power = None;
+        for cost in costs {
+            match cost {
+                A::SacrificePermanent { filter } => {
+                    // Auto-pick the cheapest matching permanent (tokens
+                    // first, then lowest mana value, then lowest power).
+                    let chosen = {
+                        let mut cands: Vec<&crate::card::CardInstance> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && self.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        p,
+                                        None,
+                                    )
+                            })
+                            .collect();
+                        cands.sort_by_key(|c| {
+                            (!c.is_token, c.definition.cost.cmc(), c.power())
+                        });
+                        cands
+                            .first()
+                            .map(|c| (c.id, c.power().max(0) as u32, c.definition.is_creature()))
+                    };
+                    if let Some((id, power, is_creature)) = chosen {
+                        sac_power = Some(power);
+                        if is_creature {
+                            if let Some(c) = self.battlefield_find(id) {
+                                self.died_card_snapshots.insert(id, c.clone());
+                            }
+                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
+                            events.push(GameEvent::CreatureDied { card_id: id });
+                        }
+                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
+                        let mut die = self.remove_to_graveyard_with_triggers(id);
+                        events.append(&mut die);
+                    }
+                }
+                A::Discard { count } => {
+                    for _ in 0..*count {
+                        let pick = self.players[p].hand.first().map(|c| c.id);
+                        if let Some(id) = pick {
+                            self.discard_card(p, id, &mut events);
+                        }
+                    }
+                }
+            }
+        }
+        (events, sac_power)
     }
 
     /// Common post-cost-payment bookkeeping for the three cast paths
@@ -2946,50 +3049,39 @@ impl GameState {
 
     // ── Activate ability ──────────────────────────────────────────────────────
 
-    /// Static grant: "Permanents of type T you control have '{T}: Add
-    /// one mana of any one color.'" — returns the virtual mana ability
-    /// when a permanent named `source_name` is on the battlefield under
-    /// `controller`'s seat. Hooked into `activate_ability` so the
-    /// standard cost-pay / target-validation / mana-emit path "just
-    /// works" — no separate branch in the resolver. The granted ability
-    /// uses `ManaPayload::AnyOneColor(1)`, which routes through the
-    /// `AnyOneColorPending` decision (chooser picks the color) for UI
-    /// players; the AutoDecider picks the first legal color.
-    ///
-    /// Used by Galazeth Prismari (artifacts) and Resonating Lute
-    /// (lands; the printed text grants two restricted-spend mana —
-    /// collapsed to one unrestricted until the spend-restriction
-    /// primitive lands).
-    fn any_one_color_grant(
+    /// Collect the activated abilities granted to the permanent `card_id`
+    /// by `StaticEffect::GrantActivatedAbility` statics in play (Galazeth
+    /// Prismari, Cryptolith Rite). Each grant's `applies_to` filter is
+    /// evaluated from the static source's controller so "you control"
+    /// clauses scope to that player's permanents. Returned in battlefield
+    /// order so a permanent's granted-ability indices are stable within a
+    /// recompute. Surfaced by `activate_ability` at indices ≥ the
+    /// permanent's printed-ability count.
+    pub(crate) fn granted_abilities_for(
         &self,
-        controller: usize,
-        source_name: &str,
-    ) -> Option<crate::effect::ActivatedAbility> {
-        use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
-        let source_in_play = self.battlefield.iter().any(|c| {
-            c.definition.name == source_name && c.controller == controller
-        });
-        if !source_in_play {
-            return None;
+        card_id: CardId,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::effect::{Selector, StaticEffect};
+        if self.battlefield_find(card_id).is_none() {
+            return vec![];
         }
-        Some(ActivatedAbility {
-            tap_cost: true,
-            mana_cost: crate::mana::ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
-        })
+        let tgt = Target::Permanent(card_id);
+        let mut out = Vec::new();
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                let StaticEffect::GrantActivatedAbility { applies_to, ability } = &sa.effect
+                else {
+                    continue;
+                };
+                let Selector::EachPermanent(req) = applies_to else { continue };
+                // Evaluate the filter from the granting source's controller
+                // so "ControlledByYou" picks that player's permanents.
+                if self.evaluate_requirement_static(req, &tgt, src.controller, None) {
+                    out.push(ability.clone());
+                }
+            }
+        }
+        out
     }
 
     pub(crate) fn activate_ability(
@@ -3042,24 +3134,19 @@ impl GameState {
                 .find(|c| c.id == card_id)
                 .map(|c| c.lost_all_abilities)
                 .unwrap_or(false);
-            // Galazeth Prismari static: "Artifacts you control have
-            // '{T}: Add one mana of any color.'" Surface this as a
-            // virtual activated ability at index = printed_count, so
-            // standard activate_ability validation and mana payment
-            // work without modifying every ability lookup path.
+            // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,
+            // Cryptolith Rite, …): surface granted abilities as virtual
+            // activated abilities at indices ≥ printed_count, so standard
+            // activate_ability validation and mana payment work without
+            // modifying every ability lookup path. Stripped permanents
+            // (CR 113.10b) keep their granted mana abilities but lose
+            // non-mana grants.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
-            let bf_card = &self.battlefield[pos];
-            let controller = bf_card.controller;
-            let is_artifact = bf_card.definition.is_artifact();
-            let is_land = bf_card.definition.is_land();
-            let granted = if ability_index == printed_count && !stripped {
-                if is_artifact {
-                    self.any_one_color_grant(controller, "Galazeth Prismari")
-                } else if is_land {
-                    self.any_one_color_grant(controller, "Resonating Lute")
-                } else {
-                    None
-                }
+            let granted = if ability_index >= printed_count {
+                self.granted_abilities_for(card_id)
+                    .into_iter()
+                    .nth(ability_index - printed_count)
+                    .filter(|a| !stripped || is_mana_ability(&a.effect))
             } else {
                 None
             };

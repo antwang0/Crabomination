@@ -504,37 +504,23 @@ pub fn veil_of_summer() -> CardDefinition {
 
 /// Crop Rotation — {G} Instant. As an additional cost, sacrifice a land.
 /// Search your library for a land card and put it onto the battlefield.
-/// Then shuffle.
-///
-/// The "sacrifice a land" additional cost is folded into the resolved
-/// effect's first step (matching Thud's sacrifice-as-resolution pattern).
+/// The sacrifice is a real cast-time cost (`AdditionalCastCost`).
 pub fn crop_rotation() -> CardDefinition {
     CardDefinition {
         name: "Crop Rotation",
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            // Sacrifice a land you control as part of resolution.
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Land
-                    .and(SelectionRequirement::ControlledByYou),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
             },
-            // Tutor a land into play.
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Land,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-        ]),
+        },
         triggered_abilities: vec![],
         ..Default::default()
     }
@@ -10377,6 +10363,508 @@ pub fn basking_rootwalla() -> CardDefinition {
             self_counter_cost_reduction: None,
             sac_other_filter: None,
             tap_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Blazing Rootwalla — {R} Creature — Lizard. 1/1. Madness {0}.
+/// "{1}{R}: Blazing Rootwalla gets +1/+1 until end of turn. Activate only
+/// once each turn." The red sibling of Basking Rootwalla.
+pub fn blazing_rootwalla() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    CardDefinition {
+        name: "Blazing Rootwalla",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Madness(ManaCost::default())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Anje's Ravager — {2}{R}{R} Legendary Creature — Vampire Berserker. 3/3.
+/// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
+/// hand, then draw three cards."
+pub fn anjes_ravager() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, Supertype, TriggeredAbility};
+    CardDefinition {
+        name: "Anje's Ravager",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                    random: false,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Wind Drake — {2}{U} Creature — Drake. 2/2. Flying.
+pub fn wind_drake() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Wind Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Cunning Sparkmage — {1}{R} Creature — Human Shaman. 1/1. Haste.
+/// "{T}: This creature deals 1 damage to any target."
+pub fn cunning_sparkmage() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    CardDefinition {
+        name: "Cunning Sparkmage",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hill Giant — {3}{R} Creature — Giant. 3/3. A vanilla beater.
+pub fn hill_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Hill Giant",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Reckless Wurm — {3}{R} Creature — Wurm. 5/4. Trample. Madness {1}{R}.
+pub fn reckless_wurm() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Reckless Wurm",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fiery Temper — {1}{R}{R} Instant. "Deal 3 damage to any target."
+/// Madness {R}.
+pub fn fiery_temper() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Fiery Temper",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Madness(ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]))],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Vampire Nighthawk — {1}{B}{B} Creature — Vampire Shaman. 2/3. Flying,
+/// deathtouch, lifelink.
+pub fn vampire_nighthawk() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Vampire Nighthawk",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
+        ..Default::default()
+    }
+}
+
+/// Nekrataal — {2}{B}{B} Creature — Human Assassin. 2/1. First strike.
+/// "When this creature enters, destroy target nonartifact, nonblack
+/// creature. It can't be regenerated."
+pub fn nekrataal() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, TriggeredAbility};
+    let filter = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasColor(Color::Black).negate())
+        .and(SelectionRequirement::HasCardType(CardType::Artifact).negate());
+    CardDefinition {
+        name: "Nekrataal",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen { what: target_filtered(filter) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skinrender — {3}{B} Creature — Phyrexian Horror. 3/3. "When this creature
+/// enters, put three -1/-1 counters on target creature."
+pub fn skinrender() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Skinrender",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Ravenous Chupacabra — {2}{B}{B} Creature — Beast Horror. 2/2. "When this
+/// creature enters, destroy target creature an opponent controls."
+pub fn ravenous_chupacabra() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Ravenous Chupacabra",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sentinel Spider — {3}{G}{G} Creature — Spider. 4/4. Vigilance, reach.
+pub fn sentinel_spider() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Sentinel Spider",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
+        ..Default::default()
+    }
+}
+
+/// Brindle Boar — {2}{G} Creature — Boar. 3/3. "Sacrifice Brindle Boar: You
+/// gain 4 life."
+pub fn brindle_boar() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Brindle Boar",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Abandon — {R} Sorcery. "As an additional cost to cast this
+/// spell, sacrifice a creature. Deal 4 damage to any target."
+pub fn reckless_abandon() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, SelectionRequirement};
+    CardDefinition {
+        name: "Reckless Abandon",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Cloudgoat Ranger — {3}{W}{W} Creature — Giant. 2/2. "When this creature
+/// enters, create three 1/1 white Kithkin Soldier creature tokens."
+pub fn cloudgoat_ranger() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let kithkin = TokenDefinition {
+        name: "Kithkin Soldier".to_string(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cloudgoat Ranger",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: kithkin,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pelakka Wurm — {5}{G}{G} Creature — Wurm. 7/7. Trample. "When this
+/// creature enters, you gain 7 life. When this creature dies, draw a card."
+pub fn pelakka_wurm() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    CardDefinition {
+        name: "Pelakka Wurm",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(7) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Springbloom Druid — {2}{G} Creature — Human Druid. 2/2. "When this
+/// creature enters, search your library for up to two basic land cards,
+/// put them onto the battlefield tapped, then shuffle." Two basic-land
+/// searches into play tapped.
+pub fn springbloom_druid() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::ZoneDest;
+    let fetch = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::IsBasicLand,
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+    };
+    CardDefinition {
+        name: "Springbloom Druid",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![fetch(), fetch()]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Cryptolith Rite — {1}{G} Enchantment. "Creatures you control have
+/// '{T}: Add one mana of any color.'" Wired via
+/// `StaticEffect::GrantActivatedAbility`.
+pub fn cryptolith_rite() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Cryptolith Rite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Call of the Herd — {2}{G} Sorcery. "Create a 3/3 green Elephant creature
+/// token. Flashback {3}{G}." Flashback via `Keyword::Flashback`.
+pub fn call_of_the_herd() -> CardDefinition {
+    let elephant = TokenDefinition {
+        name: "Elephant".to_string(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Call of the Herd",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: elephant,
+        },
+        ..Default::default()
+    }
+}
+
+/// Arrogant Wurm — {3}{G}{G} Creature — Wurm. 4/4. Trample. Madness {2}{G}.
+pub fn arrogant_wurm() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Arrogant Wurm",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(2), ManaSymbol::Colored(Color::Green)])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Big Game Hunter — {2}{B} Creature — Human Mercenary. 1/1. Madness {B}.
+/// "When this creature enters, destroy target creature with power 4 or
+/// greater. It can't be regenerated."
+pub fn big_game_hunter() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Big Game Hunter",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Madness(ManaCost::new(vec![ManaSymbol::Colored(Color::Black)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+            },
         }],
         ..Default::default()
     }

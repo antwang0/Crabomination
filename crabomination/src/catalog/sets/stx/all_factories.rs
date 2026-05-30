@@ -2439,6 +2439,7 @@ pub fn all_stx_card_factories() -> &'static [Factory] {
         super::extras::triskaidekaphile,
         super::extras::excellent_education,
         super::extras::sproutback_trudge,
+        super::extras::filth,
         super::extras::wonder,
         super::extras::brawn,
         super::extras::deep_analysis,

@@ -207,6 +207,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         aether_spellbomb,
         damping_sphere,
         zuran_orb,
+        soul_conduit,
         chromatic_star,
         soul_guide_lantern,
         wasteland,
@@ -294,6 +295,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks (cascade/aura) ──
         ardent_plea,
+        cloudgoat_ranger,
         holy_strength,
         savannah_lions,
         white_knight,
@@ -457,6 +459,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks (auras) ──
         spectral_flight,
+        wind_drake,
         flight,
         counterspell,
         mana_leak,
@@ -635,6 +638,10 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         terror,
         doom_blade,
+        ravenous_chupacabra,
+        vampire_nighthawk,
+        nekrataal,
+        skinrender,
         fatal_push,
         // ── modern_decks (dredge): Stinkweed Imp ──
         stinkweed_imp,
@@ -874,6 +881,14 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         lightning_bolt,
         shock,
+        blazing_rootwalla,
+        cunning_sparkmage,
+        hill_giant,
+        anjes_ravager,
+        reckless_wurm,
+        reckless_abandon,
+        fiery_temper,
+        big_game_hunter,
         // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
         // (the printed Kindred Goblin subtype doesn't grant any tribal
         // payoff today). The 2-damage-to-any-target body works end-to-
@@ -1085,6 +1100,13 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grizzly_bears,
         elvish_archers,
         craw_wurm,
+        arrogant_wurm,
+        cryptolith_rite,
+        call_of_the_herd,
+        springbloom_druid,
+        pelakka_wurm,
+        brindle_boar,
+        sentinel_spider,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──

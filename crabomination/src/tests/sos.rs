@@ -151,6 +151,7 @@ fn stand_up_for_yourself_only_targets_power_three_or_more() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let mut g = two_player_game();
     let big_id = g.add_card_to_battlefield(1, big);
@@ -1895,6 +1896,7 @@ fn quandrix_charm_mode_1_destroys_enchantment() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let mut g = two_player_game();
     let ench = g.add_card_to_battlefield(1, ench_def);
@@ -2383,6 +2385,7 @@ fn arnyn_drains_when_a_one_power_creature_you_control_dies() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let weak_id = g.add_card_to_battlefield(0, weak);
 
@@ -7046,6 +7049,23 @@ fn resonating_lute_draw_succeeds_at_seven_in_hand() {
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
     assert!(g.battlefield_find(lute).unwrap().tapped,
         "Lute should be tapped after activation");
+}
+
+#[test]
+fn resonating_lute_grants_lands_tap_for_any_color() {
+    // "Lands you control have '{T}: Add … mana of any one color'" — wired via
+    // StaticEffect::GrantActivatedAbility. A Forest (1 printed mana ability)
+    // gets the grant at index 1; tapping it adds one any-color mana.
+    let mut g = two_player_game();
+    let _lute = g.add_card_to_battlefield(0, catalog::resonating_lute());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 1, target: None, x_value: None })
+        .expect("Resonating Lute grants lands a tap-for-any-color ability at index 1");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1,
+        "granted land ability adds one mana");
+    assert!(g.battlefield_find(forest).unwrap().tapped, "land tapped for the grant");
 }
 
 #[test]

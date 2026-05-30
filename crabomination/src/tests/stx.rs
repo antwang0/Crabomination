@@ -3616,6 +3616,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -6206,6 +6207,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -6290,6 +6292,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -9891,6 +9894,23 @@ fn light_of_promise_scales_with_lump_sum_lifegain() {
 }
 
 #[test]
+fn filth_in_graveyard_grants_swampwalk_with_swamp() {
+    use crate::card::LandType;
+    // Filth's graveyard anthem grants swampwalk to your creatures while you
+    // control a Swamp (reuses the graveyard_anthem_for_name table + the new
+    // Keyword::Landwalk).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().keywords
+        .contains(&Keyword::Landwalk(LandType::Swamp)), "no swampwalk without Filth");
+    g.add_card_to_graveyard(0, catalog::filth());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    assert!(g.computed_permanent(bear).unwrap().keywords
+        .contains(&Keyword::Landwalk(LandType::Swamp)),
+        "bear gains swampwalk from Filth in gy + Swamp controlled");
+}
+
+#[test]
 fn anger_in_graveyard_grants_haste_with_mountain() {
     // Push (modern_decks): NEW STA reprint. Anger's graveyard-resident
     // anthem grants Haste to your creatures while you control a Mountain.
@@ -10546,6 +10566,34 @@ fn inscription_of_ruin_destroys_creature_and_discards() {
     );
 }
 
+#[test]
+fn choose_n_decider_overrides_the_default_mode_picks() {
+    // CR 700.2d — a ScriptedDecider can pick modes other than the card's
+    // default. Inscription of Ruin defaults to [discard, destroy]; scripting
+    // mode [1] (reanimate only) returns a creature from gy and leaves the
+    // opponent's creature alive.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gy_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // reanimation target
+    let id = g.add_card_to_hand(0, catalog::inscription_of_ruin());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_some(),
+        "destroy mode was NOT chosen — opponent's creature survives");
+    assert!(g.players[0].hand.iter().any(|c| c.id == gy_bear),
+        "reanimate mode ran — the gy creature is back in hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == gy_bear),
+        "the reanimated creature left the graveyard");
+}
+
 // ── Tome of the Infinite ────────────────────────────────────────────────────
 
 #[test]
@@ -10765,6 +10813,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -16935,6 +16984,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -16982,6 +17032,7 @@ fn set_life_total_higher_emits_life_gained() {
         max_counters_of_kind: None,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -17040,6 +17091,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -49593,6 +49645,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49636,6 +49689,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49676,6 +49730,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49807,6 +49862,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 

@@ -151,6 +151,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             exile_on_resolve: false,
             affinity_filter: None,
             equipped_bonus: None,
+            additional_cast_cost: vec![],
         }
     }
 
@@ -4360,6 +4361,44 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
     assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }
 
+/// CR 601.2b — an "additional cost: sacrifice a creature" spell can't be
+/// cast when there's nothing to sacrifice; the spell stays in hand and no
+/// mana is spent.
+#[test]
+fn additional_cost_sacrifice_rejected_without_fodder() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let before = g.players[0].life;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no creature to sacrifice → cast rejected");
+    assert!(g.players[0].has_in_hand(id), "spell reverts to hand");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "mana not spent on a rejected cast");
+    assert_eq!(g.players[1].life, before, "opponent not drained — spell never resolved");
+}
+
+/// CR 601.2h — the additional-cost sacrifice happens *during casting*, so
+/// the fodder leaves the battlefield immediately, before the spell resolves
+/// off the stack.
+#[test]
+fn additional_cost_sacrifice_pays_during_cast() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with fodder present");
+    // Sacrifice paid as a cost — fodder is gone before the drain resolves.
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "fodder sacrificed during casting, not at resolution");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Witherbloom Sacrosanct drains the opponent for 3");
+}
+
 // ── CR 702.90b — Infect player damage → poison counters ─────────────────────
 
 /// CR 702.90b: "Damage dealt to a player by a source with infect doesn't
@@ -4542,6 +4581,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {
@@ -5226,6 +5266,102 @@ fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
     assert!(!g.battlefield.iter().any(|c| c.id == b2));
     assert!(!g.battlefield.iter().any(|c| c.id == b3));
     assert!(!g.battlefield.iter().any(|c| c.id == attacker), "attacker takes 15");
+}
+
+#[test]
+fn cr_701_12c_exchange_life_totals_swaps_both_players() {
+    use crate::effect::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    // Soul Conduit / Magus of the Mirror: "Exchange life totals with target
+    // player." P0 (5 life) swaps with P1 (30) → P0 has 30, P1 has 5.
+    let mut g = two_player_game();
+    g.set_life(0, 5);
+    g.set_life(1, 30);
+    let p1_gained_before = g.players[1].life_gained_this_turn;
+    let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    g.resolve_effect(
+        &Effect::ExchangeLifeTotals { a: Selector::You, b: Selector::Target(0) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].life, 30, "P0 takes P1's previous total");
+    assert_eq!(g.players[1].life, 5, "P1 takes P0's previous total");
+    // The gainer's life-gain-this-turn bumped (lifegain-matters payoffs see it).
+    assert_eq!(g.players[0].life_gained_this_turn, 25,
+        "P0 gained 25 — lifegain-matters counter reflects the swing");
+    assert_eq!(g.players[1].life_gained_this_turn, p1_gained_before,
+        "P1 lost life — its life-gained counter is unchanged");
+}
+
+#[test]
+fn soul_conduit_activation_exchanges_life_totals() {
+    let mut g = two_player_game();
+    g.set_life(0, 4);
+    g.set_life(1, 28);
+    let conduit = g.add_card_to_battlefield(0, catalog::soul_conduit());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 0, target: None, x_value: None,
+    }).expect("Soul Conduit activates at sorcery speed for {6}, {T}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 28, "P0 takes the opponent's previous total");
+    assert_eq!(g.players[1].life, 4, "opponent takes P0's previous total");
+}
+
+#[test]
+fn cr_702_15_landwalk_unblockable_only_when_defender_has_land_type() {
+    use crate::card::{Keyword, LandType};
+    // A Forestwalk attacker can't be blocked while the defending player
+    // controls a Forest; remove the Forest and it blocks normally.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Forestwalker", 2, 2, vec![Keyword::Landwalk(LandType::Forest)])
+    });
+    let blocker = setup_attacker(&mut g, 1, || vanilla_body("Blocker", 2, 2, vec![]));
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    // Defender controls a Forest → block is illegal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "Forestwalk: can't be blocked while defender controls a Forest");
+
+    // Remove the Forest → the same block is now legal.
+    g.remove_to_graveyard_with_triggers(forest);
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_ok(),
+        "no Forest → Forestwalk grants no evasion");
+}
+
+#[test]
+fn cr_510_1c_attacker_chooses_damage_assignment_order() {
+    // A 3/3 attacker (no trample) is blocked by a 2/2 and a 3/3. The
+    // attacking player chooses the order: scripting [big, small] assigns
+    // all 3 to the 3/3 (lethal) and 0 to the 2/2 — so the 3/3 dies and the
+    // 2/2 lives, the opposite of the default (lowest-id-first) order.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || vanilla_body("Atk 3/3", 3, 3, vec![]));
+    let small = setup_attacker(&mut g, 1, || vanilla_body("Wall 2/2", 2, 2, vec![]));
+    let big = setup_attacker(&mut g, 1, || vanilla_body("Wall 3/3", 3, 3, vec![]));
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DamageOrder(vec![big, small])]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(small, attacker), (big, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "attacker assigned all 3 to the 3/3 first → it dies");
+    assert!(g.battlefield.iter().any(|c| c.id == small),
+        "no damage left for the 2/2 → it survives");
 }
 
 #[test]

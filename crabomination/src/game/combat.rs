@@ -288,6 +288,18 @@ impl GameState {
             ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
+
+            // Landwalk (CR 702.15): the attacker can't be blocked while the
+            // defending player controls a land of the named type. Needs
+            // game state (the defender's lands), so it lives here rather
+            // than in the pure two-creature `can_block_attacker_computed`.
+            for kw in kws_of(attacker_id) {
+                if let Keyword::Landwalk(lt) = kw
+                    && self.defender_controls_land_type(defender_idx, lt)
+                {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
+            }
         }
 
         // Menace: attackers with Menace must be blocked by 2+ creatures or not at all.
@@ -472,6 +484,61 @@ impl GameState {
         Ok(events)
     }
 
+    /// CR 702.15 — does `defender` control a land with the given land type?
+    /// Reads printed land subtypes (Forest/Island/…), so dual lands and
+    /// nonbasics with the type count.
+    fn defender_controls_land_type(
+        &self,
+        defender: usize,
+        lt: &crate::card::LandType,
+    ) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == defender && c.definition.has_land_type(*lt)
+        })
+    }
+
+    /// CR 510.1c — ask the attacking player's decider to order the blockers
+    /// for combat-damage assignment. `default_order` is the engine's
+    /// deterministic fallback (CardId order). The decider's answer reorders
+    /// the listed ids; any id it omits is appended in its default position,
+    /// and unknown ids are ignored — so a partial or empty answer is always
+    /// legal and `AutoDecider` keeps `default_order`.
+    fn order_combat_blockers(
+        &mut self,
+        attacker: CardId,
+        default_order: Vec<CardId>,
+    ) -> Vec<CardId> {
+        use crate::decision::{Decision, DecisionAnswer};
+        let blockers: Vec<(CardId, String)> = default_order
+            .iter()
+            .map(|id| {
+                let name = self
+                    .battlefield_find(*id)
+                    .map(|c| c.definition.name.to_string())
+                    .unwrap_or_default();
+                (*id, name)
+            })
+            .collect();
+        let answer = self
+            .decider
+            .decide(&Decision::CombatDamageOrder { attacker, blockers });
+        let DecisionAnswer::DamageOrder(chosen) = answer else {
+            return default_order;
+        };
+        let mut ordered: Vec<CardId> = Vec::with_capacity(default_order.len());
+        for id in &chosen {
+            if default_order.contains(id) && !ordered.contains(id) {
+                ordered.push(*id);
+            }
+        }
+        for id in &default_order {
+            if !ordered.contains(id) {
+                ordered.push(*id);
+            }
+        }
+        ordered
+    }
+
     /// Core combat damage resolver. Each attacker has its own defending
     /// player or planeswalker (`Attack::target`); damage routing is
     /// per-attacker.
@@ -521,13 +588,11 @@ impl GameState {
                 continue;
             }
 
-            // CR 510.1c: attacker's controller chooses damage assignment
-            // order against multiple blockers. The engine doesn't surface
-            // that choice through a Decision yet, but we MUST iterate in
-            // a deterministic order so replay/snapshot diverge isn't
-            // gated on randomized HashMap iteration order. Sort by
-            // CardId (declaration order proxy — ids are handed out
-            // monotonically by `next_id`).
+            // CR 510.1c: the attacking player chooses the order in which an
+            // attacker assigns combat damage to its multiple blockers. Start
+            // from a deterministic default (CardId = declaration-order proxy,
+            // so iteration isn't gated on HashMap order), then let the
+            // attacker's decider reorder via `Decision::CombatDamageOrder`.
             let mut blocker_ids: Vec<CardId> = self
                 .block_map
                 .iter()
@@ -535,6 +600,9 @@ impl GameState {
                 .map(|(&bid, _)| bid)
                 .collect();
             blocker_ids.sort_by_key(|id| id.0);
+            if blocker_ids.len() > 1 {
+                blocker_ids = self.order_combat_blockers(atk.id, blocker_ids);
+            }
 
             if blocker_ids.is_empty() {
                 let amount = if prevent_combat_damage {

@@ -2130,6 +2130,299 @@ fn voldaren_epicure_etb_creates_blood_and_pings_each_opponent() {
 }
 
 #[test]
+fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::call_of_the_herd());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Call of the Herd castable");
+    drain_stack(&mut g);
+    let elephants = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elephant").count();
+    assert_eq!(elephants, 1, "creates one 3/3 Elephant token");
+    // It carries Flashback so it can be recast from the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c|
+        c.definition.name == "Call of the Herd"
+        && c.definition.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)))),
+        "Call of the Herd is in the graveyard with Flashback");
+}
+
+#[test]
+fn vampire_nighthawk_has_flying_deathtouch_lifelink() {
+    use crate::card::Keyword;
+    let def = catalog::vampire_nighthawk();
+    assert_eq!((def.power, def.toughness), (2, 3));
+    for kw in [Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink] {
+        assert!(def.keywords.contains(&kw), "Nighthawk has {kw:?}");
+    }
+}
+
+#[test]
+fn wind_drake_is_a_two_two_flier() {
+    use crate::card::Keyword;
+    let def = catalog::wind_drake();
+    assert_eq!((def.power, def.toughness), (2, 2));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
+fn nekrataal_etb_destroys_a_nonblack_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let id = g.add_card_to_hand(0, catalog::nekrataal());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Nekrataal castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "the nonblack creature is destroyed");
+}
+
+#[test]
+fn skinrender_etb_shrinks_target_with_three_minus_counters() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::skinrender());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skinrender castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(victim).expect("4/4 survives three -1/-1");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "4/4 → 1/1 after three -1/-1 counters");
+}
+
+#[test]
+fn ravenous_chupacabra_etb_destroys_an_opponent_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ravenous_chupacabra());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ravenous Chupacabra castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "opponent's creature destroyed on ETB");
+}
+
+#[test]
+fn sentinel_spider_has_vigilance_and_reach() {
+    use crate::card::Keyword;
+    let def = catalog::sentinel_spider();
+    assert_eq!((def.power, def.toughness), (4, 4));
+    assert!(def.keywords.contains(&Keyword::Vigilance) && def.keywords.contains(&Keyword::Reach));
+}
+
+#[test]
+fn brindle_boar_sacrifices_for_four_life() {
+    let mut g = two_player_game();
+    let boar = g.add_card_to_battlefield(0, catalog::brindle_boar());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boar, ability_index: 0, target: None, x_value: None,
+    }).expect("Brindle Boar sac ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4, "gained 4 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == boar), "Brindle Boar was sacrificed");
+}
+
+#[test]
+fn reckless_abandon_sacrifices_a_creature_and_deals_four() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fodder
+    let id = g.add_card_to_hand(0, catalog::reckless_abandon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reckless Abandon castable with fodder present");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "dealt 4 to the opponent");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the sacrificed creature is in the graveyard");
+}
+
+#[test]
+fn cloudgoat_ranger_etb_makes_three_kithkin() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cloudgoat_ranger());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cloudgoat Ranger castable");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Kithkin Soldier").count();
+    assert_eq!(tokens, 3, "creates three 1/1 Kithkin Soldier tokens");
+}
+
+#[test]
+fn pelakka_wurm_etb_gains_seven_and_death_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::pelakka_wurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pelakka Wurm castable for {5}{G}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 7, "ETB gained 7 life");
+    let wurm = g.battlefield.iter().find(|c| c.definition.name == "Pelakka Wurm").unwrap().id;
+    let hand_before = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(wurm);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "death trigger drew a card");
+}
+
+#[test]
+fn springbloom_druid_etb_fetches_two_basics_tapped() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let id = g.add_card_to_hand(0, catalog::springbloom_druid());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Script the two tutor picks (AutoDecider declines searches by default).
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Springbloom Druid castable");
+    drain_stack(&mut g);
+    let tapped_lands = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land() && c.tapped).count();
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after - lands_before, 2, "two basics entered the battlefield");
+    assert!(tapped_lands >= 2, "the fetched basics entered tapped");
+}
+
+#[test]
+fn cryptolith_rite_grants_creatures_tap_for_any_color() {
+    // "Creatures you control have '{T}: Add one mana of any color.'" — the
+    // creature-filter path of StaticEffect::GrantActivatedAbility. A bear
+    // (0 printed abilities) gets the grant at index 0.
+    let mut g = two_player_game();
+    let _rite = g.add_card_to_battlefield(0, catalog::cryptolith_rite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, x_value: None,
+    }).expect("Cryptolith Rite grants the bear a tap-for-any-color ability");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1, "added one mana");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "bear tapped for the grant");
+}
+
+#[test]
+fn big_game_hunter_etb_destroys_a_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bgh = g.add_card_to_hand(0, catalog::big_game_hunter());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bgh, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Big Game Hunter castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "the 4/4 (power ≥ 4) is destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == small), "the 2/2 is untouched");
+}
+
+#[test]
+fn arrogant_wurm_is_a_four_four_trampling_madness_wurm() {
+    use crate::card::Keyword;
+    let def = catalog::arrogant_wurm();
+    assert_eq!((def.power, def.toughness), (4, 4));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
+}
+
+#[test]
+fn hill_giant_is_a_vanilla_three_three() {
+    let def = catalog::hill_giant();
+    assert_eq!((def.power, def.toughness), (3, 3));
+    assert!(def.keywords.is_empty() && def.activated_abilities.is_empty()
+        && def.triggered_abilities.is_empty(), "vanilla beater");
+}
+
+#[test]
+fn cunning_sparkmage_taps_to_ping_for_one() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::cunning_sparkmage());
+    g.clear_sickness(mage);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("Cunning Sparkmage pings");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage to the opponent");
+    assert!(g.battlefield_find(mage).unwrap().tapped, "mage tapped to ping");
+}
+
+#[test]
+fn fiery_temper_deals_three_to_any_target() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::fiery_temper());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fiery Temper castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "3 damage to the opponent");
+}
+
+#[test]
+fn reckless_wurm_is_a_five_four_trampling_madness_wurm() {
+    use crate::card::Keyword;
+    let g = two_player_game();
+    let def = catalog::reckless_wurm();
+    assert_eq!((def.power, def.toughness), (5, 4));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
+    let _ = g;
+}
+
+#[test]
+fn anjes_ravager_attack_discards_hand_then_draws_three() {
+    let mut g = two_player_game();
+    let ravager = g.add_card_to_battlefield(0, catalog::anjes_ravager());
+    g.clear_sickness(ravager);
+    // Two junk cards in hand; five in library to draw from.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::shock());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::mountain()); }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ravager, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3, "discarded the 2-card hand, then drew 3");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the discarded hand hit the graveyard");
+}
+
+#[test]
 fn goldspan_dragon_attack_creates_a_treasure() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::goldspan_dragon());
@@ -12206,6 +12499,26 @@ fn basking_rootwalla_pump_once_per_turn() {
     let pumped = g.computed_permanent(rootwalla).unwrap();
     assert_eq!(pumped.power, 3, "Rootwalla should be 3/3 after pump");
     assert_eq!(pumped.toughness, 3, "Rootwalla should be 3/3 after pump");
+}
+
+#[test]
+fn blazing_rootwalla_madness_zero_and_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let rw = g.add_card_to_battlefield(0, catalog::blazing_rootwalla());
+    g.clear_sickness(rw);
+    // Madness {0}: the keyword is present so a discard offers a free cast.
+    assert!(g.battlefield_find(rw).unwrap().definition.keywords
+        .iter().any(|k| matches!(k, Keyword::Madness(_))), "carries Madness");
+    // {1}{R}: +1/+1 until end of turn.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rw, ability_index: 0, target: None, x_value: None,
+    }).expect("pump activates");
+    drain_stack(&mut g);
+    let pumped = g.computed_permanent(rw).unwrap();
+    assert_eq!((pumped.power, pumped.toughness), (2, 2), "1/1 → 2/2 after +1/+1");
 }
 
 // ── Push XIX: cube creature tests ──────────────────────────────────────

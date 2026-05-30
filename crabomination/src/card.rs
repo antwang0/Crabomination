@@ -268,6 +268,10 @@ pub enum Keyword {
     Unblockable,
     Shadow,
     Horsemanship,
+    /// Landwalk (CR 702.15) — this creature can't be blocked as long as the
+    /// defending player controls a land of the named type (Forestwalk,
+    /// Islandwalk, Swampwalk, Mountainwalk, Plainswalk, …).
+    Landwalk(LandType),
     /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
@@ -690,6 +694,28 @@ pub struct CardDefinition {
     /// activate approximation). Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
+    /// CR 601.2b/601.2f — additional cost(s) paid as the spell is cast
+    /// ("As an additional cost to cast this spell, …"). Paid during
+    /// casting, not folded into resolution: the spell can't be cast unless
+    /// every cost is payable, and a sacrifice/discard/life payment happens
+    /// immediately (death/discard triggers fire before the spell resolves).
+    /// Powers Necrotic Fumes, Tend the Pests, Witherbloom Sacrosanct.
+    /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub additional_cast_cost: Vec<AdditionalCastCost>,
+}
+
+/// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed
+/// in `CardDefinition.additional_cast_cost`. Determined and paid during
+/// casting; the spell can't be cast unless every cost is payable.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AdditionalCastCost {
+    /// "As an additional cost to cast this spell, sacrifice a [filter]."
+    /// The sacrificed permanent's power becomes the spell's X (read at
+    /// resolution via `Value::XFromCost`) — powers Tend the Pests.
+    SacrificePermanent { filter: SelectionRequirement },
+    /// "As an additional cost, discard N card(s)."
+    Discard { count: u32 },
 }
 
 /// The static bonus an Equipment confers on the creature it's attached to.

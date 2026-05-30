@@ -96,6 +96,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Equip(_) => "Equip",
         Keyword::Fortify(_) => "Fortify",
         Keyword::Protection(_) => "Protection",
+        Keyword::Landwalk(lt) => {
+            return Some(format!("{:?}walk", lt));
+        }
         // Engine-internal keywords with no Scryfall equivalent:
         // (CantBlock is a card-text restriction, not a Scryfall-tagged
         // keyword, so it's filtered the same way as Unblockable.)

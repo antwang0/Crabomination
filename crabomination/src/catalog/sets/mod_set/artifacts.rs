@@ -1,5 +1,6 @@
 //! Modern-staple / cube artifacts.
 
+use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, Effect, EventKind, EventScope, EventSpec, Keyword,
     SelectionRequirement, Selector, Subtypes, TriggeredAbility, Value, Zone,
@@ -14,14 +15,27 @@ pub fn ornithopter() -> CardDefinition {
     CardDefinition {
         name: "Ornithopter",
         cost: ManaCost::default(),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -32,6 +46,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
     CardDefinition {
         name: "Ornithopter of Paradise",
         cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes::default(),
         power: 0,
@@ -56,7 +71,18 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -68,6 +94,7 @@ pub fn millstone() -> CardDefinition {
     CardDefinition {
         name: "Millstone",
         cost: cost(&[generic(2)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -92,7 +119,18 @@ pub fn millstone() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -107,6 +145,7 @@ pub fn mind_stone() -> CardDefinition {
     CardDefinition {
         name: "Mind Stone",
         cost: cost(&[generic(2)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -150,7 +189,18 @@ pub fn mind_stone() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -169,6 +219,7 @@ pub fn aether_spellbomb() -> CardDefinition {
     CardDefinition {
         name: "Aether Spellbomb",
         cost: cost(&[generic(1)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -211,7 +262,18 @@ pub fn aether_spellbomb() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -225,6 +287,7 @@ pub fn zuran_orb() -> CardDefinition {
     CardDefinition {
         name: "Zuran Orb",
         cost: ManaCost::default(),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -251,6 +314,41 @@ pub fn zuran_orb() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
+    }
+}
+
+/// Soul Conduit — {6} Artifact. "{6}, {T}: Exchange life totals with target
+/// player. Activate only as a sorcery." (CR 701.12c). Targets the opponent
+/// in heads-up via `Selector::Player(EachOpponent)` rather than a player
+/// prompt.
+pub fn soul_conduit() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Soul Conduit",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(6)]),
+            sorcery_speed: true,
+            effect: Effect::ExchangeLifeTotals {
+                a: Selector::You,
+                b: Selector::Player(PlayerRef::EachOpponent),
+            },
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }
@@ -270,6 +368,7 @@ pub fn chromatic_star() -> CardDefinition {
     CardDefinition {
         name: "Chromatic Star",
         cost: cost(&[generic(1)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -303,7 +402,18 @@ pub fn chromatic_star() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -321,6 +431,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
     CardDefinition {
         name: "Soul-Guide Lantern",
         cost: cost(&[generic(1)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -377,7 +488,18 @@ pub fn soul_guide_lantern() -> CardDefinition {
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -393,6 +515,7 @@ pub fn cankerbloom() -> CardDefinition {
     CardDefinition {
         name: "Cankerbloom",
         cost: cost(&[generic(1), g()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Fungus],
@@ -425,7 +548,18 @@ pub fn cankerbloom() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -444,6 +578,7 @@ pub fn fellwar_stone() -> CardDefinition {
     CardDefinition {
         name: "Fellwar Stone",
         cost: cost(&[generic(2)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -468,7 +603,18 @@ pub fn fellwar_stone() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -481,6 +627,7 @@ pub fn monument_to_endurance() -> CardDefinition {
     CardDefinition {
         name: "Monument to Endurance",
         cost: cost(&[generic(3)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -507,6 +654,17 @@ pub fn monument_to_endurance() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

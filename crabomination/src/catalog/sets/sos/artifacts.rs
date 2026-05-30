@@ -288,15 +288,12 @@ pub fn potioners_trove() -> CardDefinition {
 /// this mana only to cast instant and sorcery spells.' / {T}: Draw a
 /// card. Activate only if you have seven or more cards in your hand."
 ///
-/// The `{T}: Draw a card` activation is wired with the new
-/// `condition: Predicate::ValueAtLeast(HandSizeOf(You), 7)` gate — the
-/// engine rejects the activation before paying the tap cost when hand
-/// size < 7. The lands-grant static is omitted (engine has no per-color
-/// "spend this mana only to cast X" restriction yet — tracked under
-/// "Spend-Restricted Mana" in TODO.md). Without the lands-grant the
-/// card is a 4-mana "draw a card if your hand is overflowing" — a
-/// strictly weaker version, but the printed gate enforces a meaningful
-/// hand-size threshold.
+/// The `{T}: Draw a card` activation is gated by
+/// `condition: Predicate::ValueAtLeast(HandSizeOf(You), 7)`. The lands-grant
+/// is wired via `StaticEffect::GrantActivatedAbility` as one unrestricted
+/// any-color mana per land (the printed "two mana, spend only on
+/// instants/sorceries" spend-restriction is still engine-wide ⏳ — tracked
+/// as "Spend-Restricted Mana" in TODO.md).
 pub fn resonating_lute() -> CardDefinition {
     use crate::card::Predicate;
     use crate::mana::{r, u};
@@ -330,6 +327,11 @@ pub fn resonating_lute() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
+        // "Lands you control have '{T}: Add one mana of any color.'"
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            crate::card::SelectionRequirement::Land
+                .and(crate::card::SelectionRequirement::ControlledByYou),
+        )],
         ..Default::default()
     }
 }

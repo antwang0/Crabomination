@@ -21,15 +21,13 @@ use crate::mana::{b, cost, g, generic, r, u, w};
 /// Treasure token. / Artifacts you control have '{T}: Add one mana of any
 /// color.'"
 ///
-/// We ship the body + Flying + the ETB Treasure token via the existing
-/// Treasure helper. The "artifacts you control are mana sources" static is
-/// 🟡 — needs a static `GrantActivatedAbility(applies_to: Selector)`
-/// primitive (untracked artifacts gaining a mana ability is also tricky
-/// today since `tap_for_mana` walks each card's defined activated abilities
-/// directly).
+/// Body + Flying + ETB Treasure token, plus the "Artifacts you control have
+/// '{T}: Add one mana of any color'" static via
+/// `StaticEffect::GrantActivatedAbility`.
 pub fn galazeth_prismari() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility, Value};
     use crate::effect::PlayerRef;
+    use crate::effect::shortcut::grant_tap_for_any_color;
     CardDefinition {
         name: "Galazeth Prismari",
         cost: cost(&[generic(2), u(), r()]),
@@ -43,8 +41,7 @@ pub fn galazeth_prismari() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
-        // ETB: create a Treasure token. (The "artifacts tap for any color"
-        // static is omitted — see doc comment.)
+        // ETB: create a Treasure token.
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -53,6 +50,10 @@ pub fn galazeth_prismari() -> CardDefinition {
                 definition: crate::game::effects::treasure_token(),
             },
         }],
+        // "Artifacts you control have '{T}: Add one mana of any color.'"
+        static_abilities: vec![grant_tap_for_any_color(
+            SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+        )],
         ..Default::default()
     }
 }

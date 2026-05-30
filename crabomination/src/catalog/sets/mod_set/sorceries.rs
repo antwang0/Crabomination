@@ -279,32 +279,15 @@ pub fn sundering_eruption() -> CardDefinition {
 }
 
 /// Big Score — {3}{R} Sorcery. As an additional cost, discard a card.
-/// Create two Treasure tokens. Draw two cards.
-///
-/// The discard "additional cost" is folded into the resolution sequence
-/// (the same simplification Thud uses for its sac-as-cost). Treasure
-/// tokens are wired via the built-in `treasure_token()` helper, but note
-/// the engine's `TokenDefinition` carries no activated abilities yet — so
-/// the resulting Treasure tokens enter as colorless artifacts on the
-/// battlefield without their canonical "{T}, sac: add one mana of any
-/// color" ability. They count for spells/effects that key off "you
-/// control an artifact" / "Treasures you control" but can't actually be
-/// spent for mana until a sac-as-cost activation primitive lands.
+/// Create two Treasure tokens. Draw two cards. Discard is a real cast-time
+/// cost via `AdditionalCastCost::Discard`.
 pub fn big_score() -> CardDefinition {
     CardDefinition {
         name: "Big Score",
         cost: cost(&[generic(3), r()]),
-        card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::Discard { count: 1 }],
         effect: Effect::Seq(vec![
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(1),
-                random: false,
-            },
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(2),
@@ -312,7 +295,6 @@ pub fn big_score() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }

@@ -3710,6 +3710,7 @@ fn graveyard_anthem_for_name(
         "Wonder" => Some((LandType::Island, Keyword::Flying)),
         "Brawn" => Some((LandType::Forest, Keyword::Trample)),
         "Valor" => Some((LandType::Plains, Keyword::FirstStrike)),
+        "Filth" => Some((LandType::Swamp, Keyword::Landwalk(LandType::Swamp))),
         _ => None,
     }
 }
@@ -3853,7 +3854,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CastHandSpellsFree
             // GrantKeywordToAttackers — needs live combat state, resolved in
             // `compute_battlefield` against `GameState.attacking`.
-            | StaticEffect::GrantKeywordToAttackers { .. } => vec![],
+            | StaticEffect::GrantKeywordToAttackers { .. }
+            // GrantActivatedAbility — surfaced as a virtual activated ability
+            // in `activate_ability`; not a characteristic layer effect.
+            | StaticEffect::GrantActivatedAbility { .. } => vec![],
         })
         .collect()
 }

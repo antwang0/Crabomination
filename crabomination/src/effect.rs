@@ -1073,6 +1073,14 @@ pub enum Effect {
     /// or `LifeLost` event (delta < 0). Delta of 0 emits no event
     /// (matches CR 119.9 / 119.10 zero-life-change semantics).
     SetLifeTotal { who: Selector, amount: Value },
+    /// CR 701.12c — "exchange life totals" between the players the two
+    /// selectors resolve to (Soul Conduit, Magus of the Mirror, Mirror
+    /// Universe-style swaps). Each side's previous total is captured before
+    /// either changes, then each player gains/loses to reach the other's
+    /// previous total; `LifeGained`/`LifeLost` events fire so lifegain-
+    /// matters payoffs see the swing. A no-op when both selectors land on
+    /// the same player.
+    ExchangeLifeTotals { a: Selector, b: Selector },
     /// One-turn "[selected players] can't gain life this turn" lock.
     /// Sets `Player.cannot_gain_life_this_turn = true` for each player
     /// the selector resolves to. Cleared by `do_untap` at the start
@@ -1759,6 +1767,7 @@ impl Effect {
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::ExchangeLifeTotals { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::Drain { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
@@ -2650,6 +2659,19 @@ pub enum StaticEffect {
     /// scoped to the controller's attackers — `affects()` can't see combat
     /// state on its own, so this can't route through `selector_to_affected`.
     GrantKeywordToAttackers { keyword: Keyword },
+    /// "[Permanents matching `applies_to`] have '<ability>'." Grants a single
+    /// activated ability to every permanent the selector picks — Galazeth
+    /// Prismari ("Artifacts you control have '{T}: Add one mana of any
+    /// color'"), Cryptolith Rite ("Creatures you control have '{T}: Add one
+    /// mana of any color'"). `applies_to` is an `EachPermanent(filter)`
+    /// evaluated from the static source's controller, so "you control"
+    /// clauses scope correctly. Surfaced by `activate_ability` as a virtual
+    /// ability at index ≥ the permanent's printed-ability count, so the
+    /// standard cost-pay / mana-emit path works unchanged.
+    GrantActivatedAbility {
+        applies_to: Selector,
+        ability: ActivatedAbility,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -2911,6 +2933,23 @@ pub mod shortcut {
     }
     pub fn add_any_one_color(n: i32) -> Effect {
         Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(n)) }
+    }
+
+    /// "[Permanents matching `filter`] have '{T}: Add one mana of any
+    /// color.'" — the mana-dork-anthem static shared by Galazeth Prismari
+    /// (artifacts), Cryptolith Rite (creatures), Resonating Lute (lands).
+    pub fn grant_tap_for_any_color(filter: SelectionRequirement) -> StaticAbility {
+        StaticAbility {
+            description: "{T}: Add one mana of any color.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(filter),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: add_any_one_color(1),
+                    ..Default::default()
+                },
+            },
+        }
     }
 
     pub fn etb(effect: Effect) -> TriggeredAbility {

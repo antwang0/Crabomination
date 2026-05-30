@@ -659,6 +659,19 @@ pub enum DecisionWire {
         player: usize,
         sides: u8,
     },
+    /// CR 510.1c — order the blockers of one attacker for combat-damage
+    /// assignment. Decider answers `DamageOrder(ordered_ids)`.
+    CombatDamageOrder {
+        attacker: CardId,
+        blockers: Vec<(CardId, String)>,
+    },
+    /// CR 700.2d — choose `count` distinct modes for a "choose N" spell.
+    ChooseModes {
+        source: CardId,
+        num_modes: usize,
+        count: usize,
+        default: Vec<u8>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -727,6 +740,20 @@ impl From<&Decision> for DecisionWire {
                 player: *player,
                 sides: *sides,
             },
+            Decision::CombatDamageOrder { attacker, blockers } => {
+                DecisionWire::CombatDamageOrder {
+                    attacker: *attacker,
+                    blockers: blockers.clone(),
+                }
+            }
+            Decision::ChooseModes { source, num_modes, count, default } => {
+                DecisionWire::ChooseModes {
+                    source: *source,
+                    num_modes: *num_modes,
+                    count: *count,
+                    default: default.clone(),
+                }
+            }
         }
     }
 }

@@ -214,13 +214,8 @@ pub fn summoners_pact() -> CardDefinition {
 
 /// Thud — {R} Sorcery. As an additional cost, sacrifice a creature. Thud
 /// deals damage equal to the sacrificed creature's power to any target.
-///
-/// The "additional cost" sacrifice is modelled as the first step of the
-/// effect tree (rather than at cast time): on resolution, Thud picks a
-/// creature its controller has and sacrifices it, recording the sacrificed
-/// power so the subsequent `DealDamage` can read it. With `AutoDecider`
-/// the engine auto-picks the first eligible creature; a future UI can
-/// surface the choice via a dedicated decision.
+/// The sacrifice is a real cast-time cost (`AdditionalCastCost`), threading
+/// the fodder's power into the spell's X (read by `Value::XFromCost`).
 pub fn thud() -> CardDefinition {
     CardDefinition {
         name: "Thud",
