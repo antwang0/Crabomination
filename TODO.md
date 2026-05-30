@@ -38,6 +38,15 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
+- **Time Walk / Temporal Manipulation / Nexus of Fate** — now trivial to add
+  as real cards (`Effect::TakeExtraTurn { who: You, count: 1 }`); they were
+  not added this run only because the catalog registration site
+  (`catalog::mod::all_known_factories`) could not be safely edited. Add the
+  factories + register + a "extra turn taken" functionality test.
+- **Coin-flip extra-turn emblem test** — Ral Zarek's -7 emblem currently has
+  an emblem-creation test + a deterministic `extra_turns` engine test; add a
+  scripted-decider test that forces heads through the end-step coin flip to
+  cover the full path.
 - See `FEATURE_ROADMAP.md` Tier 1. DONE this run: additional cast costs
   (`AdditionalCastCost::SacrificePermanent`/`Discard`), `GrantActivatedAbility`
   static, "when target dies this turn" delayed trigger. Still open: choose-N

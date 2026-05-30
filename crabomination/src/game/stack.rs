@@ -882,23 +882,32 @@ impl GameState {
         for player in &mut self.players {
             player.mana_pool.empty();
         }
-        // Advance to the next non-eliminated player's turn (TurnStarted
-        // fires on Untap entry). If the next player has pending skip
-        // turns (Ral Zarek's -7), decrement and skip past them — keep
-        // walking until we find a player with no skip-turn debt.
-        // Safety cap at `players.len()` iterations to avoid an
-        // infinite loop in pathological "everyone skips" scenarios.
-        let n_players = self.players.len();
-        for _ in 0..n_players.max(1) {
-            self.active_player_idx = self.next_alive_seat(self.active_player_idx);
+        // CR 500.7 — extra turns. If the active player banked an extra
+        // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead
+        // of passing: consume one charge and just bump the turn number.
+        let active = self.active_player_idx;
+        if self.players[active].is_alive() && self.players[active].extra_turns > 0 {
+            self.players[active].extra_turns -= 1;
             self.turn_number += 1;
-            let skipped = self.players[self.active_player_idx].skip_turns;
-            if skipped == 0 {
-                break;
+        } else {
+            // Advance to the next non-eliminated player's turn (TurnStarted
+            // fires on Untap entry). If the next player has pending skip
+            // turns (Ral Zarek's -7), decrement and skip past them — keep
+            // walking until we find a player with no skip-turn debt.
+            // Safety cap at `players.len()` iterations to avoid an
+            // infinite loop in pathological "everyone skips" scenarios.
+            let n_players = self.players.len();
+            for _ in 0..n_players.max(1) {
+                self.active_player_idx = self.next_alive_seat(self.active_player_idx);
+                self.turn_number += 1;
+                let skipped = self.players[self.active_player_idx].skip_turns;
+                if skipped == 0 {
+                    break;
+                }
+                self.players[self.active_player_idx].skip_turns = skipped - 1;
+                // Loop again — the current player's turn was just consumed
+                // by the skip and we advance to the next.
             }
-            self.players[self.active_player_idx].skip_turns = skipped - 1;
-            // Loop again — the current player's turn was just consumed
-            // by the skip and we advance to the next.
         }
         // Sweep expired `may_play_until` permissions across every zone.
         // Runs *after* the turn-number bump so `elapsed = turn_number -

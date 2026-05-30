@@ -12184,7 +12184,7 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
                             EventKind::StepBegins(crate::game::TurnStep::Upkeep),
                             EventScope::YourControl,
                         ),
-                        effect: Effect::Draw { who: PlayerRef::You, amount: Value::Const(1) },
+                        effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
                     }],
                 },
             },

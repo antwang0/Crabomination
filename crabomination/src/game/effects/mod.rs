@@ -3196,6 +3196,18 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::TakeExtraTurn { who, count } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                if n == 0 { return Ok(()); }
+                for ent in self.resolve_selector(&Selector::Player(who.clone()), ctx) {
+                    if let EntityRef::Player(p) = ent {
+                        self.players[p].extra_turns =
+                            self.players[p].extra_turns.saturating_add(n);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::WinGame { who } => {
                 // CR 104.2a — "you win the game". Resolve `who` to a single
                 // player and eliminate every other (non-eliminated) player.
