@@ -4552,11 +4552,11 @@ pub fn professor_dellian_fel() -> CardDefinition {
 /// coins that came up heads."
 ///
 /// Wired with the +1 (Surveil 2), -1 (each opponent discards 1, single-
-/// target collapse of the printed "any number of target players"), and
-/// -2 (return ≤3-MV creature card from your gy → bf). The -7 ult is
-/// omitted — engine has no coin-flip primitive nor a "skip turns"
-/// modifier (TODO.md). Note the printed cost is `{1}{B}{B}` despite
-/// the Ral subtype, matching this Witherbloom-flavoured Ral variant.
+/// target collapse of the printed "any number of target players"),
+/// -2 (return ≤3-MV creature card from your gy → bf), and -7 (flip five
+/// coins; each opponent skips a turn per head, via `FlipCoin` +
+/// `SkipTurns`). Note the printed cost is `{1}{B}{B}` despite the Ral
+/// subtype, matching this Witherbloom-flavoured Ral variant.
 pub fn ral_zarek_guest_lecturer() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype};
     use crate::effect::ZoneDest;
