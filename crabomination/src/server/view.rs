@@ -1350,3 +1350,21 @@ mod tests {
         assert_eq!(entry.may_play_recipient, Some(0));
     }
 }
+
+#[cfg(test)]
+mod emblem_view_tests {
+    use super::build_player_view;
+    use crate::game::two_player_game;
+    use crate::player::Emblem;
+
+    #[test]
+    fn build_player_view_surfaces_emblem_names() {
+        let mut g = two_player_game();
+        g.players[0].emblems.push(Emblem {
+            name: "Professor Dellian Fel".into(),
+            triggered: vec![],
+        });
+        let view = build_player_view(&g, 0, 0);
+        assert_eq!(view.emblems, vec!["Professor Dellian Fel".to_string()]);
+    }
+}
