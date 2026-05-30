@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
@@ -930,7 +931,15 @@ impl CardDefinition {
 #[derive(Debug, Clone)]
 pub struct CardInstance {
     pub id: CardId,
-    pub definition: CardDefinition,
+    /// Static blueprint, shared behind an `Arc` so cloning a `CardInstance`
+    /// (and therefore a whole `GameState` — the bot dry-runs every candidate
+    /// action against a clone) is a refcount bump rather than a deep copy of
+    /// the definition's ~two dozen `Vec` fields. The definition is immutable
+    /// for the common case; the handful of effects that rewrite it
+    /// (MDFC face-swap, "loses all abilities", overload effect override,
+    /// keyword grants) go through `Arc::make_mut`, which clones lazily only
+    /// when the `Arc` is actually shared.
+    pub definition: Arc<CardDefinition>,
     pub owner: usize,
     pub controller: usize,
     pub tapped: bool,
@@ -1012,7 +1021,8 @@ pub struct CardInstance {
 }
 
 impl CardInstance {
-    pub fn new(id: CardId, definition: CardDefinition, owner: usize) -> Self {
+    pub fn new(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
+        let definition = definition.into();
         let summoning_sick = definition.is_creature();
         let base_loyalty = definition.base_loyalty;
         let is_planeswalker = definition.is_planeswalker();
@@ -1050,7 +1060,7 @@ impl CardInstance {
         }
     }
 
-    pub fn new_token(id: CardId, definition: CardDefinition, owner: usize) -> Self {
+    pub fn new_token(id: CardId, definition: impl Into<Arc<CardDefinition>>, owner: usize) -> Self {
         let mut instance = Self::new(id, definition, owner);
         instance.is_token = true;
         instance
@@ -1218,7 +1228,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         let def = crate::catalog::lookup_by_name(&wire.name).ok_or_else(|| {
             serde::de::Error::custom(format!("unknown card name: {:?}", wire.name))
         })?;
-        let mut c = CardInstance::new(wire.id, def, wire.owner);
+        let mut c = CardInstance::new(wire.id, Arc::new(def), wire.owner);
         c.controller = wire.controller;
         c.tapped = wire.tapped;
         c.damage = wire.damage;

@@ -608,7 +608,7 @@ impl GameState {
                 self.players[p].hand.push(card);
                 return Err(GameError::NotALand(card_id));
             };
-            card.definition = *back;
+            card.definition = std::sync::Arc::new(*back);
         }
         if !card.definition.is_land() {
             // Put it back then error
@@ -655,7 +655,7 @@ impl GameState {
                 self_counter_cost_reduction: None, sac_other_filter: None,
                 tap_other_filter: None,
             });
-            card.definition.activated_abilities = kept;
+            std::sync::Arc::make_mut(&mut card.definition).activated_abilities = kept;
         }
         self.players[p].lands_played_this_turn += 1;
         self.battlefield.push(card);
@@ -766,7 +766,7 @@ impl GameState {
         // we just installed), so a later restore can flip back without
         // a second catalog lookup.
         if let Some(c) = self.players[p].hand.iter_mut().find(|c| c.id == card_id) {
-            c.definition = back_def;
+            c.definition = std::sync::Arc::new(back_def);
         }
         // Delegate to the regular cast path. The back face's cost,
         // type, target filters, and effect now drive validation.
@@ -2310,7 +2310,7 @@ impl GameState {
         // effect to the alternative version so it resolves with "each"
         // instead of "target" semantics (or whatever the override says).
         if let Some(override_effect) = alt.effect_override {
-            card.definition.effect = override_effect;
+            std::sync::Arc::make_mut(&mut card.definition).effect = override_effect;
         }
 
         auto_events.push(GameEvent::SpellCast {

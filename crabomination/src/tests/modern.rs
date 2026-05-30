@@ -14618,7 +14618,7 @@ fn intimidate_shares_color_counts_hybrid_pip_color() {
     let mut g = two_player_game();
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage());
     // Grant Intimidate to the attacker.
-    g.battlefield_find_mut(mage).unwrap().definition.keywords.push(Keyword::Intimidate);
+    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(mage).unwrap().definition).keywords.push(Keyword::Intimidate);
     g.clear_sickness(mage);
     let goblin = g.add_card_to_battlefield(1, catalog::goblin_guide()); // red
 
@@ -14638,7 +14638,7 @@ fn intimidate_off_color_creature_cannot_block_hybrid_attacker() {
     use crate::game::{Attack, AttackTarget};
     let mut g = two_player_game();
     let mage = g.add_card_to_battlefield(0, catalog::spectacle_mage()); // U/R
-    g.battlefield_find_mut(mage).unwrap().definition.keywords.push(Keyword::Intimidate);
+    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(mage).unwrap().definition).keywords.push(Keyword::Intimidate);
     g.clear_sickness(mage);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
 

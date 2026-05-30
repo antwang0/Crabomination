@@ -47,7 +47,7 @@ fn creature_dies_at_lethal_damage() {
 #[test]
 fn indestructible_creature_does_not_die_from_damage() {
     let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
-    c.definition.keywords.push(Keyword::Indestructible);
+    std::sync::Arc::make_mut(&mut c.definition).keywords.push(Keyword::Indestructible);
     c.damage = 99;
     assert!(!c.is_dead());
 }
@@ -126,6 +126,6 @@ fn flash_is_instant_speed() {
 fn defender_cannot_attack() {
     let mut c = CardInstance::new(CardId(0), catalog::grizzly_bears(), 0);
     c.summoning_sick = false;
-    c.definition.keywords.push(Keyword::Defender);
+    std::sync::Arc::make_mut(&mut c.definition).keywords.push(Keyword::Defender);
     assert!(!c.can_attack());
 }

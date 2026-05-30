@@ -1442,7 +1442,9 @@ impl GameState {
                                 c.granted_keywords_eot.push(keyword.clone());
                             }
                         } else if !c.definition.keywords.contains(keyword) {
-                            c.definition.keywords.push(keyword.clone());
+                            std::sync::Arc::make_mut(&mut c.definition)
+                                .keywords
+                                .push(keyword.clone());
                         }
                     }
                 }
@@ -1767,7 +1769,7 @@ impl GameState {
                     .battlefield
                     .iter()
                     .find(|c| c.id == src_id)
-                    .map(|c| c.definition.clone());
+                    .map(|c| (*c.definition).clone());
                 let Some(mut def) = source_def else { return Ok(()); };
                 // Apply extra creature types & P/T override.
                 let mut extra_types = def.subtypes.creature_types.clone();
