@@ -341,6 +341,7 @@ pub fn mavinda_students_advocate() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -615,6 +616,7 @@ pub fn selfless_glyphweaver() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2786,6 +2788,7 @@ pub fn inkling_sage() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -14042,6 +14045,7 @@ pub fn silverquill_lectern_b160() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             sac_other_filter: None,
+            tap_other_filter: None,
             self_counter_cost_reduction: None,
         }],
         triggered_abilities: vec![],

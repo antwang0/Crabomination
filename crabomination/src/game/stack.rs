@@ -709,6 +709,9 @@ impl GameState {
             }
             blocked
         };
+        // Track which permanents actually flip tapped→untapped so we can
+        // fire CR 702.108 Inspired ("becomes untapped") triggers afterward.
+        let mut untapped_now: Vec<crate::card::CardId> = Vec::new();
         for card in &mut self.battlefield {
             if card.controller == p {
                 if prevented.contains(&card.id) {
@@ -718,9 +721,20 @@ impl GameState {
                     card.summoning_sick = false;
                     continue;
                 }
+                // CR 702.83 — an exerted creature skips this untap. The flag
+                // is one-shot: clear it so the creature untaps normally next
+                // turn. No tapped→untapped flip, so no Inspired trigger.
+                if card.skip_next_untap {
+                    card.skip_next_untap = false;
+                    card.summoning_sick = false;
+                    continue;
+                }
                 if card.counter_count(CounterType::Stun) > 0 {
                     card.remove_counters(CounterType::Stun, 1);
                 } else {
+                    if card.tapped {
+                        untapped_now.push(card.id);
+                    }
                     card.tapped = false;
                 }
                 card.summoning_sick = false;
@@ -769,6 +783,15 @@ impl GameState {
         // was targeted, not to the active player.
         for q in 0..self.players.len() {
             self.players[q].cannot_gain_life_this_turn = false;
+        }
+        // CR 702.108 — fire "becomes untapped" (Inspired) triggers for every
+        // permanent that flipped tapped→untapped this step.
+        if !untapped_now.is_empty() {
+            let events: Vec<GameEvent> = untapped_now
+                .into_iter()
+                .map(|card_id| GameEvent::PermanentUntapped { card_id })
+                .collect();
+            self.dispatch_triggers_for_events(&events);
         }
     }
 
@@ -827,6 +850,11 @@ impl GameState {
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
         self.granted_triggers_eot.clear();
+        // Expire event-keyed "when [card] dies this turn" delayed triggers
+        // that never fired (CR 603.4 — the "this turn" window closes).
+        self.delayed_triggers.retain(|dt| {
+            !matches!(dt.kind, crate::game::types::DelayedKind::WhenCardDies(_))
+        });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.

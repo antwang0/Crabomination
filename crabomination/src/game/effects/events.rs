@@ -47,6 +47,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::CardLeftGraveyard, GameEvent::CardLeftGraveyard { .. }) => true,
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
+        (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
         _ => false,
     };
     if !kind_ok {
@@ -114,6 +115,10 @@ pub(crate) fn event_matches_spec(
             // card's printed abilities.
             event,
             GameEvent::CardCycled { card_id, .. } if *card_id == source.id
+        ) || matches!(
+            // CR 702.108 Inspired — "Whenever this becomes untapped."
+            event,
+            GameEvent::PermanentUntapped { card_id } if *card_id == source.id
         ),
         // CR 810.8 — in Two-Headed Giant, "you" effects fan out to
         // teammates: a "whenever you gain life" trigger on team A

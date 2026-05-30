@@ -727,6 +727,32 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             *attacker_damage_taken.entry(a_id).or_insert(0) += b_tough;
         }
     }
+    // CR 509.1c — satisfy "must be blocked if able" (Academic Dispute /
+    // Lure). The engine rejects a declaration that leaves such an attacker
+    // unblocked while an idle able blocker exists, so the bot must assign
+    // one or it would deadlock the combat step. Pull any unused creature
+    // that can legally block (respecting flying/reach) onto each
+    // must-be-blocked attacker still missing a blocker.
+    for (a_id, _a_pow, _a_tough, a_flying) in &attacker_info {
+        let must_block = state
+            .battlefield
+            .iter()
+            .find(|c| c.id == *a_id)
+            .is_some_and(|a| a.has_keyword(&Keyword::MustBeBlocked));
+        if !must_block || assignments.iter().any(|(_, aid)| aid == a_id) {
+            continue;
+        }
+        if let Some(idle) = state.battlefield.iter().find(|c| {
+            c.controller == seat
+                && c.can_block()
+                && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                && (!a_flying
+                    || c.has_keyword(&Keyword::Flying)
+                    || c.has_keyword(&Keyword::Reach))
+        }) {
+            assignments.push((idle.id, *a_id));
+        }
+    }
     assignments
 }
 

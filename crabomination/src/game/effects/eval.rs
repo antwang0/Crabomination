@@ -136,6 +136,9 @@ impl GameState {
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }
+            Value::PermanentsDestroyedThisResolution => {
+                self.permanents_destroyed_this_resolution as i32
+            }
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when
@@ -338,6 +341,17 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::CastSpellMatches(filter) => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        self.evaluate_requirement_on_card(filter, card, ctx.controller)
+                    }
+                    _ => false,
+                })
+            }
             Predicate::CastSpellHasX => {
                 // Locate the just-cast spell via the trigger source and
                 // peek at its printed mana cost. Used by "whenever you
@@ -504,6 +518,17 @@ impl GameState {
                 max_opp_lands > your_lands
             }
             Predicate::AttackingAlone => self.attacking.len() == 1,
+            Predicate::DeliriumActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let mut kinds: std::collections::HashSet<&crate::card::CardType> =
+                    std::collections::HashSet::new();
+                for c in &self.players[p].graveyard {
+                    for t in &c.definition.card_types {
+                        kinds.insert(t);
+                    }
+                }
+                kinds.len() >= 4
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this
@@ -632,6 +657,16 @@ impl GameState {
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::PowerPlusToughnessAtMost(n) => {
+                        card.definition.is_creature() && card.power() + card.toughness() <= *n
+                    }
+                    R::PowerLessThanSource => {
+                        source
+                            .and_then(|s| self.battlefield_find(s))
+                            .is_some_and(|src| {
+                                card.definition.is_creature() && card.power() < src.power()
+                            })
+                    }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
                     R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
@@ -755,8 +790,15 @@ impl GameState {
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+            // No source/battlefield context in the on-card evaluator (used
+            // for hidden-zone cards); the source-relative Mentor check only
+            // makes sense for battlefield targets, so it's vacuously false.
+            R::PowerLessThanSource => false,
             R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
             R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::PowerPlusToughnessAtMost(n) => {
+                card.definition.is_creature() && card.power() + card.toughness() <= *n
+            }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),

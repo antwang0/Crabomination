@@ -268,6 +268,12 @@ pub enum Keyword {
     Unblockable,
     Shadow,
     Horsemanship,
+    /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
+    Flanking,
+    /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
+    Bushido(u32),
+    /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
+    Rampage(u32),
     Intimidate,
     Skulk,
     /// CR 702.36 — Fear. "This creature can't be blocked except by
@@ -335,6 +341,14 @@ pub enum Keyword {
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
     CantBlock,
+    /// CR 509.1c — "This creature must be blocked if able" (Lure-style
+    /// block requirement, also Academic Dispute's rider). Enforced in
+    /// `declare_blockers`: if an attacker carrying this keyword is left
+    /// unblocked while the defending player controls an idle creature
+    /// that could legally block it, the declaration is rejected. The
+    /// engine models the single-requirement case; multi-Lure
+    /// maximization (CR 509.1c's "as many as possible") is approximated.
+    MustBeBlocked,
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in
@@ -392,6 +406,17 @@ pub enum SelectionRequirement {
     HasEnchantmentSubtype(EnchantmentSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
+    /// Candidate's power + toughness (layer-computed) is at most `n`. Used
+    /// by Cut Down ("destroy target creature with total power and toughness
+    /// 5 or less"). Battlefield-only; false for non-creatures.
+    PowerPlusToughnessAtMost(i32),
+    /// True when the candidate's power is strictly less than the source
+    /// permanent's power (both read at evaluation time). Powers Mentor
+    /// (CR 702.114 — "target attacking creature with lesser power") so the
+    /// "lesser power" check re-evaluates against the source's current power
+    /// instead of a hard-coded threshold. Battlefield-only; false when the
+    /// source is missing or either side isn't a creature.
+    PowerLessThanSource,
     IsToken,
     NotToken,
     IsBasicLand,
@@ -842,6 +867,11 @@ impl CardDefinition {
             if let Keyword::FlashbackTap(n) = kw { Some(*n) } else { None }
         })
     }
+    /// True if this card has Retrace (CR 702.81) — castable from the
+    /// graveyard for its mana cost plus discarding a land card.
+    pub fn has_retrace(&self) -> bool {
+        self.keywords.contains(&Keyword::Retrace)
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Kicker(cost) = kw { Some(cost) } else { None }
@@ -948,6 +978,11 @@ pub struct CardInstance {
     /// `granted_keywords_eot`), so it's intentionally **not** serialized —
     /// a mid-turn snapshot reload defaults shields back to 0.
     pub regeneration_shields: u32,
+    /// CR 702.83 — Exert. When this creature attacks and is exerted, it
+    /// won't untap during its controller's next untap step. Set at attack
+    /// time; consumed (and the untap skipped) by `do_untap`. Transient —
+    /// not serialized (defaults to false on snapshot reload).
+    pub skip_next_untap: bool,
 }
 
 impl CardInstance {
@@ -985,6 +1020,7 @@ impl CardInstance {
             may_play_until: None,
             dealt_deathtouch_damage: false,
             regeneration_shields: 0,
+            skip_next_untap: false,
         }
     }
 

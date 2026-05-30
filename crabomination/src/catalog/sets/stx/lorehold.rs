@@ -8,6 +8,7 @@
 //! are stubbed and the body/keyword half ships only — see STRIXHAVEN2.md
 //! for the per-card status.
 
+use super::no_abilities;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
     EventScope, EventSpec, Keyword, Selector, SelectionRequirement, Subtypes, TokenDefinition,
@@ -65,6 +66,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -74,6 +76,7 @@ pub fn lorehold_apprentice() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -88,7 +91,17 @@ pub fn lorehold_apprentice() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -108,6 +121,7 @@ pub fn lorehold_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pledgemage",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -136,9 +150,20 @@ pub fn lorehold_pledgemage() -> CardDefinition {
             // "Exile a card from your graveyard" — any card (count 1).
             exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -156,6 +181,7 @@ pub fn pillardrop_rescuer() -> CardDefinition {
     CardDefinition {
         name: "Pillardrop Rescuer",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -165,6 +191,7 @@ pub fn pillardrop_rescuer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -175,7 +202,17 @@ pub fn pillardrop_rescuer() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -195,6 +232,7 @@ pub fn heated_debate() -> CardDefinition {
     CardDefinition {
         name: "Heated Debate",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -204,8 +242,19 @@ pub fn heated_debate() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -233,12 +282,14 @@ pub fn sparring_regimen() -> CardDefinition {
     CardDefinition {
         name: "Sparring Regimen",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -257,7 +308,17 @@ pub fn sparring_regimen() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -280,6 +341,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
     CardDefinition {
         name: "Storm-Kiln Artist",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -289,6 +351,7 @@ pub fn storm_kiln_artist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -304,7 +367,17 @@ pub fn storm_kiln_artist() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -326,6 +399,7 @@ pub fn reconstruct_history() -> CardDefinition {
     CardDefinition {
         name: "Reconstruct History",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -383,8 +457,19 @@ pub fn reconstruct_history() -> CardDefinition {
                 },
             ],
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -439,6 +524,7 @@ pub fn lorehold_excavation() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Excavation",
         cost: ManaCost::default(),
+        supertypes: vec![],
         card_types: vec![CardType::Land],
         subtypes: Subtypes::default(),
         power: 0,
@@ -498,10 +584,21 @@ pub fn lorehold_excavation() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -520,6 +617,7 @@ pub fn lorehold_acolyte() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Acolyte",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -529,6 +627,7 @@ pub fn lorehold_acolyte() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             // `InGraveyard` restricts the printed Oracle's "exile up to
@@ -540,7 +639,17 @@ pub fn lorehold_acolyte() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -561,6 +670,7 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warrior-Priest",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -570,6 +680,7 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -587,7 +698,17 @@ pub fn lorehold_warrior_priest() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -607,6 +728,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Priest",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -616,6 +738,7 @@ pub fn lorehold_ember_priest() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -624,7 +747,17 @@ pub fn lorehold_ember_priest() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -646,6 +779,7 @@ pub fn lorehold_skirmish() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmish",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -658,8 +792,19 @@ pub fn lorehold_skirmish() -> CardDefinition {
             Keyword::Haste,
             Duration::EndOfTurn,
         ),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -679,6 +824,7 @@ pub fn lorehold_pyrosage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrosage",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -688,11 +834,22 @@ pub fn lorehold_pyrosage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -710,6 +867,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Loremaster",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -719,6 +877,7 @@ pub fn lorehold_loremaster() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -727,7 +886,17 @@ pub fn lorehold_loremaster() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -745,6 +914,7 @@ pub fn lorehold_aerospirit() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Aerospirit",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -754,8 +924,19 @@ pub fn lorehold_aerospirit() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -774,6 +955,7 @@ pub fn lorehold_ember_forge() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Forge",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -789,8 +971,19 @@ pub fn lorehold_ember_forge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -809,6 +1002,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -818,6 +1012,7 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -838,7 +1033,17 @@ pub fn lorehold_spiritcaller() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -858,6 +1063,7 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebrand",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -867,13 +1073,24 @@ pub fn lorehold_pyrebrand() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(1),
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -896,6 +1113,7 @@ pub fn lorehold_reclamation() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reclamation",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -912,8 +1130,19 @@ pub fn lorehold_reclamation() -> CardDefinition {
                 tapped: false,
             },
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -932,6 +1161,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverberator",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -941,6 +1171,7 @@ pub fn lorehold_reverberator() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -949,7 +1180,17 @@ pub fn lorehold_reverberator() -> CardDefinition {
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -968,6 +1209,7 @@ pub fn lorehold_pyrescribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescribe",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -977,11 +1219,22 @@ pub fn lorehold_pyrescribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1000,6 +1253,7 @@ pub fn lorehold_echoist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echoist",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -1009,8 +1263,19 @@ pub fn lorehold_echoist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1029,6 +1294,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritmaster",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1038,6 +1304,7 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1046,7 +1313,17 @@ pub fn lorehold_spiritmaster() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1066,6 +1343,7 @@ pub fn lorehold_recollect() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recollect",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1082,8 +1360,19 @@ pub fn lorehold_recollect() -> CardDefinition {
                 tapped: false,
             },
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1106,6 +1395,7 @@ pub fn lorehold_anthemist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Anthemist",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1115,6 +1405,7 @@ pub fn lorehold_anthemist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+1.",
@@ -1129,7 +1420,16 @@ pub fn lorehold_anthemist() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1149,6 +1449,7 @@ pub fn lorehold_bonepriest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonepriest",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1158,8 +1459,19 @@ pub fn lorehold_bonepriest() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1178,6 +1490,7 @@ pub fn lorehold_battlescroll() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlescroll",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1199,8 +1512,19 @@ pub fn lorehold_battlescroll() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1220,6 +1544,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Tomescholar",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -1229,6 +1554,7 @@ pub fn lorehold_tomescholar() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1250,7 +1576,17 @@ pub fn lorehold_tomescholar() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1267,6 +1603,7 @@ pub fn lorehold_ember_brand() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Brand",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1280,8 +1617,19 @@ pub fn lorehold_ember_brand() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1299,6 +1647,7 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectrescribe",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1308,11 +1657,22 @@ pub fn lorehold_spectrescribe() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1330,6 +1690,7 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkstrike",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1349,8 +1710,19 @@ pub fn lorehold_sparkstrike() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1369,6 +1741,7 @@ pub fn lorehold_bonereader() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonereader",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1378,11 +1751,22 @@ pub fn lorehold_bonereader() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_gain_life(2),
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1400,6 +1784,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritarcher",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Archer],
@@ -1409,6 +1794,7 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Reach],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -1420,7 +1806,17 @@ pub fn lorehold_spiritarcher() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1439,6 +1835,7 @@ pub fn lorehold_echoflame() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echoflame",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1460,8 +1857,19 @@ pub fn lorehold_echoflame() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1496,6 +1904,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pilgrimwarden",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -1505,6 +1914,7 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1513,7 +1923,17 @@ pub fn lorehold_pilgrimwarden() -> CardDefinition {
                 definition: soldier_token,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1536,6 +1956,7 @@ pub fn lorehold_emberscribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberscribe",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -1545,6 +1966,7 @@ pub fn lorehold_emberscribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         // Body: exile a card from any graveyard, then ping each opp for 1.
         // The unconditional "ping each opp" half stands in for the printed
         // "1 damage to any target if it was IS" rider — auto-target picker
@@ -1568,7 +1990,17 @@ pub fn lorehold_emberscribe() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1585,12 +2017,14 @@ pub fn lorehold_reliquary() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reliquary",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -1602,7 +2036,17 @@ pub fn lorehold_reliquary() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1618,6 +2062,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ringleader",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -1627,6 +2072,7 @@ pub fn lorehold_ringleader() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1635,7 +2081,17 @@ pub fn lorehold_ringleader() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1652,6 +2108,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Strikevanguard",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -1661,6 +2118,7 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -1669,7 +2127,17 @@ pub fn lorehold_strikevanguard() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1686,6 +2154,7 @@ pub fn lorehold_ember_recall() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Recall",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1709,8 +2178,19 @@ pub fn lorehold_ember_recall() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1736,6 +2216,7 @@ pub fn lorehold_warband() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warband",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -1745,6 +2226,7 @@ pub fn lorehold_warband() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -1754,7 +2236,17 @@ pub fn lorehold_warband() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1774,6 +2266,7 @@ pub fn lorehold_phoenix() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Phoenix",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix, CreatureType::Spirit],
@@ -1799,9 +2292,20 @@ pub fn lorehold_phoenix() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1818,6 +2322,7 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlechronicler",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -1827,6 +2332,7 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {
@@ -1838,7 +2344,17 @@ pub fn lorehold_battlechronicler() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1854,6 +2370,7 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Searing Wisdom",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1878,8 +2395,19 @@ pub fn lorehold_searing_wisdom() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1896,6 +2424,7 @@ pub fn lorehold_saint() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Saint",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1905,8 +2434,19 @@ pub fn lorehold_saint() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1922,6 +2462,7 @@ pub fn lorehold_volley() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Volley",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1943,8 +2484,19 @@ pub fn lorehold_volley() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1969,6 +2521,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Caller",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -1978,6 +2531,7 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1997,7 +2551,17 @@ pub fn lorehold_spirit_caller() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2013,6 +2577,7 @@ pub fn lorehold_recital() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recital",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2033,8 +2598,19 @@ pub fn lorehold_recital() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2053,6 +2629,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrostriker",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -2062,6 +2639,7 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2080,7 +2658,17 @@ pub fn lorehold_pyrostriker() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2096,6 +2684,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulshaper",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2105,6 +2694,7 @@ pub fn lorehold_soulshaper() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -2113,7 +2703,17 @@ pub fn lorehold_soulshaper() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2128,6 +2728,7 @@ pub fn lorehold_ironhand() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironhand",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -2137,6 +2738,7 @@ pub fn lorehold_ironhand() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -2144,7 +2746,17 @@ pub fn lorehold_ironhand() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2160,6 +2772,7 @@ pub fn lorehold_revival() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Revival",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2183,8 +2796,19 @@ pub fn lorehold_revival() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2200,6 +2824,7 @@ pub fn lorehold_sparkflare() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkflare",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2213,8 +2838,19 @@ pub fn lorehold_sparkflare() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2231,6 +2867,7 @@ pub fn spirit_conduit() -> CardDefinition {
     CardDefinition {
         name: "Spirit Conduit",
         cost: cost(&[generic(2)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -2260,9 +2897,20 @@ pub fn spirit_conduit() -> CardDefinition {
                 amount: Value::Const(1),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2282,6 +2930,7 @@ pub fn lorehold_spirit_anthem() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Anthem",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2300,8 +2949,19 @@ pub fn lorehold_spirit_anthem() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2325,6 +2985,7 @@ pub fn lorehold_spellrunner() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spellrunner",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -2334,8 +2995,19 @@ pub fn lorehold_spellrunner() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2353,6 +3025,7 @@ pub fn lorehold_battlecaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlecaster",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -2362,6 +3035,7 @@ pub fn lorehold_battlecaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2380,7 +3054,17 @@ pub fn lorehold_battlecaster() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2396,6 +3080,7 @@ pub fn lorehold_pyresurge() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresurge",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2415,8 +3100,19 @@ pub fn lorehold_pyresurge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2432,6 +3128,7 @@ pub fn spirit_sparkguard() -> CardDefinition {
     CardDefinition {
         name: "Spirit Sparkguard",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2441,6 +3138,7 @@ pub fn spirit_sparkguard() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+1.",
@@ -2455,7 +3153,16 @@ pub fn spirit_sparkguard() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2474,6 +3181,7 @@ pub fn lorehold_outburst() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Outburst",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2492,8 +3200,19 @@ pub fn lorehold_outburst() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2514,6 +3233,7 @@ pub fn lorehold_pyresinger() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresinger",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2523,8 +3243,19 @@ pub fn lorehold_pyresinger() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2539,6 +3270,7 @@ pub fn lorehold_soulchanter() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulchanter",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2548,6 +3280,7 @@ pub fn lorehold_soulchanter() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -2555,7 +3288,17 @@ pub fn lorehold_soulchanter() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2570,6 +3313,7 @@ pub fn lorehold_flameherald() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flameherald",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -2579,6 +3323,7 @@ pub fn lorehold_flameherald() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -2590,7 +3335,17 @@ pub fn lorehold_flameherald() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2606,6 +3361,7 @@ pub fn lorehold_embercouncil() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embercouncil",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2622,8 +3378,19 @@ pub fn lorehold_embercouncil() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2640,6 +3407,7 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderpriest",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2649,6 +3417,7 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2670,7 +3439,17 @@ pub fn lorehold_cinderpriest() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2686,6 +3465,7 @@ pub fn lorehold_sparkscholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -2695,8 +3475,19 @@ pub fn lorehold_sparkscholar() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2709,6 +3500,7 @@ pub fn lorehold_ironscribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironscribe",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2718,8 +3510,19 @@ pub fn lorehold_ironscribe() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(3)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2733,6 +3536,7 @@ pub fn lorehold_spiritflame() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritflame",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2752,8 +3556,19 @@ pub fn lorehold_spiritflame() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2765,6 +3580,7 @@ pub fn lorehold_sparkknight() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkknight",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -2774,6 +3590,7 @@ pub fn lorehold_sparkknight() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -2788,7 +3605,17 @@ pub fn lorehold_sparkknight() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2800,6 +3627,7 @@ pub fn lorehold_stoneweaver() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneweaver",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -2809,6 +3637,7 @@ pub fn lorehold_stoneweaver() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -2816,7 +3645,17 @@ pub fn lorehold_stoneweaver() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2828,6 +3667,7 @@ pub fn lorehold_pyrescroll() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescroll",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2846,8 +3686,19 @@ pub fn lorehold_pyrescroll() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2860,6 +3711,7 @@ pub fn lorehold_battle_witness() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle Witness",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -2869,6 +3721,7 @@ pub fn lorehold_battle_witness() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2888,7 +3741,17 @@ pub fn lorehold_battle_witness() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             }),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2900,6 +3763,7 @@ pub fn lorehold_battlescholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlescholar",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -2909,6 +3773,7 @@ pub fn lorehold_battlescholar() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::Move {
@@ -2916,7 +3781,17 @@ pub fn lorehold_battlescholar() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2928,6 +3803,7 @@ pub fn lorehold_pyrokineticist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrokineticist",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -2937,8 +3813,19 @@ pub fn lorehold_pyrokineticist() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2949,6 +3836,7 @@ pub fn lorehold_wargleam() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wargleam",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -2958,6 +3846,7 @@ pub fn lorehold_wargleam() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -2970,7 +3859,17 @@ pub fn lorehold_wargleam() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2984,6 +3883,7 @@ pub fn lorehold_stoneglyph() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneglyph",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2997,8 +3897,19 @@ pub fn lorehold_stoneglyph() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3009,6 +3920,7 @@ pub fn lorehold_reverend() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverend",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3018,8 +3930,19 @@ pub fn lorehold_reverend() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3035,6 +3958,7 @@ pub fn lorehold_recountmage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recountmage",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3044,6 +3968,7 @@ pub fn lorehold_recountmage() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Deal 2 damage to this creature; if you do, draw a card.".into(),
             body: Box::new(Effect::Seq(vec![
@@ -3057,7 +3982,17 @@ pub fn lorehold_recountmage() -> CardDefinition {
                 },
             ])),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3070,6 +4005,7 @@ pub fn lorehold_inscribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Inscribe",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3093,8 +4029,19 @@ pub fn lorehold_inscribe() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3107,6 +4054,7 @@ pub fn lorehold_reenactor() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reenactor",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -3116,6 +4064,7 @@ pub fn lorehold_reenactor() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3138,7 +4087,17 @@ pub fn lorehold_reenactor() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3150,6 +4109,7 @@ pub fn lorehold_ardent_pyromage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ardent Pyromage",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3159,8 +4119,19 @@ pub fn lorehold_ardent_pyromage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3174,6 +4145,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorial Reliquary",
         cost: cost(&[generic(2)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3197,6 +4169,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                     pool: crate::effect::ManaPayload::Colors(vec![Color::Red]),
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
             ActivatedAbility {
                 mana_cost: ManaCost::default(),
@@ -3214,6 +4187,7 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                     pool: crate::effect::ManaPayload::Colors(vec![Color::White]),
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(3), r(), w()]),
@@ -3238,10 +4212,21 @@ pub fn lorehold_memorial_reliquary() -> CardDefinition {
                     },
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3254,6 +4239,7 @@ pub fn lorehold_spirit_sentinel() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Sentinel",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -3263,6 +4249,7 @@ pub fn lorehold_spirit_sentinel() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::EntersBattlefield,
@@ -3278,7 +4265,17 @@ pub fn lorehold_spirit_sentinel() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3290,6 +4287,7 @@ pub fn lorehold_pyrotechnician() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrotechnician",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3299,6 +4297,7 @@ pub fn lorehold_pyrotechnician() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -3309,7 +4308,17 @@ pub fn lorehold_pyrotechnician() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3322,6 +4331,7 @@ pub fn lorehold_spectrebrand() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectrebrand",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -3331,6 +4341,7 @@ pub fn lorehold_spectrebrand() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -3342,7 +4353,17 @@ pub fn lorehold_spectrebrand() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3353,6 +4374,7 @@ pub fn lorehold_charwarden() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Charwarden",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -3362,8 +4384,19 @@ pub fn lorehold_charwarden() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3374,6 +4407,7 @@ pub fn lorehold_lightcleric() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lightcleric",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3383,8 +4417,19 @@ pub fn lorehold_lightcleric() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3395,6 +4440,7 @@ pub fn lorehold_grave_crusader() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Grave-Crusader",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -3404,6 +4450,7 @@ pub fn lorehold_grave_crusader() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -3411,7 +4458,17 @@ pub fn lorehold_grave_crusader() -> CardDefinition {
                 to: ZoneDest::Exile,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3423,6 +4480,7 @@ pub fn lorehold_pyrescholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3432,6 +4490,7 @@ pub fn lorehold_pyrescholar() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::PumpPT {
@@ -3441,7 +4500,17 @@ pub fn lorehold_pyrescholar() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3452,6 +4521,7 @@ pub fn lorehold_vow() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vow",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3472,8 +4542,19 @@ pub fn lorehold_vow() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3484,6 +4565,7 @@ pub fn lorehold_spectrecaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectrecaster",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3493,6 +4575,7 @@ pub fn lorehold_spectrecaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -3505,7 +4588,17 @@ pub fn lorehold_spectrecaster() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3516,6 +4609,7 @@ pub fn lorehold_forgemaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Forgemaster",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3525,8 +4619,19 @@ pub fn lorehold_forgemaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3537,6 +4642,7 @@ pub fn lorehold_skirmlord() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmlord",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -3546,6 +4652,7 @@ pub fn lorehold_skirmlord() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -3560,7 +4667,17 @@ pub fn lorehold_skirmlord() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3572,6 +4689,7 @@ pub fn lorehold_memoirist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memoirist",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -3581,6 +4699,7 @@ pub fn lorehold_memoirist() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3599,7 +4718,17 @@ pub fn lorehold_memoirist() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3610,6 +4739,7 @@ pub fn lorehold_ardent_acolyte() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ardent Acolyte",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3619,11 +4749,22 @@ pub fn lorehold_ardent_acolyte() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3636,6 +4777,7 @@ pub fn lorehold_bequeathing() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bequeathing",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3655,8 +4797,19 @@ pub fn lorehold_bequeathing() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3667,6 +4820,7 @@ pub fn lorehold_pyromaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromaster",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3696,9 +4850,20 @@ pub fn lorehold_pyromaster() -> CardDefinition {
                 amount: Value::Const(3),
             },
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3709,6 +4874,7 @@ pub fn lorehold_spirit_hymn() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Hymn",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3732,8 +4898,19 @@ pub fn lorehold_spirit_hymn() -> CardDefinition {
                 },
             ])),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3746,6 +4923,7 @@ pub fn lorehold_spirit_sage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Sage",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3755,8 +4933,19 @@ pub fn lorehold_spirit_sage() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3768,6 +4957,7 @@ pub fn lorehold_pyrechronicler() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrechronicler",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3777,8 +4967,19 @@ pub fn lorehold_pyrechronicler() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3789,6 +4990,7 @@ pub fn lorehold_mass_ritual() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Mass Ritual",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3799,8 +5001,19 @@ pub fn lorehold_mass_ritual() -> CardDefinition {
             count: Value::Const(3),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3811,6 +5024,7 @@ pub fn lorehold_soulburst() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulburst",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3824,8 +5038,19 @@ pub fn lorehold_soulburst() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3836,6 +5061,7 @@ pub fn lorehold_ancestor() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ancestor",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -3845,8 +5071,19 @@ pub fn lorehold_ancestor() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_drain(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3858,6 +5095,7 @@ pub fn lorehold_pyrescribe_adept() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescribe-Adept",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3867,8 +5105,19 @@ pub fn lorehold_pyrescribe_adept() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3879,6 +5128,7 @@ pub fn lorehold_burnscribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Burnscribe",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3888,6 +5138,7 @@ pub fn lorehold_burnscribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -3898,7 +5149,17 @@ pub fn lorehold_burnscribe() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3910,6 +5171,7 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Legion",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3919,6 +5181,7 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3940,7 +5203,17 @@ pub fn lorehold_spirit_legion() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3953,6 +5226,7 @@ pub fn lorehold_zealot() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Zealot",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -3962,6 +5236,7 @@ pub fn lorehold_zealot() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -3979,7 +5254,17 @@ pub fn lorehold_zealot() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3990,6 +5275,7 @@ pub fn lorehold_pyreheart() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreheart",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -3999,8 +5285,19 @@ pub fn lorehold_pyreheart() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4011,6 +5308,7 @@ pub fn spirit_phalanx() -> CardDefinition {
     CardDefinition {
         name: "Spirit Phalanx",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4034,8 +5332,19 @@ pub fn spirit_phalanx() -> CardDefinition {
                 }),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4046,6 +5355,7 @@ pub fn lorehold_warhost() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warhost",
         cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -4055,6 +5365,7 @@ pub fn lorehold_warhost() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4063,7 +5374,17 @@ pub fn lorehold_warhost() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4074,6 +5395,7 @@ pub fn lorehold_devotion() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Devotion",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4092,8 +5414,19 @@ pub fn lorehold_devotion() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4106,6 +5439,7 @@ pub fn lorehold_pyremender() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremender",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4115,6 +5449,7 @@ pub fn lorehold_pyremender() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -4126,7 +5461,17 @@ pub fn lorehold_pyremender() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4136,6 +5481,7 @@ pub fn spirit_vanguard() -> CardDefinition {
     CardDefinition {
         name: "Spirit Vanguard",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4145,8 +5491,19 @@ pub fn spirit_vanguard() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4157,6 +5514,7 @@ pub fn lorehold_ember_sage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember Sage",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4166,8 +5524,19 @@ pub fn lorehold_ember_sage() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4178,6 +5547,7 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostmaster",
         cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4187,6 +5557,7 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4195,7 +5566,17 @@ pub fn lorehold_ghostmaster() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4208,6 +5589,7 @@ pub fn lorehold_b37_spiritflame() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritflame II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4224,8 +5606,19 @@ pub fn lorehold_b37_spiritflame() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4235,6 +5628,7 @@ pub fn lorehold_b37_beacon() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Beacon II",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -4244,8 +5638,19 @@ pub fn lorehold_b37_beacon() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4256,6 +5661,7 @@ pub fn lorehold_sermonizer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sermonizer",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4265,6 +5671,7 @@ pub fn lorehold_sermonizer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -4282,7 +5689,17 @@ pub fn lorehold_sermonizer() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4293,6 +5710,7 @@ pub fn lorehold_b35_lightning() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lightning II",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4312,8 +5730,19 @@ pub fn lorehold_b35_lightning() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4326,6 +5755,7 @@ pub fn lorehold_ember_priest_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember Priest II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4335,8 +5765,19 @@ pub fn lorehold_ember_priest_v2() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4346,6 +5787,7 @@ pub fn lorehold_skydefender() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skydefender",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4355,8 +5797,19 @@ pub fn lorehold_skydefender() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4368,6 +5821,7 @@ pub fn lorehold_archivist_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivist II",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -4377,6 +5831,7 @@ pub fn lorehold_archivist_v2() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -4388,7 +5843,17 @@ pub fn lorehold_archivist_v2() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4399,6 +5864,7 @@ pub fn lorehold_spiritrider() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritrider",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -4408,6 +5874,7 @@ pub fn lorehold_spiritrider() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4416,7 +5883,17 @@ pub fn lorehold_spiritrider() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4426,6 +5903,7 @@ pub fn lorehold_wargeist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wargeist",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -4435,8 +5913,19 @@ pub fn lorehold_wargeist() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4448,6 +5937,7 @@ pub fn lorehold_hellraiser() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Hellraiser",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -4457,6 +5947,7 @@ pub fn lorehold_hellraiser() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -4468,7 +5959,17 @@ pub fn lorehold_hellraiser() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4478,6 +5979,7 @@ pub fn lorehold_annalist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Annalist",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -4487,6 +5989,7 @@ pub fn lorehold_annalist() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::EachPlayer,
@@ -4495,7 +5998,17 @@ pub fn lorehold_annalist() -> CardDefinition {
             }),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4506,6 +6019,7 @@ pub fn lorehold_bonfire() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonfire",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4525,8 +6039,19 @@ pub fn lorehold_bonfire() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4553,6 +6078,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritsage",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4562,6 +6088,7 @@ pub fn lorehold_spiritsage() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4570,7 +6097,17 @@ pub fn lorehold_spiritsage() -> CardDefinition {
                 definition: small_spirit,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4580,6 +6117,7 @@ pub fn lorehold_pyrokin() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrokin",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -4589,8 +6127,19 @@ pub fn lorehold_pyrokin() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4600,6 +6149,7 @@ pub fn spirit_outrider() -> CardDefinition {
     CardDefinition {
         name: "Spirit Outrider",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -4609,8 +6159,19 @@ pub fn spirit_outrider() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4620,6 +6181,7 @@ pub fn spirit_warbearer() -> CardDefinition {
     CardDefinition {
         name: "Spirit Warbearer",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -4629,8 +6191,19 @@ pub fn spirit_warbearer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4644,6 +6217,7 @@ pub fn lorehold_ember_reader() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Reader",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4653,8 +6227,19 @@ pub fn lorehold_ember_reader() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4666,6 +6251,7 @@ pub fn spirit_cantor() -> CardDefinition {
     CardDefinition {
         name: "Spirit Cantor",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4675,6 +6261,7 @@ pub fn spirit_cantor() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![crate::effect::StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -4689,7 +6276,16 @@ pub fn spirit_cantor() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4715,6 +6311,7 @@ pub fn lorehold_wraithcaller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wraithcaller",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -4724,12 +6321,23 @@ pub fn lorehold_wraithcaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: spirit_flying,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4740,6 +6348,7 @@ pub fn lorehold_ballad() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ballad",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4759,8 +6368,19 @@ pub fn lorehold_ballad() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4771,6 +6391,7 @@ pub fn lorehold_ironwill() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironwill",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4780,8 +6401,19 @@ pub fn lorehold_ironwill() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4792,6 +6424,7 @@ pub fn spirit_pyremage() -> CardDefinition {
     CardDefinition {
         name: "Spirit Pyremage",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -4801,6 +6434,7 @@ pub fn spirit_pyremage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -4809,7 +6443,17 @@ pub fn spirit_pyremage() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4821,6 +6465,7 @@ pub fn lorehold_emberkeeper() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberkeeper",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -4830,8 +6475,19 @@ pub fn lorehold_emberkeeper() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4842,6 +6498,7 @@ pub fn lorehold_warden_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warden II",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4851,11 +6508,22 @@ pub fn lorehold_warden_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
             what: target_filtered(SelectionRequirement::Any),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4866,6 +6534,7 @@ pub fn spirit_ironguard() -> CardDefinition {
     CardDefinition {
         name: "Spirit Ironguard",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -4875,8 +6544,19 @@ pub fn spirit_ironguard() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4887,6 +6567,7 @@ pub fn lorehold_recital_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recital II",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4907,8 +6588,19 @@ pub fn lorehold_recital_v2() -> CardDefinition {
                 count: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4922,6 +6614,7 @@ pub fn lorehold_stoneguard() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneguard",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -4931,8 +6624,19 @@ pub fn lorehold_stoneguard() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4943,6 +6647,7 @@ pub fn spirit_vanguard_v2() -> CardDefinition {
     CardDefinition {
         name: "Spirit Vanguard II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -4952,8 +6657,19 @@ pub fn spirit_vanguard_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4965,6 +6681,7 @@ pub fn lorehold_pyresummon() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresummon",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4985,8 +6702,19 @@ pub fn lorehold_pyresummon() -> CardDefinition {
                 count: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4998,6 +6726,7 @@ pub fn lorehold_saberspirit() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Saberspirit",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -5007,8 +6736,19 @@ pub fn lorehold_saberspirit() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5020,6 +6760,7 @@ pub fn spirit_bookburner() -> CardDefinition {
     CardDefinition {
         name: "Spirit Bookburner",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5029,8 +6770,19 @@ pub fn spirit_bookburner() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5042,6 +6794,7 @@ pub fn lorehold_knight_champion() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Knight-Champion",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -5051,6 +6804,7 @@ pub fn lorehold_knight_champion() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::GainLife {
@@ -5058,7 +6812,17 @@ pub fn lorehold_knight_champion() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5070,6 +6834,7 @@ pub fn lorehold_pyrelancer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrelancer",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5079,13 +6844,24 @@ pub fn lorehold_pyrelancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5099,6 +6875,7 @@ pub fn lorehold_emberhand_priest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberhand Priest",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5108,8 +6885,19 @@ pub fn lorehold_emberhand_priest() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5120,6 +6908,7 @@ pub fn lorehold_ironbacked_archivist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironbacked Archivist",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -5129,11 +6918,22 @@ pub fn lorehold_ironbacked_archivist() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Move {
             what: target_filtered(SelectionRequirement::Any),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5144,6 +6944,7 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lightspeaker",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5153,6 +6954,7 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -5161,7 +6963,17 @@ pub fn lorehold_lightspeaker() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5173,6 +6985,7 @@ pub fn lorehold_warpriest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warpriest",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5182,11 +6995,22 @@ pub fn lorehold_warpriest() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5198,6 +7022,7 @@ pub fn lorehold_emberscholar() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberscholar",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5207,8 +7032,19 @@ pub fn lorehold_emberscholar() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5220,6 +7056,7 @@ pub fn lorehold_relicbearer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relicbearer",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5229,6 +7066,7 @@ pub fn lorehold_relicbearer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
             effect: Effect::AddCounter {
@@ -5237,7 +7075,17 @@ pub fn lorehold_relicbearer() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5248,6 +7096,7 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember Sentinel",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5257,8 +7106,19 @@ pub fn lorehold_ember_sentinel() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb_gain_life(3)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5271,6 +7131,7 @@ pub fn lorehold_spiritbinder() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbinder",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5280,8 +7141,19 @@ pub fn lorehold_spiritbinder() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5293,6 +7165,7 @@ pub fn lorehold_sparkflinger() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkflinger",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5302,8 +7175,19 @@ pub fn lorehold_sparkflinger() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5314,6 +7198,7 @@ pub fn lorehold_battle_cry() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle Cry",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5326,8 +7211,19 @@ pub fn lorehold_battle_cry() -> CardDefinition {
             Keyword::Haste,
             Duration::EndOfTurn,
         ),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5339,6 +7235,7 @@ pub fn lorehold_battle_memorial() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle Memorial",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5357,8 +7254,19 @@ pub fn lorehold_battle_memorial() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5369,6 +7277,7 @@ pub fn lorehold_veteran() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Veteran",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5378,6 +7287,7 @@ pub fn lorehold_veteran() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -5389,7 +7299,17 @@ pub fn lorehold_veteran() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5400,6 +7320,7 @@ pub fn lorehold_scrollwarden() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Scrollwarden",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5409,8 +7330,19 @@ pub fn lorehold_scrollwarden() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5423,6 +7355,7 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flameherald II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5432,6 +7365,7 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -5443,7 +7377,17 @@ pub fn lorehold_flameherald_v2() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5455,6 +7399,7 @@ pub fn spirit_bardguard() -> CardDefinition {
     CardDefinition {
         name: "Spirit Bardguard",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5464,8 +7409,19 @@ pub fn spirit_bardguard() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5477,6 +7433,7 @@ pub fn lorehold_sparkwarden() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkwarden",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5486,8 +7443,19 @@ pub fn lorehold_sparkwarden() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5498,6 +7466,7 @@ pub fn lorehold_spiritscribe() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritscribe",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5514,8 +7483,19 @@ pub fn lorehold_spiritscribe() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5526,6 +7506,7 @@ pub fn lorehold_phoenix_soldier() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Phoenix-Soldier",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Phoenix],
@@ -5535,8 +7516,19 @@ pub fn lorehold_phoenix_soldier() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5549,6 +7541,7 @@ pub fn spirit_spellsmith() -> CardDefinition {
     CardDefinition {
         name: "Spirit Spellsmith",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5558,8 +7551,19 @@ pub fn spirit_spellsmith() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5570,6 +7574,7 @@ pub fn lorehold_glimmercaller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Glimmercaller",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5579,6 +7584,7 @@ pub fn lorehold_glimmercaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -5586,7 +7592,17 @@ pub fn lorehold_glimmercaller() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5597,6 +7613,7 @@ pub fn lorehold_refrain() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Refrain",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5616,8 +7633,19 @@ pub fn lorehold_refrain() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5628,6 +7656,7 @@ pub fn spirit_banner_bearer() -> CardDefinition {
     CardDefinition {
         name: "Spirit Banner-Bearer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5637,6 +7666,7 @@ pub fn spirit_banner_bearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![crate::effect::StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -5651,7 +7681,16 @@ pub fn spirit_banner_bearer() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5662,6 +7701,7 @@ pub fn lorehold_battle_drum() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle Drum",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5684,8 +7724,19 @@ pub fn lorehold_battle_drum() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5697,6 +7748,7 @@ pub fn spirit_spearmaiden() -> CardDefinition {
     CardDefinition {
         name: "Spirit Spearmaiden",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5706,8 +7758,19 @@ pub fn spirit_spearmaiden() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5717,6 +7780,7 @@ pub fn lorehold_lavabolt() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lavabolt",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5730,8 +7794,19 @@ pub fn lorehold_lavabolt() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5744,6 +7819,7 @@ pub fn lorehold_skyrunner() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skyrunner",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5753,8 +7829,19 @@ pub fn lorehold_skyrunner() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5766,6 +7853,7 @@ pub fn lorehold_stoneward() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneward",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5775,6 +7863,7 @@ pub fn lorehold_stoneward() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::PumpPT {
@@ -5784,7 +7873,17 @@ pub fn lorehold_stoneward() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5796,6 +7895,7 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremender Embershade",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5805,6 +7905,7 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -5816,7 +7917,17 @@ pub fn lorehold_pyremender_v2() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5828,6 +7939,7 @@ pub fn lorehold_pyreward() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreward",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5847,8 +7959,19 @@ pub fn lorehold_pyreward() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5860,6 +7983,7 @@ pub fn spirit_honor_guard() -> CardDefinition {
     CardDefinition {
         name: "Spirit Honor Guard",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -5869,8 +7993,19 @@ pub fn spirit_honor_guard() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5882,6 +8017,7 @@ pub fn lorehold_smiteseer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Smiteseer",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5891,6 +8027,7 @@ pub fn lorehold_smiteseer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -5904,7 +8041,17 @@ pub fn lorehold_smiteseer() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5916,6 +8063,7 @@ pub fn lorehold_embersmith() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embersmith",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -5925,8 +8073,19 @@ pub fn lorehold_embersmith() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5936,6 +8095,7 @@ pub fn spirit_mentor() -> CardDefinition {
     CardDefinition {
         name: "Spirit Mentor",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -5945,8 +8105,19 @@ pub fn spirit_mentor() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5957,6 +8128,7 @@ pub fn lorehold_wargist() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wargist",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -5966,11 +8138,22 @@ pub fn lorehold_wargist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5981,6 +8164,7 @@ pub fn lorehold_sparkstrike_b50() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkstrike Burst",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5990,8 +8174,19 @@ pub fn lorehold_sparkstrike_b50() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6002,6 +8197,7 @@ pub fn spirit_battlemaster() -> CardDefinition {
     CardDefinition {
         name: "Spirit Battlemaster",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -6011,8 +8207,19 @@ pub fn spirit_battlemaster() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6022,6 +8229,7 @@ pub fn lorehold_memoriam() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memoriam",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6038,8 +8246,19 @@ pub fn lorehold_memoriam() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6049,6 +8268,7 @@ pub fn spirit_berserker() -> CardDefinition {
     CardDefinition {
         name: "Spirit Berserker",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -6058,8 +8278,19 @@ pub fn spirit_berserker() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6071,6 +8302,7 @@ pub fn lorehold_memorialist_b50() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorialist Adept",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -6080,6 +8312,7 @@ pub fn lorehold_memorialist_b50() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -6091,7 +8324,17 @@ pub fn lorehold_memorialist_b50() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6102,6 +8345,7 @@ pub fn lorehold_echocaller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echocaller",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6111,6 +8355,7 @@ pub fn lorehold_echocaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -6122,7 +8367,17 @@ pub fn lorehold_echocaller() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6132,6 +8387,7 @@ pub fn lorehold_sparkshock() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkshock",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6151,8 +8407,19 @@ pub fn lorehold_sparkshock() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6162,6 +8429,7 @@ pub fn lorehold_skystorm() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skystorm",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6180,8 +8448,19 @@ pub fn lorehold_skystorm() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6191,6 +8470,7 @@ pub fn lorehold_reverence() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverence",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6200,8 +8480,19 @@ pub fn lorehold_reverence() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6211,6 +8502,7 @@ pub fn lorehold_pyromentor() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromentor",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6220,8 +8512,19 @@ pub fn lorehold_pyromentor() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6231,6 +8534,7 @@ pub fn lorehold_spirit_veteran() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Veteran",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -6240,6 +8544,7 @@ pub fn lorehold_spirit_veteran() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::AddCounter {
@@ -6253,7 +8558,17 @@ pub fn lorehold_spirit_veteran() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6263,6 +8578,7 @@ pub fn lorehold_embermend() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embermend",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6278,8 +8594,19 @@ pub fn lorehold_embermend() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6291,6 +8618,7 @@ pub fn lorehold_spiritchron() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritchron",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6300,6 +8628,7 @@ pub fn lorehold_spiritchron() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -6309,7 +8638,17 @@ pub fn lorehold_spiritchron() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6319,6 +8658,7 @@ pub fn lorehold_sparklock() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparklock",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6334,8 +8674,19 @@ pub fn lorehold_sparklock() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6347,6 +8698,7 @@ pub fn lorehold_emberscribe_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberscribe II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6356,8 +8708,19 @@ pub fn lorehold_emberscribe_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6367,6 +8730,7 @@ pub fn lorehold_spirit_redeemer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Redeemer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6376,8 +8740,19 @@ pub fn lorehold_spirit_redeemer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6387,6 +8762,7 @@ pub fn lorehold_emberlock() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberlock",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6406,8 +8782,19 @@ pub fn lorehold_emberlock() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6418,6 +8805,7 @@ pub fn lorehold_skyblaze() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skyblaze",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6437,8 +8825,19 @@ pub fn lorehold_skyblaze() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6448,6 +8847,7 @@ pub fn spirit_blazekin() -> CardDefinition {
     CardDefinition {
         name: "Spirit Blazekin",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6457,8 +8857,19 @@ pub fn spirit_blazekin() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6471,6 +8882,7 @@ pub fn lorehold_invoker() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Invoker",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6480,8 +8892,19 @@ pub fn lorehold_invoker() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6492,6 +8915,7 @@ pub fn spirit_sparkmage() -> CardDefinition {
     CardDefinition {
         name: "Spirit Sparkmage",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6501,6 +8925,7 @@ pub fn spirit_sparkmage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -6515,7 +8940,17 @@ pub fn spirit_sparkmage() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6526,6 +8961,7 @@ pub fn lorehold_chronicler_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Chronicler Aerist",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6535,8 +8971,19 @@ pub fn lorehold_chronicler_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6547,6 +8994,7 @@ pub fn lorehold_relicwarden() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relicwarden",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -6556,6 +9004,7 @@ pub fn lorehold_relicwarden() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -6566,7 +9015,17 @@ pub fn lorehold_relicwarden() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6579,6 +9038,7 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescribe Elder",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6588,6 +9048,7 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -6602,7 +9063,17 @@ pub fn lorehold_pyrescribe_elder() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6614,6 +9085,7 @@ pub fn lorehold_skirmish_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmish II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6626,8 +9098,19 @@ pub fn lorehold_skirmish_v2() -> CardDefinition {
             Keyword::Haste,
             Duration::EndOfTurn,
         ),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6638,6 +9121,7 @@ pub fn lorehold_sparkflame() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkflame",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6651,8 +9135,19 @@ pub fn lorehold_sparkflame() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6662,6 +9157,7 @@ pub fn lorehold_spiritcaller_b55() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller II",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6671,8 +9167,19 @@ pub fn lorehold_spiritcaller_b55() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6683,6 +9190,7 @@ pub fn spirit_banneret() -> CardDefinition {
     CardDefinition {
         name: "Spirit Banneret",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -6692,6 +9200,7 @@ pub fn spirit_banneret() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -6706,7 +9215,16 @@ pub fn spirit_banneret() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6720,6 +9238,7 @@ pub fn lorehold_forge_cleric() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Forge-Cleric",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6729,6 +9248,7 @@ pub fn lorehold_forge_cleric() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -6738,7 +9258,17 @@ pub fn lorehold_forge_cleric() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6750,6 +9280,7 @@ pub fn lorehold_pyrescholar_b56() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6759,11 +9290,22 @@ pub fn lorehold_pyrescholar_b56() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6775,6 +9317,7 @@ pub fn lorehold_summit() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Summit",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6795,8 +9338,19 @@ pub fn lorehold_summit() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6808,6 +9362,7 @@ pub fn spirit_scribe() -> CardDefinition {
     CardDefinition {
         name: "Spirit Scribe",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6817,11 +9372,22 @@ pub fn spirit_scribe() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6832,6 +9398,7 @@ pub fn lorehold_ember_strike() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Strike",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6851,8 +9418,19 @@ pub fn lorehold_ember_strike() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6865,6 +9443,7 @@ pub fn lorehold_battlepriest() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlepriest",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6874,8 +9453,19 @@ pub fn lorehold_battlepriest() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6886,6 +9476,7 @@ pub fn lorehold_bonereader_b57() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonereader II",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6895,11 +9486,22 @@ pub fn lorehold_bonereader_b57() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Move {
             what: target_filtered(SelectionRequirement::Any),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6910,6 +9512,7 @@ pub fn lorehold_sparkscholar_b57() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6919,11 +9522,22 @@ pub fn lorehold_sparkscholar_b57() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6935,6 +9549,7 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverence II",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -6944,6 +9559,7 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -6955,7 +9571,17 @@ pub fn lorehold_reverence_v2() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6968,6 +9594,7 @@ pub fn lorehold_skybattler() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skybattler",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -6977,8 +9604,19 @@ pub fn lorehold_skybattler() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6990,6 +9628,7 @@ pub fn lorehold_bonechanter() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonechanter",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -6999,12 +9638,23 @@ pub fn lorehold_bonechanter() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::GrantKeyword {
             what: target_filtered(SelectionRequirement::Creature),
             keyword: Keyword::Menace,
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7016,6 +9666,7 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkdancer",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7025,6 +9676,7 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -7039,7 +9691,17 @@ pub fn lorehold_sparkdancer() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7051,6 +9713,7 @@ pub fn lorehold_reliquarian() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reliquarian",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7060,6 +9723,7 @@ pub fn lorehold_reliquarian() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
@@ -7068,7 +9732,17 @@ pub fn lorehold_reliquarian() -> CardDefinition {
             }),
             magecraft_gain_life(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7081,6 +9755,7 @@ pub fn lorehold_skyignite() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skyignite",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7090,8 +9765,19 @@ pub fn lorehold_skyignite() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying, Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7102,6 +9788,7 @@ pub fn lorehold_pyrelearner() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrelearner",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7111,8 +9798,19 @@ pub fn lorehold_pyrelearner() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7124,6 +9822,7 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbinder II",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7133,6 +9832,7 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -7144,7 +9844,17 @@ pub fn lorehold_spiritbinder_b59() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7156,6 +9866,7 @@ pub fn lorehold_emberscribe_b59() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberscribe (b59)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7165,8 +9876,19 @@ pub fn lorehold_emberscribe_b59() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7178,6 +9900,7 @@ pub fn lorehold_chronicler_b60() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Chronicler III",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7187,8 +9910,19 @@ pub fn lorehold_chronicler_b60() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7199,6 +9933,7 @@ pub fn lorehold_sparkmage_b60() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmage II",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7208,8 +9943,19 @@ pub fn lorehold_sparkmage_b60() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7221,6 +9967,7 @@ pub fn lorehold_battle_sage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Sage",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7230,13 +9977,24 @@ pub fn lorehold_battle_sage() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             1, 1,
         )],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7248,6 +10006,7 @@ pub fn lorehold_relicseer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relicseer",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7257,6 +10016,7 @@ pub fn lorehold_relicseer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::take(
                 Selector::CardsInZone {
@@ -7268,7 +10028,17 @@ pub fn lorehold_relicseer() -> CardDefinition {
             ),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7282,6 +10052,7 @@ pub fn lorehold_emberspeaker() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberspeaker",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7291,8 +10062,19 @@ pub fn lorehold_emberspeaker() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7304,6 +10086,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Keeper",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7313,6 +10096,7 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -7328,7 +10112,17 @@ pub fn lorehold_battle_keeper() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7340,6 +10134,7 @@ pub fn spirit_bannerer() -> CardDefinition {
     CardDefinition {
         name: "Spirit Bannerer",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7349,12 +10144,23 @@ pub fn spirit_bannerer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_pump_each_creature_type(
             CreatureType::Spirit,
             1,
             0,
         )],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7364,6 +10170,7 @@ pub fn lorehold_scholar_b61() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Scholar II",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7373,8 +10180,19 @@ pub fn lorehold_scholar_b61() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7385,6 +10203,7 @@ pub fn lorehold_warpoet() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warpoet",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7394,8 +10213,19 @@ pub fn lorehold_warpoet() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7409,6 +10239,7 @@ pub fn lorehold_brimstoner() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Brimstoner",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7418,8 +10249,19 @@ pub fn lorehold_brimstoner() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7432,6 +10274,7 @@ pub fn spirit_reliquarian() -> CardDefinition {
     CardDefinition {
         name: "Spirit Reliquarian",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7441,6 +10284,7 @@ pub fn spirit_reliquarian() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -7455,7 +10299,16 @@ pub fn spirit_reliquarian() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7468,6 +10321,7 @@ pub fn spirit_sparkblade() -> CardDefinition {
     CardDefinition {
         name: "Spirit Sparkblade",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -7477,8 +10331,19 @@ pub fn spirit_sparkblade() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7488,6 +10353,7 @@ pub fn lorehold_spiritchron_b63() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritchron II",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7497,8 +10363,19 @@ pub fn lorehold_spiritchron_b63() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7509,6 +10386,7 @@ pub fn lorehold_embertongue() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embertongue",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7528,8 +10406,19 @@ pub fn lorehold_embertongue() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7539,6 +10428,7 @@ pub fn lorehold_sparkstoneflinger() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkstoneflinger",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7548,8 +10438,19 @@ pub fn lorehold_sparkstoneflinger() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7561,6 +10462,7 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorialcaller",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7570,6 +10472,7 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::CreateToken {
                 who: PlayerRef::You,
@@ -7578,7 +10481,17 @@ pub fn lorehold_memorialcaller() -> CardDefinition {
             }),
             magecraft_gain_life(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7590,6 +10503,7 @@ pub fn lorehold_sparkscholar_b63() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar III",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7599,8 +10513,19 @@ pub fn lorehold_sparkscholar_b63() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_creature(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7612,6 +10537,7 @@ pub fn lorehold_sparkscholar_b63_v2() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar IV",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7621,8 +10547,19 @@ pub fn lorehold_sparkscholar_b63_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_creature(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7637,6 +10574,7 @@ pub fn lorehold_coinflinger() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Coinflinger",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7646,6 +10584,7 @@ pub fn lorehold_coinflinger() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::FlipCoin {
             count: Value::Const(1),
             on_heads: Box::new(Effect::DealDamage {
@@ -7662,7 +10601,17 @@ pub fn lorehold_coinflinger() -> CardDefinition {
                 random: false,
             }),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7676,6 +10625,7 @@ pub fn lorehold_ember_speaker_b64() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Speaker (b64)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7685,8 +10635,19 @@ pub fn lorehold_ember_speaker_b64() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7696,6 +10657,7 @@ pub fn spirit_spellblade() -> CardDefinition {
     CardDefinition {
         name: "Spirit Spellblade",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7705,8 +10667,19 @@ pub fn spirit_spellblade() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7716,6 +10689,7 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkchorus",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7736,8 +10710,19 @@ pub fn lorehold_sparkchorus() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7747,6 +10732,7 @@ pub fn lorehold_sigilbearer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sigilbearer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7756,8 +10742,19 @@ pub fn lorehold_sigilbearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7769,6 +10766,7 @@ pub fn spirit_wardancer() -> CardDefinition {
     CardDefinition {
         name: "Spirit Wardancer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7778,8 +10776,19 @@ pub fn spirit_wardancer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7790,6 +10799,7 @@ pub fn lorehold_pyromancer_b66() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b66)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7799,8 +10809,19 @@ pub fn lorehold_pyromancer_b66() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7811,6 +10832,7 @@ pub fn lorehold_spiritmint_b66() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritmint (b66)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7820,12 +10842,23 @@ pub fn lorehold_spiritmint_b66() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: lorehold_spirit_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7837,6 +10870,7 @@ pub fn lorehold_battlegrave() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlegrave",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -7846,6 +10880,7 @@ pub fn lorehold_battlegrave() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -7857,7 +10892,17 @@ pub fn lorehold_battlegrave() -> CardDefinition {
                 tapped: false,
             },
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7867,6 +10912,7 @@ pub fn lorehold_skybearer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skybearer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7876,8 +10922,19 @@ pub fn lorehold_skybearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7887,6 +10944,7 @@ pub fn lorehold_spellbreaker() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spellbreaker",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7896,8 +10954,19 @@ pub fn lorehold_spellbreaker() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7910,6 +10979,7 @@ pub fn lorehold_sparkscholar_b67() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar (b67)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -7919,8 +10989,19 @@ pub fn lorehold_sparkscholar_b67() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7930,6 +11011,7 @@ pub fn lorehold_cinderpriest_b67() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderpriest (b67)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7939,8 +11021,19 @@ pub fn lorehold_cinderpriest_b67() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_drain(1), magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7951,6 +11044,7 @@ pub fn lorehold_memorialer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorialer",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -7960,6 +11054,7 @@ pub fn lorehold_memorialer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -7969,7 +11064,17 @@ pub fn lorehold_memorialer() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7979,6 +11084,7 @@ pub fn lorehold_spiritflare() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritflare",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7998,8 +11104,19 @@ pub fn lorehold_spiritflare() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8009,6 +11126,7 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Crier",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -8018,6 +11136,7 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -8026,7 +11145,17 @@ pub fn lorehold_spirit_crier() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8037,6 +11166,7 @@ pub fn lorehold_bellringer() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bellringer",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8046,12 +11176,23 @@ pub fn lorehold_bellringer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: lorehold_spirit_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8064,6 +11205,7 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkshrine",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8084,8 +11226,19 @@ pub fn lorehold_sparkshrine() -> CardDefinition {
                 count: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8095,6 +11248,7 @@ pub fn lorehold_embertenured() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embertenured",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8104,8 +11258,19 @@ pub fn lorehold_embertenured() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8117,6 +11282,7 @@ pub fn spirit_glyphbinder() -> CardDefinition {
     CardDefinition {
         name: "Spirit Glyphbinder",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8126,12 +11292,23 @@ pub fn spirit_glyphbinder() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8142,6 +11319,7 @@ pub fn lorehold_pyrebinder() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebinder",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -8151,8 +11329,19 @@ pub fn lorehold_pyrebinder() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_creature(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8163,6 +11352,7 @@ pub fn lorehold_heroic_sage() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Heroic Sage",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -8172,8 +11362,19 @@ pub fn lorehold_heroic_sage() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8186,6 +11387,7 @@ pub fn lorehold_bloodrazer_b125() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bloodrazer (b125)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -8195,8 +11397,19 @@ pub fn lorehold_bloodrazer_b125() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8207,6 +11420,7 @@ pub fn lorehold_saintkeeper_b125() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Saintkeeper (b125)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8216,8 +11430,19 @@ pub fn lorehold_saintkeeper_b125() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8228,6 +11453,7 @@ pub fn lorehold_vanguardian_b125() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguardian (b125)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -8237,8 +11463,19 @@ pub fn lorehold_vanguardian_b125() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_drain(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8250,6 +11487,7 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Heraldcaller (b125)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8259,6 +11497,7 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -8270,7 +11509,17 @@ pub fn lorehold_heraldcaller_b125() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8283,6 +11532,7 @@ pub fn lorehold_spiritbinder_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbinder (b126)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8292,8 +11542,19 @@ pub fn lorehold_spiritbinder_b126() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![dies_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8303,6 +11564,7 @@ pub fn lorehold_cinderscholar_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderscholar (b126)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8312,8 +11574,19 @@ pub fn lorehold_cinderscholar_b126() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8324,6 +11597,7 @@ pub fn lorehold_halfblood_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Halfblood (b126)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -8333,8 +11607,19 @@ pub fn lorehold_halfblood_b126() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8345,6 +11630,7 @@ pub fn lorehold_skywatcher_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skywatcher (b126)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8354,8 +11640,19 @@ pub fn lorehold_skywatcher_b126() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8366,6 +11663,7 @@ pub fn lorehold_ember_mage_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Mage (b126)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8375,8 +11673,19 @@ pub fn lorehold_ember_mage_b126() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8387,6 +11696,7 @@ pub fn lorehold_sparkscholar_b126() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar (b126)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8396,8 +11706,19 @@ pub fn lorehold_sparkscholar_b126() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![dies_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8410,6 +11731,7 @@ pub fn lorehold_aerialist_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Aerialist (b127)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8419,8 +11741,19 @@ pub fn lorehold_aerialist_b127() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8431,6 +11764,7 @@ pub fn lorehold_ironbound_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironbound (b127)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -8440,8 +11774,19 @@ pub fn lorehold_ironbound_b127() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8453,6 +11798,7 @@ pub fn lorehold_pyrebrand_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebrand (b127)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8462,6 +11808,7 @@ pub fn lorehold_pyrebrand_b127() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
                 .with_filter(cast_is_instant_or_sorcery()),
@@ -8470,7 +11817,17 @@ pub fn lorehold_pyrebrand_b127() -> CardDefinition {
                 to: Selector::Player(PlayerRef::EachOpponent),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8481,6 +11838,7 @@ pub fn lorehold_veteran_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Veteran (b127)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8490,6 +11848,7 @@ pub fn lorehold_veteran_b127() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_gain_life(3),
             TriggeredAbility {
@@ -8503,7 +11862,17 @@ pub fn lorehold_veteran_b127() -> CardDefinition {
                 },
             },
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8514,6 +11883,7 @@ pub fn lorehold_honorbound_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Honorbound (b127)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -8523,8 +11893,19 @@ pub fn lorehold_honorbound_b127() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8535,6 +11916,7 @@ pub fn lorehold_embercurse_b127() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embercurse (b127)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8550,8 +11932,19 @@ pub fn lorehold_embercurse_b127() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8564,6 +11957,7 @@ pub fn lorehold_skybinder_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skybinder (b128)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8573,8 +11967,19 @@ pub fn lorehold_skybinder_b128() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8586,6 +11991,7 @@ pub fn lorehold_bookforger_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bookforger (b128)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8595,8 +12001,19 @@ pub fn lorehold_bookforger_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8607,6 +12024,7 @@ pub fn lorehold_bell_ringer_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bell-Ringer (b128)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8616,8 +12034,19 @@ pub fn lorehold_bell_ringer_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2), etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8628,6 +12057,7 @@ pub fn lorehold_cliffstrike_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cliffstrike (b128)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8643,8 +12073,19 @@ pub fn lorehold_cliffstrike_b128() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8655,6 +12096,7 @@ pub fn lorehold_sparkmender_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmender (b128)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8664,8 +12106,19 @@ pub fn lorehold_sparkmender_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8676,6 +12129,7 @@ pub fn lorehold_battlespirit_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlespirit (b128)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -8685,8 +12139,19 @@ pub fn lorehold_battlespirit_b128() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8697,6 +12162,7 @@ pub fn lorehold_soulreaver_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulreaver (b128)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -8706,8 +12172,19 @@ pub fn lorehold_soulreaver_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8719,6 +12196,7 @@ pub fn lorehold_pyrestone_b128() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrestone (b128)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8737,8 +12215,19 @@ pub fn lorehold_pyrestone_b128() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8754,6 +12243,7 @@ pub fn lorehold_spirit_banner_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Banner (b129)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -8763,6 +12253,7 @@ pub fn lorehold_spirit_banner_b129() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+1.",
@@ -8777,7 +12268,16 @@ pub fn lorehold_spirit_banner_b129() -> CardDefinition {
                 toughness: 1,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8788,6 +12288,7 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneglyph (b129)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8818,9 +12319,20 @@ pub fn lorehold_stoneglyph_b129() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8831,6 +12343,7 @@ pub fn lorehold_pyrespirit_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrespirit (b129)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -8840,8 +12353,19 @@ pub fn lorehold_pyrespirit_b129() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8854,12 +12378,14 @@ pub fn lorehold_lectern_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lectern (b129)",
         cost: cost(&[generic(3)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control have lifelink.",
@@ -8873,7 +12399,16 @@ pub fn lorehold_lectern_b129() -> CardDefinition {
                 keyword: Keyword::Lifelink,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8885,6 +12420,7 @@ pub fn lorehold_memorist_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorist (b129)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -8894,6 +12430,7 @@ pub fn lorehold_memorist_b129() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -8904,7 +12441,17 @@ pub fn lorehold_memorist_b129() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8917,6 +12464,7 @@ pub fn lorehold_sparkscholar_ii_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar II (b129)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -8926,8 +12474,19 @@ pub fn lorehold_sparkscholar_ii_b129() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8938,6 +12497,7 @@ pub fn lorehold_excavation_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Excavation (b129)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8948,8 +12508,19 @@ pub fn lorehold_excavation_b129() -> CardDefinition {
             count: Value::Const(2),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8960,6 +12531,7 @@ pub fn lorehold_pyreverse_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreverse (b129)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8979,8 +12551,19 @@ pub fn lorehold_pyreverse_b129() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8991,6 +12574,7 @@ pub fn lorehold_sparkmender_ii_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmender II (b129)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9000,8 +12584,19 @@ pub fn lorehold_sparkmender_ii_b129() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9013,6 +12608,7 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embertongue (b129)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9022,6 +12618,7 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             amount: Value::Const(1),
             to: target_filtered(
@@ -9029,7 +12626,17 @@ pub fn lorehold_embertongue_b129() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9043,6 +12650,7 @@ pub fn lorehold_spiritcaller_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller (b130)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9052,8 +12660,19 @@ pub fn lorehold_spiritcaller_b130() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9066,6 +12685,7 @@ pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skyguard Banner (b130)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9075,6 +12695,7 @@ pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control have flying.",
@@ -9088,7 +12709,16 @@ pub fn lorehold_skyguard_banner_b130() -> CardDefinition {
                 keyword: Keyword::Flying,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9100,6 +12730,7 @@ pub fn lorehold_pyresage_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresage (b130)",
         cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -9109,8 +12740,19 @@ pub fn lorehold_pyresage_b130() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9123,6 +12765,7 @@ pub fn lorehold_reliquarian_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reliquarian (b130)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9132,6 +12775,7 @@ pub fn lorehold_reliquarian_b130() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -9142,7 +12786,17 @@ pub fn lorehold_reliquarian_b130() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9153,6 +12807,7 @@ pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle Cantrip (b130)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9169,8 +12824,19 @@ pub fn lorehold_battle_cantrip_b130() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9181,6 +12847,7 @@ pub fn lorehold_pyremaster_b130() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremaster (b130)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -9190,8 +12857,19 @@ pub fn lorehold_pyremaster_b130() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9204,6 +12882,7 @@ pub fn lorehold_spirit_warden_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Warden (b131)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9213,8 +12892,19 @@ pub fn lorehold_spirit_warden_b131() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9224,6 +12914,7 @@ pub fn lorehold_pyrosaint_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrosaint (b131)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9233,8 +12924,19 @@ pub fn lorehold_pyrosaint_b131() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9245,6 +12947,7 @@ pub fn lorehold_relic_keeper_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relic-Keeper (b131)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9254,11 +12957,22 @@ pub fn lorehold_relic_keeper_b131() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(SelectionRequirement::Any),
             to: ZoneDest::Exile,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9269,6 +12983,7 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkpriest (b131)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9278,6 +12993,7 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(1),
@@ -9292,7 +13008,17 @@ pub fn lorehold_sparkpriest_b131() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9302,6 +13028,7 @@ pub fn lorehold_battle_chant_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Chant (b131)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9323,8 +13050,19 @@ pub fn lorehold_battle_chant_b131() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9334,6 +13072,7 @@ pub fn lorehold_remembrance_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Remembrance (b131)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9350,8 +13089,19 @@ pub fn lorehold_remembrance_b131() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9361,6 +13111,7 @@ pub fn lorehold_ember_choir_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Choir (b131)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -9370,8 +13121,19 @@ pub fn lorehold_ember_choir_b131() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9382,6 +13144,7 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremourner (b131)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -9391,6 +13154,7 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::Const(1),
             to: Selector::EachPermanent(
@@ -9398,7 +13162,17 @@ pub fn lorehold_pyremourner_b131() -> CardDefinition {
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9411,6 +13185,7 @@ pub fn lorehold_cleric_recruit_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cleric-Recruit (b132)",
         cost: cost(&[w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9420,8 +13195,19 @@ pub fn lorehold_cleric_recruit_b132() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9432,6 +13218,7 @@ pub fn lorehold_pyrescholar_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar (b132)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -9441,8 +13228,19 @@ pub fn lorehold_pyrescholar_b132() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9453,6 +13251,7 @@ pub fn lorehold_spiritforger_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforger (b132)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -9462,8 +13261,19 @@ pub fn lorehold_spiritforger_b132() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9474,6 +13284,7 @@ pub fn lorehold_ember_bandit_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Bandit (b132)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Rogue],
@@ -9483,8 +13294,19 @@ pub fn lorehold_ember_bandit_b132() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9496,6 +13318,7 @@ pub fn lorehold_skyforge_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skyforge (b132)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9506,8 +13329,19 @@ pub fn lorehold_skyforge_b132() -> CardDefinition {
             count: Value::Const(2),
             definition: spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9518,6 +13352,7 @@ pub fn lorehold_champions_echo_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Champion's Echo (b132)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -9527,8 +13362,19 @@ pub fn lorehold_champions_echo_b132() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9540,6 +13386,7 @@ pub fn lorehold_pyresinger_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresinger (b132)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Bard],
@@ -9549,8 +13396,19 @@ pub fn lorehold_pyresinger_b132() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9563,6 +13421,7 @@ pub fn lorehold_spirit_cleric_b133() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Cleric (b133)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9572,8 +13431,19 @@ pub fn lorehold_spirit_cleric_b133() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9585,6 +13455,7 @@ pub fn lorehold_bell_ringer_ii_b133() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bell-Ringer II (b133)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9594,8 +13465,19 @@ pub fn lorehold_bell_ringer_ii_b133() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token_and_gain_life(lorehold_spirit_token(), 2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9606,6 +13488,7 @@ pub fn lorehold_sparkstrider_b133() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkstrider (b133)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -9615,8 +13498,19 @@ pub fn lorehold_sparkstrider_b133() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9629,14 +13523,26 @@ pub fn lorehold_final_lesson_b132() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Final Lesson (b132)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: pump_and_grant_keyword(2, 2, Keyword::Lifelink),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9649,6 +13555,7 @@ pub fn lorehold_skirmisher_b135() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmisher (b135)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9658,8 +13565,19 @@ pub fn lorehold_skirmisher_b135() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9671,6 +13589,7 @@ pub fn lorehold_crackleflame_b135() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Crackleflame (b135)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9690,8 +13609,19 @@ pub fn lorehold_crackleflame_b135() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9701,6 +13631,7 @@ pub fn lorehold_sparkpilgrim_b135() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkpilgrim (b135)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9710,8 +13641,19 @@ pub fn lorehold_sparkpilgrim_b135() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9723,6 +13665,7 @@ pub fn lorehold_pyremartyr_b135() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremartyr (b135)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -9732,8 +13675,19 @@ pub fn lorehold_pyremartyr_b135() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![dies_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9745,6 +13699,7 @@ pub fn lorehold_ember_chant_b136() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Chant (b136)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9755,8 +13710,19 @@ pub fn lorehold_ember_chant_b136() -> CardDefinition {
             count: Value::Const(2),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9767,6 +13733,7 @@ pub fn lorehold_skirmisher_captain_b136() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmisher Captain (b136)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9776,8 +13743,19 @@ pub fn lorehold_skirmisher_captain_b136() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9788,6 +13766,7 @@ pub fn lorehold_sage_choir_b136() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sage-Choir (b136)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -9797,8 +13776,19 @@ pub fn lorehold_sage_choir_b136() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9808,6 +13798,7 @@ pub fn lorehold_ember_sprite_b136() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Sprite (b136)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Elemental],
@@ -9817,8 +13808,19 @@ pub fn lorehold_ember_sprite_b136() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9833,6 +13835,7 @@ pub fn lorehold_spirit_captain_b137() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Captain (b137)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9842,8 +13845,19 @@ pub fn lorehold_spirit_captain_b137() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9855,6 +13869,7 @@ pub fn lorehold_pyrocaller_b138() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrocaller (b138)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
@@ -9864,8 +13879,19 @@ pub fn lorehold_pyrocaller_b138() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9875,6 +13901,7 @@ pub fn lorehold_spirit_marshal_b138() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Marshal (b138)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9884,8 +13911,19 @@ pub fn lorehold_spirit_marshal_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9895,6 +13933,7 @@ pub fn lorehold_sparkdancer_b138() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkdancer (b138)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -9904,8 +13943,19 @@ pub fn lorehold_sparkdancer_b138() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9916,6 +13966,7 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritsong (b138)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9932,8 +13983,19 @@ pub fn lorehold_spiritsong_b138() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9945,6 +14007,7 @@ pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer-Adept (b139)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
@@ -9954,6 +14017,7 @@ pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -9961,7 +14025,17 @@ pub fn lorehold_pyromancer_adept_b139() -> CardDefinition {
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9971,6 +14045,7 @@ pub fn lorehold_spiritwarden_b139() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritwarden (b139)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -9980,8 +14055,19 @@ pub fn lorehold_spiritwarden_b139() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9992,6 +14078,7 @@ pub fn lorehold_battle_witness_b139() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Witness (b139)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10001,8 +14088,19 @@ pub fn lorehold_battle_witness_b139() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10012,6 +14110,7 @@ pub fn lorehold_ember_cleric_b138() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Cleric (b138)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10021,8 +14120,19 @@ pub fn lorehold_ember_cleric_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10035,6 +14145,7 @@ pub fn lorehold_stormcleric_b141() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stormcleric (b141)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10044,8 +14155,19 @@ pub fn lorehold_stormcleric_b141() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10056,6 +14178,7 @@ pub fn lorehold_pyrosage_b141() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrosage (b141)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
@@ -10065,8 +14188,19 @@ pub fn lorehold_pyrosage_b141() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10076,6 +14210,7 @@ pub fn lorehold_spiritforge_b141() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforge (b141)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10092,8 +14227,19 @@ pub fn lorehold_spiritforge_b141() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10104,6 +14250,7 @@ pub fn lorehold_ember_soldier_b141() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Soldier (b141)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -10113,6 +14260,7 @@ pub fn lorehold_ember_soldier_b141() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -10123,7 +14271,17 @@ pub fn lorehold_ember_soldier_b141() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10136,6 +14294,7 @@ pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar III (b141)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10145,8 +14304,19 @@ pub fn lorehold_sparkscholar_iii_b141() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_mint_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10159,6 +14329,7 @@ pub fn lorehold_pyroscribe_b142() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyroscribe (b142)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10168,6 +14339,7 @@ pub fn lorehold_pyroscribe_b142() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -10175,7 +14347,17 @@ pub fn lorehold_pyroscribe_b142() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10186,6 +14368,7 @@ pub fn lorehold_spiritbond_b142() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbond (b142)",
         cost: cost(&[w(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10210,8 +14393,19 @@ pub fn lorehold_spiritbond_b142() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10222,6 +14416,7 @@ pub fn lorehold_stoneveil_b142() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneveil (b142)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -10231,6 +14426,7 @@ pub fn lorehold_stoneveil_b142() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -10243,7 +14439,17 @@ pub fn lorehold_stoneveil_b142() -> CardDefinition {
                 tapped: false,
             },
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10253,6 +14459,7 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritmender (b142)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10262,6 +14469,7 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -10273,7 +14481,17 @@ pub fn lorehold_spiritmender_b142() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10283,6 +14501,7 @@ pub fn lorehold_spellfire_b142() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spellfire (b142)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10296,8 +14515,19 @@ pub fn lorehold_spellfire_b142() -> CardDefinition {
             ),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10309,6 +14539,7 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Acolyte (b143)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -10318,6 +14549,7 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife {
                 who: Selector::You,
@@ -10332,7 +14564,17 @@ pub fn lorehold_ember_acolyte_b143() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10342,6 +14584,7 @@ pub fn lorehold_pyromancer_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b143)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10351,11 +14594,22 @@ pub fn lorehold_pyromancer_b143() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Player),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10365,6 +14619,7 @@ pub fn lorehold_stonemason_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stonemason (b143)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10374,6 +14629,7 @@ pub fn lorehold_stonemason_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -10382,7 +14638,17 @@ pub fn lorehold_stonemason_b143() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10392,6 +14658,7 @@ pub fn lorehold_inferno_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Inferno (b143)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10403,8 +14670,19 @@ pub fn lorehold_inferno_b143() -> CardDefinition {
             ),
             amount: Value::Const(5),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10415,6 +14693,7 @@ pub fn lorehold_spirit_bond_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Bond (b143)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10424,6 +14703,7 @@ pub fn lorehold_spirit_bond_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
                 .with_filter(crate::card::Predicate::EntityMatches {
@@ -10436,7 +14716,17 @@ pub fn lorehold_spirit_bond_b143() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10446,6 +14736,7 @@ pub fn lorehold_flamekeeper_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flamekeeper (b143)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -10455,8 +14746,19 @@ pub fn lorehold_flamekeeper_b143() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10466,6 +14768,7 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Chant (b143)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10488,8 +14791,19 @@ pub fn lorehold_battle_chant_b143() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10502,6 +14816,7 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ignis (b144)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10515,8 +14830,19 @@ pub fn lorehold_ignis_b144() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10527,6 +14853,7 @@ pub fn lorehold_conjurer_b144() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Conjurer (b144)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10536,8 +14863,19 @@ pub fn lorehold_conjurer_b144() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10547,6 +14885,7 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyroflame (b144)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10566,8 +14905,19 @@ pub fn lorehold_pyroflame_b144() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10580,6 +14930,7 @@ pub fn lorehold_spiritcaller_b145() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller (b145)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10589,6 +14940,7 @@ pub fn lorehold_spiritcaller_b145() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -10600,7 +14952,17 @@ pub fn lorehold_spiritcaller_b145() -> CardDefinition {
                 tapped: false,
             },
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10611,6 +14973,7 @@ pub fn lorehold_inferno_acolyte_b145() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Inferno-Acolyte (b145)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -10620,8 +14983,19 @@ pub fn lorehold_inferno_acolyte_b145() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10631,6 +15005,7 @@ pub fn lorehold_knight_errant_b145() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Knight-Errant (b145)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -10640,8 +15015,19 @@ pub fn lorehold_knight_errant_b145() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10650,6 +15036,7 @@ pub fn lorehold_embermage_b144() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embermage (b144)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10659,8 +15046,19 @@ pub fn lorehold_embermage_b144() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Cycling(cost(&[generic(2)]))],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10670,6 +15068,7 @@ pub fn lorehold_cinderscholar_b143() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderscholar (b143)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10679,11 +15078,22 @@ pub fn lorehold_cinderscholar_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_gain_life(2),
             magecraft_ping_any(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10696,6 +15106,7 @@ pub fn lorehold_echocaller_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echocaller (b146)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10705,6 +15116,7 @@ pub fn lorehold_echocaller_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -10714,7 +15126,17 @@ pub fn lorehold_echocaller_b146() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10725,6 +15147,7 @@ pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Glyph (b146)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10735,8 +15158,19 @@ pub fn lorehold_spirit_glyph_b146() -> CardDefinition {
             count: Value::Const(1),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10746,6 +15180,7 @@ pub fn lorehold_ember_adept_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Adept (b146)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10755,8 +15190,19 @@ pub fn lorehold_ember_adept_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10767,6 +15213,7 @@ pub fn lorehold_pyresinger_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresinger (b146)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10776,8 +15223,19 @@ pub fn lorehold_pyresinger_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10788,6 +15246,7 @@ pub fn lorehold_spirit_burst_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Burst (b146)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10801,8 +15260,19 @@ pub fn lorehold_spirit_burst_b146() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10813,6 +15283,7 @@ pub fn lorehold_soulrender_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulrender (b146)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -10822,8 +15293,19 @@ pub fn lorehold_soulrender_b146() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10834,6 +15316,7 @@ pub fn lorehold_battle_sage_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battle-Sage (b146)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -10843,6 +15326,7 @@ pub fn lorehold_battle_sage_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::AddCounter {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -10852,7 +15336,17 @@ pub fn lorehold_battle_sage_b146() -> CardDefinition {
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10863,6 +15357,7 @@ pub fn lorehold_pyrebound_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebound (b146)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -10872,8 +15367,19 @@ pub fn lorehold_pyrebound_b146() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10883,6 +15389,7 @@ pub fn lorehold_spirit_decree_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Decree (b146)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10902,8 +15409,19 @@ pub fn lorehold_spirit_decree_b146() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10914,6 +15432,7 @@ pub fn lorehold_glyph_strike_b146() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Glyph-Strike (b146)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10923,8 +15442,19 @@ pub fn lorehold_glyph_strike_b146() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10937,6 +15467,7 @@ pub fn lorehold_glyphcaster_b147() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Glyphcaster (b147)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -10946,8 +15477,19 @@ pub fn lorehold_glyphcaster_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10957,6 +15499,7 @@ pub fn lorehold_ironwarden_b147() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironwarden (b147)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -10966,8 +15509,19 @@ pub fn lorehold_ironwarden_b147() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10977,6 +15531,7 @@ pub fn lorehold_pyrehowler_b147() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrehowler (b147)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10990,8 +15545,19 @@ pub fn lorehold_pyrehowler_b147() -> CardDefinition {
             ),
             amount: Value::Const(5),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11001,6 +15567,7 @@ pub fn lorehold_cinderscry_b147() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderscry (b147)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11020,8 +15587,19 @@ pub fn lorehold_cinderscry_b147() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11032,6 +15610,7 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
     CardDefinition {
         name: "Spirit Banner-Bearer (b147)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11041,6 +15620,7 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -11055,7 +15635,16 @@ pub fn spirit_banner_bearer_b147() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11067,6 +15656,7 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lightcaller (b148)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11076,6 +15666,7 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -11084,7 +15675,17 @@ pub fn lorehold_lightcaller_b148() -> CardDefinition {
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11094,6 +15695,7 @@ pub fn lorehold_ember_wraith_b148() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Wraith (b148)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -11103,11 +15705,22 @@ pub fn lorehold_ember_wraith_b148() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![{
             use crate::effect::shortcut::magecraft_treasure;
             magecraft_treasure()
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11117,6 +15730,7 @@ pub fn lorehold_cinderlist_b148() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderlist (b148)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11130,8 +15744,19 @@ pub fn lorehold_cinderlist_b148() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11141,6 +15766,7 @@ pub fn lorehold_skystalker_b148() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skystalker (b148)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11150,8 +15776,19 @@ pub fn lorehold_skystalker_b148() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11163,6 +15800,7 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Smith (b148)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -11172,6 +15810,7 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(create_token_with_keyword(
             PlayerRef::You,
             1,
@@ -11179,7 +15818,17 @@ pub fn lorehold_spirit_smith_b148() -> CardDefinition {
             Keyword::Haste,
             Duration::EndOfTurn,
         ))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11192,6 +15841,7 @@ pub fn lorehold_echobreaker_b149() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echobreaker (b149)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11201,8 +15851,19 @@ pub fn lorehold_echobreaker_b149() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Persist],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11212,6 +15873,7 @@ pub fn lorehold_eternal_phoenix_b149() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Eternal-Phoenix (b149)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix, CreatureType::Spirit],
@@ -11221,8 +15883,19 @@ pub fn lorehold_eternal_phoenix_b149() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste, Keyword::Undying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11232,6 +15905,7 @@ pub fn lorehold_pyre_stalker_b149() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyre-Stalker (b149)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -11241,8 +15915,19 @@ pub fn lorehold_pyre_stalker_b149() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11254,6 +15939,7 @@ pub fn lorehold_embermage_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embermage (b150)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -11263,11 +15949,22 @@ pub fn lorehold_embermage_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11277,6 +15974,7 @@ pub fn lorehold_spiritforge_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforge (b150)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -11286,8 +15984,19 @@ pub fn lorehold_spiritforge_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11297,6 +16006,7 @@ pub fn lorehold_ancestor_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ancestor (b150)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11306,8 +16016,19 @@ pub fn lorehold_ancestor_b150() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11317,6 +16038,7 @@ pub fn lorehold_sparkmage_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmage (b150)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11326,8 +16048,19 @@ pub fn lorehold_sparkmage_b150() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11339,6 +16072,7 @@ pub fn lorehold_bonfire_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonfire (b150)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11354,8 +16088,19 @@ pub fn lorehold_bonfire_b150() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11365,6 +16110,7 @@ pub fn lorehold_spirit_tender_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Tender (b150)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11374,8 +16120,19 @@ pub fn lorehold_spirit_tender_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11386,6 +16143,7 @@ pub fn lorehold_ember_strike_b150() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember Strike (b150)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11397,8 +16155,19 @@ pub fn lorehold_ember_strike_b150() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11410,6 +16179,7 @@ pub fn lorehold_skirmisher_b151() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmisher (b151)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11419,8 +16189,19 @@ pub fn lorehold_skirmisher_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11431,6 +16212,7 @@ pub fn lorehold_pyrelore_b151() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrelore (b151)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11449,8 +16231,19 @@ pub fn lorehold_pyrelore_b151() -> CardDefinition {
                 amount: Value::Const(4),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11460,6 +16253,7 @@ pub fn lorehold_spirit_guide_b151() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Guide (b151)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -11469,8 +16263,19 @@ pub fn lorehold_spirit_guide_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_mint_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11481,6 +16286,7 @@ pub fn lorehold_battlemage_b151() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlemage (b151)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -11490,6 +16296,7 @@ pub fn lorehold_battlemage_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::GrantKeyword {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -11497,7 +16304,17 @@ pub fn lorehold_battlemage_b151() -> CardDefinition {
             keyword: Keyword::Vigilance,
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11507,6 +16324,7 @@ pub fn lorehold_sun_spirit_b151() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sun-Spirit (b151)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11516,8 +16334,19 @@ pub fn lorehold_sun_spirit_b151() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11529,6 +16358,7 @@ pub fn lorehold_spirit_stalker_b152() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Stalker (b152)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11538,8 +16368,19 @@ pub fn lorehold_spirit_stalker_b152() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste, Keyword::Menace],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11549,6 +16390,7 @@ pub fn lorehold_ember_cleric_b152() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Cleric (b152)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11558,11 +16400,22 @@ pub fn lorehold_ember_cleric_b152() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11572,6 +16425,7 @@ pub fn lorehold_pyre_ancient_b152() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyre-Ancient (b152)",
         cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Giant],
@@ -11581,8 +16435,19 @@ pub fn lorehold_pyre_ancient_b152() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11592,6 +16457,7 @@ pub fn lorehold_pyromancer_b152() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b152)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11601,8 +16467,19 @@ pub fn lorehold_pyromancer_b152() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11617,6 +16494,7 @@ pub fn lorehold_spirit_surger_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Surger (b154)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11626,8 +16504,19 @@ pub fn lorehold_spirit_surger_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_mint_lorehold_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11638,6 +16527,7 @@ pub fn lorehold_reflux_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reflux (b154)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11651,8 +16541,19 @@ pub fn lorehold_reflux_b154() -> CardDefinition {
             )),
             gain_life(2),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11663,6 +16564,7 @@ pub fn lorehold_battlespirit_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlespirit (b154)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -11672,8 +16574,19 @@ pub fn lorehold_battlespirit_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11684,6 +16597,7 @@ pub fn lorehold_cinderspeaker_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderspeaker (b154)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -11693,8 +16607,19 @@ pub fn lorehold_cinderspeaker_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11706,6 +16631,7 @@ pub fn lorehold_smiterite_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Smiterite (b154)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Shaman],
@@ -11715,8 +16641,19 @@ pub fn lorehold_smiterite_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11728,6 +16665,7 @@ pub fn lorehold_memoryflame_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memoryflame (b154)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11749,8 +16687,19 @@ pub fn lorehold_memoryflame_b154() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11762,6 +16711,7 @@ pub fn lorehold_spirit_banner_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Banner (b154)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -11771,6 +16721,7 @@ pub fn lorehold_spirit_banner_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -11785,7 +16736,16 @@ pub fn lorehold_spirit_banner_b154() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11797,6 +16757,7 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stratagem (b154)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11810,8 +16771,19 @@ pub fn lorehold_stratagem_b154() -> CardDefinition {
             },
             deal(3, Selector::Player(PlayerRef::EachOpponent)),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11822,6 +16794,7 @@ pub fn lorehold_searingscholar_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Searingscholar (b154)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -11831,8 +16804,19 @@ pub fn lorehold_searingscholar_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11842,6 +16826,7 @@ pub fn lorehold_cinderward_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderward (b154)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11851,8 +16836,19 @@ pub fn lorehold_cinderward_b154() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(3)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11863,6 +16859,7 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Strikeritual (b154)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11880,8 +16877,19 @@ pub fn lorehold_strikeritual_b154() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11893,6 +16901,7 @@ pub fn lorehold_chronicler_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Chronicler (b155)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -11902,8 +16911,19 @@ pub fn lorehold_chronicler_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11915,6 +16935,7 @@ pub fn spirit_crusader_ii_b155() -> CardDefinition {
     CardDefinition {
         name: "Spirit Crusader II (b155)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11924,12 +16945,23 @@ pub fn spirit_crusader_ii_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(deal(2, target_filtered(
             SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
                 .or(SelectionRequirement::Planeswalker),
         )))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11939,6 +16971,7 @@ pub fn lorehold_reverent_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverent (b155)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -11948,8 +16981,19 @@ pub fn lorehold_reverent_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11961,6 +17005,7 @@ pub fn lorehold_ironscribe_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironscribe (b155)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Cleric],
@@ -11970,8 +17015,19 @@ pub fn lorehold_ironscribe_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11981,6 +17037,7 @@ pub fn pillardrop_veteran_b155() -> CardDefinition {
     CardDefinition {
         name: "Pillardrop Veteran (b155)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -11990,8 +17047,19 @@ pub fn pillardrop_veteran_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12003,6 +17071,7 @@ pub fn lorehold_flamebrand_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flamebrand (b155)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12012,8 +17081,19 @@ pub fn lorehold_flamebrand_b155() -> CardDefinition {
             deal(3, target_filtered(SelectionRequirement::Creature)),
             gain_life(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12025,6 +17105,7 @@ pub fn lorehold_spirit_captain_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Captain (b155)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -12034,11 +17115,22 @@ pub fn lorehold_spirit_captain_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12049,6 +17141,7 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b155)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12058,6 +17151,7 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: Selector::Player(PlayerRef::EachOpponent),
@@ -12068,7 +17162,17 @@ pub fn lorehold_pyromancer_b155() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12086,12 +17190,14 @@ pub fn lorehold_banner_b156() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Banner (b156)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::PumpPT {
@@ -12101,7 +17207,17 @@ pub fn lorehold_banner_b156() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12112,6 +17228,7 @@ pub fn lorehold_marshal_b156() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Marshal (b156)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12121,6 +17238,7 @@ pub fn lorehold_marshal_b156() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::GainLife {
@@ -12128,7 +17246,17 @@ pub fn lorehold_marshal_b156() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12139,6 +17267,7 @@ pub fn lorehold_banner_bearer_b156() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Banner-Bearer (b156)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -12148,6 +17277,7 @@ pub fn lorehold_banner_bearer_b156() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::GrantKeyword {
@@ -12156,7 +17286,17 @@ pub fn lorehold_banner_bearer_b156() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12169,6 +17309,7 @@ pub fn lorehold_glyphbearer_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Glyphbearer (b155)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -12178,8 +17319,19 @@ pub fn lorehold_glyphbearer_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12189,6 +17341,7 @@ pub fn lorehold_watchspirit_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Watchspirit (b155)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12198,8 +17351,19 @@ pub fn lorehold_watchspirit_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12211,6 +17375,7 @@ pub fn lorehold_spiritforge_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforge (b155)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12220,8 +17385,19 @@ pub fn lorehold_spiritforge_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_mint_lorehold_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12232,6 +17408,7 @@ pub fn lorehold_pyrescholar_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar (b155)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12241,12 +17418,23 @@ pub fn lorehold_pyrescholar_b155() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(deal(1, target_filtered(
             SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
                 .or(SelectionRequirement::Planeswalker),
         )))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12256,6 +17444,7 @@ pub fn lorehold_bonewright_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonewright (b155)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12265,8 +17454,19 @@ pub fn lorehold_bonewright_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12276,6 +17476,7 @@ pub fn lorehold_skystrider_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skystrider (b155)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -12285,8 +17486,19 @@ pub fn lorehold_skystrider_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12297,6 +17509,7 @@ pub fn lorehold_battlechant_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlechant (b155)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12310,8 +17523,19 @@ pub fn lorehold_battlechant_b155() -> CardDefinition {
             )),
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12322,6 +17546,7 @@ pub fn lorehold_ancestralist_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ancestralist (b155)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12331,6 +17556,7 @@ pub fn lorehold_ancestralist_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -12339,7 +17565,17 @@ pub fn lorehold_ancestralist_b155() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12349,6 +17585,7 @@ pub fn lorehold_echocaller_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echocaller (b155)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12358,8 +17595,19 @@ pub fn lorehold_echocaller_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12370,14 +17618,26 @@ pub fn lorehold_pyrebolt_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebolt (b155)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: deal(2, target_filtered(SelectionRequirement::Creature)),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12387,6 +17647,7 @@ pub fn lorehold_vanguard_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard (b155)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -12396,8 +17657,19 @@ pub fn lorehold_vanguard_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12407,6 +17679,7 @@ pub fn lorehold_spirit_caller_b155() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Caller (b155)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12416,12 +17689,23 @@ pub fn lorehold_spirit_caller_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(2),
             definition: lorehold_spirit_token(),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12433,6 +17717,7 @@ pub fn lorehold_wallscribe_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wallscribe (b158)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12442,8 +17727,19 @@ pub fn lorehold_wallscribe_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12453,6 +17749,7 @@ pub fn lorehold_embermage_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embermage (b158)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12462,8 +17759,19 @@ pub fn lorehold_embermage_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12473,6 +17781,7 @@ pub fn lorehold_spirit_drummer_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Drummer (b158)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -12482,8 +17791,19 @@ pub fn lorehold_spirit_drummer_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12493,6 +17813,7 @@ pub fn lorehold_stoneflame_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneflame (b158)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12502,8 +17823,19 @@ pub fn lorehold_stoneflame_b158() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12513,6 +17845,7 @@ pub fn lorehold_reaver_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reaver (b158)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -12522,8 +17855,19 @@ pub fn lorehold_reaver_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12533,6 +17877,7 @@ pub fn spirit_vanguard_ii_b158() -> CardDefinition {
     CardDefinition {
         name: "Spirit Vanguard II (b158)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12542,8 +17887,19 @@ pub fn spirit_vanguard_ii_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12553,6 +17909,7 @@ pub fn lorehold_spectermage_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectermage (b158)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12562,8 +17919,19 @@ pub fn lorehold_spectermage_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12573,6 +17941,7 @@ pub fn lorehold_spirit_caster_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Caster (b158)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12582,8 +17951,19 @@ pub fn lorehold_spirit_caster_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(lorehold_spirit_token(), 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12593,6 +17973,7 @@ pub fn lorehold_crusader_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Crusader (b158)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -12602,8 +17983,19 @@ pub fn lorehold_crusader_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12613,6 +18005,7 @@ pub fn lorehold_spellsong_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spellsong (b158)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12629,8 +18022,19 @@ pub fn lorehold_spellsong_b158() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12641,6 +18045,7 @@ pub fn lorehold_spiritforger_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforger (b158)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12650,6 +18055,7 @@ pub fn lorehold_spiritforger_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -12664,7 +18070,16 @@ pub fn lorehold_spiritforger_b158() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12674,6 +18089,7 @@ pub fn lorehold_stonewright_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stonewright (b158)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12684,8 +18100,19 @@ pub fn lorehold_stonewright_b158() -> CardDefinition {
             count: Value::Const(2),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12695,6 +18122,7 @@ pub fn lorehold_pyremage_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremage (b158)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12704,8 +18132,19 @@ pub fn lorehold_pyremage_b158() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12715,6 +18154,7 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectral-Lance (b158)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12735,8 +18175,19 @@ pub fn lorehold_spectral_lance_b158() -> CardDefinition {
                 definition: lorehold_spirit_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12746,6 +18197,7 @@ pub fn lorehold_recallmage_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recallmage (b158)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12755,6 +18207,7 @@ pub fn lorehold_recallmage_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -12763,7 +18216,17 @@ pub fn lorehold_recallmage_b158() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12774,6 +18237,7 @@ pub fn lorehold_spectral_watcher_b158() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectral-Watcher (b158)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12783,8 +18247,19 @@ pub fn lorehold_spectral_watcher_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12797,6 +18272,7 @@ pub fn lorehold_pyrescholar_b159() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar (b159)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12806,8 +18282,19 @@ pub fn lorehold_pyrescholar_b159() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12817,6 +18304,7 @@ pub fn lorehold_sentinel_b159() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sentinel (b159)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -12826,8 +18314,19 @@ pub fn lorehold_sentinel_b159() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12837,6 +18336,7 @@ pub fn lorehold_ember_mage_b159() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember-Mage (b159)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -12846,8 +18346,19 @@ pub fn lorehold_ember_mage_b159() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12857,6 +18368,7 @@ pub fn lorehold_spectral_cavalry_b159() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectral Cavalry (b159)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -12866,8 +18378,19 @@ pub fn lorehold_spectral_cavalry_b159() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12891,6 +18414,7 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlescroll (b159)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12912,8 +18436,19 @@ pub fn lorehold_battlescroll_b159() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12925,6 +18460,7 @@ pub fn lorehold_spectralguard_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralguard (b160)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12934,8 +18470,19 @@ pub fn lorehold_spectralguard_b160() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12946,6 +18493,7 @@ pub fn lorehold_sparkpriest_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkpriest (b160)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -12955,8 +18503,19 @@ pub fn lorehold_sparkpriest_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12966,6 +18525,7 @@ pub fn lorehold_bonewright_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonewright (b160)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -12975,8 +18535,19 @@ pub fn lorehold_bonewright_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12988,6 +18559,7 @@ pub fn lorehold_recallsmith_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recallsmith (b160)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -12997,6 +18569,7 @@ pub fn lorehold_recallsmith_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -13006,7 +18579,17 @@ pub fn lorehold_recallsmith_b160() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13016,6 +18599,7 @@ pub fn lorehold_ghostflame_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostflame (b160)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13025,8 +18609,19 @@ pub fn lorehold_ghostflame_b160() -> CardDefinition {
             amount: Value::Const(4),
             to: target_filtered(SelectionRequirement::Creature),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13037,6 +18632,7 @@ pub fn lorehold_pyresage_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresage (b160)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13046,8 +18642,19 @@ pub fn lorehold_pyresage_b160() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_creature(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13057,6 +18664,7 @@ pub fn lorehold_recoverer_b160() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recoverer (b160)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13066,8 +18674,19 @@ pub fn lorehold_recoverer_b160() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13079,6 +18698,7 @@ pub fn lorehold_pyrescholar_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar (b161)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13088,8 +18708,19 @@ pub fn lorehold_pyrescholar_b161() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13114,6 +18745,7 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cavalcade (b161)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13124,8 +18756,19 @@ pub fn lorehold_cavalcade_b161() -> CardDefinition {
             count: Value::Const(2),
             definition: lorehold_spirit_token(),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13135,6 +18778,7 @@ pub fn lorehold_wallflame_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wallflame (b161)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13150,8 +18794,19 @@ pub fn lorehold_wallflame_b161() -> CardDefinition {
             },
             Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13161,6 +18816,7 @@ pub fn lorehold_reckoner_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reckoner (b161)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13170,8 +18826,19 @@ pub fn lorehold_reckoner_b161() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13181,6 +18848,7 @@ pub fn lorehold_spectralfist_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralfist (b161)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13190,8 +18858,19 @@ pub fn lorehold_spectralfist_b161() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13201,6 +18880,7 @@ pub fn lorehold_pyreknight_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreknight (b161)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -13210,8 +18890,19 @@ pub fn lorehold_pyreknight_b161() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13221,6 +18912,7 @@ pub fn lorehold_tutorpriest_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Tutorpriest (b161)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13230,12 +18922,23 @@ pub fn lorehold_tutorpriest_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13245,6 +18948,7 @@ pub fn lorehold_sparkspirit_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkspirit (b161)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13254,8 +18958,19 @@ pub fn lorehold_sparkspirit_b161() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13265,6 +18980,7 @@ pub fn lorehold_ghostbinder_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostbinder (b161)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13274,8 +18990,19 @@ pub fn lorehold_ghostbinder_b161() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(3)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13285,6 +19012,7 @@ pub fn lorehold_crackleflame_b161() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Crackleflame (b161)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13294,8 +19022,19 @@ pub fn lorehold_crackleflame_b161() -> CardDefinition {
             amount: Value::Const(2),
             to: target_filtered(SelectionRequirement::Creature),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13307,6 +19046,7 @@ pub fn lorehold_bonelord_b162() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bonelord (b162)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -13316,8 +19056,19 @@ pub fn lorehold_bonelord_b162() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13327,6 +19078,7 @@ pub fn lorehold_spectralrider_b162() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralrider (b162)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -13336,8 +19088,19 @@ pub fn lorehold_spectralrider_b162() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13347,6 +19110,7 @@ pub fn lorehold_brave_b162() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Brave (b162)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13356,8 +19120,19 @@ pub fn lorehold_brave_b162() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13367,6 +19142,7 @@ pub fn lorehold_battleweave_b162() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battleweave (b162)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13379,8 +19155,19 @@ pub fn lorehold_battleweave_b162() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13390,6 +19177,7 @@ pub fn lorehold_spectralweaver_b162() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralweaver (b162)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13399,6 +19187,7 @@ pub fn lorehold_spectralweaver_b162() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(1),
@@ -13406,7 +19195,17 @@ pub fn lorehold_spectralweaver_b162() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13418,6 +19217,7 @@ pub fn lorehold_coursemate_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Coursemate (b163)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13427,8 +19227,19 @@ pub fn lorehold_coursemate_b163() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13438,6 +19249,7 @@ pub fn lorehold_pyrebound_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrebound (b163)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13447,8 +19259,19 @@ pub fn lorehold_pyrebound_b163() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13458,6 +19281,7 @@ pub fn lorehold_spirit_guard_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit-Guard (b163)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13467,8 +19291,19 @@ pub fn lorehold_spirit_guard_b163() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13478,6 +19313,7 @@ pub fn lorehold_phantasm_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Phantasm (b163)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -13487,8 +19323,19 @@ pub fn lorehold_phantasm_b163() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13498,6 +19345,7 @@ pub fn lorehold_sparkling_spirit_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkling Spirit (b163)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -13507,8 +19355,19 @@ pub fn lorehold_sparkling_spirit_b163() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13519,6 +19378,7 @@ pub fn lorehold_sparkscholar_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar (b163)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13528,8 +19388,19 @@ pub fn lorehold_sparkscholar_b163() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13539,12 +19410,14 @@ pub fn lorehold_lightcage_b163() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lightcage (b163)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirit creatures you control get +1/+0.",
@@ -13559,7 +19432,16 @@ pub fn lorehold_lightcage_b163() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13571,6 +19453,7 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlemonk (b164)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13580,6 +19463,7 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(2),
@@ -13590,7 +19474,17 @@ pub fn lorehold_battlemonk_b164() -> CardDefinition {
             },
             Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13642,6 +19536,7 @@ pub fn lorehold_command() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Command",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13654,8 +19549,19 @@ pub fn lorehold_command() -> CardDefinition {
             },
             mint_lorehold_spirits(2),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13665,6 +19571,7 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyremender (b164)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -13674,6 +19581,7 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
             Effect::DealDamage {
@@ -13685,7 +19593,17 @@ pub fn lorehold_pyremender_b164() -> CardDefinition {
                 ),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13696,6 +19614,7 @@ pub fn lorehold_ghostflame_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostflame (b164)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13705,8 +19624,19 @@ pub fn lorehold_ghostflame_b164() -> CardDefinition {
             amount: Value::Const(3),
             to: target_filtered(SelectionRequirement::Creature),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13716,6 +19646,7 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skybinder (b164)",
         cost: cost(&[generic(3), w(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13725,8 +19656,19 @@ pub fn lorehold_skybinder_b164() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13736,6 +19678,7 @@ pub fn lorehold_ironforge_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ironforge (b164)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -13745,8 +19688,19 @@ pub fn lorehold_ironforge_b164() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13778,17 +19732,12 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
 
 /// Academic Dispute — {R} Instant. "Target creature gets +2/+0 and gains
 /// reach until end of turn. It must be blocked this turn if able."
-///
-/// 🟡 "Must be blocked" rider is omitted (no forced-block primitive).
+/// (Must-be-blocked rider via `Keyword::MustBeBlocked`, CR 509.1c.)
 pub fn academic_dispute() -> CardDefinition {
     CardDefinition {
         name: "Academic Dispute",
         cost: cost(&[r()]),
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -13801,8 +19750,12 @@ pub fn academic_dispute() -> CardDefinition {
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::MustBeBlocked,
+                duration: Duration::EndOfTurn,
+            },
         ]),
-        triggered_abilities: vec![],
         ..Default::default()
     }
 }
@@ -13813,6 +19766,7 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller (b164)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13825,31 +19779,7 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
     }
 }
 
-// ── Blade Historian ────────────────────────────────────────────────────────
-
-/// Blade Historian — {R}{R}{W}{W}, 2/3 Human Cleric.
-/// "Attacking creatures you control have double strike."
-///
-/// 🟡 The continuous static granting double strike to attackers needs a
-/// layer-based keyword-grant primitive. We ship the body only.
-#[allow(dead_code)]
-pub fn blade_historian() -> CardDefinition {
-    CardDefinition {
-        name: "Blade Historian",
-        cost: cost(&[r(), r(), w(), w()]),
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![magecraft(mint_lorehold_spirits(1))],
-        ..Default::default()
-    }
-}
+// (Blade Historian lives in `extras.rs` — the registered factory.)
 
 // ── Batch 165 (modern_decks) — More Lorehold ──────────────────────────────
 
@@ -13858,6 +19788,7 @@ pub fn lorehold_flamebinder_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flamebinder (b165)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -13867,8 +19798,19 @@ pub fn lorehold_flamebinder_b165() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13901,6 +19843,7 @@ pub fn lorehold_pyreguard_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreguard (b165)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -13910,11 +19853,22 @@ pub fn lorehold_pyreguard_b165() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::Const(2),
             to: Selector::Target(0),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13923,6 +19877,7 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Braveheart (b165)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -13932,8 +19887,19 @@ pub fn lorehold_braveheart_b165() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13943,6 +19909,7 @@ pub fn lorehold_fireshield_b165() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Fireshield (b165)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
@@ -13970,6 +19937,7 @@ pub fn rip_apart() -> CardDefinition {
     CardDefinition {
         name: "Rip Apart",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13990,8 +19958,19 @@ pub fn rip_apart() -> CardDefinition {
                 ),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14032,6 +20011,7 @@ pub fn lorehold_sparkmage_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmage (b166)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -14041,8 +20021,19 @@ pub fn lorehold_sparkmage_b166() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14052,6 +20043,7 @@ pub fn lorehold_spiritskirmisher_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritskirmisher (b166)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -14061,8 +20053,19 @@ pub fn lorehold_spiritskirmisher_b166() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14073,6 +20076,7 @@ pub fn lorehold_pyresmith_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresmith (b166)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
@@ -14082,6 +20086,7 @@ pub fn lorehold_pyresmith_b166() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -14092,7 +20097,17 @@ pub fn lorehold_pyresmith_b166() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14102,6 +20117,7 @@ pub fn lorehold_recall_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recall (b166)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14124,8 +20140,19 @@ pub fn lorehold_recall_b166() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14135,6 +20162,7 @@ pub fn lorehold_pyreweaver_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyreweaver (b166)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -14144,8 +20172,19 @@ pub fn lorehold_pyreweaver_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14155,6 +20194,7 @@ pub fn lorehold_vandal_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vandal (b166)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
@@ -14164,10 +20204,21 @@ pub fn lorehold_vandal_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Destroy {
             what: target_filtered(SelectionRequirement::Artifact),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14177,6 +20228,7 @@ pub fn lorehold_spectrescholar_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectrescholar (b166)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -14186,8 +20238,19 @@ pub fn lorehold_spectrescholar_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_gain_life(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14197,14 +20260,26 @@ pub fn lorehold_charge_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Charge (b166)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: mint_lorehold_spirits(2),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14214,6 +20289,7 @@ pub fn lorehold_boltmage_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Boltmage (b166)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14227,8 +20303,19 @@ pub fn lorehold_boltmage_b166() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14238,6 +20325,7 @@ pub fn lorehold_battlespirit_b166() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlespirit (b166)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -14247,8 +20335,19 @@ pub fn lorehold_battlespirit_b166() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14260,6 +20359,7 @@ pub fn lorehold_banisher_b167() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Banisher (b167)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14272,8 +20372,19 @@ pub fn lorehold_banisher_b167() -> CardDefinition {
             ),
             to: ZoneDest::Exile,
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14283,6 +20394,7 @@ pub fn lorehold_champion_b167() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Champion (b167)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -14292,8 +20404,19 @@ pub fn lorehold_champion_b167() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14303,6 +20426,7 @@ pub fn lorehold_strikewing_b167() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Strikewing (b167)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -14312,8 +20436,19 @@ pub fn lorehold_strikewing_b167() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14323,6 +20458,7 @@ pub fn lorehold_inscription_b167() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Inscription (b167)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14338,8 +20474,19 @@ pub fn lorehold_inscription_b167() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14349,6 +20496,7 @@ pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller II (b167)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -14358,8 +20506,19 @@ pub fn lorehold_spiritcaller_ii_b167() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -14373,6 +20532,7 @@ pub fn lorehold_sparkblade_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkblade (b169)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
@@ -14382,7 +20542,14 @@ pub fn lorehold_sparkblade_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14393,6 +20560,7 @@ pub fn lorehold_spiritforge_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritforge (b169)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -14402,7 +20570,14 @@ pub fn lorehold_spiritforge_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14413,6 +20588,7 @@ pub fn lorehold_reciter_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reciter (b169)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -14422,6 +20598,7 @@ pub fn lorehold_reciter_b169() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature
@@ -14431,6 +20608,12 @@ pub fn lorehold_reciter_b169() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14441,13 +20624,21 @@ pub fn lorehold_reverence_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reverence (b169)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: mint_lorehold_spirits(2),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14459,13 +20650,21 @@ pub fn lorehold_lectern_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lectern (b169)",
         cost: cost(&[generic(3)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14476,6 +20675,7 @@ pub fn lorehold_quartermaster_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Quartermaster (b169)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Warrior],
@@ -14485,7 +20685,14 @@ pub fn lorehold_quartermaster_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14496,6 +20703,7 @@ pub fn lorehold_flameglyph_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flameglyph (b169)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14505,7 +20713,14 @@ pub fn lorehold_flameglyph_b169() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14519,6 +20734,7 @@ pub fn lorehold_shieldbearer_b170() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Shieldbearer (b170)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -14528,11 +20744,18 @@ pub fn lorehold_shieldbearer_b170() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::Shield,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14545,6 +20768,7 @@ pub fn lorehold_skirmisher_b171() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmisher (b171)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -14554,7 +20778,14 @@ pub fn lorehold_skirmisher_b171() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14570,6 +20801,7 @@ pub fn lorehold_wardseeker_b173() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wardseeker (b173)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -14579,7 +20811,14 @@ pub fn lorehold_wardseeker_b173() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_add_shield_self()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14590,6 +20829,7 @@ pub fn lorehold_embersmith_b172() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embersmith (b172)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Soldier],
@@ -14599,7 +20839,14 @@ pub fn lorehold_embersmith_b172() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14610,6 +20857,7 @@ pub fn lorehold_pyresage_b171() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyresage (b171)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -14619,7 +20867,14 @@ pub fn lorehold_pyresage_b171() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14630,6 +20885,7 @@ pub fn lorehold_aegisblade_b170() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Aegisblade (b170)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14640,7 +20896,14 @@ pub fn lorehold_aegisblade_b170() -> CardDefinition {
             kind: CounterType::Shield,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14651,6 +20914,7 @@ pub fn lorehold_aurochs_b169() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Aurochs (b169)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Beast, CreatureType::Spirit],
@@ -14660,7 +20924,14 @@ pub fn lorehold_aurochs_b169() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14673,6 +20944,7 @@ pub fn lorehold_pyrespirit_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrespirit (b174)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -14682,7 +20954,14 @@ pub fn lorehold_pyrespirit_b174() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14693,6 +20972,7 @@ pub fn lorehold_banneret_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Banneret (b174)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -14702,7 +20982,14 @@ pub fn lorehold_banneret_b174() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14713,6 +21000,7 @@ pub fn lorehold_sparkborn_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkborn (b174)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -14722,7 +21010,14 @@ pub fn lorehold_sparkborn_b174() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14734,6 +21029,7 @@ pub fn lorehold_ghostflame_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostflame (b174)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14749,7 +21045,14 @@ pub fn lorehold_ghostflame_b174() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14760,6 +21063,7 @@ pub fn lorehold_spectralcaller_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralcaller (b174)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -14769,7 +21073,14 @@ pub fn lorehold_spectralcaller_b174() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14783,6 +21094,7 @@ pub fn lorehold_skirmishmage_b175() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmishmage (b175)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -14792,7 +21104,14 @@ pub fn lorehold_skirmishmage_b175() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14804,6 +21123,7 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Anthemwarden (b175)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -14813,6 +21133,7 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other Spirits you control get +1/+1.",
@@ -14827,6 +21148,11 @@ pub fn lorehold_anthemwarden_b175() -> CardDefinition {
                 toughness: 1,
             },
         }],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14839,6 +21165,7 @@ pub fn lorehold_echobringer_b191() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echobringer (b191)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14851,7 +21178,14 @@ pub fn lorehold_echobringer_b191() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14862,6 +21196,7 @@ pub fn lorehold_sparrowscholar_b191() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparrowscholar (b191)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -14871,7 +21206,14 @@ pub fn lorehold_sparrowscholar_b191() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14882,6 +21224,7 @@ pub fn lorehold_embershield_b191() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Embershield (b191)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -14891,7 +21234,14 @@ pub fn lorehold_embershield_b191() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14904,6 +21254,7 @@ pub fn lorehold_doubleblast_b190() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Doubleblast (b190)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14921,7 +21272,14 @@ pub fn lorehold_doubleblast_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14932,6 +21290,7 @@ pub fn lorehold_bondseal_b190() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bondseal (b190)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -14949,7 +21308,14 @@ pub fn lorehold_bondseal_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14961,6 +21327,7 @@ pub fn lorehold_phoenixmage_b190() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Phoenixmage (b190)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Phoenix],
@@ -14970,11 +21337,18 @@ pub fn lorehold_phoenixmage_b190() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddKeywordCounter {
             what: Selector::This,
             keyword: Keyword::Haste,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -14988,6 +21362,7 @@ pub fn lorehold_voltmage_b189() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Voltmage (b189)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -14997,7 +21372,14 @@ pub fn lorehold_voltmage_b189() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15008,6 +21390,7 @@ pub fn lorehold_fireseal_b189() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Fireseal (b189)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15021,7 +21404,14 @@ pub fn lorehold_fireseal_b189() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15032,6 +21422,7 @@ pub fn lorehold_crusader_b189() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Crusader (b189)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -15041,7 +21432,14 @@ pub fn lorehold_crusader_b189() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15054,6 +21452,7 @@ pub fn lorehold_spiritsong_b188() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritsong (b188)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15063,7 +21462,14 @@ pub fn lorehold_spiritsong_b188() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15074,6 +21480,7 @@ pub fn lorehold_sparkbarrier_b188() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkbarrier (b188)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15086,7 +21493,14 @@ pub fn lorehold_sparkbarrier_b188() -> CardDefinition {
             },
             mint_lorehold_spirits(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15097,6 +21511,7 @@ pub fn lorehold_vanguard_ii_b188() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard II (b188)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -15106,7 +21521,14 @@ pub fn lorehold_vanguard_ii_b188() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance, Keyword::Reach],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15119,6 +21541,7 @@ pub fn lorehold_firstrikedoctrine_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Firstrikedoctrine (b187)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15131,7 +21554,14 @@ pub fn lorehold_firstrikedoctrine_b187() -> CardDefinition {
             keyword: Keyword::FirstStrike,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15142,6 +21572,7 @@ pub fn lorehold_battleseer_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battleseer (b187)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15151,6 +21582,7 @@ pub fn lorehold_battleseer_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -15159,6 +21591,12 @@ pub fn lorehold_battleseer_b187() -> CardDefinition {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15169,6 +21607,7 @@ pub fn lorehold_memorymage_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memorymage (b187)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15178,6 +21617,7 @@ pub fn lorehold_memorymage_b187() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -15187,6 +21627,12 @@ pub fn lorehold_memorymage_b187() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15197,6 +21643,7 @@ pub fn lorehold_spiritcaller_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller (b187)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15206,7 +21653,14 @@ pub fn lorehold_spiritcaller_b187() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_other_dies_mint_token(lorehold_spirit_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15217,6 +21671,7 @@ pub fn lorehold_pyrescribe_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescribe (b187)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15229,7 +21684,14 @@ pub fn lorehold_pyrescribe_b187() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15240,6 +21702,7 @@ pub fn lorehold_ghostpaladin_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostpaladin (b187)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -15249,12 +21712,19 @@ pub fn lorehold_ghostpaladin_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Tap {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15265,6 +21735,7 @@ pub fn lorehold_reach_doctrine_b187() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reach Doctrine (b187)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15275,7 +21746,14 @@ pub fn lorehold_reach_doctrine_b187() -> CardDefinition {
             keyword: Keyword::Reach,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15289,6 +21767,7 @@ pub fn lorehold_battlerune_b184() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlerune (b184)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15299,7 +21778,14 @@ pub fn lorehold_battlerune_b184() -> CardDefinition {
             keyword: Keyword::Haste,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15311,6 +21797,7 @@ pub fn lorehold_wardseal_b184() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wardseal (b184)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15321,7 +21808,14 @@ pub fn lorehold_wardseal_b184() -> CardDefinition {
             keyword: Keyword::Vigilance,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15335,6 +21829,7 @@ pub fn lorehold_cinderwell_b182() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderwell (b182)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -15344,10 +21839,17 @@ pub fn lorehold_cinderwell_b182() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_unblocked(Effect::DealDamage {
             to: Selector::Player(PlayerRef::EachOpponent),
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15360,6 +21862,7 @@ pub fn lorehold_spiritlord_b180() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritlord (b180)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -15369,7 +21872,14 @@ pub fn lorehold_spiritlord_b180() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(2))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15380,6 +21890,7 @@ pub fn lorehold_spectralguard_b180() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spectralguard (b180)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15389,7 +21900,14 @@ pub fn lorehold_spectralguard_b180() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_gain_life(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15404,6 +21922,7 @@ pub fn lorehold_sparkscholar_b178() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar (b178)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -15427,6 +21946,12 @@ pub fn lorehold_sparkscholar_b178() -> CardDefinition {
             ..Default::default()
         }],
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15440,6 +21965,7 @@ pub fn lorehold_ghostsmith_b177() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostsmith (b177)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15449,11 +21975,18 @@ pub fn lorehold_ghostsmith_b177() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou)),
             1,
             1,
         )],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15464,6 +21997,7 @@ pub fn lorehold_cultivator_b177() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cultivator (b177)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Berserker],
@@ -15473,7 +22007,14 @@ pub fn lorehold_cultivator_b177() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15485,6 +22026,7 @@ pub fn lorehold_charm_echo_b175() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Charm-Echo (b175)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15494,7 +22036,14 @@ pub fn lorehold_charm_echo_b175() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15505,6 +22054,7 @@ pub fn lorehold_vanguard_b174() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard (b174)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -15514,7 +22064,14 @@ pub fn lorehold_vanguard_b174() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -15526,6 +22083,7 @@ pub fn returned_pastcaller() -> CardDefinition {
     CardDefinition {
         name: "Returned Pastcaller",
         cost: cost(&[generic(4), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15535,6 +22093,7 @@ pub fn returned_pastcaller() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -15545,7 +22104,17 @@ pub fn returned_pastcaller() -> CardDefinition {
                 to: ZoneDest::Hand(PlayerRef::You),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15558,6 +22127,7 @@ pub fn lorehold_stoneward_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneward (b193)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -15567,8 +22137,19 @@ pub fn lorehold_stoneward_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15578,6 +22159,7 @@ pub fn lorehold_ravenrider_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ravenrider (b193)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
@@ -15587,8 +22169,19 @@ pub fn lorehold_ravenrider_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15598,6 +22191,7 @@ pub fn lorehold_boltstudent_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Boltstudent (b193)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15607,8 +22201,19 @@ pub fn lorehold_boltstudent_b193() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15618,6 +22223,7 @@ pub fn lorehold_spiritsummoner_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritsummoner (b193)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -15627,8 +22233,19 @@ pub fn lorehold_spiritsummoner_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(2))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15638,6 +22255,7 @@ pub fn lorehold_pyrescholar_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescholar (b193)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -15647,8 +22265,19 @@ pub fn lorehold_pyrescholar_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15658,6 +22287,7 @@ pub fn lorehold_sparkscholar_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkscholar (b193)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -15667,8 +22297,19 @@ pub fn lorehold_sparkscholar_b193() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15678,6 +22319,7 @@ pub fn lorehold_soulsign_b193() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulsign (b193)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15695,8 +22337,19 @@ pub fn lorehold_soulsign_b193() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15709,6 +22362,7 @@ pub fn lorehold_boltscribe_b194() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Boltscribe (b194)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -15718,8 +22372,19 @@ pub fn lorehold_boltscribe_b194() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15729,6 +22394,7 @@ pub fn lorehold_vanguard_ii_b194() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard II (b194)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -15738,8 +22404,19 @@ pub fn lorehold_vanguard_ii_b194() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15748,6 +22425,7 @@ pub fn lorehold_bolt_b194() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bolt (b194)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15761,8 +22439,19 @@ pub fn lorehold_bolt_b194() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15773,6 +22462,7 @@ pub fn lorehold_mausolescholar_b194() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Mausolescholar (b194)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -15782,8 +22472,19 @@ pub fn lorehold_mausolescholar_b194() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_mint_lorehold_spirit()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15795,6 +22496,7 @@ pub fn lorehold_frostbreaker_b195() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Frostbreaker (b195)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -15804,6 +22506,7 @@ pub fn lorehold_frostbreaker_b195() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -15811,7 +22514,17 @@ pub fn lorehold_frostbreaker_b195() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15821,6 +22534,7 @@ pub fn lorehold_spiritcaller_b195() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritcaller (b195)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -15830,11 +22544,22 @@ pub fn lorehold_spiritcaller_b195() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(mint_lorehold_spirits(1)),
             magecraft_gain_life(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15844,6 +22569,7 @@ pub fn lorehold_memoryguard_b195() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Memoryguard (b195)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -15853,8 +22579,19 @@ pub fn lorehold_memoryguard_b195() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Lifelink],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15865,6 +22602,7 @@ pub fn lorehold_pyrescribe_b195() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrescribe (b195)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -15874,8 +22612,19 @@ pub fn lorehold_pyrescribe_b195() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15888,6 +22637,7 @@ pub fn lorehold_lavalord_b196() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lavalord (b196)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -15897,8 +22647,19 @@ pub fn lorehold_lavalord_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15908,6 +22669,7 @@ pub fn lorehold_sparkward_b196() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkward (b196)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15919,8 +22681,19 @@ pub fn lorehold_sparkward_b196() -> CardDefinition {
             toughness: Value::Const(3),
             duration: Duration::EndOfTurn,
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15930,6 +22703,7 @@ pub fn lorehold_stormrider_b196() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stormrider (b196)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -15939,8 +22713,19 @@ pub fn lorehold_stormrider_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::FirstStrike, Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15951,6 +22736,7 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bookburn (b196)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -15960,8 +22746,19 @@ pub fn lorehold_bookburn_b196() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15973,6 +22770,7 @@ pub fn lorehold_sparkmage_b197() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkmage (b197)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -15982,8 +22780,19 @@ pub fn lorehold_sparkmage_b197() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -15993,6 +22802,7 @@ pub fn lorehold_brawnsage_b197() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Brawnsage (b197)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16002,8 +22812,19 @@ pub fn lorehold_brawnsage_b197() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16016,6 +22837,7 @@ pub fn lorehold_apprentice_ii_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice II (b198)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -16025,12 +22847,23 @@ pub fn lorehold_apprentice_ii_b198() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature),
             1,
             1,
         )],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16040,6 +22873,7 @@ pub fn lorehold_watchtower_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Watchtower (b198)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -16049,8 +22883,19 @@ pub fn lorehold_watchtower_b198() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16061,6 +22906,7 @@ pub fn lorehold_pyromancer_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b198)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Shaman],
@@ -16070,8 +22916,19 @@ pub fn lorehold_pyromancer_b198() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16082,6 +22939,7 @@ pub fn lorehold_sparkbinder_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkbinder (b198)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16091,8 +22949,19 @@ pub fn lorehold_sparkbinder_b198() -> CardDefinition {
             to: target_any(),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16103,6 +22972,7 @@ pub fn lorehold_battlecaller_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlecaller (b198)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16112,13 +22982,24 @@ pub fn lorehold_battlecaller_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: target_filtered(SelectionRequirement::Creature),
             power: Value::Const(1),
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16128,6 +23009,7 @@ pub fn lorehold_spiritbinder_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbinder (b198)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Cleric],
@@ -16137,8 +23019,19 @@ pub fn lorehold_spiritbinder_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16149,6 +23042,7 @@ pub fn lorehold_burner_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Burner (b198)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16158,8 +23052,19 @@ pub fn lorehold_burner_b198() -> CardDefinition {
             to: each_opponent(),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16169,6 +23074,7 @@ pub fn lorehold_champion_b198() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Champion (b198)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16178,8 +23084,19 @@ pub fn lorehold_champion_b198() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16192,6 +23109,7 @@ pub fn lorehold_ember_b199() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember (b199)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16201,8 +23119,19 @@ pub fn lorehold_ember_b199() -> CardDefinition {
             to: target_any(),
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16212,6 +23141,7 @@ pub fn lorehold_recurrence_b199() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Recurrence (b199)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16225,8 +23155,19 @@ pub fn lorehold_recurrence_b199() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16236,6 +23177,7 @@ pub fn lorehold_frontier_b199() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Frontier (b199)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16245,8 +23187,19 @@ pub fn lorehold_frontier_b199() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16257,6 +23210,7 @@ pub fn lorehold_boltscribe_b199() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Boltscribe (b199)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -16266,8 +23220,19 @@ pub fn lorehold_boltscribe_b199() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16277,6 +23242,7 @@ pub fn lorehold_aegis_b199() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Aegis (b199)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Soldier],
@@ -16286,8 +23252,19 @@ pub fn lorehold_aegis_b199() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16298,6 +23275,7 @@ pub fn lorehold_sparkguard_b200() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Sparkguard (b200)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16307,8 +23285,19 @@ pub fn lorehold_sparkguard_b200() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16318,6 +23307,7 @@ pub fn lorehold_smite_b200() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Smite (b200)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16328,8 +23318,19 @@ pub fn lorehold_smite_b200() -> CardDefinition {
                 SelectionRequirement::Creature.and(SelectionRequirement::Tapped),
             ),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16342,6 +23343,7 @@ pub fn lorehold_vanguard_b201() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard (b201)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16351,6 +23353,7 @@ pub fn lorehold_vanguard_b201() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
@@ -16359,7 +23362,17 @@ pub fn lorehold_vanguard_b201() -> CardDefinition {
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16369,6 +23382,7 @@ pub fn lorehold_wildfire_b201() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Wildfire (b201)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16378,8 +23392,19 @@ pub fn lorehold_wildfire_b201() -> CardDefinition {
             to: Selector::EachPermanent(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16392,6 +23417,7 @@ pub fn lorehold_reanimator_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Reanimator (b202)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16401,6 +23427,7 @@ pub fn lorehold_reanimator_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -16413,7 +23440,17 @@ pub fn lorehold_reanimator_b202() -> CardDefinition {
                 tapped: false,
             },
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16424,6 +23461,7 @@ pub fn lorehold_pyromancer_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromancer (b202)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -16433,8 +23471,19 @@ pub fn lorehold_pyromancer_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16445,6 +23494,7 @@ pub fn lorehold_charge_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Charge (b202)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16463,8 +23513,19 @@ pub fn lorehold_charge_b202() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16475,6 +23536,7 @@ pub fn lorehold_spirit_caller_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Caller (b202)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16484,8 +23546,19 @@ pub fn lorehold_spirit_caller_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16496,14 +23569,26 @@ pub fn lorehold_bolt_ii_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Bolt II (b202)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: target_any(), amount: Value::Const(2) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16513,6 +23598,7 @@ pub fn lorehold_battlescholar_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlescholar (b202)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16522,8 +23608,19 @@ pub fn lorehold_battlescholar_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16534,6 +23631,7 @@ pub fn lorehold_excavate_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Excavate (b202)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -16550,8 +23648,19 @@ pub fn lorehold_excavate_b202() -> CardDefinition {
                 tapped: false,
             },
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16561,6 +23670,7 @@ pub fn lorehold_frontlord_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Frontlord (b202)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -16570,6 +23680,7 @@ pub fn lorehold_frontlord_b202() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Other creatures you control get +1/+0.",
@@ -16583,7 +23694,16 @@ pub fn lorehold_frontlord_b202() -> CardDefinition {
                 toughness: 0,
             },
         }],
-        ..Default::default()
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16594,14 +23714,26 @@ pub fn lorehold_cleanse_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cleanse (b202)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: each_creature(), amount: Value::Const(2) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16612,6 +23744,7 @@ pub fn lorehold_echoblade_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echoblade (b202)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16621,13 +23754,24 @@ pub fn lorehold_echoblade_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             ),
             1, 1,
         )],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16638,6 +23782,7 @@ pub fn lorehold_lavascholar_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Lavascholar (b202)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -16647,8 +23792,19 @@ pub fn lorehold_lavascholar_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16659,6 +23815,7 @@ pub fn lorehold_ghostsmith_b202() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ghostsmith (b202)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16668,8 +23825,19 @@ pub fn lorehold_ghostsmith_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16680,6 +23848,7 @@ pub fn lorehold_apprentice_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Apprentice (b203)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -16689,8 +23858,19 @@ pub fn lorehold_apprentice_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16701,6 +23881,7 @@ pub fn lorehold_soulbinder_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulbinder (b203)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16710,8 +23891,19 @@ pub fn lorehold_soulbinder_b203() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_create_token(lorehold_spirit_token())],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16721,6 +23913,7 @@ pub fn lorehold_spirit_sage_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Sage (b203)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16730,12 +23923,23 @@ pub fn lorehold_spirit_sage_b203() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: lorehold_spirit_token(),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16745,14 +23949,26 @@ pub fn lorehold_strike_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Strike (b203)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16762,6 +23978,7 @@ pub fn lorehold_ancestor_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ancestor (b203)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -16771,8 +23988,19 @@ pub fn lorehold_ancestor_b203() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16781,6 +24009,7 @@ pub fn lorehold_spirit_squire_b203() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spirit Squire (b203)",
         cost: cost(&[w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -16790,8 +24019,19 @@ pub fn lorehold_spirit_squire_b203() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16804,6 +24044,7 @@ pub fn lorehold_battlemage_b204() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlemage (b204)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16813,8 +24054,19 @@ pub fn lorehold_battlemage_b204() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16824,6 +24076,7 @@ pub fn lorehold_pyromaster_b204() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyromaster (b204)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -16833,8 +24086,19 @@ pub fn lorehold_pyromaster_b204() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16843,6 +24107,7 @@ pub fn lorehold_ardent_b204() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ardent (b204)",
         cost: cost(&[r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit],
@@ -16852,8 +24117,19 @@ pub fn lorehold_ardent_b204() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::FirstStrike, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16863,14 +24139,26 @@ pub fn lorehold_flameburst_b204() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Flameburst (b204)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16880,6 +24168,7 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Spiritbringer (b204)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16889,12 +24178,23 @@ pub fn lorehold_spiritbringer_b204() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: lorehold_spirit_token(),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16912,6 +24212,7 @@ pub fn lorehold_battlescarred_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlescarred (b205)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16921,12 +24222,23 @@ pub fn lorehold_battlescarred_b205() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16937,6 +24249,7 @@ pub fn lorehold_echovenger_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Echovenger (b205)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16946,12 +24259,23 @@ pub fn lorehold_echovenger_b205() -> CardDefinition {
         toughness: 5,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::AddCounter {
             what: Selector::This,
             kind: CounterType::PlusOnePlusOne,
             amount: Value::TriggerEventAmount,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16962,6 +24286,7 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vengescribe (b205)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -16971,6 +24296,7 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -16979,7 +24305,17 @@ pub fn lorehold_vengescribe_b205() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -16990,6 +24326,7 @@ pub fn lorehold_grudgebearer_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Grudgebearer (b205)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -16999,12 +24336,23 @@ pub fn lorehold_grudgebearer_b205() -> CardDefinition {
         toughness: 5,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::Drain {
             from: Selector::Player(PlayerRef::EachOpponent),
             to: Selector::You,
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17015,6 +24363,7 @@ pub fn lorehold_stoneguard_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Stoneguard (b205)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17024,11 +24373,22 @@ pub fn lorehold_stoneguard_b205() -> CardDefinition {
         toughness: 5,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::GainLife {
             who: Selector::You,
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17039,6 +24399,7 @@ pub fn lorehold_chroniclekeeper_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Chroniclekeeper (b205)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -17048,11 +24409,22 @@ pub fn lorehold_chroniclekeeper_b205() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17063,6 +24435,7 @@ pub fn lorehold_warhost_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warhost (b205)",
         cost: cost(&[generic(4), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17072,8 +24445,19 @@ pub fn lorehold_warhost_b205() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![enrage(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17084,6 +24468,7 @@ pub fn lorehold_emberhistorian_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberhistorian (b205)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -17093,8 +24478,19 @@ pub fn lorehold_emberhistorian_b205() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17104,6 +24500,7 @@ pub fn lorehold_relicwarden_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relicwarden (b205)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17113,8 +24510,19 @@ pub fn lorehold_relicwarden_b205() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Vigilance],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17125,6 +24533,7 @@ pub fn lorehold_warchronicler_b205() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Warchronicler (b205)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -17134,8 +24543,19 @@ pub fn lorehold_warchronicler_b205() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(2, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17149,6 +24569,7 @@ pub fn lorehold_skirmisher_b206() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skirmisher (b206)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17158,8 +24579,19 @@ pub fn lorehold_skirmisher_b206() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17169,6 +24601,7 @@ pub fn lorehold_archivekeeper_b206() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Archivekeeper (b206)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -17178,11 +24611,22 @@ pub fn lorehold_archivekeeper_b206() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Draw {
             who: Selector::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17193,6 +24637,7 @@ pub fn lorehold_ember_veteran_b206() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Ember Veteran (b206)",
         cost: cost(&[generic(3), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Warrior],
@@ -17202,8 +24647,19 @@ pub fn lorehold_ember_veteran_b206() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17217,6 +24673,7 @@ pub fn lorehold_soulkindler_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Soulkindler (b207)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -17226,8 +24683,19 @@ pub fn lorehold_soulkindler_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17237,6 +24705,7 @@ pub fn lorehold_cinderscribe_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Cinderscribe (b207)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -17246,8 +24715,19 @@ pub fn lorehold_cinderscribe_b207() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17257,6 +24737,7 @@ pub fn lorehold_battlecaller_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Battlecaller (b207)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17266,8 +24747,19 @@ pub fn lorehold_battlecaller_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack(mint_lorehold_spirits(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17277,6 +24769,7 @@ pub fn lorehold_emberbolt_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Emberbolt (b207)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17290,8 +24783,19 @@ pub fn lorehold_emberbolt_b207() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17302,6 +24806,7 @@ pub fn lorehold_relicsmith_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Relicsmith (b207)",
         cost: cost(&[generic(3), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Artificer],
@@ -17311,6 +24816,7 @@ pub fn lorehold_relicsmith_b207() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: Selector::one_of(Selector::CardsInZone {
                 who: PlayerRef::You,
@@ -17320,7 +24826,17 @@ pub fn lorehold_relicsmith_b207() -> CardDefinition {
             }),
             to: ZoneDest::Hand(PlayerRef::You),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17330,6 +24846,7 @@ pub fn lorehold_charge_ii_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Charge II (b207)",
         cost: cost(&[generic(1), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -17354,8 +24871,19 @@ pub fn lorehold_charge_ii_b207() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17365,6 +24893,7 @@ pub fn lorehold_vanguard_b207() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard (b207)",
         cost: cost(&[generic(2), r(), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Knight],
@@ -17374,8 +24903,19 @@ pub fn lorehold_vanguard_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17391,6 +24931,7 @@ pub fn lorehold_vanguard_captain_b208() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Vanguard-Captain (b208)",
         cost: cost(&[generic(2), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Soldier],
@@ -17400,8 +24941,19 @@ pub fn lorehold_vanguard_captain_b208() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![exalted()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17411,6 +24963,7 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Pyrohistorian (b208)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Wizard],
@@ -17420,6 +24973,7 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -17428,7 +24982,17 @@ pub fn lorehold_pyrohistorian_b208() -> CardDefinition {
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -17438,6 +25002,7 @@ pub fn lorehold_skydefender_b208() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Skydefender (b208)",
         cost: cost(&[generic(1), w()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -17447,7 +25012,18 @@ pub fn lorehold_skydefender_b208() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_gain_life(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }

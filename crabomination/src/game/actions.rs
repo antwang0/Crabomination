@@ -101,14 +101,21 @@ pub(crate) fn extra_cost_for_spell(
         tax += 1;
     }
     let already_cast = state.players[caster].spells_cast_this_turn;
-    if already_cast > 0 {
-        for src in &state.battlefield {
-            for sa in &src.definition.static_abilities {
-                if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect
-                    && state.evaluate_requirement_on_card(filter, card, caster)
+    for src in &state.battlefield {
+        for sa in &src.definition.static_abilities {
+            match &sa.effect {
+                StaticEffect::AdditionalCostAfterFirstSpell { filter, amount }
+                    if already_cast > 0
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
                     tax += amount;
                 }
+                StaticEffect::AdditionalCost { filter, amount }
+                    if state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    tax += amount;
+                }
+                _ => {}
             }
         }
     }
@@ -226,6 +233,54 @@ pub(crate) fn cost_reduction_for_spell(
     reduction
 }
 
+/// Trinisphere floor: the largest `StaticEffect::SpellCostFloor` amount
+/// among untapped battlefield permanents (affects every player's spells).
+/// Returns 0 if none in play.
+pub(crate) fn spell_cost_floor(state: &crate::game::GameState) -> u32 {
+    use crate::effect::StaticEffect;
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !c.tapped)
+        .flat_map(|c| c.definition.static_abilities.iter())
+        .filter_map(|sa| match &sa.effect {
+            StaticEffect::SpellCostFloor { amount } => Some(*amount),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// Raise `cost` so its mana value is at least the active Trinisphere floor
+/// by padding generic mana. No-op when no floor is in play or the cost is
+/// already at/above it.
+pub(crate) fn apply_spell_cost_floor(
+    state: &crate::game::GameState,
+    cost: &mut crate::mana::ManaCost,
+) {
+    let floor = spell_cost_floor(state);
+    let mv = cost.cmc();
+    if floor > mv {
+        cost.symbols
+            .push(crate::mana::ManaSymbol::Generic(floor - mv));
+    }
+}
+
+/// True if `player` controls a permanent granting Omniscience-style free
+/// casting of hand spells (`StaticEffect::CastHandSpellsFree`).
+impl crate::game::GameState {
+    pub(crate) fn player_casts_hand_spells_free(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::CastHandSpellsFree))
+        })
+    }
+}
+
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
@@ -253,6 +308,7 @@ pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> boo
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::Colors(cs) => cs.len() > 1,
+            ManaPayload::OfColors(cs, _) => cs.len() > 1,
             ManaPayload::OfColor(_, _) => false,
             ManaPayload::Colorless(_) => false,
         };
@@ -508,6 +564,7 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::OfColor(c, _) => *c == color,
+            ManaPayload::OfColors(cs, _) => cs.contains(&color),
             ManaPayload::Colorless(_) => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
@@ -596,6 +653,7 @@ impl GameState {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             });
             card.definition.activated_abilities = kept;
         }
@@ -931,6 +989,9 @@ impl GameState {
         if !delve_cards.is_empty() {
             cost.reduce_generic(delve_cards.len() as u32);
         }
+        // Trinisphere floor (CR 117.7 / replacement-style): applied after
+        // every reduction so a discounted spell still owes the minimum.
+        apply_spell_cost_floor(self, &mut cost);
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
@@ -1056,18 +1117,52 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = card.definition.is_creature();
-        
+        // CR 702.40 — Storm: when this spell is cast, copy it for each spell
+        // cast before it this turn. `spells_cast_this_turn` already includes
+        // this spell (bumped above), so prior spells = count - 1. Capture the
+        // bits needed to mint copies before `card` is moved onto the stack.
+        let storm_copies = card
+            .definition
+            .keywords
+            .contains(&Keyword::Storm)
+            .then(|| {
+                (
+                    card.definition.clone(),
+                    self.spells_cast_this_turn.saturating_sub(1),
+                )
+            });
+
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
-            target,
-            additional_targets,
+            target: target.clone(),
+            additional_targets: additional_targets.clone(),
             mode,
             x_value,
             converged_value,
             mana_spent,
             uncounterable,
         });
+        // Push Storm copies above the original (they resolve first, CR 702.40).
+        // Each is a token copy that can't be countered, inheriting target/mode.
+        if let Some((def, n)) = storm_copies {
+            for _ in 0..n {
+                let new_id = self.next_id();
+                let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
+                copy_inst.is_token = true;
+                self.stack.push(StackItem::Spell {
+                    card: Box::new(copy_inst),
+                    caster: p,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    mode,
+                    x_value,
+                    converged_value,
+                    mana_spent: 0,
+                    uncounterable: true,
+                });
+            }
+        }
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
         // fire *at cast time*, before the spell resolves. The trigger goes
@@ -1368,6 +1463,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
         if receipt.side_effects.life_lost > 0 {
@@ -1420,6 +1516,82 @@ impl GameState {
             },
         ];
         self.finalize_cast(p, card, target, additional_targets, mode, x_value, 0, mana_spent);
+        Ok(events)
+    }
+
+    /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81): pay its
+    /// normal mana cost plus discard a land card from hand. The spell
+    /// returns to the graveyard after resolving (no exile), so a single
+    /// land + the card can be recast every turn.
+    pub(crate) fn cast_retrace(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        if !card.definition.has_retrace() {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // Additional cost: a land card in hand to discard. Reject before
+        // paying mana if none is available.
+        let land_in_hand = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.definition.is_land())
+            .map(|c| c.id)
+            .ok_or(GameError::SelectionRequirementViolated)?;
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+        // Pay the printed mana cost (Retrace doesn't change it).
+        let mut cost = if card.definition.cost.has_x() {
+            card.definition.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            card.definition.cost.clone()
+        };
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        // Discard the land as the additional cost (routes through the
+        // central discard path so discard-matters triggers fire).
+        let mut events = Vec::new();
+        self.discard_card(p, land_in_hand, &mut events);
+
+        // Lift the card from the graveyard and cast it normally — no
+        // `cast_via_flashback`, so it returns to the graveyard on
+        // resolution and can be retraced again.
+        let card = self.players[p].graveyard.remove(graveyard_pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent,
+        );
         Ok(events)
     }
 
@@ -1538,6 +1710,17 @@ impl GameState {
                 }
                 found.ok_or(GameError::CardNotInHand(card_id))?
             }
+            Zone::Hand => {
+                // Omniscience-style free cast straight from hand.
+                let mut found: Option<crate::card::CardInstance> = None;
+                for player in self.players.iter_mut() {
+                    if let Some(pos) = player.hand.iter().position(|c| c.id == card_id) {
+                        found = Some(player.hand.remove(pos));
+                        break;
+                    }
+                }
+                found.ok_or(GameError::CardNotInHand(card_id))?
+            }
             _ => return Err(GameError::CardNotInHand(card_id)),
         };
 
@@ -1604,17 +1787,31 @@ impl GameState {
         let card_ref = self
             .find_card_anywhere(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let permission = card_ref
-            .may_play_until
-            .ok_or(GameError::CardNotInHand(card_id))?;
-        if permission.player != p {
-            return Err(GameError::CardNotInHand(card_id));
-        }
+        let is_instant = card_ref.definition.is_instant_speed();
+        // Two ways to invoke a free cast: a per-card `may_play_until`
+        // permission (Discovery / Paradigm / etc.), or an Omniscience-style
+        // standing static letting the controller free-cast their own hand
+        // spells. The latter doesn't exile the spell afterwards (it goes
+        // wherever it normally would).
+        let exile_after = match card_ref.may_play_until {
+            Some(permission) => {
+                if permission.player != p {
+                    return Err(GameError::CardNotInHand(card_id));
+                }
+                permission.exile_after
+            }
+            None => {
+                let from_own_hand = zone == crate::card::Zone::Hand
+                    && self.players[p].hand.iter().any(|c| c.id == card_id);
+                if !(from_own_hand && self.player_casts_hand_spells_free(p)) {
+                    return Err(GameError::CardNotInHand(card_id));
+                }
+                false
+            }
+        };
         // Expiry check: EndOfThisTurn => only valid this turn;
         // EndOfControllersNextTurn => one full controller-turn later.
         // Defensive — the cleanup hook also clears expired permissions.
-        let is_instant = card_ref.definition.is_instant_speed();
-        let exile_after = permission.exile_after;
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
@@ -1722,6 +1919,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
         let forced_only = self.players[p].wants_ui;
@@ -1948,6 +2146,7 @@ impl GameState {
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut mana_cost);
         let forced_only = self.players[p].wants_ui;
         let receipt = match self.try_pay_with_auto_tap_mode(p, &mana_cost, forced_only) {
             Ok(r) => r,
@@ -2789,6 +2988,7 @@ impl GameState {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         })
     }
 
@@ -3031,6 +3231,28 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
+        // permanent (other than the source) the activator controls matches
+        // the cost's filter. Picks the lowest-power match so higher-value
+        // creatures stay open. Tapped after payment succeeds.
+        let tap_other_pick: Option<CardId> = if let Some(filter) =
+            ability.tap_other_filter.as_ref()
+        {
+            let pick = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p && !c.tapped)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .min_by_key(|c| c.power())
+                .map(|c| c.id);
+            match pick {
+                Some(id) => Some(id),
+                None => return Err(GameError::SelectionRequirementViolated),
+            }
+        } else {
+            None
+        };
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -3199,6 +3421,15 @@ impl GameState {
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
+        }
+
+        // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the
+        // pre-selected untapped permanent. Opposition's "Tap an untapped
+        // creature you control" cost runs here.
+        if let Some(other_cid) = tap_other_pick
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
+        {
+            c.tapped = true;
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile

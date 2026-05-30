@@ -290,6 +290,7 @@ impl GameState {
         self.creature_cards_discarded_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
+        self.permanents_destroyed_this_resolution = 0;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -1013,6 +1014,26 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
+                    ManaPayload::OfColors(colors, v) => {
+                        // N pips, each chosen from the restricted palette
+                        // (Culling Ritual: {B} or {G} per permanent destroyed).
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let fallback = colors.first().copied().unwrap_or(Color::White);
+                        for _ in 0..n {
+                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+                                source,
+                                legal: colors.clone(),
+                            });
+                            let color = match answer {
+                                crate::decision::DecisionAnswer::Color(c)
+                                    if colors.contains(&c) => c,
+                                _ => fallback,
+                            };
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
                 }
                 Ok(())
             }
@@ -1076,6 +1097,8 @@ impl GameState {
                         }
                         let mut dies = self.remove_to_graveyard_with_triggers(cid);
                         events.append(&mut dies);
+                        self.permanents_destroyed_this_resolution =
+                            self.permanents_destroyed_this_resolution.saturating_add(1);
                     }
                 }
                 let mut sba = self.check_state_based_actions();
@@ -2382,6 +2405,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenTargetDiesThisTurn { body } => {
+                // Watch the targeted creature's death; capture its controller
+                // as the body's Target(0) so it survives the creature leaving
+                // play. No-op if there's no permanent target (the creature
+                // already left, or none was chosen).
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.first().cloned()
+                    && let Some(controller) = self.battlefield_find(cid).map(|c| c.controller)
+                {
+                    let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::WhenCardDies(cid),
+                        effect: (**body).clone(),
+                        target: Some(crate::game::Target::Player(controller)),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of
@@ -3202,6 +3246,27 @@ impl GameState {
                     Some(Some(t)) if *slot == 0 => vec![target_to_entity(&t)],
                     _ => vec![],
                 }
+            }
+
+            Selector::SharingNameWith(inner) => {
+                // Resolve the anchor, read its printed name, then collect
+                // every battlefield permanent (anchor included) with that
+                // name. The anchor's name is read from the battlefield so a
+                // freshly-resolved target still matches.
+                let anchor = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id());
+                let Some(anchor_id) = anchor else { return vec![] };
+                let Some(name) = self.battlefield_find(anchor_id).map(|c| c.definition.name)
+                else {
+                    return vec![];
+                };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.definition.name == name)
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
             }
 
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),

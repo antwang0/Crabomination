@@ -137,6 +137,7 @@ pub fn serum_powder() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         opening_hand: Some(OpeningHandEffect::MulliganHelper),

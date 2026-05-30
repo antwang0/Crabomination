@@ -437,6 +437,38 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Persist => "Persist".into(),
         K::Undying => "Undying".into(),
         K::CantBeCountered => "Can't be countered".into(),
+        // Combat / evasion riders that previously fell through to the raw
+        // `{:?}` debug shape — give them printed-Oracle phrasing.
+        K::CantBlock => "Can't block".into(),
+        K::MustBeBlocked => "Must be blocked if able".into(),
+        K::Skulk => "Skulk".into(),
+        K::Fear => "Fear".into(),
+        K::Intimidate => "Intimidate".into(),
+        K::Infect => "Infect".into(),
+        K::Wither => "Wither".into(),
+        K::Prowess => "Prowess".into(),
+        K::Shadow => "Shadow".into(),
+        // Keyword-action / ability words that previously printed the raw
+        // `{:?}` debug shape — give them printed-Oracle phrasing, surfacing
+        // their cost/count where one exists.
+        K::Storm => "Storm".into(),
+        K::Exert => "Exert".into(),
+        K::Inspired => "Inspired".into(),
+        K::Changeling => "Changeling".into(),
+        K::Phasing => "Phasing".into(),
+        K::Banding => "Banding".into(),
+        K::Rebound => "Rebound".into(),
+        K::Retrace => "Retrace".into(),
+        K::Delve => "Delve".into(),
+        K::Cascade => "Cascade".into(),
+        K::Annihilator(n) => format!("Annihilator {n}"),
+        K::Dredge(n) => format!("Dredge {n}"),
+        K::Crew(n) => format!("Crew {n}"),
+        K::Madness(cost) => format!("Madness {}", cost.summary()),
+        K::Kicker(cost) => format!("Kicker {}", cost.summary()),
+        K::Echo(cost) => format!("Echo {}", cost.summary()),
+        K::CumulativeUpkeep(cost) => format!("Cumulative upkeep {}", cost.summary()),
+        K::Equip(cost) => format!("Equip {}", cost.summary()),
         _ => format!("{kw:?}"),
     }
 }

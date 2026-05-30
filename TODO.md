@@ -2,8 +2,51 @@
 
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
-See `CUBE_FEATURES.md` (cube-card implementation status) and
-`STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
+See `CUBE_FEATURES.md` (cube-card implementation status),
+`STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
+(prioritized engine functionality).
+
+## Recent additions (Push XLIII — claude/modern_decks: combat-requirement + same-name + Mentor primitives)
+
+New engine primitives, 16 partial cards completed/promoted with tests, 3 CR
+sections, and one improvement each in engine / UI / server.
+
+- **CR 509.1c — Must be blocked if able** ✅ — `Keyword::MustBeBlocked`
+  enforced in `declare_blockers` (reject leaving it unblocked while an idle
+  able blocker exists) + a bot `pick_blocks` post-pass so bot games can't
+  deadlock. Wires **Academic Dispute**.
+- **CR 702.114 — Mentor** ✅ — `SelectionRequirement::PowerLessThanSource`
+  (source-relative "lesser power"). Made **Combat Professor** + **Lorehold
+  Mentor** dynamic (were hard-coded `PowerAtMost`).
+- **CR 702.4 — Double strike** (lock-in test) via `GrantKeywordToAttackers`
+  static → **Blade Historian** ("attacking creatures you control have double
+  strike"); fixed its wrong P/T/subtype too.
+- **`Selector::SharingNameWith`** — "all permanents with the same name":
+  **Maelstrom Pulse**, **Echoing Truth**.
+- **`Value::PermanentsDestroyedThisResolution` + `ManaPayload::OfColors`** —
+  **Culling Ritual**'s "add {B} or {G} per permanent destroyed".
+- **Searing Blood** death-burn rider (Lava-Coil-style `If(toughness≤2)`),
+  **Elemental Expressionist** real flicker (`DelayUntil(NextEndStep)`),
+  **Symmetry Sage** merged to one magecraft `Seq`.
+- **Stale-doc promotions** (already wired in prior runs): Mica, Silverquill
+  the Disputant, Zaffai, Velomachus, Sacred Fire, Divine Gambit, Mentor's
+  Guidance; corrected Quandrix/Applied Geometry comments.
+- **UI** — `keyword_label` now prints friendly text for combat/evasion
+  keywords (Must be blocked, Can't block, Skulk, Fear, Intimidate, …) instead
+  of raw `{:?}`.
+- **Server** — `MatchOutcome.final_board_sizes` (per-seat battlefield count).
+
+### Follow-ups noticed this run (not yet done)
+
+- See `FEATURE_ROADMAP.md` Tier 1: additional cast costs (sacrifice/discard
+  as a cost), choose-N modes, "when target dies this turn" delayed trigger,
+  `GrantActivatedAbility` static (Galazeth Prismari).
+- **Echoing Truth same-name bounce** routes every copy to `OwnerOf(Target0)`;
+  mixed-ownership same-named permanents would all go to the target's owner.
+  Needs a per-moved-card owner destination to be fully correct.
+- **Client can't be built/clippy'd in the web sandbox** — `wayland-sys` needs
+  the `wayland-client` system lib. Engine + server clippy are clean. Re-run
+  `cargo clippy --workspace` locally to cover the client.
 
 ## MagicCompRules coverage audit
 
@@ -2955,8 +2998,42 @@ candidate-cast's chosen target before payment. Probably a new
 
 ### Mana Ability from Non-Battlefield Zone
 `activate_ability` only walks the battlefield.  Cards like Elvish Spirit Guide
-and Simian Spirit Guide (exile from hand: add mana) are completely omitted
-because hand-activated mana abilities need a separate activation path.
+and Simian Spirit Guide (exile from hand: add mana) ship as vanilla bodies;
+the "exile from hand: add mana" half needs a from-hand activation zone (adding
+an `ActivatedAbility.from_hand` flag parallel to `from_graveyard` would mean
+touching ~240 literal constructors — migrate them to `..Default::default()`
+first).
+
+### Delirium-conditional static buffs
+`Predicate::DeliriumActive` now gates spell effects (Unholy Heat). A
+*continuous* delirium buff — "as long as you have delirium, this gets +2/+2
+and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
+cards) — needs a layer-system static whose application is gated on a
+predicate. DRC isn't implemented yet pending this.
+
+### Client build can't be verified in the web sandbox
+`crabomination_client` links Bevy, which needs the system `wayland-client`
+library that isn't present here, so `cargo build/clippy -p crabomination_client`
+fails at the `wayland-sys` build script. Engine + server changes are fully
+verified; client-only edits (e.g. `keyword_label`) are reviewed by hand.
+
+### Damage-as-(-1/-1)-counters replacement
+Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
+deal noncombat damage to a creature, it deals that much in -1/-1 counters
+instead" needs a damage-replacement hook. Soul-Scar Mage ships as 1/2 Prowess
+without it.
+
+### Phyrexian mana
+Mutagenic Growth ({G/P}), Gut Shot, Dismember, etc. — a mana symbol payable
+with 2 life. Mutagenic Growth ships at the {G} cost (the life-pay alt is
+omitted).
+
+### Source-relative mana-value search filter
+`Effect::Search`/`SelectionRequirement::ManaValueAtMost(u32)` only take a
+constant. Rushed Rebirth ("search for a creature with *lesser* MV than the one
+that died") drops the relative constraint — it fetches any creature. A
+`ManaValueLessThanSource`-style filter (paired with the `WhenTargetDiesThisTurn`
+captured-source MV) would make it faithful.
 
 ### "Look At Top X, Pick One, Put Rest in Graveyard" Primitive
 Stirring Honormancer ("look at top X cards where X is creatures you

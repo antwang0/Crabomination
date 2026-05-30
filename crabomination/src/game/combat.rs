@@ -107,6 +107,14 @@ impl GameState {
             if !computed_kw(id).contains(&Keyword::Vigilance) {
                 card.tapped = true;
             }
+            // CR 702.83 — Exert. We auto-exert any attacking creature with
+            // the keyword (the "you may" choice is collapsed; the AutoDecider
+            // would have no policy and a real exert is almost always taken for
+            // its bonus). The creature won't untap next untap step. Its exert
+            // bonus rides its normal SelfSource Attacks trigger.
+            if computed_kw(id).contains(&Keyword::Exert) {
+                card.skip_next_untap = true;
+            }
             self.attacking.push(atk);
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted
@@ -296,6 +304,83 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute).
+        // If such an attacker is left unblocked while the defender controls
+        // an idle creature that could legally block it, reject the
+        // declaration. Considers the merged block set (already-declared
+        // blocks plus this batch) so independent multiplayer submissions
+        // compose. Single-requirement model; full CR maximization across
+        // multiple simultaneous requirements is approximated.
+        for atk in &self.attacking {
+            if !kws_of(atk.attacker).contains(&Keyword::MustBeBlocked) {
+                continue;
+            }
+            let already = self.block_map.values().any(|&aid| aid == atk.attacker);
+            let in_batch = assignments.iter().any(|(_, aid)| *aid == atk.attacker);
+            if already || in_batch {
+                continue;
+            }
+            let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+            let attacker = match self.battlefield_find(atk.attacker) {
+                Some(a) => a,
+                None => continue,
+            };
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let idle_able_blocker = self.battlefield.iter().any(|b| {
+                b.definition.is_creature()
+                    && self.same_team(b.controller, defender_idx)
+                    && b.can_block()
+                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !self.block_map.contains_key(&b.id)
+                    && !assignments.iter().any(|(bid, _)| *bid == b.id)
+                    && cp_of(b.id).is_some_and(|bcp| {
+                        super::can_block_attacker_computed(
+                            b, attacker, bcp, kws_of(atk.attacker), atk_colors,
+                        )
+                    })
+            });
+            if idle_able_blocker {
+                return Err(GameError::MustBeBlockedIfAble(atk.attacker));
+            }
+        }
+
+        // Combat-keyword P/T adjustments applied on block declaration:
+        // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
+        // Snapshot the +/-N deltas (same value on power and toughness)
+        // before mutating so the borrow of `assignments` stays clean.
+        let computed = self.compute_battlefield();
+        let kws_for = |id: CardId| -> Vec<Keyword> {
+            computed.iter().find(|c| c.id == id).map(|c| c.keywords.clone()).unwrap_or_default()
+        };
+        let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
+            kws.iter().filter_map(pick).sum()
+        };
+        let mut pt_deltas: Vec<(CardId, i32)> = vec![];
+        let mut blocked: std::collections::HashMap<CardId, usize> = std::collections::HashMap::new();
+        for &(b, a) in &assignments {
+            *blocked.entry(a).or_insert(0) += 1;
+            let bk = kws_for(b);
+            let ak = kws_for(a);
+            // Flanking: nonflanking blocker shrinks once per flanking instance.
+            let flank = ak.iter().filter(|k| **k == Keyword::Flanking).count() as i32;
+            if flank > 0 && !bk.contains(&Keyword::Flanking) {
+                pt_deltas.push((b, -flank));
+            }
+            // Bushido on the blocker (it blocks).
+            let bn = sum_n(&bk, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            if bn > 0 { pt_deltas.push((b, bn)); }
+        }
+        for (a, count) in blocked {
+            let ak = kws_for(a);
+            // Bushido on the attacker (it becomes blocked — once).
+            let bn = sum_n(&ak, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            if bn > 0 { pt_deltas.push((a, bn)); }
+            // Rampage: +N for each blocker beyond the first.
+            let rn = sum_n(&ak, |k| if let Keyword::Rampage(x) = k { Some(*x as i32) } else { None });
+            let extra = count.saturating_sub(1) as i32;
+            if rn > 0 && extra > 0 { pt_deltas.push((a, rn * extra)); }
+        }
+
         // All valid — apply (merge into existing block_map so multiple
         // defenders can submit independently in multiplayer).
         self.blockers_declared = true;
@@ -306,6 +391,12 @@ impl GameState {
                 blocker: blocker_id,
                 attacker: attacker_id,
             });
+        }
+        for (id, d) in pt_deltas {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.power_bonus += d;
+                c.toughness_bonus += d;
+            }
         }
         // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
         // with no blockers assigned. Trigger source is the unblocked

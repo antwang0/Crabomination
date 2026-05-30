@@ -14145,3 +14145,42 @@ fn strixhaven_skycoach_crews_into_a_flier() {
     assert_eq!(cp.power, 3);
     assert_eq!(cp.toughness, 2);
 }
+
+#[test]
+fn zaffai_grants_a_free_instant_or_sorcery_each_turn() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zaffai_and_the_tempests());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // Beginning of the active player's main phase grants a free IS cast.
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    // No mana in pool — only the Zaffai grant makes the Bolt castable.
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Zaffai grant lets Bolt be cast for free");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "free Bolt dealt 3");
+}
+
+#[test]
+fn daydream_flickers_a_creature_and_adds_a_counter() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::daydream());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Daydream castable for {1}{W}");
+    drain_stack(&mut g);
+    // Exile + return resolve in one shot — the bear is back (a fresh
+    // instance) carrying a +1/+1 counter.
+    let returned = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("creature returned to battlefield");
+    assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1,
+        "flicker leaves a +1/+1 counter");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Daydream"));
+}

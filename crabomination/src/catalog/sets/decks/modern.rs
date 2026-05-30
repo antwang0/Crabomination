@@ -445,6 +445,7 @@ pub fn putrid_imp() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -580,6 +581,7 @@ pub fn karakas() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             // {T}: Return target legendary creature to its owner's hand.
             ActivatedAbility {
@@ -600,6 +602,7 @@ pub fn karakas() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -840,6 +843,7 @@ pub fn lotus_petal() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -883,6 +887,7 @@ pub fn tormods_crypt() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -932,6 +937,7 @@ pub fn mishras_bauble() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1011,6 +1017,7 @@ pub fn qasali_pridemage() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1065,6 +1072,7 @@ pub fn greater_good() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1125,6 +1133,7 @@ pub fn bojuka_bog() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![etb],
         ..Default::default()
@@ -1197,6 +1206,7 @@ pub fn goblin_bombardment() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1239,6 +1249,7 @@ pub fn wasteland() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1257,6 +1268,7 @@ pub fn wasteland() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1295,6 +1307,7 @@ pub fn strip_mine() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -1310,6 +1323,7 @@ pub fn strip_mine() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1640,6 +1654,7 @@ pub fn fanatic_of_rhonas() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1720,6 +1735,7 @@ pub fn orcish_lumberjack() -> CardDefinition {
                     .and(SelectionRequirement::HasLandType(crate::card::LandType::Forest)),
                 1,
             )),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1866,6 +1882,7 @@ pub fn talisman_of_progress() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
     };
     CardDefinition {
         name: "Talisman of Progress",
@@ -1893,6 +1910,7 @@ pub fn talisman_of_progress() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             make_color(Color::White),
             make_color(Color::Blue),
@@ -1925,6 +1943,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
     };
     CardDefinition {
         name: "Talisman of Dominance",
@@ -1951,6 +1970,7 @@ pub fn talisman_of_dominance() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             make_color(Color::Blue),
             make_color(Color::Black),
@@ -2016,6 +2036,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
     };
     CardDefinition {
         name,
@@ -2042,6 +2063,7 @@ fn talisman_cycle(name: &'static str, c1: Color, c2: Color) -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             make_color(c1),
             make_color(c2),
@@ -3517,6 +3539,7 @@ pub fn sakura_tribe_elder() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -3584,6 +3607,7 @@ pub fn elvish_mystic() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -3939,6 +3963,7 @@ pub fn wild_mongrel() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4027,6 +4052,7 @@ pub fn glimmerpost() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![
             modern_etb_tap(),
@@ -4068,6 +4094,7 @@ pub fn cloudpost() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4115,6 +4142,7 @@ pub fn lotus_field() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![etb],
         ..Default::default()
@@ -4153,6 +4181,7 @@ pub fn evolving_wilds() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4197,6 +4226,7 @@ fn bridge_land(
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
@@ -4299,6 +4329,7 @@ pub fn coalition_relic() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -4316,6 +4347,7 @@ pub fn coalition_relic() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: false,
@@ -4355,6 +4387,7 @@ pub fn coalition_relic() -> CardDefinition {
                 from_graveyard: false,
                 exile_self_cost: false, exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
         ],
         ..Default::default()
@@ -4383,26 +4416,32 @@ pub fn tear_asunder() -> CardDefinition {
     }
 }
 
-/// Assassin's Trophy — {B}{G} Instant. Destroy target permanent an
-/// opponent controls.
-///
-/// Two-mana destroy-anything-but-yours. The "owner searches their library
-/// for a basic land card and puts it onto the battlefield" downside is
-/// collapsed (search-for-basic-onto-opponent's-battlefield isn't yet
-/// supported by the engine — `Search` always targets the caster). For
-/// gameplay purposes this is the upside half: a clean flexible answer.
+/// Assassin's Trophy — {B}{G} Instant. "Destroy target permanent an
+/// opponent controls. Its controller may search their library for a basic
+/// land card, put it onto the battlefield, then shuffle." The destroyed
+/// permanent's owner (resolved post-destroy via the graveyard) does the
+/// basic-land search — the printed ramp downside.
 pub fn assassins_trophy() -> CardDefinition {
     CardDefinition {
         name: "Assassin's Trophy",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Permanent
-                    .and(SelectionRequirement::Nonland)
-                    .and(SelectionRequirement::ControlledByOpponent),
-            ),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::Search {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -4542,6 +4581,7 @@ pub fn krark_clan_ironworks() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4666,6 +4706,7 @@ pub fn ghost_vacuum() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -4752,21 +4793,21 @@ pub fn mortify() -> CardDefinition {
     }
 }
 
-/// Maelstrom Pulse — {1}{B}{G} Sorcery. Destroy target nonland permanent.
-///
-/// The "all permanents with the same name" rider is collapsed (no
-/// name-match selector primitive yet). Single-target nonland-permanent
-/// removal is still flexible: hits creatures, artifacts, enchantments,
-/// and planeswalkers. Tear Asunder + Vindicate's Golgari cousin.
+/// Maelstrom Pulse — {1}{B}{G} Sorcery. "Destroy target nonland permanent
+/// and all other permanents with the same name as that permanent."
+/// The same-name sweep rides via `Selector::SharingNameWith(Target(0))`.
 pub fn maelstrom_pulse() -> CardDefinition {
     CardDefinition {
         name: "Maelstrom Pulse",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
+        // Cast-time target validation runs on `Target(0)`; the destroy then
+        // hits every battlefield permanent sharing the target's name.
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-            ),
+            what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            })),
         },
         ..Default::default()
     }
@@ -4817,23 +4858,21 @@ pub fn dismember() -> CardDefinition {
     }
 }
 
-/// Echoing Truth — {1}{U} Instant. Return target nonland permanent and
+/// Echoing Truth — {1}{U} Instant. "Return target nonland permanent and
 /// all other permanents with the same name as that permanent to their
-/// owners' hands.
-///
-/// The "and all permanents with the same name" rider is collapsed (no
-/// name-match selector primitive). Single-target bounce of any nonland
-/// permanent is the gameplay-relevant default — Boomerang's wider land
-/// twin, Unsummon's nonland-permanent twin.
+/// owners' hands." Same-name sweep via `Selector::SharingNameWith`. The
+/// destination resolves to the target's owner (same-named permanents
+/// almost always share an owner — token swarms / your own multiples).
 pub fn echoing_truth() -> CardDefinition {
     CardDefinition {
         name: "Echoing Truth",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-            ),
+            what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            })),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         },
         ..Default::default()
@@ -5122,6 +5161,7 @@ pub fn elvish_reclaimer() -> CardDefinition {
             self_counter_cost_reduction: None,
             // Sacrifice a land as an activation cost.
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -5171,6 +5211,7 @@ pub fn rofellos_llanowar_emissary() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -5436,6 +5477,7 @@ pub fn pentad_prism() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6021,6 +6063,7 @@ pub fn mortuary_mire() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6055,6 +6098,7 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -6078,28 +6122,659 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         ..Default::default()
     }
 }
 
-/// Searing Blood — {R}{R} Instant. Searing Blood deals 2 damage to target
-/// creature. When that creature dies this turn, Searing Blood deals 3
-/// damage to that creature's controller.
-///
-/// The "if it dies, deal 3 to its controller" rider collapses (no
-/// "if-this-effect's-target-dies" delayed trigger primitive yet).
-/// Resolves as flat 2 damage to a creature — strictly worse than
-/// Magma Spray for a half-cost increase but still efficient.
+/// Searing Blood — {R}{R} Instant. Deals 2 damage to target creature; when
+/// that creature dies this turn, deals 3 to its controller. The death rider
+/// is a real event-keyed delayed trigger (`WhenTargetDiesThisTurn`).
 pub fn searing_blood() -> CardDefinition {
     CardDefinition {
         name: "Searing Blood",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        // Register the death-watch before the damage so the watch is live
+        // when the 2 damage kills the creature within this same resolution.
+        effect: Effect::Seq(vec![
+            Effect::WhenTargetDiesThisTurn {
+                body: Box::new(Effect::DealDamage {
+                    to: Selector::Target(0),
+                    amount: Value::Const(3),
+                }),
+            },
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Grapeshot — {1}{R} Sorcery with Storm. Deals 1 damage to any target.
+/// Storm copies it once for each spell cast before it this turn (CR 702.40),
+/// each copy choosing its own target.
+pub fn grapeshot() -> CardDefinition {
+    CardDefinition {
+        name: "Grapeshot",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Ahn-Crop Crasher — {2}{R}, 3/2 Minotaur Warrior with Haste and Exert
+/// (CR 702.83). We auto-exert it as it attacks: it gains its on-attack
+/// bonus (target creature can't block this turn) and won't untap on the
+/// controller's next untap step.
+pub fn ahn_crop_crasher() -> CardDefinition {
+    CardDefinition {
+        name: "Ahn-Crop Crasher",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Exert],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Servant of Tymaret — {1}{B}, 2/1 Zombie with Inspired (CR 702.108):
+/// whenever it becomes untapped, each opponent loses 1 life.
+pub fn servant_of_tymaret() -> CardDefinition {
+    CardDefinition {
+        name: "Servant of Tymaret",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Unholy Heat — {R} Instant. Deals 2 damage to target creature or
+/// planeswalker; Delirium (4+ card types in your graveyard) deals 6 instead.
+pub fn unholy_heat() -> CardDefinition {
+    CardDefinition {
+        name: "Unholy Heat",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::DeliriumActive { who: PlayerRef::You },
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(6),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cut Down — {B} Instant. Destroy target creature with total power and
+/// toughness 5 or less.
+pub fn cut_down() -> CardDefinition {
+    CardDefinition {
+        name: "Cut Down",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::PowerPlusToughnessAtMost(5)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Galvanic Blast — {R} Instant. Deals 1 damage to any target; Affinity for
+/// artifacts (3+ artifacts you control) deals 4 instead.
+pub fn galvanic_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Galvanic Blast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(3),
+            },
+            then: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) }),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Seal of Fire — {R} Enchantment. Sacrifice it: deals 2 damage to any target.
+pub fn seal_of_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Fire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abrade — {1}{R} Instant. Choose one — deal 3 damage to target creature;
+/// or destroy target artifact.
+pub fn abrade() -> CardDefinition {
+    CardDefinition {
+        name: "Abrade",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Boros Charm — {R}{W} Instant. Choose one — 4 damage to target player or
+/// planeswalker; or permanents you control gain indestructible until end of
+/// turn; or target creature gains double strike until end of turn.
+pub fn boros_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Charm",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Sprite Dragon — {U}{R}, 1/1 Faerie Dragon with Flying and Haste.
+/// Whenever you cast a noncreature spell, put a +1/+1 counter on it.
+pub fn sprite_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Sprite Dragon",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kiln Fiend — {1}{R}, 1/2 Elemental. Whenever you cast an instant or
+/// sorcery spell, it gets +3/+0 until end of turn.
+pub fn kiln_fiend() -> CardDefinition {
+    CardDefinition {
+        name: "Kiln Fiend",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(3),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Soul-Scar Mage — {R}, 1/2 Human Monk with Prowess. (Its noncombat-damage-
+/// as-(-1/-1)-counters replacement is omitted — no damage-replacement
+/// primitive yet; tracked in TODO.md.)
+pub fn soul_scar_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Soul-Scar Mage",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Temur Battle Rage — {1}{R} Instant. Target creature gets +1/+1 and gains
+/// trample until end of turn. Ferocious — it also gains double strike if you
+/// control a creature with power 4 or greater.
+pub fn temur_battle_rage() -> CardDefinition {
+    CardDefinition {
+        name: "Temur Battle Rage",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mutagenic Growth — {G/P} Instant. Target creature gets +2/+2 until end of
+/// turn. (Modeled at the {G} cost — Phyrexian "pay 2 life" alt is omitted;
+/// tracked in TODO.md.)
+pub fn mutagenic_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Mutagenic Growth",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Brute Force — {G} Instant. Target creature gets +3/+3 until end of turn.
+pub fn brute_force() -> CardDefinition {
+    CardDefinition {
+        name: "Brute Force",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Titan's Strength — {R} Instant. Target creature gets +3/+1 until end of
+/// turn. Scry 1.
+pub fn titans_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Titan's Strength",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crash Through — {R} Sorcery. Creatures you control gain trample until end
+/// of turn. Draw a card.
+pub fn crash_through() -> CardDefinition {
+    CardDefinition {
+        name: "Crash Through",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fling — {1}{R} Instant. As an additional cost, sacrifice a creature.
+/// Deals damage equal to the sacrificed creature's power to any target.
+pub fn fling() -> CardDefinition {
+    CardDefinition {
+        name: "Fling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::SacrificedPower },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Supreme Verdict — {1}{W}{W}{U} Sorcery. Destroy all creatures. This spell
+/// can't be countered.
+pub fn supreme_verdict() -> CardDefinition {
+    CardDefinition {
+        name: "Supreme Verdict",
+        cost: cost(&[generic(1), w(), w(), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Stubborn Denial — {U} Instant. Counter target noncreature spell unless its
+/// controller pays {1}. Ferocious — pays {3} instead if you control a
+/// creature with power 4 or greater.
+pub fn stubborn_denial() -> CardDefinition {
+    let spell_filter =
+        SelectionRequirement::IsSpellOnStack.and(SelectionRequirement::Noncreature);
+    CardDefinition {
+        name: "Stubborn Denial",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::ControlledByYou
+                        .and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+                n: Value::Const(1),
+            },
+            then: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(spell_filter.clone()),
+                mana_cost: cost(&[generic(3)]),
+            }),
+            else_: Box::new(Effect::CounterUnlessPaid {
+                what: target_filtered(spell_filter),
+                mana_cost: cost(&[generic(1)]),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Archmage's Charm — {U}{U}{U} Instant. Choose one — counter target spell;
+/// or draw two cards; or gain control of target nonland permanent with mana
+/// value 1 or less.
+pub fn archmages_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Archmage's Charm",
+        cost: cost(&[u(), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+            Effect::GainControl {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::ManaValueAtMost(1)),
+                ),
+                duration: Duration::Permanent,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Snakeskin Veil — {G} Instant. Target creature gets +1/+1 and gains
+/// hexproof until end of turn.
+pub fn snakeskin_veil() -> CardDefinition {
+    CardDefinition {
+        name: "Snakeskin Veil",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Murmuring Mystic — {3}{U}, 1/5 Human Wizard. Whenever you cast an instant
+/// or sorcery spell, create a 1/1 blue Bird Illusion with flying.
+pub fn murmuring_mystic() -> CardDefinition {
+    CardDefinition {
+        name: "Murmuring Mystic",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Bird Illusion".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Blue],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Bird, CreatureType::Illusion],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Werewolf Pack Leader — {G}{G}, 3/3 Wolf. Whenever it attacks, if you
+/// control three or more creatures, draw a card. {3}{G}{G}: it gets +1/+1
+/// and can't be blocked this turn.
+pub fn werewolf_pack_leader() -> CardDefinition {
+    CardDefinition {
+        name: "Werewolf Pack Leader",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(3),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Infernal Grasp — {1}{B} Instant. Destroy target creature. You lose 2 life.
+pub fn infernal_grasp() -> CardDefinition {
+    CardDefinition {
+        name: "Infernal Grasp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Village Rites — {B} Instant. As an additional cost, sacrifice a creature.
+/// Draw two cards.
+pub fn village_rites() -> CardDefinition {
+    CardDefinition {
+        name: "Village Rites",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Power Word Kill — {1}{B} Instant. Destroy target non-Angel, non-Demon,
+/// non-Dragon creature. (The printed "non-God" clause is dropped — no God
+/// creature type in the engine yet.)
+pub fn power_word_kill() -> CardDefinition {
+    use crate::card::CreatureType as CT;
+    CardDefinition {
+        name: "Power Word Kill",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CT::Angel).negate())
+                    .and(SelectionRequirement::HasCreatureType(CT::Demon).negate())
+                    .and(SelectionRequirement::HasCreatureType(CT::Dragon).negate()),
+            ),
         },
         ..Default::default()
     }
@@ -6750,6 +7425,7 @@ pub fn pernicious_deed() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6802,6 +7478,7 @@ pub fn wall_of_roots() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -6897,6 +7574,7 @@ pub fn phyrexian_reclamation() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -7072,6 +7750,7 @@ pub fn yavimaya_elder() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -7956,20 +8635,39 @@ pub fn wall_of_blossoms() -> CardDefinition {
     }
 }
 
-/// Trinisphere — {3} Artifact. As long as Trinisphere is untapped, each
-/// spell costs at least {3} to cast.
-///
-/// Cube-style approximation: the "cost at least {3}" static is engine-
-/// wide ⏳ (no minimum-cost primitive — only the additional-cost-per-
-/// spell tax, Damping Sphere). Ships as a vanilla 3-mana artifact body
-/// — promote to ✅ once the minimum-cost-floor static lands. The card
-/// remains in pools as a colorless stop-gap pickup.
+/// Trinisphere — {3} Artifact. While untapped, each spell that would cost
+/// less than {3} to cast costs {3} instead.
 pub fn trinisphere() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Trinisphere",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        effect: Effect::Noop,
+        static_abilities: vec![StaticAbility {
+            description: "As long as Trinisphere is untapped, each spell that \
+                          would cost less than three mana to cast costs three \
+                          instead.",
+            effect: StaticEffect::SpellCostFloor { amount: 3 },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Raven's Crime — {B} Sorcery. "Target player discards a card. Retrace"
+/// (CR 702.81 — recast from the graveyard for its cost plus discarding a
+/// land card). Wired via `Keyword::Retrace` + `GameAction::CastRetrace`.
+pub fn ravens_crime() -> CardDefinition {
+    CardDefinition {
+        name: "Raven's Crime",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Retrace],
+        effect: Effect::Discard {
+            who: Selector::Target(0),
+            amount: Value::Const(1),
+            random: false,
+        },
         ..Default::default()
     }
 }
@@ -8197,6 +8895,7 @@ pub fn drudge_skeletons() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -8252,6 +8951,7 @@ pub fn will_o_the_wisp() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -8287,6 +8987,7 @@ pub fn wall_of_bone() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -9305,6 +10006,7 @@ pub fn helix_pinnacle() -> CardDefinition {
             condition: None,
             exile_other_filter: None,
             sac_other_filter: None,
+            tap_other_filter: None,
             self_counter_cost_reduction: None,
             effect: Effect::AddCounter {
                 what: Selector::This,
@@ -9566,9 +10268,7 @@ pub fn amped_raptor() -> CardDefinition {
 
 /// Thundertrap Trainer — {1}{W} Creature — Human Soldier. 2/2. Flash.
 /// "When Thundertrap Trainer enters, tap target creature an opponent
-/// controls."
-///
-/// 🟡 Body: 2/2 Flash + ETB tap target opponent creature. Fully wired.
+/// controls." (Synthesised body; ETB tap fully wired.)
 pub fn thundertrap_trainer() -> CardDefinition {
     CardDefinition {
         name: "Thundertrap Trainer",
@@ -9676,6 +10376,7 @@ pub fn basking_rootwalla() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -10636,6 +11337,7 @@ pub fn three_tree_city() -> CardDefinition {
             exile_other_filter: None,
             self_counter_cost_reduction: None,
             sac_other_filter: None,
+            tap_other_filter: None,
         }],
         ..Default::default()
     }
@@ -10887,6 +11589,7 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
                 amount: Value::Const(1),
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 2)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

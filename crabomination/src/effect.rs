@@ -209,6 +209,14 @@ pub enum Selector {
         value_of_each: Box<Value>,
     },
 
+    /// All battlefield permanents (including the anchor itself) whose
+    /// printed name matches the entity resolved by `inner`. Powers the
+    /// printed "and each other permanent with the same name" / "all
+    /// permanents with that name" riders — Maelstrom Pulse, Echoing Truth,
+    /// Bile Blight-style sweepers. `inner` is typically `Target(0)`; if it
+    /// resolves to nothing (or a non-permanent), this yields nothing.
+    SharingNameWith(Box<Selector>),
+
     /// No entities (placeholder/default).
     None,
 }
@@ -384,6 +392,11 @@ pub enum Value {
     /// table-wide aristocrat scaling, mirroring
     /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
     CreaturesDiedThisTurnTotal,
+    /// Number of permanents destroyed by `Effect::Destroy` earlier in this
+    /// same resolution. Backed by `GameState.permanents_destroyed_this_resolution`.
+    /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed
+    /// this way" — evaluate it in a later `Seq` step after the destruction.
+    PermanentsDestroyedThisResolution,
 }
 
 impl Value {
@@ -472,6 +485,11 @@ pub enum Predicate {
     /// Evaluated against the topmost matching `StackItem::Spell`'s `target`
     /// slot.
     CastSpellTargetsMatch(SelectionRequirement),
+    /// True if the just-cast spell (located via `ctx.trigger_source`) is
+    /// itself a card matching `filter` — e.g. a noncreature spell (Sprite
+    /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
+    /// against the topmost matching `StackItem::Spell`'s card definition.
+    CastSpellMatches(SelectionRequirement),
     /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
     /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
     /// in its mana cost. Used by Quandrix's "whenever you cast a spell
@@ -555,6 +573,11 @@ pub enum Predicate {
     /// Exalted reminder ("Whenever a creature you control attacks
     /// alone, that creature gets +1/+1 until end of turn").
     AttackingAlone,
+    /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
+    /// least 4 distinct card types (the count of *types*, not cards). Backed
+    /// by scanning the graveyard's `definition.card_types`. Used by Unholy
+    /// Heat, Dragon's Rage Channeler, etc.
+    DeliriumActive { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
@@ -662,6 +685,12 @@ pub enum ManaPayload {
     AnyOneColor(Value),
     /// Add `amount` mana of any colors (player chooses each).
     AnyColors(Value),
+    /// Add `amount` mana, each pip chosen from the given color subset
+    /// (player chooses per pip). The restricted-palette sibling of
+    /// `AnyColors`. Used by Culling Ritual's "Add {B} or {G} for each
+    /// permanent destroyed this way". Falls back to the first listed
+    /// color when the decider can't choose.
+    OfColors(Vec<Color>, Value),
     /// Add one mana of any color a controller's opponent's land could
     /// produce. The pool of legal colors is the union of basic-land
     /// types under any opponent's control (`Plains` → White, `Island`
@@ -786,6 +815,10 @@ pub enum EventKind {
     /// source card was the one cycled; `EventScope::YourControl` fires
     /// when any of the controller's cards were cycled.
     CardCycled,
+    /// CR 702.108 — a permanent became untapped (Inspired). Fired once per
+    /// permanent that flips tapped→untapped during the untap step. The
+    /// triggering permanent is the event subject.
+    BecomesUntapped,
 }
 
 /// Whose events does this trigger listen for?
@@ -1435,6 +1468,14 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
+    /// "When [target creature] dies this turn, [body]." Registers an
+    /// event-keyed delayed trigger watching `ctx.targets[0]`'s death. The
+    /// targeted creature's controller is captured as `Target::Player` so the
+    /// body can reference it via `Selector::Target(0)` even after the
+    /// creature has left the battlefield. Expires at cleanup. Used by
+    /// Searing Blood ("deals 3 damage to its controller").
+    WhenTargetDiesThisTurn { body: Box<Effect> },
+
     /// "Pay {cost} or you lose the game." Used for pact upkeep payments
     /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
     /// can afford; eliminates the controller otherwise. (No interactive
@@ -1626,7 +1667,9 @@ impl Effect {
         fn sel_has_target(s: &Selector) -> bool {
             match s {
                 Selector::Target(_) | Selector::TargetFiltered { .. } => true,
-                Selector::AttachedTo(i) | Selector::AttachedToMe(i) => sel_has_target(i),
+                Selector::AttachedTo(i)
+                | Selector::AttachedToMe(i)
+                | Selector::SharingNameWith(i) => sel_has_target(i),
                 Selector::Take { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
@@ -1737,7 +1780,7 @@ impl Effect {
                     ManaPayload::Colorless(v)
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
-                    ManaPayload::OfColor(_, v) => value_has_target(v),
+                    ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::Colors(_)
                     | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }
@@ -1801,6 +1844,8 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::DelayUntil { body, .. } => body.requires_target(),
+            // Needs a creature to watch for death (the watched target).
+            Effect::WhenTargetDiesThisTurn { .. } => true,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { .. } => false,
             Effect::AddFirstSpellTax { who, count } => {
@@ -1909,6 +1954,7 @@ impl Effect {
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
             Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            Effect::WhenTargetDiesThisTurn { .. } => Some(&SelectionRequirement::Creature),
             // Modal cards: surface the first mode's filter as the
             // representative one (UI/bot still need *some* filter to
             // narrow target candidates). Mode-specific validation lives
@@ -2276,7 +2322,9 @@ impl Effect {
         fn sel_find(s: &Selector, slot: u8) -> Option<&SelectionRequirement> {
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
-                Selector::AttachedTo(i) | Selector::AttachedToMe(i) => sel_find(i, slot),
+                Selector::AttachedTo(i)
+                | Selector::AttachedToMe(i)
+                | Selector::SharingNameWith(i) => sel_find(i, slot),
                 Selector::Take { inner, .. } => sel_find(inner, slot),
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 _ => None,
@@ -2434,6 +2482,11 @@ pub enum StaticEffect {
     /// are taxed; the cost increase is applied at cast time when the
     /// caster's `Player.spells_cast_this_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
+    /// Thalia-style unconditional tax: spells matching `filter` cost
+    /// `amount` more to cast, every time (no first-spell gate). Applied at
+    /// cast time alongside `AdditionalCostAfterFirstSpell` in
+    /// `extra_cost_for_spell`.
+    AdditionalCost { filter: SelectionRequirement, amount: u32 },
     /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.
@@ -2578,6 +2631,25 @@ pub enum StaticEffect {
     PreventUntap {
         applies_to: Selector,
     },
+    /// Trinisphere: while the source is untapped, every spell that would
+    /// cost less than `amount` mana to cast costs that much instead
+    /// (generic is added to bring the total up). Applies to all players.
+    /// Read by the cast paths in `game/actions.rs` after cost reductions.
+    SpellCostFloor {
+        amount: u32,
+    },
+    /// Omniscience: the controller may cast spells from their hand without
+    /// paying their mana costs. Consulted by
+    /// `GameState::player_casts_hand_spells_free`, which lets
+    /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
+    CastHandSpellsFree,
+    /// "Attacking creatures you control have <keyword>." Blade Historian
+    /// (double strike), and any future combat anthem keyed on the
+    /// declare-attackers set. Resolved at `compute_battlefield` time (which
+    /// has the live `GameState.attacking` list) into a layer-6 keyword grant
+    /// scoped to the controller's attackers — `affects()` can't see combat
+    /// state on its own, so this can't route through `selector_to_affected`.
+    GrantKeywordToAttackers { keyword: Keyword },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -2720,6 +2792,16 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// Optional cost: tap an *untapped, different* permanent the activator
+    /// controls matching this filter (CR 602.5b "tap an untapped … you
+    /// control" costs). Mirrors `sac_other_filter` but taps rather than
+    /// sacrifices. Used by Opposition (`Tap an untapped creature you
+    /// control: Tap target …`) and similar. The auto-picker takes the
+    /// lowest-power matching untapped permanent so higher-value creatures
+    /// stay open. Rejected with `GameError::SelectionRequirementViolated`
+    /// when nothing matches. Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub tap_other_filter: Option<SelectionRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

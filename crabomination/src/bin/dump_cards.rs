@@ -80,6 +80,9 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Dredge(_) => "Dredge",
         Keyword::Crew(_) => "Crew",
         Keyword::Annihilator(_) => "Annihilator",
+        Keyword::Flanking => "Flanking",
+        Keyword::Bushido(_) => "Bushido",
+        Keyword::Rampage(_) => "Rampage",
         Keyword::Ward(_) => "Ward",
         Keyword::Flashback(_) => "Flashback",
         Keyword::FlashbackTap(_) => "Flashback",
@@ -98,6 +101,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         // keyword, so it's filtered the same way as Unblockable.)
         Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
+        | Keyword::MustBeBlocked
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
     };
     Some(s.to_string())

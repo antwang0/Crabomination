@@ -186,8 +186,20 @@ pub fn graveyard_browser(
             .unwrap_or_else(|| format!("Player {owner}"));
         let owner_label = format!("{owner_name}'s");
 
-        let card_names: Vec<String> = view.0.as_ref()
-            .map(|cv| cv.players[owner].graveyard.iter().map(|c| c.name.clone()).collect())
+        // (name, recast-badge): badge is "Flashback {N}" / "Retrace" for
+        // cards castable from the graveyard, surfaced from the view's new
+        // recast flags so players can see their options at a glance.
+        let card_names: Vec<(String, Option<String>)> = view.0.as_ref()
+            .map(|cv| cv.players[owner].graveyard.iter().map(|c| {
+                let badge = if let Some(fb) = &c.flashback_cost {
+                    Some(format!("Flashback {{{}}}", fb.cmc()))
+                } else if c.retrace {
+                    Some("Retrace".to_string())
+                } else {
+                    None
+                };
+                (c.name.clone(), badge)
+            }).collect())
             .unwrap_or_default();
         let count = card_names.len();
 
@@ -272,7 +284,7 @@ pub fn graveyard_browser(
                             Pickable::IGNORE,
                         ))
                         .with_children(|grid| {
-                            for name in &card_names {
+                            for (name, badge) in &card_names {
                                 let path = scryfall::card_asset_path(name);
                                 let texture: Handle<Image> = asset_server.load(&path);
                                 // Each tile is a Button so Bevy's
@@ -305,6 +317,30 @@ pub fn graveyard_browser(
                                         },
                                         Pickable::IGNORE,
                                     ));
+                                    // Recast badge pinned to the bottom of
+                                    // the tile (Flashback / Retrace).
+                                    if let Some(label) = badge {
+                                        tile.spawn((
+                                            Node {
+                                                position_type: PositionType::Absolute,
+                                                bottom: Val::Px(2.0),
+                                                left: Val::Px(2.0),
+                                                right: Val::Px(2.0),
+                                                justify_content: JustifyContent::Center,
+                                                ..default()
+                                            },
+                                            BackgroundColor(theme::OVERLAY_BG),
+                                            Pickable::IGNORE,
+                                        ))
+                                        .with_children(|b| {
+                                            b.spawn((
+                                                Text::new(label.clone()),
+                                                ui_fonts.tf(10.0),
+                                                TextColor(theme::TEXT_PRIMARY),
+                                                Pickable::IGNORE,
+                                            ));
+                                        });
+                                    }
                                 });
                             }
                         });

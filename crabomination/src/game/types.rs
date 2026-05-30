@@ -168,6 +168,10 @@ pub enum GameAction {
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target> },
     CastFlashback { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
+    /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81) for its
+    /// mana cost plus discarding a land card from hand. Unlike Flashback,
+    /// the spell returns to the graveyard after resolving (no exile).
+    CastRetrace { card_id: CardId, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
     /// `tap_creatures` (must list exactly N untapped creatures the
     /// caster controls). Used by Group Project ("Flashback—Tap three
@@ -279,6 +283,12 @@ pub enum DelayedKind {
     /// step so the mana lands in the pool with main-phase windows still
     /// open (mana pools empty on step transition, MTG rule 500.4).
     YourNextMainPhase,
+    /// "When [card] dies this turn, …" — fires on a `CreatureDied` event for
+    /// the watched card id (CR 603.4 event-keyed delayed trigger). Registered
+    /// by `Effect::WhenTargetDiesThisTurn` capturing the targeted creature.
+    /// Expires at cleanup if the watched card hasn't died (the "this turn"
+    /// window). Powers Searing Blood's "deals 3 to its controller".
+    WhenCardDies(crate::card::CardId),
 }
 
 // ── Pending decisions (suspendable resolution) ───────────────────────────────
@@ -685,6 +695,8 @@ pub enum GameError {
     CannotBlock(CardId),
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
+    #[error("Attacker {0:?} must be blocked if able and an idle blocker can block it")]
+    MustBeBlockedIfAble(CardId),
     #[error("Card {0:?} has Hexproof and cannot be targeted by opponents")]
     TargetHasHexproof(CardId),
     #[error("Card {0:?} has Shroud and cannot be targeted")]

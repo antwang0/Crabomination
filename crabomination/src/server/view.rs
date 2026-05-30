@@ -183,6 +183,8 @@ fn graveyard_entry(card: &CardInstance) -> GraveyardCardView {
         mana_cost: card.definition.cost.clone(),
         power: card.definition.base_power(),
         toughness: card.definition.base_toughness(),
+        flashback_cost: card.definition.has_flashback().cloned(),
+        retrace: card.definition.has_retrace(),
     }
 }
 
@@ -962,6 +964,17 @@ mod tests {
     }
 
     #[test]
+    fn graveyard_view_surfaces_recast_options() {
+        let mut state = two_player_game();
+        // Raven's Crime carries Retrace; the view should advertise it.
+        let crime = state.add_card_to_graveyard(0, catalog::ravens_crime());
+        let view = project(&state, 0);
+        let entry = view.players[0].graveyard.iter().find(|c| c.id == crime).unwrap();
+        assert!(entry.retrace, "Retrace flagged on graveyard view");
+        assert!(entry.flashback_cost.is_none(), "no flashback cost for Raven's Crime");
+    }
+
+    #[test]
     fn permanent_view_includes_static_ability_labels() {
         // Tenured Inkcaster has a printed static "Other Inkling
         // creatures you control get +2/+2." — the view should surface
@@ -1051,6 +1064,7 @@ mod tests {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{W}"), "{label} should contain {{W}}");
@@ -1073,6 +1087,7 @@ mod tests {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         };
         assert_eq!(ability_cost_label(&ab_x), "{X}",
             "X-cost ability renders as {{X}}");
@@ -1099,6 +1114,7 @@ mod tests {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         };
         let label = ability_cost_label(&ab);
         assert!(label.contains("{1}"), "{label} must include the {{1}} cost");
@@ -1119,6 +1135,7 @@ mod tests {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         };
         let label = ability_cost_label(&petal);
         assert!(label.contains("{T}") && label.contains("Sac"),

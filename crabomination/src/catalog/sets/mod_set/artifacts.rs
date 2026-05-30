@@ -53,6 +53,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -88,6 +89,7 @@ pub fn millstone() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -127,6 +129,7 @@ pub fn mind_stone() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -143,6 +146,7 @@ pub fn mind_stone() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -188,6 +192,7 @@ pub fn aether_spellbomb() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             // {1}, Sacrifice this: Draw a card.
             ActivatedAbility {
@@ -202,6 +207,7 @@ pub fn aether_spellbomb() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -242,6 +248,7 @@ pub fn zuran_orb() -> CardDefinition {
             self_counter_cost_reduction: None,
             // Sacrifice a land as an activation cost.
             sac_other_filter: Some((SelectionRequirement::Land, 1)),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -284,6 +291,7 @@ pub fn chromatic_star() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -340,6 +348,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             // {2}, {T}, Sac: Each player exiles their graveyard, you draw.
             ActivatedAbility {
@@ -364,6 +373,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -412,6 +422,7 @@ pub fn cankerbloom() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -454,6 +465,7 @@ pub fn fellwar_stone() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -492,6 +504,7 @@ pub fn monument_to_endurance() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()

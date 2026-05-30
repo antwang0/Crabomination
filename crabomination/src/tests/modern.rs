@@ -1277,29 +1277,16 @@ fn dovins_veto_is_uncounterable() {
 // ── Modern creatures (mod_set/creatures) ─────────────────────────────────────
 
 #[test]
-fn thalia_taxes_noncreature_spells_after_first() {
+fn thalia_taxes_every_noncreature_spell() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
 
-    // First Bolt this turn pays no tax — passes for {R}.
-    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt1,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("first noncreature spell shouldn't pay Thalia tax");
-    drain_stack(&mut g);
-
-    // Second Bolt now requires {1}{R}; only {R} fails.
-    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // Even the first Bolt this turn owes {1} more — only {R} fails.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let err = g
         .perform_action(GameAction::CastSpell {
-            card_id: bolt2,
+            card_id: bolt,
             target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
@@ -1307,6 +1294,17 @@ fn thalia_taxes_noncreature_spells_after_first() {
         })
         .unwrap_err();
     assert!(matches!(err, GameError::Mana(_)));
+
+    // {1}{R} pays the taxed Bolt.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1}{R} covers Thalia's tax");
 }
 
 #[test]
@@ -7530,6 +7528,26 @@ fn assassins_trophy_destroys_opp_permanent() {
 }
 
 #[test]
+fn assassins_trophy_owner_ramps_a_basic_land() {
+    let mut g = two_player_game();
+    // Opponent's permanent to destroy is a land; they ramp a basic in return.
+    let opp_land = g.add_card_to_battlefield(1, catalog::mountain());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::assassins_trophy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("can target an opponent's land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_land), "land destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == forest && c.controller == 1),
+        "owner searched a basic land onto the battlefield");
+}
+
+#[test]
 fn assassins_trophy_rejects_your_own_permanent() {
     // Filter is "permanent an opponent controls" — caster's own creature
     // should be rejected at cast time.
@@ -7904,6 +7922,29 @@ fn maelstrom_pulse_destroys_nonland_permanent() {
 }
 
 #[test]
+fn maelstrom_pulse_sweeps_all_with_same_name() {
+    let mut g = two_player_game();
+    // Three Grizzly Bears split across players + one other creature.
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::maelstrom_pulse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    for id in [b1, b2, b3] {
+        assert!(!g.battlefield.iter().any(|c| c.id == id), "all Grizzly Bears destroyed");
+    }
+    assert!(g.battlefield.iter().any(|c| c.id == elf), "differently-named creature survives");
+}
+
+#[test]
 fn maelstrom_pulse_rejects_land_target() {
     let mut g = two_player_game();
     let mountain = g.add_card_to_battlefield(1, catalog::mountain());
@@ -8026,6 +8067,27 @@ fn echoing_truth_bounces_nonland_permanent() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
     assert!(g.players[1].hand.iter().any(|c| c.id == bear),
         "Bear bounces back to its owner's hand");
+}
+
+#[test]
+fn echoing_truth_bounces_all_with_same_name() {
+    let mut g = two_player_game();
+    // Opponent has a swarm of same-named tokens (e.g. three Bears).
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::echoing_truth());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    for id in [b1, b2] {
+        assert!(g.players[1].hand.iter().any(|c| c.id == id), "both Bears bounce");
+    }
+    assert!(g.battlefield.iter().any(|c| c.id == elf), "Elf unaffected");
 }
 
 #[test]
@@ -8826,6 +8888,493 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn infernal_grasp_destroys_and_loses_two_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::infernal_grasp());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature destroyed");
+    assert_eq!(g.players[0].life, 18, "lose 2 life");
+}
+
+#[test]
+fn village_rites_sacrifices_and_draws_two() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::village_rites());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 cast, +2 drawn = net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draws two");
+}
+
+#[test]
+fn power_word_kill_spares_dragons() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::power_word_kill());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable on a non-Dragon");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "ordinary creature dies");
+}
+
+#[test]
+fn snakeskin_veil_pumps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snakeskin_veil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1");
+    assert!(c.has_keyword(&Keyword::Hexproof), "gains hexproof");
+}
+
+#[test]
+fn murmuring_mystic_makes_a_bird_on_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::murmuring_mystic());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bird Illusion"),
+        "casting an instant mints a Bird");
+}
+
+#[test]
+fn werewolf_pack_leader_draws_when_attacking_with_three() {
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::werewolf_pack_leader());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.battlefield.iter_mut().find(|c| c.id == leader).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.declare_attackers(vec![Attack { attacker: leader, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "drew a card (controls 3+ creatures)");
+}
+
+#[test]
+fn supreme_verdict_destroys_all_creatures() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::serra_angel());
+    let id = g.add_card_to_hand(0, catalog::supreme_verdict());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == a || c.id == b),
+        "all creatures destroyed");
+}
+
+#[test]
+fn stubborn_denial_counters_unless_paid() {
+    let mut g = two_player_game();
+    // Opponent casts a noncreature spell (Lightning Bolt) we want to counter.
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt on stack");
+    // We respond with Stubborn Denial; opponent has no mana to pay {1}.
+    let sd = g.add_card_to_hand(0, catalog::stubborn_denial());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sd, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Stubborn Denial on stack");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt), "Bolt countered (unpaid)");
+    assert_eq!(g.players[0].life, 20, "Bolt never resolved");
+}
+
+#[test]
+fn archmages_charm_mode_one_draws_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::archmages_charm());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // -1 for the Charm leaving hand, +2 drawn → net +1.
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "draws two cards");
+}
+
+#[test]
+fn brute_force_pumps_three_three() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::brute_force());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 5), "+3/+3");
+}
+
+#[test]
+fn titans_strength_pumps_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::titans_strength());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 3), "+3/+1");
+}
+
+#[test]
+fn crash_through_grants_trample_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::crash_through());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == bear).unwrap().has_keyword(&Keyword::Trample),
+        "your creatures gain trample");
+    // -1 for the Crash Through leaving hand, +1 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before, "net hand size unchanged (cast 1, drew 1)");
+}
+
+#[test]
+fn fling_sacrifices_creature_and_deals_its_power() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+    let id = g.add_card_to_hand(0, catalog::fling());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "deals damage equal to its power");
+}
+
+#[test]
+fn sprite_dragon_grows_on_noncreature_spell() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::sprite_dragon());
+    // Cast a noncreature spell (Lightning Bolt) — Sprite Dragon grows.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let d = g.battlefield.iter().find(|c| c.id == dragon).unwrap();
+    assert_eq!(d.counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "noncreature cast adds a +1/+1 counter");
+    assert_eq!(d.power(), 2, "now 2/2");
+}
+
+#[test]
+fn kiln_fiend_pumps_on_instant_cast() {
+    let mut g = two_player_game();
+    let fiend = g.add_card_to_battlefield(0, catalog::kiln_fiend());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == fiend).unwrap().power(), 4,
+        "Kiln Fiend is 4/2 after an instant");
+}
+
+#[test]
+fn temur_battle_rage_grants_double_strike_with_ferocious() {
+    let mut g = two_player_game();
+    // A 4-power creature satisfies Ferocious.
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::temur_battle_rage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample), "gains trample");
+    assert!(c.has_keyword(&Keyword::DoubleStrike), "Ferocious grants double strike");
+    assert_eq!(c.power(), 5, "+1/+1");
+}
+
+#[test]
+fn soul_scar_mage_has_prowess() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::soul_scar_mage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 2,
+        "Prowess pumps to 2/3 after a noncreature spell");
+}
+
+#[test]
+fn mutagenic_growth_pumps_two_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mutagenic_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
+}
+
+#[test]
+fn unholy_heat_deals_two_without_delirium() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == angel).unwrap().damage, 2,
+        "deals 2 without delirium");
+}
+
+#[test]
+fn unholy_heat_deals_six_with_delirium() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    // Seed 4 card types in our graveyard: creature, instant, enchantment, artifact.
+    for def in [
+        catalog::grizzly_bears(),
+        catalog::lightning_bolt(),
+        catalog::seal_of_fire(),
+        catalog::mishras_bauble(),
+    ] {
+        let id = g.next_id();
+        g.players[0].graveyard.push(crate::card::CardInstance::new(id, def, 0));
+    }
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "6 damage kills the 4/4 (delirium)");
+}
+
+#[test]
+fn cut_down_destroys_small_creature_only() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2+2=4 ≤ 5
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4+4=8 > 5
+    let id = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable on the small creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "small creature destroyed");
+
+    // The big creature isn't a legal target.
+    let id2 = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id2, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap_err();
+    assert!(matches!(err, GameError::SelectionRequirementViolated | GameError::InvalidTarget));
+}
+
+#[test]
+fn galvanic_blast_affinity_boosts_with_three_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mishras_bauble());
+    }
+    let id = g.add_card_to_hand(0, catalog::galvanic_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 4, "4 damage with 3 artifacts");
+}
+
+#[test]
+fn seal_of_fire_sacrifices_to_deal_two() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_fire());
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac Seal of Fire");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal is sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "deals 2 to the target");
+}
+
+#[test]
+fn abrade_mode_zero_burns_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::abrade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "3 damage kills the 2/2");
+}
+
+#[test]
+fn boros_charm_mode_zero_deals_four_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boros_charm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 4, "4 damage to target player");
+}
+
+#[test]
+fn servant_of_tymaret_inspired_drains_on_untap() {
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::servant_of_tymaret());
+    g.battlefield.iter_mut().find(|c| c.id == servant).unwrap().tapped = true;
+    let foe_life = g.players[1].life;
+
+    g.do_untap();
+    drain_stack(&mut g); // resolve the Inspired trigger
+
+    assert!(!g.battlefield.iter().find(|c| c.id == servant).unwrap().tapped, "Servant untaps");
+    assert_eq!(g.players[1].life, foe_life - 1, "Inspired drains each opponent 1 on untap");
+}
+
+#[test]
+fn exert_attacker_does_not_untap_next_turn() {
+    let mut g = two_player_game();
+    let crasher = g.add_card_to_battlefield(0, catalog::ahn_crop_crasher());
+    // Not summoning sick (has Haste anyway). Advance to declare attackers.
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack {
+        attacker: crasher,
+        target: AttackTarget::Player(1),
+    }]).expect("Ahn-Crop Crasher attacks");
+    let c = g.battlefield.iter().find(|c| c.id == crasher).unwrap();
+    assert!(c.tapped, "attacker is tapped");
+    assert!(c.skip_next_untap, "exert flagged it to skip next untap");
+
+    // The controller's next untap step: the exerted creature stays tapped.
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == crasher).unwrap();
+    assert!(c.tapped, "exerted creature does not untap");
+    assert!(!c.skip_next_untap, "exert flag consumed — it untaps the turn after");
+}
+
+#[test]
+fn grapeshot_storm_copies_for_each_prior_spell() {
+    let mut g = two_player_game();
+    // Two prior spells this turn (Bolts at our own face are fine — we only
+    // care about the spell count). Each is cast and resolved.
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(0)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt castable");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.spells_cast_this_turn, 2, "two prior spells recorded");
+
+    let gp = g.add_card_to_hand(0, catalog::grapeshot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gp, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Grapeshot castable for {1}{R}");
+    drain_stack(&mut g);
+    // Original + 2 Storm copies = 3 instances of 1 damage.
+    assert_eq!(g.players[1].life, foe_life - 3, "Storm copies once per prior spell");
+}
+
+#[test]
 fn searing_blood_deals_two_damage_to_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
@@ -8842,6 +9391,64 @@ fn searing_blood_deals_two_damage_to_creature() {
 
     assert!(!g.battlefield.iter().any(|c| c.id == bear),
         "2-toughness Grizzly Bears dies to Searing Blood");
+}
+
+#[test]
+fn searing_blood_burns_controller_when_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 dies
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear dies");
+    assert_eq!(g.players[1].life, p1_life - 3, "controller takes 3 on death");
+}
+
+#[test]
+fn searing_blood_spares_controller_when_creature_survives() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(wall)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == wall), "4-toughness survives");
+    assert_eq!(g.players[1].life, p1_life, "no burn when creature survives");
+}
+
+#[test]
+fn searing_blood_burns_on_deferred_death_same_turn() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life, "no burn yet — 2 damage isn't lethal");
+
+    // Later this turn, a Lightning Bolt finishes the angel (2+3 ≥ 4).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "angel dies to the combined damage");
+    assert_eq!(g.players[1].life, p1_life - 3, "Searing Blood's death watch burns 3");
 }
 
 #[test]
@@ -15607,19 +16214,53 @@ fn culling_ritual_destroys_small_nonland_permanents() {
 }
 
 #[test]
-fn rushed_rebirth_tutors_a_creature_to_hand() {
+fn culling_ritual_adds_mana_per_permanent_destroyed() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_battlefield(1, catalog::llanowar_elves()); // MV 1
+    let id = g.add_card_to_hand(0, catalog::culling_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Cost was fully paid, so the pool now holds only the rider's mana:
+    // one B/G per destroyed permanent (two destroyed → two mana).
+    assert_eq!(g.players[0].mana_pool.total(), 2,
+        "two permanents destroyed → two B/G mana added");
+}
+
+#[test]
+fn rushed_rebirth_fetches_creature_to_battlefield_when_target_dies() {
     let mut g = two_player_game();
     let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    // The creature we target — a 2/2 that will die to a follow-up.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
     let id = g.add_card_to_hand(0, catalog::rushed_rebirth());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
     }).expect("Rushed Rebirth castable for {B}{G}");
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == elf),
-        "Rushed Rebirth tutors a creature to hand");
+    // No fetch yet — the watched creature is still alive.
+    assert!(!g.battlefield.iter().any(|c| c.id == elf), "no fetch before the target dies");
+
+    // Bolt the bear; its death fires Rushed Rebirth's watch.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let fetched = g.battlefield.iter().find(|c| c.id == elf);
+    assert!(fetched.is_some(), "creature fetched onto the battlefield on death");
+    assert!(fetched.unwrap().tapped, "fetched creature enters tapped");
 }
 
 #[test]
@@ -15739,4 +16380,76 @@ fn planar_nexus_taps_for_any_color() {
     }).expect("Planar Nexus mana ability activates");
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Planar Nexus adds one mana of any color");
+}
+
+#[test]
+fn trinisphere_floors_cheap_spells_at_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_battlefield(0, catalog::trinisphere());
+    let id = g.add_card_to_hand(0, catalog::ponder());
+    // {U} alone is short of the {3} floor.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Ponder can't be paid for under Trinisphere with only {{U}}");
+    // Top up to three total; now it pays.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ponder castable once three mana are available");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "all three mana consumed");
+}
+
+#[test]
+fn trinisphere_does_not_tax_when_tapped() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let tri = g.add_card_to_battlefield(0, catalog::trinisphere());
+    g.battlefield.iter_mut().find(|c| c.id == tri).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("tapped Trinisphere imposes no floor");
+    drain_stack(&mut g);
+}
+
+#[test]
+fn ravens_crime_retrace_recasts_from_graveyard_for_a_land() {
+    let mut g = two_player_game();
+    // Opponent has two cards to discard.
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    // Put Raven's Crime in the graveyard and a land in hand for the cost.
+    let crime = g.add_card_to_graveyard(0, catalog::ravens_crime());
+    g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastRetrace {
+        card_id: crime, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Raven's Crime retraces by discarding a land");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1, "opponent discarded a card");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.is_land()), "land discarded as cost");
+    // Retrace returns the spell to the graveyard (not exile) — recastable.
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Raven's Crime"),
+        "Raven's Crime back in graveyard for another retrace");
+}
+
+#[test]
+fn ravens_crime_retrace_requires_a_land_in_hand() {
+    let mut g = two_player_game();
+    let crime = g.add_card_to_graveyard(0, catalog::ravens_crime());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // No land in hand → retrace rejected, mana untouched.
+    assert!(g.perform_action(GameAction::CastRetrace {
+        card_id: crime, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "retrace needs a land to discard");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "mana not spent on failed retrace");
 }

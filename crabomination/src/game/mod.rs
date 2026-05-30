@@ -263,6 +263,15 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: count of permanents destroyed by `Effect::Destroy` within
+    /// the current resolution. Read by `Value::PermanentsDestroyedThisResolution`
+    /// so a follow-up `Effect::Seq` step can scale off the kill count
+    /// (Culling Ritual's "Add {B} or {G} for each permanent destroyed this
+    /// way"). Counts only permanents that actually reach the graveyard —
+    /// indestructible / shielded survivors don't bump it. Reset to 0
+    /// between independent resolutions.
+    #[serde(skip)]
+    pub(crate) permanents_destroyed_this_resolution: u32,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -410,6 +419,7 @@ impl Clone for GameState {
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
+            permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -473,6 +483,7 @@ impl GameState {
             creature_cards_discarded_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
             discarded_card_ids_this_resolution: Vec::new(),
+            permanents_destroyed_this_resolution: 0,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,
@@ -1164,6 +1175,43 @@ impl GameState {
                 });
             }
         }
+        // "Attacking creatures you control have <keyword>" (Blade Historian).
+        // Resolved here because `affects()` can't see combat state — we read
+        // the live `attacking` list and scope the grant to the source's own
+        // attackers. Layer-6 keyword addition, like the equipment grants.
+        if !self.attacking.is_empty() {
+            for card in &self.battlefield {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GrantKeywordToAttackers { keyword } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ids: Vec<CardId> = self
+                        .attacking
+                        .iter()
+                        .map(|a| a.attacker)
+                        .filter(|id| {
+                            self.battlefield
+                                .iter()
+                                .any(|c| c.id == *id && c.controller == card.controller)
+                        })
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -1701,6 +1749,13 @@ impl GameState {
                 mode,
                 x_value,
             } => self.cast_flashback(card_id, target, additional_targets, mode, x_value),
+            GameAction::CastRetrace {
+                card_id,
+                target,
+                additional_targets,
+                mode,
+                x_value,
+            } => self.cast_retrace(card_id, target, additional_targets, mode, x_value),
             GameAction::CastFlashbackTap {
                 card_id,
                 tap_creatures,
@@ -2144,6 +2199,50 @@ impl GameState {
     pub(crate) fn dispatch_triggers_for_events(&mut self, events: &[GameEvent]) {
         if events.is_empty() {
             return;
+        }
+        // Event-keyed delayed triggers ("when [card] dies this turn, …").
+        // Fire any `WhenCardDies(cid)` whose watched card appears in a
+        // `CreatureDied` event in this batch, with its captured target.
+        let died: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CreatureDied { card_id } => Some(*card_id),
+                _ => None,
+            })
+            .collect();
+        if !died.is_empty() {
+            use crate::game::types::DelayedKind;
+            let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
+            let mut watched: Vec<CardId> = Vec::new();
+            self.delayed_triggers.retain(|dt| {
+                if let DelayedKind::WhenCardDies(cid) = dt.kind
+                    && died.contains(&cid)
+                {
+                    fire.push(dt.clone());
+                    watched.push(cid);
+                    false
+                } else {
+                    true
+                }
+            });
+            for (dt, cid) in fire.into_iter().zip(watched) {
+                // Expose the dead creature as the trigger's source so bodies
+                // can reference it (e.g. "exile it") via `Selector::This` /
+                // `TriggerSource`; `target` still carries its controller.
+                self.stack.push(crate::game::types::StackItem::Trigger {
+                    source: dt.source,
+                    controller: dt.controller,
+                    effect: Box::new(dt.effect),
+                    target: dt.target,
+                    mode: None,
+                    x_value: 0,
+                    converged_value: 0,
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(cid)),
+                    mana_spent: 0,
+                    event_amount: 0,
+                    intervening_if: None,
+                });
+            }
         }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
@@ -3707,6 +3806,7 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::CostReduction { .. }
             | StaticEffect::CostReductionTargetingFilter { .. }
             | StaticEffect::AdditionalCostAfterFirstSpell { .. }
+            | StaticEffect::AdditionalCost { .. }
             | StaticEffect::ControllerHasHexproof
             | StaticEffect::LandsTapColorlessOnly
             // Teferi statics — handled at cast time via dedicated checks
@@ -3744,7 +3844,16 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
             // effect since it gates a turn-based action rather than a
             // characteristic.
-            | StaticEffect::PreventUntap { .. } => vec![],
+            | StaticEffect::PreventUntap { .. }
+            // SpellCostFloor (Trinisphere) — read at cast time by
+            // `apply_spell_cost_floor`; no layer effect.
+            | StaticEffect::SpellCostFloor { .. }
+            // CastHandSpellsFree (Omniscience) — read by the free-cast
+            // action via `player_casts_hand_spells_free`; no layer effect.
+            | StaticEffect::CastHandSpellsFree
+            // GrantKeywordToAttackers — needs live combat state, resolved in
+            // `compute_battlefield` against `GameState.attacking`.
+            | StaticEffect::GrantKeywordToAttackers { .. } => vec![],
         })
         .collect()
 }

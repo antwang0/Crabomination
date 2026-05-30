@@ -14,13 +14,8 @@ use crate::mana::{ManaCost, b, cost, g, generic, r, u, w};
 // ── Creatures ────────────────────────────────────────────────────────────────
 
 /// Thalia, Guardian of Thraben — {1}{W}, 2/1 Legendary Human Soldier with
-/// First Strike. Static: noncreature spells cost {1} more to cast. Wired
-/// via `StaticEffect::AdditionalCostAfterFirstSpell` with a noncreature
-/// filter and `amount: 1`. The static currently only fires after a player's
-/// first spell each turn (Damping-Sphere style); the real Thalia taxes
-/// every noncreature spell. Acceptable for the playtest.
-/// TODO: introduce an unconditional `StaticEffect::AdditionalCost` variant
-/// to model Thalia's full text.
+/// First Strike. Static: noncreature spells cost {1} more to cast (every
+/// such spell, via `StaticEffect::AdditionalCost`).
 pub fn thalia_guardian_of_thraben() -> CardDefinition {
     CardDefinition {
         name: "Thalia, Guardian of Thraben",
@@ -38,7 +33,7 @@ pub fn thalia_guardian_of_thraben() -> CardDefinition {
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",
-            effect: StaticEffect::AdditionalCostAfterFirstSpell {
+            effect: StaticEffect::AdditionalCost {
                 filter: SelectionRequirement::Noncreature,
                 amount: 1,
             },
@@ -122,6 +117,7 @@ pub fn sylvan_caryatid() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -260,6 +256,7 @@ pub fn loran_of_the_third_path() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
@@ -390,6 +387,7 @@ pub fn cathar_commando() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -434,6 +432,7 @@ pub fn haywire_mite() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -635,6 +634,7 @@ pub fn bloodtithe_harvester() -> CardDefinition {
                 SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Blood),
                 1,
             )),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![blood_etb, blood_attack],
         ..Default::default()
@@ -795,6 +795,7 @@ pub fn sylvan_safekeeper() -> CardDefinition {
                     .and(SelectionRequirement::HasLandType(LandType::Forest)),
                 1,
             )),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -846,6 +847,7 @@ pub fn grim_lavamancer() -> CardDefinition {
             // Additional cost: exile two cards from your graveyard.
             exile_other_filter: Some((SelectionRequirement::Any, 2)),
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -887,26 +889,9 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
-/// Simian Spirit Guide — {2}{R}, 2/2 Ape Spirit. **Alt cost**: exile this
-/// card from your hand to add {R}.
-///
-/// We model the alt cost via the existing `AlternativeCost` path —
-/// `mana_cost: {0}`, `exile_filter: Self` (the "exile this card from
-/// hand" cost is structurally identical to Force of Will's pitch
-/// approach). When the alt cast resolves the spell goes onto the stack
-/// and… wait, that's the issue: Simian Spirit Guide's alt cost
-/// produces mana, it doesn't cast the creature. We approximate by
-/// having the alt-cast resolve as a mana ability (`AddMana(R)`) with
-/// the source self-exiled — same gameplay outcome.
-///
-/// The "exile" half is handled by the alt cost path's exile_filter
-/// pulling the card itself out of hand into exile; the mana addition
-/// is wired by overriding the spell effect on alt cast to `AddMana`.
-/// Currently the alt cost path doesn't support a "different effect
-/// when alt-cast", so the cast falls back to the normal path — which
-/// would put a 2/2 onto the stack. To keep this correct we leave the
-/// alt cost OFF for now and just ship the body. TODO: alt-cost
-/// effect-override.
+/// Simian Spirit Guide — {2}{R}, 2/2 Ape Spirit. Ships as the vanilla body;
+/// the "exile from hand: add {R}" mana ability needs a from-hand activation
+/// zone (tracked in TODO.md).
 pub fn simian_spirit_guide() -> CardDefinition {
     use crate::card::CreatureType as CT;
     CardDefinition {
@@ -995,6 +980,7 @@ pub fn heliod_sun_crowned() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you gain life, put a +1/+1 counter on target
@@ -2232,6 +2218,7 @@ pub fn koma_cosmos_serpent() -> CardDefinition {
             tap_cost: false,
             mana_cost: ManaCost::default(),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             effect: Effect::Seq(vec![
                 Effect::Tap {
                     what: target_filtered(SelectionRequirement::Permanent),

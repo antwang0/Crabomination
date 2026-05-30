@@ -7,6 +7,7 @@
 //! Larger Prismari cards (Magma Opus, Expressive Iteration's siblings)
 //! lean on the copy-spell primitive and stay ⏳ until that lands.
 
+use super::no_abilities;
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind, EventScope, EventSpec,
     Keyword, SelectionRequirement, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
@@ -15,7 +16,7 @@ use crate::effect::shortcut::{
     magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_scry, magecraft_self_pump,
     magecraft_treasure, target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
@@ -30,6 +31,7 @@ pub fn prismari_pledgemage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pledgemage",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -39,8 +41,19 @@ pub fn prismari_pledgemage() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Trample, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -65,6 +78,7 @@ pub fn prismari_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -74,6 +88,7 @@ pub fn prismari_apprentice() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::ChooseMode(vec![
             // Mode 0 — Scry 1.
             Effect::Scry {
@@ -88,7 +103,17 @@ pub fn prismari_apprentice() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -108,6 +133,7 @@ pub fn prismari_drakelord() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakelord",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -117,13 +143,24 @@ pub fn prismari_drakelord() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: Selector::This,
             power: Value::Const(1),
             toughness: Value::Const(1),
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -142,6 +179,7 @@ pub fn prismari_emberseer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberseer",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -151,6 +189,7 @@ pub fn prismari_emberseer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -158,7 +197,17 @@ pub fn prismari_emberseer() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -179,6 +228,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrowriter",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -188,6 +238,7 @@ pub fn prismari_pyrowriter() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -196,7 +247,17 @@ pub fn prismari_pyrowriter() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -216,6 +277,7 @@ pub fn prismari_command() -> CardDefinition {
     CardDefinition {
         name: "Prismari Command",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -239,7 +301,14 @@ pub fn prismari_command() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -255,6 +324,7 @@ pub fn creative_outburst() -> CardDefinition {
     CardDefinition {
         name: "Creative Outburst",
         cost: cost(&[generic(3), u(), u(), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -274,7 +344,14 @@ pub fn creative_outburst() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -302,6 +379,7 @@ pub fn elemental_summoning() -> CardDefinition {
     CardDefinition {
         name: "Elemental Summoning",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
@@ -315,7 +393,14 @@ pub fn elemental_summoning() -> CardDefinition {
             count: Value::Const(1),
             definition: elemental,
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -328,6 +413,7 @@ pub fn teach_by_example() -> CardDefinition {
     CardDefinition {
         name: "Teach by Example",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -337,7 +423,14 @@ pub fn teach_by_example() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             count: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -346,15 +439,8 @@ pub fn teach_by_example() -> CardDefinition {
 
 /// Symmetry Sage — {U}, 1/2 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// Symmetry Sage gets +1/+0 and gains flying until end of turn."
-///
-/// 🟡 We split the rider into two separate magecraft triggers: one
-/// `magecraft_self_pump(+1/+0)` and one grant-flying. They're functionally
-/// equivalent to the original `Seq` body — both fire on every magecraft
-/// event and both reference the source via `Selector::This`. The split
-/// also means the helper is reusable across any future magecraft
-/// self-pump creature (e.g. Quandrix's Berta, Symmetry Sage's siblings)
-/// without copy-pasting a six-line `Seq`.
+/// Symmetry Sage gets +1/+0 and gains flying until end of turn." Single
+/// magecraft `Seq` so the pump and flying grant land as one trigger.
 pub fn symmetry_sage() -> CardDefinition {
     CardDefinition {
         name: "Symmetry Sage",
@@ -366,16 +452,19 @@ pub fn symmetry_sage() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        triggered_abilities: vec![
-            magecraft_self_pump(1, 0),
-            magecraft(Effect::GrantKeyword {
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
-            }),
-        ],
+            },
+        ]))],
         ..Default::default()
     }
 }
@@ -396,6 +485,7 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrotechnician",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -405,13 +495,24 @@ pub fn prismari_pyrotechnician() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature
                 .or(SelectionRequirement::Player)
                 .or(SelectionRequirement::HasCardType(CardType::Planeswalker))),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -429,6 +530,7 @@ pub fn prismari_looter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Looter",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -438,6 +540,7 @@ pub fn prismari_looter() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -445,7 +548,17 @@ pub fn prismari_looter() -> CardDefinition {
                 Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -465,6 +578,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
     CardDefinition {
         name: "Prismari Chromaticist",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -474,6 +588,7 @@ pub fn prismari_chromaticist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -482,7 +597,17 @@ pub fn prismari_chromaticist() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -500,6 +625,7 @@ pub fn prismari_drakeward() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakeward",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake],
@@ -509,6 +635,7 @@ pub fn prismari_drakeward() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -516,7 +643,17 @@ pub fn prismari_drakeward() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -537,6 +674,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellsmith",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -546,6 +684,7 @@ pub fn prismari_spellsmith() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -554,7 +693,17 @@ pub fn prismari_spellsmith() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -572,6 +721,7 @@ pub fn prismari_storm_caller() -> CardDefinition {
     CardDefinition {
         name: "Prismari Storm-Caller",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -581,8 +731,19 @@ pub fn prismari_storm_caller() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -602,6 +763,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ignite-Apprentice",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -611,6 +773,7 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -622,7 +785,17 @@ pub fn prismari_ignite_apprentice() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -642,6 +815,7 @@ pub fn prismari_volley() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volley",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -659,8 +833,19 @@ pub fn prismari_volley() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -680,6 +865,7 @@ pub fn prismari_stormcaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaster",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -689,8 +875,19 @@ pub fn prismari_stormcaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -709,6 +906,7 @@ pub fn prismari_sparkmaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmaster",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -718,8 +916,19 @@ pub fn prismari_sparkmaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -738,6 +947,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Channeler",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -747,6 +957,7 @@ pub fn prismari_ember_channeler() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -755,7 +966,17 @@ pub fn prismari_ember_channeler() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -799,14 +1020,8 @@ pub fn prismari_alchemist() -> CardDefinition {
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// exile target creature an opponent controls, then return it to the
 /// battlefield under its owner's control at the beginning of the next
-/// end step."
-///
-/// 🟡 Approximated as Magecraft → tap target opponent creature + stun
-/// counter (same Frost Trickster pattern). Full flicker needs delayed
-/// zone-return which is not yet wired.
+/// end step." (Flickerwisp-style delayed return.)
 pub fn elemental_expressionist() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Elemental Expressionist",
         cost: cost(&[generic(2), u(), r()]),
@@ -817,19 +1032,22 @@ pub fn elemental_expressionist() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Tap {
+            Effect::Exile {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        tapped: false,
+                    },
+                }),
             },
         ]))],
         ..Default::default()
@@ -850,6 +1068,7 @@ pub fn prismari_cantrip() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -865,8 +1084,19 @@ pub fn prismari_cantrip() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -885,6 +1115,7 @@ pub fn prismari_flarespark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarespark",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -904,8 +1135,19 @@ pub fn prismari_flarespark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -923,6 +1165,7 @@ pub fn prismari_cascade_volley() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cascade Volley",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -945,8 +1188,19 @@ pub fn prismari_cascade_volley() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -965,6 +1219,7 @@ pub fn prismari_initiate() -> CardDefinition {
     CardDefinition {
         name: "Prismari Initiate",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -974,6 +1229,7 @@ pub fn prismari_initiate() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -982,7 +1238,17 @@ pub fn prismari_initiate() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1002,6 +1268,7 @@ pub fn prismari_spellbinder() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellbinder",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -1011,6 +1278,7 @@ pub fn prismari_spellbinder() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CopySpell {
@@ -1025,7 +1293,17 @@ pub fn prismari_spellbinder() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1043,6 +1321,7 @@ pub fn prismari_treasurer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurer",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -1052,6 +1331,7 @@ pub fn prismari_treasurer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1060,7 +1340,17 @@ pub fn prismari_treasurer() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1079,6 +1369,7 @@ pub fn prismari_embershaper() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embershaper",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1088,6 +1379,7 @@ pub fn prismari_embershaper() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Tap {
                 what: target_filtered(
@@ -1101,7 +1393,17 @@ pub fn prismari_embershaper() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1119,6 +1421,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -1128,6 +1431,7 @@ pub fn prismari_sparkforge() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -1136,7 +1440,17 @@ pub fn prismari_sparkforge() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1153,6 +1467,7 @@ pub fn prismari_mindwave() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mindwave",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1166,8 +1481,19 @@ pub fn prismari_mindwave() -> CardDefinition {
                 random: false,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1185,6 +1511,7 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrocrafter",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1194,6 +1521,7 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1204,7 +1532,17 @@ pub fn prismari_pyrocrafter() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1222,6 +1560,7 @@ pub fn prismari_stormspire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormspire",
         cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -1231,11 +1570,22 @@ pub fn prismari_stormspire() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1254,6 +1604,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellforger (b22)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1263,6 +1614,7 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(
@@ -1279,7 +1631,17 @@ pub fn prismari_spellforger_b22() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1296,6 +1658,7 @@ pub fn prismari_volleyfire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volleyfire",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1315,8 +1678,19 @@ pub fn prismari_volleyfire() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1331,6 +1705,7 @@ pub fn prismari_spell_shaper() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spell-Shaper",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1340,11 +1715,22 @@ pub fn prismari_spell_shaper() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1359,6 +1745,7 @@ pub fn prismari_stormgaze() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormgaze",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1380,8 +1767,19 @@ pub fn prismari_stormgaze() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1398,6 +1796,7 @@ pub fn prismari_vortexweaver() -> CardDefinition {
     CardDefinition {
         name: "Prismari Vortexweaver",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -1407,6 +1806,7 @@ pub fn prismari_vortexweaver() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CopySpell {
@@ -1419,7 +1819,17 @@ pub fn prismari_vortexweaver() -> CardDefinition {
                 count: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1437,6 +1847,7 @@ pub fn prismari_quickfire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Quickfire",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1446,8 +1857,19 @@ pub fn prismari_quickfire() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1467,6 +1889,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurer-Surge",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -1476,6 +1899,7 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1487,7 +1911,17 @@ pub fn prismari_treasurer_surge() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1502,6 +1936,7 @@ pub fn prismari_pyreburst() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyreburst",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1511,8 +1946,19 @@ pub fn prismari_pyreburst() -> CardDefinition {
             to: Selector::EachPermanent(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1529,6 +1975,7 @@ pub fn prismari_vorthos() -> CardDefinition {
     CardDefinition {
         name: "Prismari Vorthos",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1538,6 +1985,7 @@ pub fn prismari_vorthos() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -1567,7 +2015,17 @@ pub fn prismari_vorthos() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1582,6 +2040,7 @@ pub fn prismari_cinderspark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderspark",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1601,8 +2060,19 @@ pub fn prismari_cinderspark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1619,6 +2089,7 @@ pub fn prismari_tempo_adept() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempo Adept",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1628,6 +2099,7 @@ pub fn prismari_tempo_adept() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1648,7 +2120,17 @@ pub fn prismari_tempo_adept() -> CardDefinition {
             },
             prowess(),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1667,6 +2149,7 @@ pub fn prismari_hotburst() -> CardDefinition {
     CardDefinition {
         name: "Prismari Hotburst",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1687,8 +2170,19 @@ pub fn prismari_hotburst() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1705,6 +2199,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaspark",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -1714,6 +2209,7 @@ pub fn prismari_magmaspark() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1728,7 +2224,17 @@ pub fn prismari_magmaspark() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1746,6 +2252,7 @@ pub fn prismari_mindkindler() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mindkindler",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1755,10 +2262,21 @@ pub fn prismari_mindkindler() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Tap {
             what: target_filtered(SelectionRequirement::Creature),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1774,6 +2292,7 @@ pub fn prismari_embergem() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embergem",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1790,8 +2309,19 @@ pub fn prismari_embergem() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1808,6 +2338,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromancer",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1817,6 +2348,7 @@ pub fn prismari_pyromancer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1844,7 +2376,17 @@ pub fn prismari_pyromancer() -> CardDefinition {
                 ])),
             }),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1859,6 +2401,7 @@ pub fn prismari_spitfire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spitfire",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -1868,6 +2411,7 @@ pub fn prismari_spitfire() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -1879,7 +2423,17 @@ pub fn prismari_spitfire() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1895,6 +2449,7 @@ pub fn prismari_wildform() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wildform",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -1917,8 +2472,19 @@ pub fn prismari_wildform() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1933,6 +2499,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbright",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -1942,6 +2509,7 @@ pub fn prismari_sparkbright() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -1953,7 +2521,17 @@ pub fn prismari_sparkbright() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -1974,6 +2552,7 @@ pub fn prismari_drakeforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakeforge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -1983,6 +2562,7 @@ pub fn prismari_drakeforge() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -1994,7 +2574,17 @@ pub fn prismari_drakeforge() -> CardDefinition {
             },
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2014,6 +2604,7 @@ pub fn prismari_sparkdrake() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkdrake",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake],
@@ -2023,8 +2614,19 @@ pub fn prismari_sparkdrake() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2040,6 +2642,7 @@ pub fn prismari_lavalifter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Lavalifter",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -2049,6 +2652,7 @@ pub fn prismari_lavalifter() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -2057,7 +2661,17 @@ pub fn prismari_lavalifter() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2072,6 +2686,7 @@ pub fn prismari_spelltheorist() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spelltheorist",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2081,6 +2696,7 @@ pub fn prismari_spelltheorist() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2095,7 +2711,17 @@ pub fn prismari_spelltheorist() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2110,6 +2736,7 @@ pub fn prismari_stormwriter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormwriter",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2125,8 +2752,19 @@ pub fn prismari_stormwriter() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2143,6 +2781,7 @@ pub fn prismari_igniter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Igniter",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -2152,6 +2791,7 @@ pub fn prismari_igniter() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -2160,7 +2800,17 @@ pub fn prismari_igniter() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2181,6 +2831,7 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embershaper-Wizard",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -2190,6 +2841,7 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2209,7 +2861,17 @@ pub fn prismari_embershaper_wizard() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2225,6 +2887,7 @@ pub fn prismari_magmaboon() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaboon",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2241,8 +2904,19 @@ pub fn prismari_magmaboon() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2257,6 +2931,7 @@ pub fn prismari_tideburst() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tideburst",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2272,8 +2947,19 @@ pub fn prismari_tideburst() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2289,6 +2975,7 @@ pub fn prismari_tempest_caller() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempest-Caller",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2298,8 +2985,19 @@ pub fn prismari_tempest_caller() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2314,6 +3012,7 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyresurge",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2333,8 +3032,19 @@ pub fn prismari_pyresurge_b28() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2350,6 +3060,7 @@ pub fn prismari_sparksong() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparksong",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2367,8 +3078,19 @@ pub fn prismari_sparksong() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2380,6 +3102,7 @@ pub fn prismari_glasscaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glasscaster",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2389,8 +3112,19 @@ pub fn prismari_glasscaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2403,6 +3137,7 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurewright B30",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -2412,6 +3147,7 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2426,7 +3162,17 @@ pub fn prismari_treasurewright_b30() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2440,6 +3186,7 @@ pub fn prismari_tideforger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tideforger",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -2449,8 +3196,19 @@ pub fn prismari_tideforger() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2463,6 +3221,7 @@ pub fn prismari_splashcaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Splashcaster",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2487,8 +3246,19 @@ pub fn prismari_splashcaster() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2501,6 +3271,7 @@ pub fn prismari_embertongue() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embertongue",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2510,8 +3281,19 @@ pub fn prismari_embertongue() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2522,6 +3304,7 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurewright (b32)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -2531,6 +3314,7 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -2539,7 +3323,17 @@ pub fn prismari_treasurewright_b32() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2552,6 +3346,7 @@ pub fn prismari_sparkpainter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkpainter",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2561,6 +3356,7 @@ pub fn prismari_sparkpainter() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -2583,7 +3379,17 @@ pub fn prismari_sparkpainter() -> CardDefinition {
                 ])),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2594,6 +3400,7 @@ pub fn prismari_burning_lesson() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burning Lesson",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2613,8 +3420,19 @@ pub fn prismari_burning_lesson() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2627,6 +3445,7 @@ pub fn prismari_sparkscribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkscribe",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2636,11 +3455,22 @@ pub fn prismari_sparkscribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2652,6 +3482,7 @@ pub fn prismari_ember_adept() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Adept",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2661,8 +3492,19 @@ pub fn prismari_ember_adept() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2673,6 +3515,7 @@ pub fn prismari_sparkflare() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkflare",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2686,8 +3529,19 @@ pub fn prismari_sparkflare() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2698,6 +3552,7 @@ pub fn prismari_flameforger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameforger",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -2707,8 +3562,19 @@ pub fn prismari_flameforger() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(2, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2721,6 +3587,7 @@ pub fn prismari_stormfront() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormfront",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2736,8 +3603,19 @@ pub fn prismari_stormfront() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2749,6 +3627,7 @@ pub fn prismari_eruption_mage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Eruption Mage",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2758,8 +3637,19 @@ pub fn prismari_eruption_mage() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2770,6 +3660,7 @@ pub fn prismari_flamescribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamescribe",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2779,6 +3670,7 @@ pub fn prismari_flamescribe() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Seq(vec![
@@ -2793,7 +3685,17 @@ pub fn prismari_flamescribe() -> CardDefinition {
                 },
             ]),
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2804,6 +3706,7 @@ pub fn prismari_sparkriot() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkriot",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2819,8 +3722,19 @@ pub fn prismari_sparkriot() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2831,6 +3745,7 @@ pub fn prismari_pyrosage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrosage",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2840,8 +3755,19 @@ pub fn prismari_pyrosage() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2854,6 +3780,7 @@ pub fn prismari_spellforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellforge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2863,6 +3790,7 @@ pub fn prismari_spellforge() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2877,7 +3805,17 @@ pub fn prismari_spellforge() -> CardDefinition {
             },
             magecraft_loot(),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2889,6 +3827,7 @@ pub fn prismari_b35_pyromage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage II",
         cost: cost(&[r(), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2898,8 +3837,19 @@ pub fn prismari_b35_pyromage() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2910,6 +3860,7 @@ pub fn prismari_stormforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormforge",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -2925,8 +3876,19 @@ pub fn prismari_stormforge() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2936,6 +3898,7 @@ pub fn prismari_mirror_mage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mirror Mage",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -2945,8 +3908,19 @@ pub fn prismari_mirror_mage() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2959,6 +3933,7 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -2968,6 +3943,7 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2982,7 +3958,17 @@ pub fn prismari_sparkmage_v2() -> CardDefinition {
             },
             magecraft_ping_each_opp(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -2992,6 +3978,7 @@ pub fn prismari_eddy() -> CardDefinition {
     CardDefinition {
         name: "Prismari Eddy",
         cost: cost(&[u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3007,8 +3994,19 @@ pub fn prismari_eddy() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3021,6 +4019,7 @@ pub fn prismari_dazzler() -> CardDefinition {
     CardDefinition {
         name: "Prismari Dazzler",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3030,8 +4029,19 @@ pub fn prismari_dazzler() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3042,6 +4052,7 @@ pub fn prismari_cinderpoet() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderpoet",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3051,9 +4062,20 @@ pub fn prismari_cinderpoet() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         // Refactored in batch 40 to use the `etb_loot` shortcut.
         triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3064,6 +4086,7 @@ pub fn prismari_pyrocaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrocaster",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3073,6 +4096,7 @@ pub fn prismari_pyrocaster() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -3084,7 +4108,17 @@ pub fn prismari_pyrocaster() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3094,6 +4128,7 @@ pub fn prismari_drift() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drift",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3109,8 +4144,19 @@ pub fn prismari_drift() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3120,6 +4166,7 @@ pub fn prismari_sparkbolt() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbolt",
         cost: cost(&[crate::mana::r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3133,8 +4180,19 @@ pub fn prismari_sparkbolt() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3145,6 +4203,7 @@ pub fn prismari_stormrider() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormrider",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3154,8 +4213,19 @@ pub fn prismari_stormrider() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3167,6 +4237,7 @@ pub fn prismari_hothead() -> CardDefinition {
     CardDefinition {
         name: "Prismari Hothead",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3176,8 +4247,19 @@ pub fn prismari_hothead() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3187,6 +4269,7 @@ pub fn prismari_cantrip_bolt() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip Bolt",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3202,8 +4285,19 @@ pub fn prismari_cantrip_bolt() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3213,6 +4307,7 @@ pub fn prismari_wildmage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wildmage",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3222,8 +4317,19 @@ pub fn prismari_wildmage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3233,6 +4339,7 @@ pub fn prismari_stormbearer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbearer",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3242,12 +4349,23 @@ pub fn prismari_stormbearer() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         // Refactored in batch 40 to use the `etb_loot` shortcut.
         triggered_abilities: vec![
             crate::effect::shortcut::etb_loot(),
             magecraft_self_pump(1, 0),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3257,6 +4375,7 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromancer V2",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3266,6 +4385,7 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -3277,7 +4397,17 @@ pub fn prismari_pyromancer_v2() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3288,6 +4418,7 @@ pub fn prismari_tempestmage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempestmage",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3297,12 +4428,23 @@ pub fn prismari_tempestmage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_target_pump(
             target_filtered(SelectionRequirement::Creature),
             1,
             0,
         )],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3313,6 +4455,7 @@ pub fn prismari_cinderdrake() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderdrake",
         cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Dragon],
@@ -3322,6 +4465,7 @@ pub fn prismari_cinderdrake() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -3333,7 +4477,17 @@ pub fn prismari_cinderdrake() -> CardDefinition {
                 amount: Value::Const(3),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3347,6 +4501,7 @@ pub fn prismari_cinderbolt() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderbolt",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3356,8 +4511,19 @@ pub fn prismari_cinderbolt() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3369,6 +4535,7 @@ pub fn prismari_stormblade() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormblade",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3388,8 +4555,19 @@ pub fn prismari_stormblade() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3402,6 +4580,7 @@ pub fn prismari_maestro() -> CardDefinition {
     CardDefinition {
         name: "Prismari Maestro",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3411,6 +4590,7 @@ pub fn prismari_maestro() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(
                 EventKind::DealsCombatDamageToPlayer,
@@ -3421,7 +4601,17 @@ pub fn prismari_maestro() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3434,6 +4624,7 @@ pub fn prismari_emberscribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberscribe",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3443,11 +4634,22 @@ pub fn prismari_emberscribe() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3459,6 +4661,7 @@ pub fn prismari_treasurer_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurer II",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3468,12 +4671,23 @@ pub fn prismari_treasurer_v2() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: treasure_token(),
             count: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3485,6 +4699,7 @@ pub fn prismari_quickcast() -> CardDefinition {
     CardDefinition {
         name: "Prismari Quickcast",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3501,8 +4716,19 @@ pub fn prismari_quickcast() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3513,6 +4739,7 @@ pub fn prismari_starcaller() -> CardDefinition {
     CardDefinition {
         name: "Prismari Starcaller",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3522,11 +4749,22 @@ pub fn prismari_starcaller() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3538,6 +4776,7 @@ pub fn prismari_scryer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Scryer",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3547,11 +4786,22 @@ pub fn prismari_scryer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3566,6 +4816,7 @@ pub fn prismari_inferno_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3579,8 +4830,19 @@ pub fn prismari_inferno_v2() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3592,6 +4854,7 @@ pub fn prismari_glasshammer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glasshammer",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Warrior],
@@ -3601,8 +4864,19 @@ pub fn prismari_glasshammer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3613,6 +4887,7 @@ pub fn prismari_skywarp() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skywarp",
         cost: cost(&[u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3624,8 +4899,19 @@ pub fn prismari_skywarp() -> CardDefinition {
                 Selector::Target(0),
             ))),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3637,6 +4923,7 @@ pub fn prismari_stagewright() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stagewright",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3646,6 +4933,7 @@ pub fn prismari_stagewright() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::Draw {
                 who: Selector::You,
@@ -3658,7 +4946,17 @@ pub fn prismari_stagewright() -> CardDefinition {
                 amount: Value::Const(1),
             }),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3671,6 +4969,7 @@ pub fn prismari_soundsmith() -> CardDefinition {
     CardDefinition {
         name: "Prismari Soundsmith",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3680,8 +4979,19 @@ pub fn prismari_soundsmith() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3695,6 +5005,7 @@ pub fn prismari_pyroartist() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroartist",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3704,13 +5015,24 @@ pub fn prismari_pyroartist() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature.or(SelectionRequirement::Player),
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3722,6 +5044,7 @@ pub fn prismari_brushpyre() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brushpyre",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3731,8 +5054,19 @@ pub fn prismari_brushpyre() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3746,6 +5080,7 @@ pub fn prismari_blastcaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Blastcaster",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3755,11 +5090,22 @@ pub fn prismari_blastcaster() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3770,6 +5116,7 @@ pub fn prismari_oddsmaker() -> CardDefinition {
     CardDefinition {
         name: "Prismari Oddsmaker",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3779,11 +5126,22 @@ pub fn prismari_oddsmaker() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3795,6 +5153,7 @@ pub fn prismari_glassforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassforge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3804,12 +5163,23 @@ pub fn prismari_glassforge() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: treasure_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3820,6 +5190,7 @@ pub fn prismari_emberweaver() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberweaver",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -3829,6 +5200,7 @@ pub fn prismari_emberweaver() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -3837,7 +5209,17 @@ pub fn prismari_emberweaver() -> CardDefinition {
             ),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3848,6 +5230,7 @@ pub fn prismari_skyflare() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skyflare",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3867,8 +5250,19 @@ pub fn prismari_skyflare() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3879,6 +5273,7 @@ pub fn prismari_volcanic_song() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanic Song",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3894,8 +5289,19 @@ pub fn prismari_volcanic_song() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3907,6 +5313,7 @@ pub fn prismari_inkjet_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inkjet Apprentice",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3916,8 +5323,19 @@ pub fn prismari_inkjet_apprentice() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3930,6 +5348,7 @@ pub fn prismari_scribbler() -> CardDefinition {
     CardDefinition {
         name: "Prismari Scribbler",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -3939,8 +5358,19 @@ pub fn prismari_scribbler() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3951,6 +5381,7 @@ pub fn prismari_skyspark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skyspark",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -3973,8 +5404,19 @@ pub fn prismari_skyspark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -3985,6 +5427,7 @@ pub fn prismari_embershout() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embershout",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4004,8 +5447,19 @@ pub fn prismari_embershout() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4017,6 +5471,7 @@ pub fn prismari_stormcoil() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcoil",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -4026,8 +5481,19 @@ pub fn prismari_stormcoil() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4037,6 +5503,7 @@ pub fn prismari_treasurespark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurespark",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4053,8 +5520,19 @@ pub fn prismari_treasurespark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4068,6 +5546,7 @@ pub fn prismari_burnscribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnscribe",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4077,6 +5556,7 @@ pub fn prismari_burnscribe() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -4084,7 +5564,17 @@ pub fn prismari_burnscribe() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4096,6 +5586,7 @@ pub fn prismari_treasurespell() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurespell",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4112,8 +5603,19 @@ pub fn prismari_treasurespell() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4125,6 +5627,7 @@ pub fn prismari_sparkmage_v3() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage III",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4134,11 +5637,22 @@ pub fn prismari_sparkmage_v3() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4150,6 +5664,7 @@ pub fn prismari_embergale() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embergale",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4165,8 +5680,19 @@ pub fn prismari_embergale() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4177,6 +5703,7 @@ pub fn prismari_stormgale() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormgale",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4186,8 +5713,19 @@ pub fn prismari_stormgale() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4200,6 +5738,7 @@ pub fn prismari_flamewright() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamewright",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4209,6 +5748,7 @@ pub fn prismari_flamewright() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -4220,7 +5760,17 @@ pub fn prismari_flamewright() -> CardDefinition {
                 amount: Value::Const(2),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4231,6 +5781,7 @@ pub fn prismari_cantrip_spark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip Spark",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4250,8 +5801,19 @@ pub fn prismari_cantrip_spark() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4262,6 +5824,7 @@ pub fn prismari_dragonkin() -> CardDefinition {
     CardDefinition {
         name: "Prismari Dragonkin",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -4271,6 +5834,7 @@ pub fn prismari_dragonkin() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Draw {
@@ -4278,7 +5842,17 @@ pub fn prismari_dragonkin() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4289,6 +5863,7 @@ pub fn prismari_sparktwister() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparktwister",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4298,11 +5873,22 @@ pub fn prismari_sparktwister() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4313,6 +5899,7 @@ pub fn prismari_spelljay() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spelljay",
         cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4322,8 +5909,19 @@ pub fn prismari_spelljay() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4335,6 +5933,7 @@ pub fn prismari_quickburn() -> CardDefinition {
     CardDefinition {
         name: "Prismari Quickburn",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4344,8 +5943,19 @@ pub fn prismari_quickburn() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4360,6 +5970,7 @@ pub fn prismari_spellscribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellscribe",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4369,11 +5980,22 @@ pub fn prismari_spellscribe() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4385,6 +6007,7 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge Anvil",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -4394,6 +6017,7 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4402,7 +6026,17 @@ pub fn prismari_sparkforge_v2() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4415,6 +6049,7 @@ pub fn prismari_tidesinger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidesinger",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -4424,6 +6059,7 @@ pub fn prismari_tidesinger() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::Move {
@@ -4431,7 +6067,17 @@ pub fn prismari_tidesinger() -> CardDefinition {
                 to: ZoneDest::Hand(OwnerOf(Box::new(Selector::Target(0)))),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4442,6 +6088,7 @@ pub fn prismari_searbolt() -> CardDefinition {
     CardDefinition {
         name: "Prismari Searbolt",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4451,8 +6098,19 @@ pub fn prismari_searbolt() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4463,6 +6121,7 @@ pub fn prismari_inkflame() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inkflame",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4472,8 +6131,19 @@ pub fn prismari_inkflame() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4485,6 +6155,7 @@ pub fn prismari_bonfire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Bonfire",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4494,8 +6165,19 @@ pub fn prismari_bonfire() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4506,6 +6188,7 @@ pub fn prismari_snapcaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Snapcaster",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4515,6 +6198,7 @@ pub fn prismari_snapcaster() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -4525,7 +6209,17 @@ pub fn prismari_snapcaster() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4535,6 +6229,7 @@ pub fn prismari_pyrolancer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrolancer",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4544,8 +6239,19 @@ pub fn prismari_pyrolancer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4556,6 +6262,7 @@ pub fn prismari_drakemage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakemage",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -4565,8 +6272,19 @@ pub fn prismari_drakemage() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4576,6 +6294,7 @@ pub fn prismari_cinder_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinder-Apprentice",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4585,8 +6304,19 @@ pub fn prismari_cinder_apprentice() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4598,6 +6328,7 @@ pub fn prismari_pyroceptor() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroceptor",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4607,6 +6338,7 @@ pub fn prismari_pyroceptor() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -4621,7 +6353,17 @@ pub fn prismari_pyroceptor() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4633,6 +6375,7 @@ pub fn prismari_coinforger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Coinforger",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4642,6 +6385,7 @@ pub fn prismari_coinforger() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -4650,7 +6394,17 @@ pub fn prismari_coinforger() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4660,6 +6414,7 @@ pub fn prismari_flashforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flashforge",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4684,8 +6439,19 @@ pub fn prismari_flashforge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4695,6 +6461,7 @@ pub fn prismari_riftspark() -> CardDefinition {
     CardDefinition {
         name: "Prismari Riftspark",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4704,6 +6471,7 @@ pub fn prismari_riftspark() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Loot".to_string(),
             body: Box::new(Effect::Seq(vec![
@@ -4718,7 +6486,17 @@ pub fn prismari_riftspark() -> CardDefinition {
                 },
             ])),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4728,6 +6506,7 @@ pub fn prismari_sparkwing() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkwing",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -4737,8 +6516,19 @@ pub fn prismari_sparkwing() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4749,6 +6539,7 @@ pub fn prismari_cantrip_mage() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip-Mage",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4758,6 +6549,7 @@ pub fn prismari_cantrip_mage() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -4768,7 +6560,17 @@ pub fn prismari_cantrip_mage() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4778,6 +6580,7 @@ pub fn prismari_firebrand() -> CardDefinition {
     CardDefinition {
         name: "Prismari Firebrand",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -4787,6 +6590,7 @@ pub fn prismari_firebrand() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::DealDamage {
@@ -4798,7 +6602,17 @@ pub fn prismari_firebrand() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4811,6 +6625,7 @@ pub fn prismari_emberveil() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberveil",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4820,8 +6635,19 @@ pub fn prismari_emberveil() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4831,6 +6657,7 @@ pub fn prismari_firechord() -> CardDefinition {
     CardDefinition {
         name: "Prismari Firechord",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4840,8 +6667,19 @@ pub fn prismari_firechord() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4852,6 +6690,7 @@ pub fn prismari_drakekin() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakekin",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -4861,8 +6700,19 @@ pub fn prismari_drakekin() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4872,6 +6722,7 @@ pub fn prismari_inscribe() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inscribe",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4891,8 +6742,19 @@ pub fn prismari_inscribe() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4903,6 +6765,7 @@ pub fn prismari_pyremaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyremaster",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4912,8 +6775,19 @@ pub fn prismari_pyremaster() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4926,6 +6800,7 @@ pub fn prismari_cinderpath() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderpath",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -4935,8 +6810,19 @@ pub fn prismari_cinderpath() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4946,6 +6832,7 @@ pub fn prismari_searstorm() -> CardDefinition {
     CardDefinition {
         name: "Prismari Searstorm",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -4961,8 +6848,19 @@ pub fn prismari_searstorm() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -4973,6 +6871,7 @@ pub fn prismari_embertide() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embertide",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -4982,6 +6881,7 @@ pub fn prismari_embertide() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -4990,7 +6890,17 @@ pub fn prismari_embertide() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5003,6 +6913,7 @@ pub fn prismari_stormcaller() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5012,8 +6923,19 @@ pub fn prismari_stormcaller() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![prowess()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5023,6 +6945,7 @@ pub fn prismari_embershock() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embershock",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5032,8 +6955,19 @@ pub fn prismari_embershock() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5044,6 +6978,7 @@ pub fn prismari_spellscholar() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellscholar",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5053,6 +6988,7 @@ pub fn prismari_spellscholar() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb(Effect::Scry {
                 who: PlayerRef::You,
@@ -5060,7 +6996,17 @@ pub fn prismari_spellscholar() -> CardDefinition {
             }),
             magecraft_scry(1),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5070,6 +7016,7 @@ pub fn prismari_reverberator() -> CardDefinition {
     CardDefinition {
         name: "Prismari Reverberator",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5079,8 +7026,19 @@ pub fn prismari_reverberator() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5091,6 +7049,7 @@ pub fn prismari_volcanist_b55() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanist II",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5106,8 +7065,19 @@ pub fn prismari_volcanist_b55() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5120,6 +7090,7 @@ pub fn prismari_sparkleap() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkleap",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -5129,8 +7100,19 @@ pub fn prismari_sparkleap() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste, Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5140,6 +7122,7 @@ pub fn prismari_flamewriter() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamewriter",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5149,6 +7132,7 @@ pub fn prismari_flamewriter() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -5163,7 +7147,17 @@ pub fn prismari_flamewriter() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5173,6 +7167,7 @@ pub fn prismari_cinderchant() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderchant",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5192,8 +7187,19 @@ pub fn prismari_cinderchant() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5203,6 +7209,7 @@ pub fn prismari_skydrake() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skydrake",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake, CreatureType::Wizard],
@@ -5212,8 +7219,19 @@ pub fn prismari_skydrake() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5224,6 +7242,7 @@ pub fn prismari_floodfire() -> CardDefinition {
     CardDefinition {
         name: "Prismari Floodfire",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5239,8 +7258,19 @@ pub fn prismari_floodfire() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5254,6 +7284,7 @@ pub fn prismari_pyromage_b57() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage (b57)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5265,7 +7296,17 @@ pub fn prismari_pyromage_b57() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5277,6 +7318,7 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller II",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5288,7 +7330,17 @@ pub fn prismari_stormcaller_v2() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![prowess()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5299,6 +7351,7 @@ pub fn prismari_sparkscribe_b57() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkscribe (b57)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5310,7 +7363,17 @@ pub fn prismari_sparkscribe_b57() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5323,6 +7386,7 @@ pub fn prismari_apprentice_b58() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice II",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5334,7 +7398,17 @@ pub fn prismari_apprentice_b58() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5345,6 +7419,7 @@ pub fn prismari_flamewriter_b58() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamewriter II",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5356,7 +7431,17 @@ pub fn prismari_flamewriter_b58() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5368,6 +7453,7 @@ pub fn prismari_tideflame() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tideflame",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5379,7 +7465,17 @@ pub fn prismari_tideflame() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5391,6 +7487,7 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaster II",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5415,7 +7512,17 @@ pub fn prismari_stormcaster_b58() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5427,6 +7534,7 @@ pub fn prismari_emberglyph() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberglyph",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5438,7 +7546,17 @@ pub fn prismari_emberglyph() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5449,6 +7567,7 @@ pub fn prismari_iceforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Iceforge",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -5460,7 +7579,17 @@ pub fn prismari_iceforge() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5471,6 +7600,7 @@ pub fn prismari_flameseer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameseer",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5482,7 +7612,17 @@ pub fn prismari_flameseer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5493,6 +7633,7 @@ pub fn prismari_artificer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Artificer",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5514,7 +7655,17 @@ pub fn prismari_artificer() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5527,6 +7678,7 @@ pub fn prismari_spell_smith_b60() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spell-Smith II",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5538,7 +7690,17 @@ pub fn prismari_spell_smith_b60() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5548,6 +7710,7 @@ pub fn prismari_fluxshaper() -> CardDefinition {
     CardDefinition {
         name: "Prismari Fluxshaper",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5559,7 +7722,17 @@ pub fn prismari_fluxshaper() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5570,6 +7743,7 @@ pub fn prismari_glassblower() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassblower",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5595,7 +7769,17 @@ pub fn prismari_glassblower() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5606,6 +7790,7 @@ pub fn prismari_blast_apprentice() -> CardDefinition {
     CardDefinition {
         name: "Prismari Blast Apprentice",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5617,7 +7802,17 @@ pub fn prismari_blast_apprentice() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5631,6 +7826,7 @@ pub fn prismari_sparkscribe_b61() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkscribe II",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5642,7 +7838,17 @@ pub fn prismari_sparkscribe_b61() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5654,6 +7860,7 @@ pub fn prismari_emberforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberforge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5675,7 +7882,17 @@ pub fn prismari_emberforge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5685,6 +7902,7 @@ pub fn prismari_torchsmith() -> CardDefinition {
     CardDefinition {
         name: "Prismari Torchsmith",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5696,7 +7914,17 @@ pub fn prismari_torchsmith() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5707,6 +7935,7 @@ pub fn prismari_iceshaper() -> CardDefinition {
     CardDefinition {
         name: "Prismari Iceshaper",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5718,7 +7947,17 @@ pub fn prismari_iceshaper() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5730,6 +7969,7 @@ pub fn prismari_smiteforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Smiteforge",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5755,7 +7995,17 @@ pub fn prismari_smiteforge() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5768,6 +8018,7 @@ pub fn prismari_sparksinger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparksinger",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -5779,7 +8030,17 @@ pub fn prismari_sparksinger() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5791,6 +8052,7 @@ pub fn prismari_pyreforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyreforge",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5802,7 +8064,17 @@ pub fn prismari_pyreforge() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![etb_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5817,6 +8089,7 @@ pub fn prismari_goldcaster() -> CardDefinition {
     CardDefinition {
         name: "Prismari Goldcaster",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5832,7 +8105,17 @@ pub fn prismari_goldcaster() -> CardDefinition {
             definition: treasure_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5843,6 +8126,7 @@ pub fn prismari_echoflame() -> CardDefinition {
     CardDefinition {
         name: "Prismari Echoflame",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -5864,7 +8148,17 @@ pub fn prismari_echoflame() -> CardDefinition {
         ]),
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5875,6 +8169,7 @@ pub fn prismari_loresprite() -> CardDefinition {
     CardDefinition {
         name: "Prismari Loresprite",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Faerie, CreatureType::Wizard],
@@ -5886,7 +8181,17 @@ pub fn prismari_loresprite() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5899,6 +8204,7 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b63)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5924,7 +8230,17 @@ pub fn prismari_stormcaller_b63() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5936,6 +8252,7 @@ pub fn prismari_combustomancer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Combustomancer",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5947,7 +8264,17 @@ pub fn prismari_combustomancer() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5961,6 +8288,7 @@ pub fn prismari_sparkforger() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforger",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5970,12 +8298,23 @@ pub fn prismari_sparkforger() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: treasure_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -5985,6 +8324,7 @@ pub fn prismari_flashbinder() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flashbinder",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -5994,8 +8334,19 @@ pub fn prismari_flashbinder() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6006,6 +8357,7 @@ pub fn prismari_tidefurnace() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidefurnace",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6026,8 +8378,19 @@ pub fn prismari_tidefurnace() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6037,6 +8400,7 @@ pub fn prismari_embergloss() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embergloss",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6046,8 +8410,19 @@ pub fn prismari_embergloss() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6058,6 +8433,7 @@ pub fn prismari_stormtide() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormtide",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6067,8 +8443,19 @@ pub fn prismari_stormtide() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6080,6 +8467,7 @@ pub fn prismari_glassflame() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassflame",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6089,8 +8477,19 @@ pub fn prismari_glassflame() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6100,6 +8499,7 @@ pub fn prismari_cinderdancer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderdancer",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6109,8 +8509,19 @@ pub fn prismari_cinderdancer() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6121,6 +8532,7 @@ pub fn prismari_tidescryer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidescryer",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6130,8 +8542,19 @@ pub fn prismari_tidescryer() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6142,6 +8565,7 @@ pub fn prismari_magmaforge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaforge",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6162,8 +8586,19 @@ pub fn prismari_magmaforge() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6174,6 +8609,7 @@ pub fn prismari_mistwarden() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mistwarden",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6183,8 +8619,19 @@ pub fn prismari_mistwarden() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6194,6 +8641,7 @@ pub fn prismari_cinderspell() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderspell",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6207,8 +8655,19 @@ pub fn prismari_cinderspell() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6222,6 +8681,7 @@ pub fn prismari_sparkbearer() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbearer",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6231,12 +8691,23 @@ pub fn prismari_sparkbearer() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             definition: treasure_token(),
             count: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6247,6 +8718,7 @@ pub fn prismari_stormcaller_b68() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b68)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6256,8 +8728,19 @@ pub fn prismari_stormcaller_b68() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6268,6 +8751,7 @@ pub fn prismari_flarewinder() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarewinder",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6277,8 +8761,19 @@ pub fn prismari_flarewinder() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6290,6 +8785,7 @@ pub fn prismari_brewbinder() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brewbinder",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6299,6 +8795,7 @@ pub fn prismari_brewbinder() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -6310,7 +8807,17 @@ pub fn prismari_brewbinder() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6320,6 +8827,7 @@ pub fn prismari_ember_surge() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Surge",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6339,8 +8847,19 @@ pub fn prismari_ember_surge() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6354,6 +8873,7 @@ pub fn prismari_blazewright_b125() -> CardDefinition {
     CardDefinition {
         name: "Prismari Blazewright (b125)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6363,8 +8883,19 @@ pub fn prismari_blazewright_b125() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6375,6 +8906,7 @@ pub fn prismari_riftscholar_b125() -> CardDefinition {
     CardDefinition {
         name: "Prismari Riftscholar (b125)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6384,6 +8916,7 @@ pub fn prismari_riftscholar_b125() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -6394,7 +8927,17 @@ pub fn prismari_riftscholar_b125() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6405,6 +8948,7 @@ pub fn prismari_sparkshow_b125() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkshow (b125)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6424,8 +8968,19 @@ pub fn prismari_sparkshow_b125() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6437,6 +8992,7 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempest-Bearer (b125)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6446,6 +9002,7 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Draw {
                 who: Selector::You,
@@ -6457,7 +9014,17 @@ pub fn prismari_tempest_bearer_b125() -> CardDefinition {
                 random: false,
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6469,6 +9036,7 @@ pub fn prismari_cinderscholar_b126() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderscholar (b126)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6478,8 +9046,19 @@ pub fn prismari_cinderscholar_b126() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6489,6 +9068,7 @@ pub fn prismari_riftrider_b126() -> CardDefinition {
     CardDefinition {
         name: "Prismari Riftrider (b126)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Pirate],
@@ -6498,8 +9078,19 @@ pub fn prismari_riftrider_b126() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6510,6 +9101,7 @@ pub fn prismari_sparkstudent_b126() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkstudent (b126)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6519,8 +9111,19 @@ pub fn prismari_sparkstudent_b126() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6531,6 +9134,7 @@ pub fn prismari_tempest_skipper_b126() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempest-Skipper (b126)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6540,6 +9144,7 @@ pub fn prismari_tempest_skipper_b126() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry {
                 who: PlayerRef::You,
@@ -6550,7 +9155,17 @@ pub fn prismari_tempest_skipper_b126() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6561,6 +9176,7 @@ pub fn prismari_coil_caller_b126() -> CardDefinition {
     CardDefinition {
         name: "Prismari Coil-Caller (b126)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6580,8 +9196,19 @@ pub fn prismari_coil_caller_b126() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6593,6 +9220,7 @@ pub fn prismari_sparkbolt_b127() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbolt (b127)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6612,8 +9240,19 @@ pub fn prismari_sparkbolt_b127() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6623,6 +9262,7 @@ pub fn prismari_flarescholar_b127() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarescholar (b127)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6632,8 +9272,19 @@ pub fn prismari_flarescholar_b127() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6643,6 +9294,7 @@ pub fn prismari_mistscholar_b127() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mistscholar (b127)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6652,8 +9304,19 @@ pub fn prismari_mistscholar_b127() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6663,6 +9326,7 @@ pub fn prismari_surgebearer_b127() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surgebearer (b127)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6672,8 +9336,19 @@ pub fn prismari_surgebearer_b127() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6683,6 +9358,7 @@ pub fn prismari_ember_wave_b127() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Wave (b127)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6697,8 +9373,19 @@ pub fn prismari_ember_wave_b127() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6712,6 +9399,7 @@ pub fn prismari_stormcrafter_b128() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcrafter (b128)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6721,8 +9409,19 @@ pub fn prismari_stormcrafter_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6734,6 +9433,7 @@ pub fn prismari_firebrand_b128() -> CardDefinition {
     CardDefinition {
         name: "Prismari Firebrand (b128)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6743,8 +9443,19 @@ pub fn prismari_firebrand_b128() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6755,6 +9466,7 @@ pub fn prismari_tide_surger_b128() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tide-Surger (b128)",
         cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -6764,8 +9476,19 @@ pub fn prismari_tide_surger_b128() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6776,6 +9499,7 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroblast (b128)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6789,8 +9513,19 @@ pub fn prismari_pyroblast_b128() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6806,6 +9541,7 @@ pub fn prismari_sparkmaker_b129() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmaker (b129)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -6815,6 +9551,7 @@ pub fn prismari_sparkmaker_b129() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             mint_treasures(1),
             Effect::Scry {
@@ -6822,7 +9559,17 @@ pub fn prismari_sparkmaker_b129() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6834,6 +9581,7 @@ pub fn prismari_tempestmage_b129() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempestmage (b129)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6843,8 +9591,19 @@ pub fn prismari_tempestmage_b129() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6855,6 +9614,7 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inkwave (b129)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6864,8 +9624,19 @@ pub fn prismari_inkwave_b129() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(2)]),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6876,6 +9647,7 @@ pub fn prismari_stormbolt_b129() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbolt (b129)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6885,8 +9657,19 @@ pub fn prismari_stormbolt_b129() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6899,6 +9682,7 @@ pub fn prismari_emberseer_b130() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberseer (b130)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6908,8 +9692,19 @@ pub fn prismari_emberseer_b130() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6920,6 +9715,7 @@ pub fn prismari_inktrickster_b130() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inktrickster (b130)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -6929,8 +9725,19 @@ pub fn prismari_inktrickster_b130() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6941,6 +9748,7 @@ pub fn prismari_burnstrike_b130() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnstrike (b130)",
         cost: cost(&[r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6950,8 +9758,19 @@ pub fn prismari_burnstrike_b130() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6964,6 +9783,7 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
     CardDefinition {
         name: "Prismari Artistic Burst (b131)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -6984,8 +9804,19 @@ pub fn prismari_artistic_burst_b131() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -6995,6 +9826,7 @@ pub fn prismari_inkpyromancer_b131() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inkpyromancer (b131)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7004,8 +9836,19 @@ pub fn prismari_inkpyromancer_b131() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7015,6 +9858,7 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volatile Inkstroke (b131)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7034,8 +9878,19 @@ pub fn prismari_volatile_inkstroke_b131() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7048,6 +9903,7 @@ pub fn prismari_sparkscholar_ii_b132() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkscholar II (b132)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7057,8 +9913,19 @@ pub fn prismari_sparkscholar_ii_b132() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7069,6 +9936,7 @@ pub fn prismari_glasswright_b132() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glasswright (b132)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -7078,8 +9946,19 @@ pub fn prismari_glasswright_b132() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7089,6 +9968,7 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellstrike (b132)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7105,8 +9985,19 @@ pub fn prismari_spellstrike_b132() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7117,6 +10008,7 @@ pub fn prismari_tempest_scribe_b132() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempest-Scribe (b132)",
         cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7126,8 +10018,19 @@ pub fn prismari_tempest_scribe_b132() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7139,6 +10042,7 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Sprite (b133)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -7148,6 +10052,7 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             amount: Value::Const(1),
             to: target_filtered(
@@ -7156,7 +10061,17 @@ pub fn prismari_ember_sprite_b133() -> CardDefinition {
                     .or(SelectionRequirement::Planeswalker),
             ),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7167,6 +10082,7 @@ pub fn prismari_wave_surger_b133() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wave-Surger (b133)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7176,8 +10092,19 @@ pub fn prismari_wave_surger_b133() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7188,6 +10115,7 @@ pub fn prismari_magma_cleric_b133() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magma-Cleric (b133)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7197,8 +10125,19 @@ pub fn prismari_magma_cleric_b133() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7212,6 +10151,7 @@ pub fn prismari_sparkmage_b135() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage (b135)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7221,8 +10161,19 @@ pub fn prismari_sparkmage_b135() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7233,6 +10184,7 @@ pub fn prismari_splash_b135() -> CardDefinition {
     CardDefinition {
         name: "Prismari Splash (b135)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7252,8 +10204,19 @@ pub fn prismari_splash_b135() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7265,6 +10228,7 @@ pub fn prismari_glasswright_ii_b135() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glasswright II (b135)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -7274,8 +10238,19 @@ pub fn prismari_glasswright_ii_b135() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7287,6 +10262,7 @@ pub fn prismari_stormcaller_b135() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b135)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -7296,6 +10272,7 @@ pub fn prismari_stormcaller_b135() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::PumpPT {
             what: target_filtered(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
@@ -7304,7 +10281,17 @@ pub fn prismari_stormcaller_b135() -> CardDefinition {
             toughness: Value::Const(-1),
             duration: Duration::EndOfTurn,
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7317,6 +10304,7 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Scribe (b136)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7326,6 +10314,7 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -7340,7 +10329,17 @@ pub fn prismari_ember_scribe_b136() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7350,6 +10349,7 @@ pub fn prismari_burnpaste_b136() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnpaste (b136)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7359,8 +10359,19 @@ pub fn prismari_burnpaste_b136() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7373,6 +10384,7 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasure-Pyro (b136)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -7382,6 +10394,7 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -7390,7 +10403,17 @@ pub fn prismari_treasure_pyro_b136() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7403,6 +10426,7 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge (b138)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -7412,6 +10436,7 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -7420,7 +10445,17 @@ pub fn prismari_sparkforge_b138() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7431,6 +10466,7 @@ pub fn prismari_embersinger_b138() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embersinger (b138)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Bard],
@@ -7440,8 +10476,19 @@ pub fn prismari_embersinger_b138() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7451,6 +10498,7 @@ pub fn prismari_surgebolt_b138() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surgebolt (b138)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7464,8 +10512,19 @@ pub fn prismari_surgebolt_b138() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7475,6 +10534,7 @@ pub fn prismari_wavecaller_b138() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavecaller (b138)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -7484,8 +10544,19 @@ pub fn prismari_wavecaller_b138() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7496,6 +10567,7 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormhand (b138)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7516,8 +10588,19 @@ pub fn prismari_stormhand_b138() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7529,6 +10612,7 @@ pub fn prismari_flarewright_b139() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarewright (b139)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Bard],
@@ -7538,8 +10622,19 @@ pub fn prismari_flarewright_b139() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7550,6 +10645,7 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
     CardDefinition {
         name: "Prismari Shocksinger (b139)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7570,8 +10666,19 @@ pub fn prismari_shocksinger_b139() -> CardDefinition {
                 definition: treasure_token(),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7581,6 +10688,7 @@ pub fn prismari_glassflinger_b136() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassflinger (b136)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7590,11 +10698,22 @@ pub fn prismari_glassflinger_b136() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7606,6 +10725,7 @@ pub fn prismari_magma_channeler_b141() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magma-Channeler (b141)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7615,8 +10735,19 @@ pub fn prismari_magma_channeler_b141() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7627,6 +10758,7 @@ pub fn prismari_pyromage_b141() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage (b141)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -7636,8 +10768,19 @@ pub fn prismari_pyromage_b141() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7647,6 +10790,7 @@ pub fn prismari_tidalstorm_b141() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidalstorm (b141)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7666,8 +10810,19 @@ pub fn prismari_tidalstorm_b141() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7678,6 +10833,7 @@ pub fn prismari_embergeist_b141() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embergeist (b141)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Elemental],
@@ -7687,8 +10843,19 @@ pub fn prismari_embergeist_b141() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7702,6 +10869,7 @@ pub fn prismari_surgemage_b142() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surgemage (b142)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7711,8 +10879,19 @@ pub fn prismari_surgemage_b142() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7722,6 +10901,7 @@ pub fn prismari_cinderwave_b142() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinderwave (b142)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7741,8 +10921,19 @@ pub fn prismari_cinderwave_b142() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7753,6 +10944,7 @@ pub fn prismari_tidemaster_b142() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidemaster (b142)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -7762,8 +10954,19 @@ pub fn prismari_tidemaster_b142() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_treasures(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7774,6 +10977,7 @@ pub fn prismari_pyrocaster_b142() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrocaster (b142)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7783,8 +10987,19 @@ pub fn prismari_pyrocaster_b142() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7794,6 +11009,7 @@ pub fn prismari_magmarush_b142() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmarush (b142)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7803,8 +11019,19 @@ pub fn prismari_magmarush_b142() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(5),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7816,6 +11043,7 @@ pub fn prismari_pyroartist_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroartist (b143)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7825,8 +11053,19 @@ pub fn prismari_pyroartist_b143() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7836,6 +11075,7 @@ pub fn prismari_cantripflinger_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantripflinger (b143)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7851,8 +11091,19 @@ pub fn prismari_cantripflinger_b143() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7863,6 +11114,7 @@ pub fn prismari_stormcaster_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaster (b143)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -7872,8 +11124,19 @@ pub fn prismari_stormcaster_b143() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure(), magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7883,6 +11146,7 @@ pub fn prismari_cantriplord_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantriplord (b143)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7902,8 +11166,19 @@ pub fn prismari_cantriplord_b143() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7913,6 +11188,7 @@ pub fn prismari_elementalmage_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Elementalmage (b143)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -7922,8 +11198,19 @@ pub fn prismari_elementalmage_b143() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7935,6 +11222,7 @@ pub fn prismari_stormgust_b144() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormgust (b144)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -7950,8 +11238,19 @@ pub fn prismari_stormgust_b144() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7960,6 +11259,7 @@ pub fn prismari_ember_cantor_b144() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Cantor (b144)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7969,8 +11269,19 @@ pub fn prismari_ember_cantor_b144() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Cycling(cost(&[generic(1), u()]))],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -7983,6 +11294,7 @@ pub fn prismari_frosthand_b145() -> CardDefinition {
     CardDefinition {
         name: "Prismari Frosthand (b145)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -7992,8 +11304,19 @@ pub fn prismari_frosthand_b145() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_tap_opp_creature()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8003,6 +11326,7 @@ pub fn prismari_magmasplitter_b145() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmasplitter (b145)",
         cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8012,8 +11336,19 @@ pub fn prismari_magmasplitter_b145() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8023,6 +11358,7 @@ pub fn prismari_wavecraft_b144() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavecraft (b144)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8032,8 +11368,19 @@ pub fn prismari_wavecraft_b144() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8044,6 +11391,7 @@ pub fn prismari_volcanist_b143() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanist (b143)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8053,11 +11401,22 @@ pub fn prismari_volcanist_b143() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8070,6 +11429,7 @@ pub fn prismari_pyromage_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage (b146)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8079,8 +11439,19 @@ pub fn prismari_pyromage_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8090,6 +11461,7 @@ pub fn prismari_volcanic_spell_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanic Spell (b146)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8103,8 +11475,19 @@ pub fn prismari_volcanic_spell_b146() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8115,6 +11498,7 @@ pub fn prismari_sleetcaster_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sleetcaster (b146)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8124,13 +11508,24 @@ pub fn prismari_sleetcaster_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Tap {
             what: target_filtered(
                 SelectionRequirement::Creature
                     .and(SelectionRequirement::ControlledByOpponent),
             ),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8141,6 +11536,7 @@ pub fn prismari_treasurer_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurer (b146)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8150,8 +11546,19 @@ pub fn prismari_treasurer_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8161,6 +11568,7 @@ pub fn prismari_mage_champion_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mage-Champion (b146)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8170,8 +11578,19 @@ pub fn prismari_mage_champion_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8182,6 +11601,7 @@ pub fn prismari_charge_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Charge (b146)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8201,8 +11621,19 @@ pub fn prismari_charge_b146() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8213,6 +11644,7 @@ pub fn prismari_reflectionist_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Reflectionist (b146)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8222,8 +11654,19 @@ pub fn prismari_reflectionist_b146() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8233,6 +11676,7 @@ pub fn prismari_pyrolancer_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrolancer (b146)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8242,8 +11686,19 @@ pub fn prismari_pyrolancer_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_add_counter_self()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8255,6 +11710,7 @@ pub fn prismari_tidemage_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidemage (b146)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8264,11 +11720,22 @@ pub fn prismari_tidemage_b146() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Move {
             what: target_filtered(SelectionRequirement::Creature),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8278,6 +11745,7 @@ pub fn prismari_surge_b146() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surge (b146)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8297,8 +11765,19 @@ pub fn prismari_surge_b146() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8311,6 +11790,7 @@ pub fn prismari_embercaller_b147() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embercaller (b147)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8320,8 +11800,19 @@ pub fn prismari_embercaller_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8331,6 +11822,7 @@ pub fn prismari_tidescribe_b147() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidescribe (b147)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8340,8 +11832,19 @@ pub fn prismari_tidescribe_b147() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8351,6 +11854,7 @@ pub fn prismari_flamekind_b147() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamekind (b147)",
         cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -8360,8 +11864,19 @@ pub fn prismari_flamekind_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8372,6 +11887,7 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
     CardDefinition {
         name: "Prismari Counterscribe (b147)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8381,8 +11897,19 @@ pub fn prismari_counterscribe_b147() -> CardDefinition {
             what: Selector::Target(0),
             mana_cost: cost(&[generic(1)]),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8393,6 +11920,7 @@ pub fn prismari_arcanist_b147() -> CardDefinition {
     CardDefinition {
         name: "Prismari Arcanist (b147)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8402,8 +11930,19 @@ pub fn prismari_arcanist_b147() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8416,6 +11955,7 @@ pub fn prismari_sparkmage_b148() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage (b148)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8425,8 +11965,19 @@ pub fn prismari_sparkmage_b148() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8436,6 +11987,7 @@ pub fn prismari_splashmage_b148() -> CardDefinition {
     CardDefinition {
         name: "Prismari Splashmage (b148)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8451,8 +12003,19 @@ pub fn prismari_splashmage_b148() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8463,6 +12026,7 @@ pub fn prismari_treasurehunter_b148() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurehunter (b148)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8472,6 +12036,7 @@ pub fn prismari_treasurehunter_b148() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![{
             use crate::effect::shortcut::etb;
             etb(Effect::Seq(vec![
@@ -8482,7 +12047,17 @@ pub fn prismari_treasurehunter_b148() -> CardDefinition {
                 },
             ]))
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8492,6 +12067,7 @@ pub fn prismari_brawler_b148() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brawler (b148)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Warrior],
@@ -8501,8 +12077,19 @@ pub fn prismari_brawler_b148() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8512,6 +12099,7 @@ pub fn prismari_mindstrike_b148() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mindstrike (b148)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8527,8 +12115,19 @@ pub fn prismari_mindstrike_b148() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8540,6 +12139,7 @@ pub fn prismari_etherealist_b149() -> CardDefinition {
     CardDefinition {
         name: "Prismari Etherealist (b149)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8549,8 +12149,19 @@ pub fn prismari_etherealist_b149() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8560,6 +12171,7 @@ pub fn prismari_stormbringer_b149() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbringer (b149)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -8569,8 +12181,19 @@ pub fn prismari_stormbringer_b149() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Trample, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8582,6 +12205,7 @@ pub fn prismari_pyromage_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage (b150)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8591,8 +12215,19 @@ pub fn prismari_pyromage_b150() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8603,6 +12238,7 @@ pub fn prismari_tidemage_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidemage (b150)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -8612,8 +12248,19 @@ pub fn prismari_tidemage_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8623,6 +12270,7 @@ pub fn prismari_galemaster_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Galemaster (b150)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8632,8 +12280,19 @@ pub fn prismari_galemaster_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8643,6 +12302,7 @@ pub fn prismari_stormcaller_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b150)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8652,8 +12312,19 @@ pub fn prismari_stormcaller_b150() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8663,6 +12334,7 @@ pub fn prismari_treasure_smith_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasure-Smith (b150)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8672,8 +12344,19 @@ pub fn prismari_treasure_smith_b150() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8684,6 +12367,7 @@ pub fn prismari_inferno_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno (b150)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8695,8 +12379,19 @@ pub fn prismari_inferno_b150() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8706,6 +12401,7 @@ pub fn prismari_aetherwave_b150() -> CardDefinition {
     CardDefinition {
         name: "Prismari Aetherwave (b150)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8722,8 +12418,19 @@ pub fn prismari_aetherwave_b150() -> CardDefinition {
                 random: false,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8735,6 +12442,7 @@ pub fn prismari_brawler_b151() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brawler (b151)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Warrior],
@@ -8744,8 +12452,19 @@ pub fn prismari_brawler_b151() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8755,6 +12474,7 @@ pub fn prismari_inferno_tide_b151() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno-Tide (b151)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8770,8 +12490,19 @@ pub fn prismari_inferno_tide_b151() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8781,6 +12512,7 @@ pub fn prismari_glassblower_b151() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassblower (b151)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Artificer],
@@ -8790,8 +12522,19 @@ pub fn prismari_glassblower_b151() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8802,6 +12545,7 @@ pub fn prismari_wavecaller_b151() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavecaller (b151)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8811,8 +12555,19 @@ pub fn prismari_wavecaller_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8822,6 +12577,7 @@ pub fn prismari_stormcrest_b151() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcrest (b151)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Dragon],
@@ -8831,8 +12587,19 @@ pub fn prismari_stormcrest_b151() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8847,6 +12614,7 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellburst (b153)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8856,8 +12624,19 @@ pub fn prismari_spellburst_b153() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: mc(&[gc(3)]),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8868,6 +12647,7 @@ pub fn prismari_elementalist_b153() -> CardDefinition {
     CardDefinition {
         name: "Prismari Elementalist (b153)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8877,8 +12657,19 @@ pub fn prismari_elementalist_b153() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8888,6 +12679,7 @@ pub fn prismari_spellsplash_b153() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellsplash (b153)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8897,8 +12689,19 @@ pub fn prismari_spellsplash_b153() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8911,6 +12714,7 @@ pub fn prismari_treasurelord_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurelord (b154)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8920,8 +12724,19 @@ pub fn prismari_treasurelord_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8931,6 +12746,7 @@ pub fn prismari_inferno_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno (b154)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -8942,8 +12758,19 @@ pub fn prismari_inferno_b154() -> CardDefinition {
             ),
             amount: Value::Const(5),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8953,6 +12780,7 @@ pub fn prismari_tempestmage_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tempestmage (b154)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -8962,8 +12790,19 @@ pub fn prismari_tempestmage_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8974,6 +12813,7 @@ pub fn prismari_crashbinder_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Crashbinder (b154)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -8983,8 +12823,19 @@ pub fn prismari_crashbinder_b154() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -8994,6 +12845,7 @@ pub fn prismari_sparkglyph_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkglyph (b154)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9007,8 +12859,19 @@ pub fn prismari_sparkglyph_b154() -> CardDefinition {
             ),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9019,6 +12882,7 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbreaker (b154)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9028,6 +12892,7 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -9039,7 +12904,17 @@ pub fn prismari_stormbreaker_b154() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9049,6 +12924,7 @@ pub fn prismari_flameseeker_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameseeker (b154)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9058,8 +12934,19 @@ pub fn prismari_flameseeker_b154() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9070,6 +12957,7 @@ pub fn prismari_calligrapher_b154() -> CardDefinition {
     CardDefinition {
         name: "Prismari Calligrapher (b154)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9079,8 +12967,19 @@ pub fn prismari_calligrapher_b154() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9093,6 +12992,7 @@ pub fn prismari_combustion_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Combustion (b155)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9102,8 +13002,19 @@ pub fn prismari_combustion_b155() -> CardDefinition {
             deal(2, target_filtered(SelectionRequirement::Creature)),
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9114,6 +13025,7 @@ pub fn elemental_stormcaller_b155() -> CardDefinition {
     CardDefinition {
         name: "Elemental Stormcaller (b155)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9123,8 +13035,19 @@ pub fn elemental_stormcaller_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9134,6 +13057,7 @@ pub fn prismari_surge_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surge (b155)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9143,8 +13067,19 @@ pub fn prismari_surge_b155() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9154,6 +13089,7 @@ pub fn prismari_looter_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Looter (b155)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9163,8 +13099,19 @@ pub fn prismari_looter_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9174,6 +13121,7 @@ pub fn elemental_brawler_b155() -> CardDefinition {
     CardDefinition {
         name: "Elemental Brawler (b155)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -9183,8 +13131,19 @@ pub fn elemental_brawler_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9196,6 +13155,7 @@ pub fn prismari_treasure_spawner_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasure-Spawner (b155)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -9205,12 +13165,23 @@ pub fn prismari_treasure_spawner_b155() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
             definition: treasure_token(),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9221,6 +13192,7 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Quickdraw (b155)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9231,8 +13203,19 @@ pub fn prismari_quickdraw_b155() -> CardDefinition {
                 .or(SelectionRequirement::Player)
                 .or(SelectionRequirement::Planeswalker),
         )),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9243,6 +13226,7 @@ pub fn elemental_whirlwind_b155() -> CardDefinition {
     CardDefinition {
         name: "Elemental Whirlwind (b155)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9258,8 +13242,19 @@ pub fn elemental_whirlwind_b155() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9272,6 +13267,7 @@ pub fn prismari_pyromancer_b156() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromancer (b156)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9281,6 +13277,7 @@ pub fn prismari_pyromancer_b156() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::AnotherOfYours),
             effect: Effect::Scry {
@@ -9288,7 +13285,17 @@ pub fn prismari_pyromancer_b156() -> CardDefinition {
                 amount: Value::Const(1),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9300,6 +13307,7 @@ pub fn prismari_sparkmaster_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmaster (b155)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
@@ -9309,8 +13317,19 @@ pub fn prismari_sparkmaster_b155() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9320,6 +13339,7 @@ pub fn prismari_treasureseeker_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasureseeker (b155)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9329,8 +13349,19 @@ pub fn prismari_treasureseeker_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9340,6 +13371,7 @@ pub fn prismari_flameshape_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameshape (b155)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -9349,8 +13381,19 @@ pub fn prismari_flameshape_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9360,6 +13403,7 @@ pub fn prismari_tidepainter_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidepainter (b155)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9369,11 +13413,22 @@ pub fn prismari_tidepainter_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::MayDo {
             description: "Draw a card?".into(),
             body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9383,6 +13438,7 @@ pub fn prismari_pyroshaper_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroshaper (b155)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9392,8 +13448,19 @@ pub fn prismari_pyroshaper_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9404,6 +13471,7 @@ pub fn prismari_forgewright_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Forgewright (b155)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9413,6 +13481,7 @@ pub fn prismari_forgewright_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             to: Selector::EachPermanent(
                 SelectionRequirement::Creature
@@ -9420,7 +13489,17 @@ pub fn prismari_forgewright_b155() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9430,6 +13509,7 @@ pub fn prismari_tinkertinker_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tinkertinker (b155)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
@@ -9439,6 +13519,7 @@ pub fn prismari_tinkertinker_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             Effect::MayDo {
@@ -9449,7 +13530,17 @@ pub fn prismari_tinkertinker_b155() -> CardDefinition {
                 }),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9459,6 +13550,7 @@ pub fn prismari_flowcaster_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flowcaster (b155)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -9468,8 +13560,19 @@ pub fn prismari_flowcaster_b155() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9479,6 +13582,7 @@ pub fn prismari_bolthurler_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Bolthurler (b155)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9488,8 +13592,19 @@ pub fn prismari_bolthurler_b155() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9500,6 +13615,7 @@ pub fn prismari_spellsign_b155() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellsign (b155)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9513,8 +13629,19 @@ pub fn prismari_spellsign_b155() -> CardDefinition {
             )),
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9526,6 +13653,7 @@ pub fn prismari_sparkmage_ii_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage II (b158)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9535,8 +13663,19 @@ pub fn prismari_sparkmage_ii_b158() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9546,6 +13685,7 @@ pub fn prismari_bellringer_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Bellringer (b158)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9555,8 +13695,19 @@ pub fn prismari_bellringer_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9566,6 +13717,7 @@ pub fn prismari_cinder_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cinder (b158)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -9575,8 +13727,19 @@ pub fn prismari_cinder_b158() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9586,6 +13749,7 @@ pub fn prismari_lootworker_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Lootworker (b158)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9595,8 +13759,19 @@ pub fn prismari_lootworker_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9606,6 +13781,7 @@ pub fn prismari_ember_scribe_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Ember-Scribe (b158)",
         cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9615,8 +13791,19 @@ pub fn prismari_ember_scribe_b158() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9627,6 +13814,7 @@ pub fn prismari_flameweaver_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameweaver (b158)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9636,8 +13824,19 @@ pub fn prismari_flameweaver_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9647,6 +13846,7 @@ pub fn prismari_stormbearer_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbearer (b158)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Djinn, CreatureType::Wizard],
@@ -9656,8 +13856,19 @@ pub fn prismari_stormbearer_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9667,6 +13878,7 @@ pub fn prismari_pyroglyph_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroglyph (b158)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9680,8 +13892,19 @@ pub fn prismari_pyroglyph_b158() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9692,6 +13915,7 @@ pub fn prismari_brewscholar_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brewscholar (b158)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9701,8 +13925,19 @@ pub fn prismari_brewscholar_b158() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1), magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9712,6 +13947,7 @@ pub fn prismari_flickerflame_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flickerflame (b158)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9728,8 +13964,19 @@ pub fn prismari_flickerflame_b158() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9742,6 +13989,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cogworks (b158)",
         cost: cost(&[generic(3)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9765,6 +14013,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
+                tap_other_filter: None,
                 self_counter_cost_reduction: None,
             },
             ActivatedAbility {
@@ -9783,11 +14032,22 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
+                tap_other_filter: None,
                 self_counter_cost_reduction: None,
             },
         ],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9799,6 +14059,7 @@ pub fn prismari_brushflare_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brushflare (b160)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9811,8 +14072,19 @@ pub fn prismari_brushflare_b160() -> CardDefinition {
             },
             Effect::Surveil { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9823,6 +14095,7 @@ pub fn prismari_stormbinder_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbinder (b160)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9832,8 +14105,19 @@ pub fn prismari_stormbinder_b160() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![prowess()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9844,6 +14128,7 @@ pub fn prismari_spellscribe_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellscribe (b160)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -9853,8 +14138,19 @@ pub fn prismari_spellscribe_b160() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9864,6 +14160,7 @@ pub fn prismari_magmadancer_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmadancer (b160)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9873,8 +14170,19 @@ pub fn prismari_magmadancer_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9884,6 +14192,7 @@ pub fn prismari_sparkthrower_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkthrower (b160)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -9893,8 +14202,19 @@ pub fn prismari_sparkthrower_b160() -> CardDefinition {
             amount: Value::Const(2),
             to: Selector::Target(0),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9906,6 +14226,7 @@ pub fn prismari_treasureforge_b160() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasureforge (b160)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9915,6 +14236,7 @@ pub fn prismari_treasureforge_b160() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::CreateToken {
                 who: PlayerRef::You,
@@ -9926,7 +14248,17 @@ pub fn prismari_treasureforge_b160() -> CardDefinition {
                 to: Selector::Target(0),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9939,6 +14271,7 @@ pub fn prismari_tideforge_b161() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tideforge (b161)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9948,8 +14281,19 @@ pub fn prismari_tideforge_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![prowess()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9960,6 +14304,7 @@ pub fn prismari_sparksmith_b161() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparksmith (b161)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Artificer],
@@ -9969,11 +14314,22 @@ pub fn prismari_sparksmith_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::Const(2),
             to: Selector::Target(0),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -9984,6 +14340,7 @@ pub fn prismari_goblinforge_b161() -> CardDefinition {
     CardDefinition {
         name: "Prismari Goblinforge (b161)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -9993,8 +14350,19 @@ pub fn prismari_goblinforge_b161() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10005,6 +14373,7 @@ pub fn prismari_voidshaper_b161() -> CardDefinition {
     CardDefinition {
         name: "Prismari Voidshaper (b161)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10014,6 +14383,7 @@ pub fn prismari_voidshaper_b161() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::DealDamage {
                 amount: Value::Const(1),
@@ -10021,7 +14391,17 @@ pub fn prismari_voidshaper_b161() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10034,6 +14414,7 @@ pub fn prismari_sparkflower_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkflower (b162)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10043,8 +14424,19 @@ pub fn prismari_sparkflower_b162() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10055,6 +14447,7 @@ pub fn prismari_burnscribe_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnscribe (b162)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Artificer],
@@ -10064,11 +14457,22 @@ pub fn prismari_burnscribe_b162() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::DealDamage {
             amount: Value::Const(1),
             to: Selector::Player(PlayerRef::EachOpponent),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10079,6 +14483,7 @@ pub fn prismari_spellslinger_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellslinger (b162)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10088,8 +14493,19 @@ pub fn prismari_spellslinger_b162() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10099,6 +14515,7 @@ pub fn prismari_firefoot_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Firefoot (b162)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10108,8 +14525,19 @@ pub fn prismari_firefoot_b162() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10119,6 +14547,7 @@ pub fn prismari_stormbolt_b162() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbolt (b162)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10131,8 +14560,19 @@ pub fn prismari_stormbolt_b162() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10144,6 +14584,7 @@ pub fn prismari_blazetide_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Blazetide (b164)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10155,7 +14596,17 @@ pub fn prismari_blazetide_b164() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10165,6 +14616,7 @@ pub fn prismari_spellfury_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellfury (b164)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10176,7 +14628,17 @@ pub fn prismari_spellfury_b164() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10186,6 +14648,7 @@ pub fn prismari_spellwaver_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellwaver (b164)",
         cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10200,7 +14663,17 @@ pub fn prismari_spellwaver_b164() -> CardDefinition {
             use crate::effect::shortcut::etb_draw;
             etb_draw(1)
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10210,6 +14683,7 @@ pub fn prismari_fireweaver_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Fireweaver (b164)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10221,7 +14695,17 @@ pub fn prismari_fireweaver_b164() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10231,6 +14715,7 @@ pub fn prismari_stormcrash_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcrash (b164)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10245,7 +14730,17 @@ pub fn prismari_stormcrash_b164() -> CardDefinition {
         ]),
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10254,6 +14749,7 @@ pub fn prismari_sparkdancer_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkdancer (b164)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10265,7 +14761,17 @@ pub fn prismari_sparkdancer_b164() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10275,6 +14781,7 @@ pub fn prismari_dracoshaper_b164() -> CardDefinition {
     CardDefinition {
         name: "Prismari Dracoshaper (b164)",
         cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10286,7 +14793,17 @@ pub fn prismari_dracoshaper_b164() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10298,6 +14815,7 @@ pub fn prismari_stormchaser_b165() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormchaser (b165)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10309,7 +14827,17 @@ pub fn prismari_stormchaser_b165() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![magecraft_self_pump(2, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10319,6 +14847,7 @@ pub fn prismari_flamebolt_b165() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamebolt (b165)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10330,7 +14859,17 @@ pub fn prismari_flamebolt_b165() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10341,6 +14880,7 @@ pub fn prismari_stormwielder_b165() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormwielder (b165)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10352,7 +14892,17 @@ pub fn prismari_stormwielder_b165() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![etb_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10362,6 +14912,7 @@ pub fn prismari_cannonade_b165() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cannonade (b165)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10373,7 +14924,17 @@ pub fn prismari_cannonade_b165() -> CardDefinition {
         },
         activated_abilities: vec![],
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10384,6 +14945,7 @@ pub fn prismari_tidecaller_b165() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidecaller (b165)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10395,7 +14957,17 @@ pub fn prismari_tidecaller_b165() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: vec![],
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10411,6 +14983,7 @@ pub fn prismari_sparkfire_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkfire (b166)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10426,8 +14999,19 @@ pub fn prismari_sparkfire_b166() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10438,6 +15022,7 @@ pub fn prismari_smithy_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Smithy (b166)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10447,6 +15032,7 @@ pub fn prismari_smithy_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -10458,7 +15044,17 @@ pub fn prismari_smithy_b166() -> CardDefinition {
             },
             magecraft_loot(),
         ],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10468,6 +15064,7 @@ pub fn prismari_magmamage_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmamage (b166)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10477,8 +15074,19 @@ pub fn prismari_magmamage_b166() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10488,6 +15096,7 @@ pub fn prismari_stormsage_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormsage (b166)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10497,8 +15106,19 @@ pub fn prismari_stormsage_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10508,6 +15128,7 @@ pub fn prismari_flarewave_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarewave (b166)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10521,8 +15142,19 @@ pub fn prismari_flarewave_b166() -> CardDefinition {
             ),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10532,6 +15164,7 @@ pub fn prismari_tidehunter_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidehunter (b166)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10541,8 +15174,19 @@ pub fn prismari_tidehunter_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10552,6 +15196,7 @@ pub fn prismari_inferno_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno (b166)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10564,8 +15209,19 @@ pub fn prismari_inferno_b166() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10575,6 +15231,7 @@ pub fn prismari_skyforger_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skyforger (b166)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10584,8 +15241,19 @@ pub fn prismari_skyforger_b166() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10596,6 +15264,7 @@ pub fn prismari_elementalist_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Elementalist (b166)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10605,8 +15274,19 @@ pub fn prismari_elementalist_b166() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10616,6 +15296,7 @@ pub fn prismari_flamewing_b166() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamewing (b166)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Dragon],
@@ -10625,8 +15306,19 @@ pub fn prismari_flamewing_b166() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10639,6 +15331,7 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellbreaker (b167)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10648,6 +15341,7 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flash],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CounterUnlessPaid {
@@ -10655,7 +15349,17 @@ pub fn prismari_spellbreaker_b167() -> CardDefinition {
                 mana_cost: crate::mana::cost(&[generic(2)]),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10665,6 +15369,7 @@ pub fn prismari_brimblast_b167() -> CardDefinition {
     CardDefinition {
         name: "Prismari Brimblast (b167)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10674,8 +15379,19 @@ pub fn prismari_brimblast_b167() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(4),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10687,6 +15403,7 @@ pub fn prismari_treasurehunter_b167() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurehunter (b167)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10696,6 +15413,7 @@ pub fn prismari_treasurehunter_b167() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
             effect: Effect::CreateToken {
@@ -10704,7 +15422,17 @@ pub fn prismari_treasurehunter_b167() -> CardDefinition {
                 definition: treasure_token(),
             },
         }],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10714,6 +15442,7 @@ pub fn prismari_skyrider_b167() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skyrider (b167)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10723,8 +15452,19 @@ pub fn prismari_skyrider_b167() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -10737,6 +15477,7 @@ pub fn prismari_inferno_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno (b169)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10753,7 +15494,14 @@ pub fn prismari_inferno_b169() -> CardDefinition {
             },
             mint_treasures(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10764,6 +15512,7 @@ pub fn prismari_stormcaller_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b169)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10773,6 +15522,7 @@ pub fn prismari_stormcaller_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
             Effect::PumpPT {
                 what: Selector::This,
@@ -10786,6 +15536,12 @@ pub fn prismari_stormcaller_b169() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10796,6 +15552,7 @@ pub fn prismari_flamejet_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flamejet (b169)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10809,7 +15566,14 @@ pub fn prismari_flamejet_b169() -> CardDefinition {
             ),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10820,6 +15584,7 @@ pub fn prismari_foamcrasher_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Foamcrasher (b169)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10829,7 +15594,14 @@ pub fn prismari_foamcrasher_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10840,6 +15612,7 @@ pub fn prismari_scrycaster_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Scrycaster (b169)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -10849,7 +15622,14 @@ pub fn prismari_scrycaster_b169() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10860,6 +15640,7 @@ pub fn prismari_aerokineticist_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Aerokineticist (b169)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -10869,7 +15650,14 @@ pub fn prismari_aerokineticist_b169() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10881,6 +15669,7 @@ pub fn prismari_drakelord_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakelord (b169)",
         cost: cost(&[generic(4), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
@@ -10890,7 +15679,14 @@ pub fn prismari_drakelord_b169() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(mint_treasures(1))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10905,6 +15701,7 @@ pub fn prismari_sparkforge_b171() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge (b171)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -10914,6 +15711,7 @@ pub fn prismari_sparkforge_b171() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::DealDamage {
             to: target_filtered(
                 SelectionRequirement::Creature
@@ -10921,6 +15719,12 @@ pub fn prismari_sparkforge_b171() -> CardDefinition {
             ),
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10933,6 +15737,7 @@ pub fn prismari_wavecaster_b172() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavecaster (b172)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -10942,7 +15747,14 @@ pub fn prismari_wavecaster_b172() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10954,6 +15766,7 @@ pub fn prismari_bonfire_b172() -> CardDefinition {
     CardDefinition {
         name: "Prismari Bonfire (b172)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10970,7 +15783,14 @@ pub fn prismari_bonfire_b172() -> CardDefinition {
             },
             mint_treasures(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -10982,6 +15802,7 @@ pub fn prismari_tideflame_b171() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tideflame (b171)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -10997,7 +15818,14 @@ pub fn prismari_tideflame_b171() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11009,6 +15837,7 @@ pub fn prismari_forgesmith_b170() -> CardDefinition {
     CardDefinition {
         name: "Prismari Forgesmith (b170)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11018,6 +15847,7 @@ pub fn prismari_forgesmith_b170() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb(Effect::AddCounter {
                 what: Selector::This,
@@ -11026,6 +15856,12 @@ pub fn prismari_forgesmith_b170() -> CardDefinition {
             }),
             magecraft_treasure(),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11036,6 +15872,7 @@ pub fn prismari_spellcrafter_b169() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellcrafter (b169)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11045,7 +15882,14 @@ pub fn prismari_spellcrafter_b169() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11056,6 +15900,7 @@ pub fn prismari_volley_b167() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volley (b167)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11075,8 +15920,19 @@ pub fn prismari_volley_b167() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11089,6 +15945,7 @@ pub fn prismari_embermage_b174() -> CardDefinition {
     CardDefinition {
         name: "Prismari Embermage (b174)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11098,7 +15955,14 @@ pub fn prismari_embermage_b174() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11110,6 +15974,7 @@ pub fn prismari_wavefocuser_b174() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavefocuser (b174)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11119,7 +15984,14 @@ pub fn prismari_wavefocuser_b174() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11131,6 +16003,7 @@ pub fn prismari_spellforge_b174() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellforge (b174)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11140,10 +16013,17 @@ pub fn prismari_spellforge_b174() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             crate::effect::shortcut::etb(mint_treasures(1)),
             magecraft_scry(1),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11154,6 +16034,7 @@ pub fn prismari_sparkflood_b174() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkflood (b174)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11173,7 +16054,14 @@ pub fn prismari_sparkflood_b174() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11187,6 +16075,7 @@ pub fn prismari_sparkmage_b175() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkmage (b175)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11196,7 +16085,14 @@ pub fn prismari_sparkmage_b175() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11207,6 +16103,7 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cloudburst (b175)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11222,7 +16119,14 @@ pub fn prismari_cloudburst_b175() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11236,6 +16140,7 @@ pub fn prismari_stormwave_b191() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormwave (b191)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11253,7 +16158,14 @@ pub fn prismari_stormwave_b191() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11264,6 +16176,7 @@ pub fn prismari_wavetamer_b191() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavetamer (b191)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11273,7 +16186,14 @@ pub fn prismari_wavetamer_b191() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11286,6 +16206,7 @@ pub fn prismari_tinkermage_b191() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tinkermage (b191)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -11295,7 +16216,14 @@ pub fn prismari_tinkermage_b191() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_mint_token(treasure_token(), 1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11308,6 +16236,7 @@ pub fn prismari_doublecharge_b190() -> CardDefinition {
     CardDefinition {
         name: "Prismari Doublecharge (b190)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11325,7 +16254,14 @@ pub fn prismari_doublecharge_b190() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11337,6 +16273,7 @@ pub fn prismari_skydiver_b190() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skydiver (b190)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11346,11 +16283,18 @@ pub fn prismari_skydiver_b190() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::AddKeywordCounter {
             what: Selector::This,
             keyword: Keyword::Flying,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11361,6 +16305,7 @@ pub fn prismari_sparkforge_ii_b190() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge II (b190)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11373,7 +16318,14 @@ pub fn prismari_sparkforge_ii_b190() -> CardDefinition {
             },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11387,6 +16339,7 @@ pub fn prismari_magmamancer_b189() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmamancer (b189)",
         cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11396,7 +16349,14 @@ pub fn prismari_magmamancer_b189() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11409,6 +16369,7 @@ pub fn prismari_treasurewright_b189() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurewright (b189)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -11418,10 +16379,17 @@ pub fn prismari_treasurewright_b189() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             etb_mint_token(treasure_token(), 1),
             magecraft_scry(1),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11432,6 +16400,7 @@ pub fn prismari_hailstrike_b189() -> CardDefinition {
     CardDefinition {
         name: "Prismari Hailstrike (b189)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11447,7 +16416,14 @@ pub fn prismari_hailstrike_b189() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11461,6 +16437,7 @@ pub fn prismari_lavakin_b188() -> CardDefinition {
     CardDefinition {
         name: "Prismari Lavakin (b188)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11470,7 +16447,14 @@ pub fn prismari_lavakin_b188() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11481,6 +16465,7 @@ pub fn prismari_storm_scholar_b188() -> CardDefinition {
     CardDefinition {
         name: "Prismari Storm-Scholar (b188)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11490,7 +16475,14 @@ pub fn prismari_storm_scholar_b188() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11501,6 +16493,7 @@ pub fn prismari_hailcaller_b188() -> CardDefinition {
     CardDefinition {
         name: "Prismari Hailcaller (b188)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11516,7 +16509,14 @@ pub fn prismari_hailcaller_b188() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11529,6 +16529,7 @@ pub fn prismari_hasterune_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Hasterune (b187)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11541,7 +16542,14 @@ pub fn prismari_hasterune_b187() -> CardDefinition {
             keyword: Keyword::Haste,
             amount: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11552,6 +16560,7 @@ pub fn prismari_sparkforge_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforge (b187)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11561,10 +16570,17 @@ pub fn prismari_sparkforge_b187() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![
             magecraft_treasure(),
             magecraft(Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) }),
         ],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11576,6 +16592,7 @@ pub fn prismari_flameseer_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flameseer (b187)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11585,7 +16602,14 @@ pub fn prismari_flameseer_b187() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Prowess],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11598,6 +16622,7 @@ pub fn prismari_stormcoach_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcoach (b187)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dragon],
@@ -11607,7 +16632,14 @@ pub fn prismari_stormcoach_b187() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11618,6 +16650,7 @@ pub fn prismari_echohammer_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Echohammer (b187)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11632,7 +16665,14 @@ pub fn prismari_echohammer_b187() -> CardDefinition {
             ),
             count: Value::Const(1),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11644,6 +16684,7 @@ pub fn prismari_pyroshaper_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroshaper (b187)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11653,7 +16694,14 @@ pub fn prismari_pyroshaper_b187() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11664,6 +16712,7 @@ pub fn prismari_stormcaller_b187() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaller (b187)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11673,7 +16722,14 @@ pub fn prismari_stormcaller_b187() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11686,6 +16742,7 @@ pub fn prismari_sparkbloomer_b185() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbloomer (b185)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11695,11 +16752,18 @@ pub fn prismari_sparkbloomer_b185() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(Effect::AddKeywordCounter {
             what: Selector::This,
             keyword: Keyword::Haste,
             amount: Value::Const(1),
         })],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11715,6 +16779,7 @@ pub fn prismari_mage_mentor_b182() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mage-Mentor (b182)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11724,7 +16789,14 @@ pub fn prismari_mage_mentor_b182() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11738,6 +16810,7 @@ pub fn prismari_lavaforge_b180() -> CardDefinition {
     CardDefinition {
         name: "Prismari Lavaforge (b180)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11747,6 +16820,7 @@ pub fn prismari_lavaforge_b180() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(
@@ -11758,6 +16832,12 @@ pub fn prismari_lavaforge_b180() -> CardDefinition {
             },
             mint_treasures(1),
         ]))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11771,6 +16851,7 @@ pub fn prismari_magecraft_sage_b178() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magecraft-Sage (b178)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11780,7 +16861,14 @@ pub fn prismari_magecraft_sage_b178() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11794,6 +16882,7 @@ pub fn prismari_flarewing_b177() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarewing (b177)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Bird],
@@ -11803,7 +16892,14 @@ pub fn prismari_flarewing_b177() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11815,6 +16911,7 @@ pub fn prismari_treasurehunter_b175() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurehunter (b175)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11824,7 +16921,14 @@ pub fn prismari_treasurehunter_b175() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_treasures(2))],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11835,6 +16939,7 @@ pub fn prismari_stormbringer_b174() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormbringer (b174)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11844,7 +16949,14 @@ pub fn prismari_stormbringer_b174() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
         ..Default::default()
     }
 }
@@ -11859,6 +16971,7 @@ pub fn prismari_pyromancer_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromancer (b193)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -11868,8 +16981,19 @@ pub fn prismari_pyromancer_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11879,14 +17003,26 @@ pub fn prismari_cantrap_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrap (b193)",
         cost: cost(&[u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11896,6 +17032,7 @@ pub fn prismari_floodlord_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Floodlord (b193)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11905,8 +17042,19 @@ pub fn prismari_floodlord_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![on_attack_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11916,6 +17064,7 @@ pub fn prismari_wavewright_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavewright (b193)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -11925,11 +17074,22 @@ pub fn prismari_wavewright_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11940,6 +17100,7 @@ pub fn prismari_magmaforge_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaforge (b193)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -11952,8 +17113,19 @@ pub fn prismari_magmaforge_b193() -> CardDefinition {
             },
             mint_treasures(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11963,6 +17135,7 @@ pub fn prismari_sparkscribe_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkscribe (b193)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -11972,8 +17145,19 @@ pub fn prismari_sparkscribe_b193() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -11983,6 +17167,7 @@ pub fn prismari_burnbloom_b193() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnbloom (b193)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -11992,8 +17177,19 @@ pub fn prismari_burnbloom_b193() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12005,6 +17201,7 @@ pub fn prismari_sparkboost_b194() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkboost (b194)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12016,8 +17213,19 @@ pub fn prismari_sparkboost_b194() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12028,6 +17236,7 @@ pub fn prismari_tinkerlord_b194() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tinkerlord (b194)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12037,8 +17246,19 @@ pub fn prismari_tinkerlord_b194() -> CardDefinition {
         toughness: 4,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_treasures(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12049,6 +17269,7 @@ pub fn prismari_magmacrafter_b194() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmacrafter (b194)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12058,8 +17279,19 @@ pub fn prismari_magmacrafter_b194() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12069,6 +17301,7 @@ pub fn prismari_drakeforge_b194() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakeforge (b194)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake],
@@ -12078,8 +17311,19 @@ pub fn prismari_drakeforge_b194() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12092,14 +17336,26 @@ pub fn prismari_coinforge_b195() -> CardDefinition {
     CardDefinition {
         name: "Prismari Coinforge (b195)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: mint_treasures(2),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12109,6 +17365,7 @@ pub fn prismari_drakeling_b195() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakeling (b195)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake],
@@ -12118,8 +17375,19 @@ pub fn prismari_drakeling_b195() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12129,6 +17397,7 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
     CardDefinition {
         name: "Prismari Riverlord (b195)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12138,6 +17407,7 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::DealDamage {
@@ -12149,7 +17419,17 @@ pub fn prismari_riverlord_b195() -> CardDefinition {
                 amount: Value::Const(2),
             },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12159,6 +17439,7 @@ pub fn prismari_magmaspark_b195() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaspark (b195)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12168,8 +17449,19 @@ pub fn prismari_magmaspark_b195() -> CardDefinition {
         toughness: 2,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12182,6 +17474,7 @@ pub fn prismari_discoverer_b196() -> CardDefinition {
     CardDefinition {
         name: "Prismari Discoverer (b196)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -12191,8 +17484,19 @@ pub fn prismari_discoverer_b196() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12202,6 +17506,7 @@ pub fn prismari_stormcaster_b196() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcaster (b196)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12211,8 +17516,19 @@ pub fn prismari_stormcaster_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12222,6 +17538,7 @@ pub fn prismari_pinger_b196() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pinger (b196)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12238,8 +17555,19 @@ pub fn prismari_pinger_b196() -> CardDefinition {
             },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12250,6 +17578,7 @@ pub fn prismari_spellforge_b196() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellforge (b196)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12259,8 +17588,19 @@ pub fn prismari_spellforge_b196() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry_and_draw(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12273,6 +17613,7 @@ pub fn prismari_wavebound_b197() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavebound (b197)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -12282,8 +17623,19 @@ pub fn prismari_wavebound_b197() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12293,6 +17645,7 @@ pub fn prismari_burnscholar_b197() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burnscholar (b197)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12302,8 +17655,19 @@ pub fn prismari_burnscholar_b197() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12315,6 +17679,7 @@ pub fn prismari_sparkroost_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkroost (b198)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12324,8 +17689,19 @@ pub fn prismari_sparkroost_b198() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12336,6 +17712,7 @@ pub fn prismari_glassblower_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Glassblower (b198)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Artificer],
@@ -12345,8 +17722,19 @@ pub fn prismari_glassblower_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12356,6 +17744,7 @@ pub fn prismari_treasurewright_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurewright (b198)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12365,8 +17754,19 @@ pub fn prismari_treasurewright_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12376,6 +17776,7 @@ pub fn prismari_burst_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Burst (b198)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12385,8 +17786,19 @@ pub fn prismari_burst_b198() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(3),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12396,6 +17808,7 @@ pub fn prismari_cantrip_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip (b198)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12405,8 +17818,19 @@ pub fn prismari_cantrip_b198() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12416,6 +17840,7 @@ pub fn prismari_skyforger_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Skyforger (b198)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12425,8 +17850,19 @@ pub fn prismari_skyforger_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12436,6 +17872,7 @@ pub fn prismari_loot_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Loot (b198)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12449,8 +17886,19 @@ pub fn prismari_loot_b198() -> CardDefinition {
                 random: false,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12461,6 +17909,7 @@ pub fn prismari_magmaforge_b198() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmaforge (b198)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12470,8 +17919,19 @@ pub fn prismari_magmaforge_b198() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_ping_any(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12483,6 +17943,7 @@ pub fn prismari_apprentice_ii_b199() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice II (b199)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12492,8 +17953,19 @@ pub fn prismari_apprentice_ii_b199() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12503,6 +17975,7 @@ pub fn prismari_smolderwight_b199() -> CardDefinition {
     CardDefinition {
         name: "Prismari Smolderwight (b199)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12512,8 +17985,19 @@ pub fn prismari_smolderwight_b199() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12525,6 +18009,7 @@ pub fn prismari_surge_b199() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surge (b199)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12543,8 +18028,19 @@ pub fn prismari_surge_b199() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12554,6 +18050,7 @@ pub fn prismari_mathlord_b199() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mathlord (b199)",
         cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -12563,8 +18060,19 @@ pub fn prismari_mathlord_b199() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12575,6 +18083,7 @@ pub fn prismari_wavemaster_b199() -> CardDefinition {
     CardDefinition {
         name: "Prismari Wavemaster (b199)",
         cost: cost(&[u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
@@ -12584,8 +18093,19 @@ pub fn prismari_wavemaster_b199() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12596,6 +18116,7 @@ pub fn prismari_sparkbolt_b200() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkbolt (b200)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12605,8 +18126,19 @@ pub fn prismari_sparkbolt_b200() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(2),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12615,6 +18147,7 @@ pub fn prismari_magmamage_b200() -> CardDefinition {
     CardDefinition {
         name: "Prismari Magmamage (b200)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12624,8 +18157,19 @@ pub fn prismari_magmamage_b200() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12635,14 +18179,26 @@ pub fn prismari_notebook_b200() -> CardDefinition {
     CardDefinition {
         name: "Prismari Notebook (b200)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::Seq(vec![Effect::Scry { who: PlayerRef::You, amount: Value::Const(3) }, draw(1)]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12656,6 +18212,7 @@ pub fn prismari_stormcrash_b201() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormcrash (b201)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12665,8 +18222,19 @@ pub fn prismari_stormcrash_b201() -> CardDefinition {
             Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
             draw(1),
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12677,6 +18245,7 @@ pub fn prismari_sparkkeeper_b201() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkkeeper (b201)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12686,8 +18255,19 @@ pub fn prismari_sparkkeeper_b201() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_any(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12699,6 +18279,7 @@ pub fn prismari_treasurehunter_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Treasurehunter (b202)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12708,8 +18289,19 @@ pub fn prismari_treasurehunter_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12720,14 +18312,26 @@ pub fn prismari_bolt_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Bolt (b202)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: target_any(), amount: Value::Const(3) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12738,6 +18342,7 @@ pub fn prismari_drakebreeder_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Drakebreeder (b202)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drake],
@@ -12747,8 +18352,19 @@ pub fn prismari_drakebreeder_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry_and_draw(2)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12758,6 +18374,7 @@ pub fn prismari_spellcraft_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spellcraft (b202)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12767,8 +18384,19 @@ pub fn prismari_spellcraft_b202() -> CardDefinition {
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
             Effect::Draw { who: Selector::You, amount: Value::Const(2) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12778,6 +18406,7 @@ pub fn prismari_sparkforger_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkforger (b202)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12787,8 +18416,19 @@ pub fn prismari_sparkforger_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12799,6 +18439,7 @@ pub fn prismari_squallcaller_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Squallcaller (b202)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -12808,8 +18449,19 @@ pub fn prismari_squallcaller_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_tap_opp_creature()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12820,6 +18472,7 @@ pub fn prismari_pyroartisan_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyroartisan (b202)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12829,8 +18482,19 @@ pub fn prismari_pyroartisan_b202() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12841,6 +18505,7 @@ pub fn prismari_tinkerer_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tinkerer (b202)",
         cost: cost(&[generic(3)]),
+        supertypes: vec![],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Construct],
@@ -12850,8 +18515,19 @@ pub fn prismari_tinkerer_b202() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb(mint_treasures(1))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12861,6 +18537,7 @@ pub fn prismari_soothsayer_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Soothsayer (b202)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -12870,8 +18547,19 @@ pub fn prismari_soothsayer_b202() -> CardDefinition {
         toughness: 1,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12882,6 +18570,7 @@ pub fn prismari_surge_ii_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Surge II (b202)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12891,8 +18580,19 @@ pub fn prismari_surge_ii_b202() -> CardDefinition {
             Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12902,6 +18602,7 @@ pub fn prismari_volcanist_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Volcanist (b202)",
         cost: cost(&[generic(3), r(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12911,8 +18612,19 @@ pub fn prismari_volcanist_b202() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste, Keyword::Trample],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12922,6 +18634,7 @@ pub fn prismari_spiketide_b202() -> CardDefinition {
     CardDefinition {
         name: "Prismari Spiketide (b202)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12931,8 +18644,19 @@ pub fn prismari_spiketide_b202() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(3) },
             Effect::Discard { who: Selector::You, amount: Value::Const(2), random: true },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12944,6 +18668,7 @@ pub fn prismari_apprentice_ii_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Apprentice II (b203)",
         cost: cost(&[u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -12953,8 +18678,19 @@ pub fn prismari_apprentice_ii_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12963,6 +18699,7 @@ pub fn prismari_cantrip_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Cantrip (b203)",
         cost: cost(&[u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -12972,8 +18709,19 @@ pub fn prismari_cantrip_b203() -> CardDefinition {
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
             Effect::Discard { who: Selector::You, amount: Value::Const(1), random: true },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -12983,14 +18731,26 @@ pub fn prismari_counter_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Counter (b203)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: counter_target_spell(),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13000,14 +18760,26 @@ pub fn prismari_flame_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flame (b203)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
         keywords: vec![],
         effect: Effect::DealDamage { to: target_any(), amount: Value::Const(4) },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13017,6 +18789,7 @@ pub fn prismari_squallcaller_ii_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Squallcaller II (b203)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -13026,8 +18799,19 @@ pub fn prismari_squallcaller_ii_b203() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![etb_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13036,6 +18820,7 @@ pub fn prismari_mage_b203() -> CardDefinition {
     CardDefinition {
         name: "Prismari Mage (b203)",
         cost: cost(&[generic(2), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13045,8 +18830,19 @@ pub fn prismari_mage_b203() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13058,6 +18854,7 @@ pub fn prismari_pyromage_b204() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyromage (b204)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13067,8 +18864,19 @@ pub fn prismari_pyromage_b204() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13078,6 +18886,7 @@ pub fn prismari_stormrider_b204() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormrider (b204)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -13087,8 +18896,19 @@ pub fn prismari_stormrider_b204() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Flying, Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13097,6 +18917,7 @@ pub fn prismari_sparkboost_b204() -> CardDefinition {
     CardDefinition {
         name: "Prismari Sparkboost (b204)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13108,8 +18929,19 @@ pub fn prismari_sparkboost_b204() -> CardDefinition {
             toughness: Value::Const(0),
             duration: Duration::EndOfTurn,
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13124,6 +18956,7 @@ pub fn prismari_flarecaster_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Flarecaster (b205)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin, CreatureType::Wizard],
@@ -13135,7 +18968,17 @@ pub fn prismari_flarecaster_b205() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13146,6 +18989,7 @@ pub fn prismari_tidescribe_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Tidescribe (b205)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13160,7 +19004,17 @@ pub fn prismari_tidescribe_b205() -> CardDefinition {
             who: PlayerRef::You,
             amount: Value::Const(2),
         })],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13170,6 +19024,7 @@ pub fn prismari_emberbolt_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Emberbolt (b205)",
         cost: cost(&[r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13185,7 +19040,17 @@ pub fn prismari_emberbolt_b205() -> CardDefinition {
         },
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13196,6 +19061,7 @@ pub fn prismari_stormloot_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormloot (b205)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental, CreatureType::Wizard],
@@ -13207,7 +19073,17 @@ pub fn prismari_stormloot_b205() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_loot()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13218,6 +19094,7 @@ pub fn prismari_pyrosmith_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrosmith (b205)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Goblin, CreatureType::Artificer],
@@ -13229,7 +19106,17 @@ pub fn prismari_pyrosmith_b205() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13239,6 +19126,7 @@ pub fn prismari_galemage_b205() -> CardDefinition {
     CardDefinition {
         name: "Prismari Galemage (b205)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13250,7 +19138,17 @@ pub fn prismari_galemage_b205() -> CardDefinition {
         effect: Effect::Noop,
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13264,6 +19162,7 @@ pub fn prismari_inferno_b206() -> CardDefinition {
     CardDefinition {
         name: "Prismari Inferno (b206)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13279,7 +19178,17 @@ pub fn prismari_inferno_b206() -> CardDefinition {
         },
         activated_abilities: super::no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13290,6 +19199,7 @@ pub fn prismari_windscholar_b206() -> CardDefinition {
     CardDefinition {
         name: "Prismari Windscholar (b206)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13304,7 +19214,17 @@ pub fn prismari_windscholar_b206() -> CardDefinition {
             Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
             Effect::Draw { who: Selector::You, amount: Value::Const(1) },
         ]))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13318,6 +19238,7 @@ pub fn prismari_pyrologist_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Pyrologist (b207)",
         cost: cost(&[generic(1), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -13327,8 +19248,19 @@ pub fn prismari_pyrologist_b207() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_ping_each_opp(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13338,6 +19270,7 @@ pub fn prismari_goldcaster_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Goldcaster (b207)",
         cost: cost(&[generic(2), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
@@ -13347,8 +19280,19 @@ pub fn prismari_goldcaster_b207() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_treasure()],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13358,6 +19302,7 @@ pub fn prismari_firebolt_ii_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Firebolt II (b207)",
         cost: cost(&[generic(2), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13373,8 +19318,19 @@ pub fn prismari_firebolt_ii_b207() -> CardDefinition {
                 amount: Value::Const(1),
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13384,6 +19340,7 @@ pub fn prismari_goldsmith_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Goldsmith (b207)",
         cost: cost(&[generic(1), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Dwarf, CreatureType::Artificer],
@@ -13393,8 +19350,19 @@ pub fn prismari_goldsmith_b207() -> CardDefinition {
         toughness: 2,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![crate::effect::shortcut::etb(crate::effect::shortcut::mint_treasures(2))],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13404,6 +19372,7 @@ pub fn prismari_stormloot_ii_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Stormloot II (b207)",
         cost: cost(&[generic(3), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13420,8 +19389,19 @@ pub fn prismari_stormloot_ii_b207() -> CardDefinition {
                 random: false,
             },
         ]),
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13431,6 +19411,7 @@ pub fn prismari_galeblaster_b207() -> CardDefinition {
     CardDefinition {
         name: "Prismari Galeblaster (b207)",
         cost: cost(&[generic(3), u(), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Elemental],
@@ -13440,8 +19421,19 @@ pub fn prismari_galeblaster_b207() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Haste],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_self_pump(1, 0)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13455,6 +19447,7 @@ pub fn prismari_scorchmage_b208() -> CardDefinition {
     CardDefinition {
         name: "Prismari Scorchmage (b208)",
         cost: cost(&[generic(3), r()]),
+        supertypes: vec![],
         card_types: vec![CardType::Instant],
         subtypes: Subtypes::default(),
         power: 0,
@@ -13464,8 +19457,19 @@ pub fn prismari_scorchmage_b208() -> CardDefinition {
             to: target_filtered(SelectionRequirement::Creature),
             amount: Value::Const(5),
         },
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }
 
@@ -13475,6 +19479,7 @@ pub fn prismari_scholar_adept_b208() -> CardDefinition {
     CardDefinition {
         name: "Prismari Scholar-Adept (b208)",
         cost: cost(&[generic(1), u()]),
+        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Vedalken, CreatureType::Wizard],
@@ -13484,7 +19489,18 @@ pub fn prismari_scholar_adept_b208() -> CardDefinition {
         toughness: 3,
         keywords: vec![],
         effect: Effect::Noop,
+        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft_scry(1)],
-        ..Default::default()
+        static_abilities: vec![],
+        base_loyalty: 0,
+        loyalty_abilities: vec![],
+        alternative_cost: None,
+        back_face: None,
+        opening_hand: None,
+        enters_with_counters: None,
+        max_counters_of_kind: None,
+        exile_on_resolve: false,
+        affinity_filter: None,
+        equipped_bonus: None,
     }
 }

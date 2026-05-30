@@ -376,6 +376,7 @@ pub fn burrog_banemaker() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -415,6 +416,7 @@ pub fn noxious_newt() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -456,6 +458,7 @@ pub fn mindful_biomancer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![etb_gain_life(1)],
         ..Default::default()
@@ -773,6 +776,7 @@ pub fn shattered_acolyte() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -818,6 +822,7 @@ pub fn summoned_dromedary() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -1321,6 +1326,7 @@ pub fn teachers_pest() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -1531,6 +1537,7 @@ pub fn hardened_academic() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl),
@@ -1841,6 +1848,7 @@ pub fn charging_strifeknight() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2418,6 +2426,7 @@ pub fn eternal_student() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -2474,6 +2483,7 @@ pub fn postmortem_professor() -> CardDefinition {
                 1,
             )),
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -2590,9 +2600,9 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// exiled cards on the bottom in a random order.) / Instant and
 /// sorcery spells you cast from your hand have cascade."
 ///
-/// 🟡: body wired as a 6/6 Legendary Elder Dragon with Flying + Trample.
-/// Cascade and the IS-grant-cascade static are still ⏳ (no Cascade
-/// primitive in the engine, no cast-from-exile-without-paying pipeline).
+/// 🟡: 6/6 Flying/Trample with its own Cascade wired (SpellCast trigger →
+/// RevealUntilFind a cheaper nonland → may-play). The "IS spells you cast
+/// have cascade" granting static is still omitted.
 pub fn quandrix_the_proof() -> CardDefinition {
     use crate::card::{MayPlayDuration, Supertype};
     use crate::effect::{RevealMissDest, ZoneDest};
@@ -2729,6 +2739,7 @@ pub fn topiary_lecturer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![increment_self_plus_one()],
         ..Default::default()
@@ -2844,6 +2855,7 @@ pub fn sundering_archaic() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -2955,6 +2967,7 @@ pub fn hydro_channeler() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -2971,6 +2984,7 @@ pub fn hydro_channeler() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -3065,6 +3079,7 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![StaticAbility {
@@ -3650,12 +3665,10 @@ pub fn elemental_mascot() -> CardDefinition {
 /// "Once during each of your turns, you may cast an instant or sorcery
 /// spell from your hand without paying its mana cost."
 ///
-/// 🟡 Body-only wire (push XVI). The "once-per-turn cast-IS-for-free"
-/// rider is omitted — engine has no per-turn alt-cost-grant primitive
-/// (would need `Player.zaffai_free_cast_used: bool` consumed by an
-/// alternative-cost path keyed off the source's controller). The 5/7
-/// vigilance-less body is still a powerful finisher in U/R aggro/spells
-/// pools.
+/// 5/7 Legendary Human Bard Sorcerer. "Once during each of your turns,
+/// you may cast an instant or sorcery spell from your hand without paying
+/// its mana cost" wired as a PreCombatMain StepBegins trigger granting a
+/// one-shot free-cast (`GrantMayPlay`) on an auto-picked IS card in hand.
 pub fn zaffai_and_the_tempests() -> CardDefinition {
     use crate::card::{MayPlayDuration, Supertype, Zone};
     use crate::game::types::TurnStep;
@@ -4100,6 +4113,7 @@ pub fn berta_wise_extrapolator() -> CardDefinition {
             from_graveyard: false,
             exile_self_cost: false, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![
             // Increment (push XVII): "Whenever you cast a spell, if the
@@ -4420,6 +4434,7 @@ pub fn rubble_rouser() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: Some((SelectionRequirement::Any, 1)),
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -4831,6 +4846,7 @@ pub fn stone_docent() -> CardDefinition {
             from_graveyard: true,
             exile_self_cost: true, exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         ..Default::default()
@@ -4913,6 +4929,7 @@ pub fn page_loose_leaf() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -5095,12 +5112,10 @@ pub fn the_dawning_archaic() -> CardDefinition {
 /// "Flying, vigilance / Each instant and sorcery spell you cast has
 /// casualty 1."
 ///
-/// 🟡 Body wired (4/4 Legendary Elder Dragon Flying+Vigilance). The
-/// casualty-1 grant on instant/sorcery casts is omitted — engine has
-/// no static "spells of type X gain casualty N" primitive, and no
-/// Casualty keyword yet. The dragon body still serves as a 4/4
-/// flying/vigilance finisher in W/B decks. Tracked in TODO.md under
-/// "Casualty keyword".
+/// Silverquill, the Disputant — 4/4 Legendary Elder Dragon, Flying +
+/// Vigilance. "Each instant and sorcery spell you cast has casualty 1"
+/// wired as a SpellCast/YourControl trigger → may-sacrifice a power-≥1
+/// creature → copy the spell.
 pub fn silverquill_the_disputant() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Supertype, TriggeredAbility};
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
@@ -5224,6 +5239,7 @@ pub fn nita_forum_conciliator() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             // "Whenever you cast a spell you don't own, put a +1/+1
@@ -5253,16 +5269,10 @@ pub fn nita_forum_conciliator() -> CardDefinition {
 /// you may sacrifice an artifact. If you do, copy that spell and you
 /// may choose new targets for the copy."
 ///
-/// 🟡 Body + the printed sac-an-artifact-to-copy magecraft rider are
-/// both wired. Body: 4/4 Legendary Human Artificer. Magecraft trigger
-/// wraps `Effect::MayDo` around `Seq(Sacrifice(Artifact, 1) +
-/// CopySpell { what: TriggerSource })` — same template as Aziza, Mage
-/// Tower Captain's tap-three-to-copy trigger, but with a sacrifice cost
-/// in place of the tap-three. Auto-decider defaults to "no" (skip), so
-/// the trigger only fires the copy when the controller scripts a yes.
-/// Ward—Pay 3 life is tagged on the card via `Keyword::Ward(crate::card::WardCost::generic(3))` (engine
-/// keyword tag; ward enforcement still pending). Tracked in TODO.md
-/// under "Ward enforcement layer".
+/// Mica, Reader of Ruins — 4/4 Legendary Human Artificer, Ward—Pay 3 life
+/// (enforced). Magecraft trigger wraps `Effect::MayDo` around
+/// `Seq(Sacrifice(Artifact) + CopySpell(TriggerSource))`; the auto-decider
+/// declines by default, so the copy fires only when scripted yes.
 pub fn mica_reader_of_ruins() -> CardDefinition {
     use crate::effect::shortcut::magecraft;
     use crate::mana::r;

@@ -2420,36 +2420,8 @@ pub fn echocasting_symposium() -> CardDefinition {
     }
 }
 
-// ── Applied Geometry ────────────────────────────────────────────────────────
+// ── Archaic's Agony ─────────────────────────────────────────────────────────
 
-/// Applied Geometry — {2}{G}{U} Sorcery.
-/// "Create a token that's a copy of target non-Aura permanent you
-/// control, except it's a 0/0 Fractal creature in addition to its
-/// other types. Put six +1/+1 counters on it."
-///
-/// 🟡 Body wired as: mint a 0/0 Fractal token (the shared
-/// `fractal_token()` shape) with six +1/+1 counters via the existing
-/// `Selector::LastCreatedToken + AddCounter` pattern. The printed
-/// "copy a non-Aura permanent" half collapses to "make a 0/0 Fractal"
-/// (no permanent-copy primitive yet; tracked in TODO.md). Net play
-/// pattern is a 6/6 Fractal for 4 mana — matches the printed lower
-/// bound when the permanent being copied is vanilla.
-/// Archaic's Agony — {4}{R} Sorcery. "Converge — Archaic's Agony deals
-/// X damage to target creature, where X is the number of colors of mana
-/// spent to cast this spell. Exile cards from the top of your library
-/// equal to the excess damage dealt to that creature this way. You may
-/// play those cards until the end of your next turn."
-///
-/// Push (modern_decks): the "exile + may play" rider is **now wired**
-/// via `Effect::Move { TopOfLibrary(count=ConvergedValue) → Exile } +
-/// GrantMayPlay(LastMoved, EndOfControllersNextTurn)`. Approximation:
-/// exiles the full converged-damage amount rather than the "excess
-/// damage" amount (the engine has no damage-dealt-vs-toughness diff
-/// primitive). Slightly buffs the rider — at converge 5 against a 2/2,
-/// the printed Oracle would exile 3, we exile 5. The cast-from-exile
-/// mechanic is identical: the controller invokes
-/// `GameAction::CastFromZoneWithoutPaying` on each exiled card within
-/// the next-turn window.
 /// Archaic's Agony — {4}{R}, Sorcery. Converge — deals X damage to
 /// target creature, where X is the number of colors of mana spent to
 /// cast this spell. The exile-top-cards rider is omitted (no cast-from-

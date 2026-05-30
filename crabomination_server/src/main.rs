@@ -221,6 +221,14 @@ struct MatchStats {
     /// `Some(Some(seat))` outcomes with available life data. Push
     /// (claude/modern_decks).
     deckout_wins: u64,
+    /// Running sum of squared final turn counts (`Σ turns²`). Paired with
+    /// `total_turns` (`Σ turns`) and the match count it yields the
+    /// population standard deviation of game length via
+    /// [`turn_count_stddev`](Self::turn_count_stddev) — a single number
+    /// that tells operators whether games cluster tightly around the
+    /// average (small σ) or swing wildly (large σ), complementing the
+    /// min/max envelope and the histogram shape.
+    total_turns_squared: u128,
 }
 
 /// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
@@ -272,6 +280,9 @@ impl MatchStats {
     /// once per `record_*` (the caller passes the final turn).
     fn observe_turns(&mut self, turns: u32) {
         self.total_turns = self.total_turns.saturating_add(turns as u64);
+        self.total_turns_squared = self
+            .total_turns_squared
+            .saturating_add((turns as u128) * (turns as u128));
         self.max_turns = Some(match self.max_turns {
             None => turns,
             Some(m) => m.max(turns),
@@ -462,6 +473,22 @@ impl MatchStats {
         }
         Self::turn_bucket_upper_bound(5)
     }
+    /// Population standard deviation of final turn counts, computed from
+    /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
+    /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
+    /// to the average means consistent game lengths; a large σ flags a
+    /// bimodal "fast concession vs. long grind" split the average alone
+    /// hides.
+    fn turn_count_stddev(&self) -> f32 {
+        let n = self.total_matches();
+        if n == 0 {
+            return 0.0;
+        }
+        let n = n as f64;
+        let mean = self.total_turns as f64 / n;
+        let mean_sq = self.total_turns_squared as f64 / n;
+        (mean_sq - mean * mean).max(0.0).sqrt() as f32
+    }
     /// Upper edge (inclusive estimate) of turn bucket `i`. Matches the
     /// cut points in [`turn_bucket_index`](Self::turn_bucket_index); the
     /// open-ended `21+` bucket reports its lower edge (21) since it has
@@ -618,11 +645,12 @@ fn format_match_stats(s: &MatchStats) -> String {
     // sample.
     if n >= 2 {
         out.push_str(&format!(
-            " p50≤{}, p95≤{} (turns p50≤{}, p95≤{})",
+            " p50≤{}, p95≤{} (turns p50≤{}, p95≤{}, σ={:.1})",
             format_duration(s.percentile(0.50)),
             format_duration(s.percentile(0.95)),
             s.turn_percentile(0.50),
             s.turn_percentile(0.95),
+            s.turn_count_stddev(),
         ));
     }
     // Append histogram only when at least one bucket has hits — keeps
@@ -1313,6 +1341,19 @@ mod tests {
         assert_eq!(s.pair_matches, 1);
         assert_eq!(s.total_duration, Duration::from_secs(210));
         assert_eq!(s.avg_duration(), Duration::from_secs(70));
+    }
+
+    #[test]
+    fn turn_count_stddev_measures_spread() {
+        let mut s = MatchStats::default();
+        assert_eq!(s.turn_count_stddev(), 0.0, "no matches → 0");
+        // Turn counts [4, 4, 10]: mean 6, variance (4+4+16)/3 = 8, σ ≈ 2.828.
+        for t in [4u32, 4, 10] {
+            s.record_bot(Duration::from_secs(1), Format::Demo);
+            s.observe_turns(t);
+        }
+        assert!((s.turn_count_stddev() - 8f32.sqrt()).abs() < 0.001,
+            "population stddev of [4,4,10] is √8");
     }
 
     #[test]
