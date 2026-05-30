@@ -76145,3 +76145,21 @@ fn blade_historian_double_strike_deals_combat_damage_twice() {
     g.resolve_combat().expect("regular damage");
     assert_eq!(g.players[1].life, 16, "regular hit for another 2");
 }
+
+#[test]
+fn lorehold_mentor_buffs_lesser_power_attacker() {
+    use crate::game::types::{Attack, AttackTarget, TurnStep};
+    let mut g = two_player_game();
+    let mentor = g.add_card_to_battlefield(0, catalog::lorehold_mentor()); // 3 power
+    let smaller = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 < 3
+    g.clear_sickness(mentor);
+    g.clear_sickness(smaller);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: mentor, target: AttackTarget::Player(1) },
+        Attack { attacker: smaller, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(smaller).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
+        "lesser-power attacker gains a Mentor counter");
+}

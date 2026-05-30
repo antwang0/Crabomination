@@ -18323,16 +18323,13 @@ pub fn witherbloom_channeler() -> CardDefinition {
 /// "Mentor (Whenever this creature attacks, put a +1/+1 counter on
 /// target attacking creature with lesser power.)"
 ///
-/// Mentor is wired via `Attacks/SelfSource` + `AddCounter` against
-/// `target_filtered(Attacking & PowerAtMost(2))`. Same template as
-/// Combat Professor's mentor — Mentor's "lesser power" rider reads
-/// the source's printed power (3) so the cap is `PowerAtMost(2)`
-/// (CR-equivalent strictly-less).
+/// Mentor wired via `Attacks/SelfSource` + `AddCounter` against
+/// `Attacking & PowerLessThanSource`, so the "lesser power" check tracks
+/// Lorehold Mentor's current power (CR 702.114).
 pub fn lorehold_mentor() -> CardDefinition {
     CardDefinition {
         name: "Lorehold Mentor",
         cost: cost(&[generic(3), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Spirit, CreatureType::Cleric],
@@ -18340,32 +18337,19 @@ pub fn lorehold_mentor() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::IsAttacking)
-                        .and(SelectionRequirement::PowerAtMost(2)),
+                        .and(SelectionRequirement::PowerLessThanSource),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
