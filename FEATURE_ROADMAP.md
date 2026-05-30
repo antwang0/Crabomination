@@ -41,10 +41,12 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
    fire before resolution; a sacrifice threads the fodder's power into the
    spell's X. Wired Tend the Pests, Necrotic Fumes, Witherbloom Sacrosanct,
    Illuminate History.
-2. **Choose-N modes ("choose two")** — a modal-spell primitive that picks N
-   distinct modes with a real decision. Unblocks Cryptic Command, Prismari
-   Charm (multi-target), the Lorehold "choose two" instant. Today collapsed
-   to a single `ChooseMode` of bundled pairs.
+2. ~~**Choose-N modes ("choose two")**~~ — DONE. `Effect::ChooseN { picks,
+   modes }` now surfaces a real `Decision::ChooseModes` (CR 700.2d):
+   `AutoDecider` keeps the card's sensible `picks` default; a UI/scripted
+   decider chooses any distinct mode set (sanitised for range/dupes). Covers
+   the Strixhaven Command cycle, Charms, Inscription of Ruin. (Per-mode
+   multi-target slots remain the separate "multi-target prompt" gap.)
 3. ~~**"When target dies this turn" delayed trigger**~~ — DONE
    (`Effect::WhenTargetDiesThisTurn`). Searing Blood faithful; reusable for
    Rushed Rebirth's reanimate-on-death.

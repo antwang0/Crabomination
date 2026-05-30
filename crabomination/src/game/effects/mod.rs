@@ -443,10 +443,32 @@ impl GameState {
             }
 
             Effect::ChooseN { picks, modes } => {
-                // Run each picked mode in `picks` order. Out-of-range
-                // indices are silently skipped (defensive; the card
-                // factories build the list explicitly).
-                for &i in picks {
+                // CR 700.2d — let the controller's decider choose `picks.len()`
+                // distinct modes. `AutoDecider` returns the card's `picks`
+                // default unchanged; a UI/scripted decider can pick any
+                // distinct set. The answer is sanitised: out-of-range and
+                // duplicate indices are dropped, and it falls back to `picks`
+                // if the result is empty.
+                use crate::decision::{Decision, DecisionAnswer};
+                let source = ctx.source.unwrap_or(CardId(0));
+                let answer = self.decider.decide(&Decision::ChooseModes {
+                    source,
+                    num_modes: modes.len(),
+                    count: picks.len(),
+                    default: picks.clone(),
+                });
+                let chosen: Vec<u8> = match answer {
+                    DecisionAnswer::Modes(v) => v,
+                    _ => picks.clone(),
+                };
+                let mut seen = Vec::new();
+                for &i in &chosen {
+                    if (i as usize) < modes.len() && !seen.contains(&i) {
+                        seen.push(i);
+                    }
+                }
+                let run = if seen.is_empty() { picks.clone() } else { seen };
+                for &i in &run {
                     if let Some(m) = modes.get(i as usize) {
                         self.run_effect(m, ctx, events)?;
                     }

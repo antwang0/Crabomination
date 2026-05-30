@@ -10566,6 +10566,34 @@ fn inscription_of_ruin_destroys_creature_and_discards() {
     );
 }
 
+#[test]
+fn choose_n_decider_overrides_the_default_mode_picks() {
+    // CR 700.2d — a ScriptedDecider can pick modes other than the card's
+    // default. Inscription of Ruin defaults to [discard, destroy]; scripting
+    // mode [1] (reanimate only) returns a creature from gy and leaves the
+    // opponent's creature alive.
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    use crate::game::Target;
+    let mut g = two_player_game();
+    let opp_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let gy_bear = g.add_card_to_graveyard(0, catalog::grizzly_bears()); // reanimation target
+    let id = g.add_card_to_hand(0, catalog::inscription_of_ruin());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(opp_bear).is_some(),
+        "destroy mode was NOT chosen — opponent's creature survives");
+    assert!(g.players[0].hand.iter().any(|c| c.id == gy_bear),
+        "reanimate mode ran — the gy creature is back in hand");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == gy_bear),
+        "the reanimated creature left the graveyard");
+}
+
 // ── Tome of the Infinite ────────────────────────────────────────────────────
 
 #[test]

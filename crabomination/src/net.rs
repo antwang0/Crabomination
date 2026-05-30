@@ -665,6 +665,13 @@ pub enum DecisionWire {
         attacker: CardId,
         blockers: Vec<(CardId, String)>,
     },
+    /// CR 700.2d — choose `count` distinct modes for a "choose N" spell.
+    ChooseModes {
+        source: CardId,
+        num_modes: usize,
+        count: usize,
+        default: Vec<u8>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -737,6 +744,14 @@ impl From<&Decision> for DecisionWire {
                 DecisionWire::CombatDamageOrder {
                     attacker: *attacker,
                     blockers: blockers.clone(),
+                }
+            }
+            Decision::ChooseModes { source, num_modes, count, default } => {
+                DecisionWire::ChooseModes {
+                    source: *source,
+                    num_modes: *num_modes,
+                    count: *count,
+                    default: default.clone(),
                 }
             }
         }

@@ -148,6 +148,17 @@ pub enum Decision {
         attacker: CardId,
         blockers: Vec<(CardId, String)>,
     },
+
+    /// CR 700.2d — choose `count` distinct modes (indices into `0..num_modes`)
+    /// for a "choose N" modal spell/ability (Charms, the Strixhaven Command
+    /// cycle). The decider answers `Modes(indices)`; `AutoDecider` returns the
+    /// card's sensible `default` picks unchanged.
+    ChooseModes {
+        source: CardId,
+        num_modes: usize,
+        count: usize,
+        default: Vec<u8>,
+    },
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
@@ -185,6 +196,8 @@ pub enum DecisionAnswer {
     /// the attacker assigns damage. Ids omitted from a partial answer keep
     /// their original relative order at the end.
     DamageOrder(Vec<CardId>),
+    /// CR 700.2d — the chosen distinct mode indices for a "choose N" spell.
+    Modes(Vec<u8>),
 }
 
 pub trait Decider {
@@ -284,6 +297,8 @@ impl Decider for AutoDecider {
             // CR 510.1c — keep the engine's default order (empty answer is
             // treated as "all blockers in their original order").
             Decision::CombatDamageOrder { .. } => DecisionAnswer::DamageOrder(vec![]),
+            // CR 700.2d — keep the card's sensible default mode picks.
+            Decision::ChooseModes { default, .. } => DecisionAnswer::Modes(default.clone()),
         }
     }
 }
