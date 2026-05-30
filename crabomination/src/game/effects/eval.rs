@@ -341,6 +341,17 @@ impl GameState {
                     _ => false,
                 }
             }
+            Predicate::CastSpellMatches(filter) => {
+                let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
+                    return false;
+                };
+                self.stack.iter().any(|si| match si {
+                    StackItem::Spell { card, .. } if card.id == cid => {
+                        self.evaluate_requirement_on_card(filter, card, ctx.controller)
+                    }
+                    _ => false,
+                })
+            }
             Predicate::CastSpellHasX => {
                 // Locate the just-cast spell via the trigger source and
                 // peek at its printed mana cost. Used by "whenever you

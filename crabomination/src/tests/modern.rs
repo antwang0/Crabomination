@@ -8888,6 +8888,88 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn sprite_dragon_grows_on_noncreature_spell() {
+    let mut g = two_player_game();
+    let dragon = g.add_card_to_battlefield(0, catalog::sprite_dragon());
+    // Cast a noncreature spell (Lightning Bolt) — Sprite Dragon grows.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let d = g.battlefield.iter().find(|c| c.id == dragon).unwrap();
+    assert_eq!(d.counter_count(crate::card::CounterType::PlusOnePlusOne), 1,
+        "noncreature cast adds a +1/+1 counter");
+    assert_eq!(d.power(), 2, "now 2/2");
+}
+
+#[test]
+fn kiln_fiend_pumps_on_instant_cast() {
+    let mut g = two_player_game();
+    let fiend = g.add_card_to_battlefield(0, catalog::kiln_fiend());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == fiend).unwrap().power(), 4,
+        "Kiln Fiend is 4/2 after an instant");
+}
+
+#[test]
+fn temur_battle_rage_grants_double_strike_with_ferocious() {
+    let mut g = two_player_game();
+    // A 4-power creature satisfies Ferocious.
+    let big = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::temur_battle_rage());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == big).unwrap();
+    assert!(c.has_keyword(&Keyword::Trample), "gains trample");
+    assert!(c.has_keyword(&Keyword::DoubleStrike), "Ferocious grants double strike");
+    assert_eq!(c.power(), 5, "+1/+1");
+}
+
+#[test]
+fn soul_scar_mage_has_prowess() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::soul_scar_mage());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mage).unwrap().power(), 2,
+        "Prowess pumps to 2/3 after a noncreature spell");
+}
+
+#[test]
+fn mutagenic_growth_pumps_two_two() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::mutagenic_growth());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4), "+2/+2");
+}
+
+#[test]
 fn unholy_heat_deals_two_without_delirium() {
     let mut g = two_player_game();
     let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4

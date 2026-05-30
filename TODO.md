@@ -7690,6 +7690,17 @@ an `ActivatedAbility.from_hand` flag parallel to `from_graveyard` would mean
 touching ~240 literal constructors — migrate them to `..Default::default()`
 first).
 
+### Damage-as-(-1/-1)-counters replacement
+Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
+deal noncombat damage to a creature, it deals that much in -1/-1 counters
+instead" needs a damage-replacement hook. Soul-Scar Mage ships as 1/2 Prowess
+without it.
+
+### Phyrexian mana
+Mutagenic Growth ({G/P}), Gut Shot, Dismember, etc. — a mana symbol payable
+with 2 life. Mutagenic Growth ships at the {G} cost (the life-pay alt is
+omitted).
+
 ### Source-relative mana-value search filter
 `Effect::Search`/`SelectionRequirement::ManaValueAtMost(u32)` only take a
 constant. Rushed Rebirth ("search for a creature with *lesser* MV than the one

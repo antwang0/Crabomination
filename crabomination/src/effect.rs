@@ -485,6 +485,11 @@ pub enum Predicate {
     /// Evaluated against the topmost matching `StackItem::Spell`'s `target`
     /// slot.
     CastSpellTargetsMatch(SelectionRequirement),
+    /// True if the just-cast spell (located via `ctx.trigger_source`) is
+    /// itself a card matching `filter` — e.g. a noncreature spell (Sprite
+    /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
+    /// against the topmost matching `StackItem::Spell`'s card definition.
+    CastSpellMatches(SelectionRequirement),
     /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
     /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
     /// in its mana cost. Used by Quandrix's "whenever you cast a spell

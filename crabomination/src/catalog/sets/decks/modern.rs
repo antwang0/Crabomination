@@ -7491,6 +7491,133 @@ pub fn boros_charm() -> CardDefinition {
     }
 }
 
+/// Sprite Dragon — {U}{R}, 1/1 Faerie Dragon with Flying and Haste.
+/// Whenever you cast a noncreature spell, put a +1/+1 counter on it.
+pub fn sprite_dragon() -> CardDefinition {
+    CardDefinition {
+        name: "Sprite Dragon",
+        cost: cost(&[u(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie, CreatureType::Dragon],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying, Keyword::Haste],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Kiln Fiend — {1}{R}, 1/2 Elemental. Whenever you cast an instant or
+/// sorcery spell, it gets +3/+0 until end of turn.
+pub fn kiln_fiend() -> CardDefinition {
+    CardDefinition {
+        name: "Kiln Fiend",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(3),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Soul-Scar Mage — {R}, 1/2 Human Monk with Prowess. (Its noncombat-damage-
+/// as-(-1/-1)-counters replacement is omitted — no damage-replacement
+/// primitive yet; tracked in TODO.md.)
+pub fn soul_scar_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Soul-Scar Mage",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Monk],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 2,
+        keywords: vec![Keyword::Prowess],
+        ..Default::default()
+    }
+}
+
+/// Temur Battle Rage — {1}{R} Instant. Target creature gets +1/+1 and gains
+/// trample until end of turn. Ferocious — it also gains double strike if you
+/// control a creature with power 4 or greater.
+pub fn temur_battle_rage() -> CardDefinition {
+    CardDefinition {
+        name: "Temur Battle Rage",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::ControlledByYou
+                            .and(SelectionRequirement::PowerAtLeast(4)),
+                    ),
+                    n: Value::Const(1),
+                },
+                then: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::DoubleStrike,
+                    duration: Duration::EndOfTurn,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Mutagenic Growth — {G/P} Instant. Target creature gets +2/+2 until end of
+/// turn. (Modeled at the {G} cost — Phyrexian "pay 2 life" alt is omitted;
+/// tracked in TODO.md.)
+pub fn mutagenic_growth() -> CardDefinition {
+    CardDefinition {
+        name: "Mutagenic Growth",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`
