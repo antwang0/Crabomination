@@ -8888,6 +8888,72 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn brute_force_pumps_three_three() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::brute_force());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 5), "+3/+3");
+}
+
+#[test]
+fn titans_strength_pumps_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::titans_strength());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (5, 3), "+3/+1");
+}
+
+#[test]
+fn crash_through_grants_trample_and_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::crash_through());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == bear).unwrap().has_keyword(&Keyword::Trample),
+        "your creatures gain trample");
+    // -1 for the Crash Through leaving hand, +1 drawn.
+    assert_eq!(g.players[0].hand.len(), hand_before, "net hand size unchanged (cast 1, drew 1)");
+}
+
+#[test]
+fn fling_sacrifices_creature_and_deals_its_power() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2 power
+    let id = g.add_card_to_hand(0, catalog::fling());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "deals damage equal to its power");
+}
+
+#[test]
 fn sprite_dragon_grows_on_noncreature_spell() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::sprite_dragon());

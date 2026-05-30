@@ -7618,6 +7618,81 @@ pub fn mutagenic_growth() -> CardDefinition {
     }
 }
 
+/// Brute Force — {G} Instant. Target creature gets +3/+3 until end of turn.
+pub fn brute_force() -> CardDefinition {
+    CardDefinition {
+        name: "Brute Force",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(3),
+            toughness: Value::Const(3),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Titan's Strength — {R} Instant. Target creature gets +3/+1 until end of
+/// turn. Scry 1.
+pub fn titans_strength() -> CardDefinition {
+    CardDefinition {
+        name: "Titan's Strength",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(3),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Crash Through — {R} Sorcery. Creatures you control gain trample until end
+/// of turn. Draw a card.
+pub fn crash_through() -> CardDefinition {
+    CardDefinition {
+        name: "Crash Through",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+                ),
+                keyword: Keyword::Trample,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fling — {1}{R} Instant. As an additional cost, sacrifice a creature.
+/// Deals damage equal to the sacrificed creature's power to any target.
+pub fn fling() -> CardDefinition {
+    CardDefinition {
+        name: "Fling",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::DealDamage { to: Selector::Target(0), amount: Value::SacrificedPower },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`

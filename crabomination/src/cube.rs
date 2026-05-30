@@ -947,6 +947,10 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         soul_scar_mage,
         temur_battle_rage,
         mutagenic_growth,
+        brute_force,
+        titans_strength,
+        crash_through,
+        fling,
         crumble_to_dust,
         // ── modern_decks (claude/modern_decks) — new R cards ──
         pyroblast,
