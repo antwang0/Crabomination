@@ -344,6 +344,43 @@ impl GameState {
             }
         }
 
+        // Combat-keyword P/T adjustments applied on block declaration:
+        // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
+        // Snapshot the +/-N deltas (same value on power and toughness)
+        // before mutating so the borrow of `assignments` stays clean.
+        let computed = self.compute_battlefield();
+        let kws_for = |id: CardId| -> Vec<Keyword> {
+            computed.iter().find(|c| c.id == id).map(|c| c.keywords.clone()).unwrap_or_default()
+        };
+        let sum_n = |kws: &[Keyword], pick: fn(&Keyword) -> Option<i32>| -> i32 {
+            kws.iter().filter_map(pick).sum()
+        };
+        let mut pt_deltas: Vec<(CardId, i32)> = vec![];
+        let mut blocked: std::collections::HashMap<CardId, usize> = std::collections::HashMap::new();
+        for &(b, a) in &assignments {
+            *blocked.entry(a).or_insert(0) += 1;
+            let bk = kws_for(b);
+            let ak = kws_for(a);
+            // Flanking: nonflanking blocker shrinks once per flanking instance.
+            let flank = ak.iter().filter(|k| **k == Keyword::Flanking).count() as i32;
+            if flank > 0 && !bk.contains(&Keyword::Flanking) {
+                pt_deltas.push((b, -flank));
+            }
+            // Bushido on the blocker (it blocks).
+            let bn = sum_n(&bk, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            if bn > 0 { pt_deltas.push((b, bn)); }
+        }
+        for (a, count) in blocked {
+            let ak = kws_for(a);
+            // Bushido on the attacker (it becomes blocked — once).
+            let bn = sum_n(&ak, |k| if let Keyword::Bushido(x) = k { Some(*x as i32) } else { None });
+            if bn > 0 { pt_deltas.push((a, bn)); }
+            // Rampage: +N for each blocker beyond the first.
+            let rn = sum_n(&ak, |k| if let Keyword::Rampage(x) = k { Some(*x as i32) } else { None });
+            let extra = count.saturating_sub(1) as i32;
+            if rn > 0 && extra > 0 { pt_deltas.push((a, rn * extra)); }
+        }
+
         // All valid — apply (merge into existing block_map so multiple
         // defenders can submit independently in multiplayer).
         self.blockers_declared = true;
@@ -354,6 +391,12 @@ impl GameState {
                 blocker: blocker_id,
                 attacker: attacker_id,
             });
+        }
+        for (id, d) in pt_deltas {
+            if let Some(c) = self.battlefield_find_mut(id) {
+                c.power_bonus += d;
+                c.toughness_bonus += d;
+            }
         }
         // CR 509.3g — emit `AttackerWentUnblocked` for each attacker
         // with no blockers assigned. Trigger source is the unblocked

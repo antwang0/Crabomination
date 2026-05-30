@@ -268,6 +268,12 @@ pub enum Keyword {
     Unblockable,
     Shadow,
     Horsemanship,
+    /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
+    Flanking,
+    /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.
+    Bushido(u32),
+    /// Rampage N (CR 702.23) — when this becomes blocked, it gets +N/+N for each blocker beyond the first.
+    Rampage(u32),
     Intimidate,
     Skulk,
     /// CR 702.36 — Fear. "This creature can't be blocked except by

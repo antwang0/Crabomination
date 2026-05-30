@@ -5339,3 +5339,81 @@ fn cr_509_1b_unblockable_attacker_cannot_be_blocked() {
         .expect_err("unblockable can't be blocked");
     assert!(matches!(err, crate::game::GameError::CannotBlock(_)), "got {err:?}");
 }
+
+#[test]
+fn flanking_shrinks_nonflanking_blocker() {
+    // CR 702.25: a blocker without flanking that blocks a flanking
+    // attacker gets -1/-1 until end of turn.
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(attacker)
+        .unwrap()
+        .definition
+        .keywords
+        .push(crate::card::Keyword::Flanking);
+    g.clear_sickness(attacker);
+    g.step = crate::game::TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(crate::game::GameAction::DeclareAttackers(vec![crate::game::Attack {
+        attacker,
+        target: crate::game::AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = crate::game::TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(crate::game::GameAction::DeclareBlockers(vec![(blocker, attacker)]))
+        .unwrap();
+    let b = g.battlefield.iter().find(|c| c.id == blocker).unwrap();
+    assert_eq!(b.power(), 1);
+    assert_eq!(b.toughness(), 1);
+}
+
+
+#[test]
+fn bushido_pumps_attacker_when_blocked() {
+    // CR 702.45: a Bushido N creature that becomes blocked gets +N/+N.
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(attacker).unwrap().definition.keywords
+        .push(crate::card::Keyword::Bushido(2));
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).unwrap();
+    let a = g.battlefield.iter().find(|c| c.id == attacker).unwrap();
+    assert_eq!(a.power(), 4);
+    assert_eq!(a.toughness(), 4);
+}
+
+#[test]
+fn rampage_pumps_attacker_per_extra_blocker() {
+    // CR 702.23: Rampage N gives +N/+N for each blocker beyond the first.
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(attacker).unwrap().definition.keywords
+        .push(crate::card::Keyword::Rampage(2));
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, attacker), (b2, attacker)])).unwrap();
+    let a = g.battlefield.iter().find(|c| c.id == attacker).unwrap();
+    assert_eq!(a.power(), 4);
+    assert_eq!(a.toughness(), 4);
+}
