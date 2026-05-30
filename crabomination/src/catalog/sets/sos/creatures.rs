@@ -3302,9 +3302,9 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// exiled cards on the bottom in a random order.) / Instant and
 /// sorcery spells you cast from your hand have cascade."
 ///
-/// 🟡: body wired as a 6/6 Legendary Elder Dragon with Flying + Trample.
-/// Cascade and the IS-grant-cascade static are still ⏳ (no Cascade
-/// primitive in the engine, no cast-from-exile-without-paying pipeline).
+/// 🟡: 6/6 Flying/Trample with its own Cascade wired (SpellCast trigger →
+/// RevealUntilFind a cheaper nonland → may-play). The "IS spells you cast
+/// have cascade" granting static is still omitted.
 pub fn quandrix_the_proof() -> CardDefinition {
     use crate::card::{MayPlayDuration, Supertype};
     use crate::effect::{RevealMissDest, ZoneDest};

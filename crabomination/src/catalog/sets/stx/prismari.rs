@@ -439,20 +439,12 @@ pub fn teach_by_example() -> CardDefinition {
 
 /// Symmetry Sage — {U}, 1/2 Human Wizard.
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// Symmetry Sage gets +1/+0 and gains flying until end of turn."
-///
-/// 🟡 We split the rider into two separate magecraft triggers: one
-/// `magecraft_self_pump(+1/+0)` and one grant-flying. They're functionally
-/// equivalent to the original `Seq` body — both fire on every magecraft
-/// event and both reference the source via `Selector::This`. The split
-/// also means the helper is reusable across any future magecraft
-/// self-pump creature (e.g. Quandrix's Berta, Symmetry Sage's siblings)
-/// without copy-pasting a six-line `Seq`.
+/// Symmetry Sage gets +1/+0 and gains flying until end of turn." Single
+/// magecraft `Seq` so the pump and flying grant land as one trigger.
 pub fn symmetry_sage() -> CardDefinition {
     CardDefinition {
         name: "Symmetry Sage",
         cost: cost(&[u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -460,28 +452,20 @@ pub fn symmetry_sage() -> CardDefinition {
         },
         power: 1,
         toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![
-            magecraft_self_pump(1, 0),
-            magecraft(Effect::GrantKeyword {
+        triggered_abilities: vec![magecraft(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
                 what: Selector::This,
                 keyword: Keyword::Flying,
                 duration: Duration::EndOfTurn,
-            }),
-        ],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+            },
+        ]))],
+        ..Default::default()
     }
 }
 
