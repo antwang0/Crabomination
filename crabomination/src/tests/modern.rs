@@ -15746,19 +15746,34 @@ fn culling_ritual_adds_mana_per_permanent_destroyed() {
 }
 
 #[test]
-fn rushed_rebirth_tutors_a_creature_to_hand() {
+fn rushed_rebirth_fetches_creature_to_battlefield_when_target_dies() {
     let mut g = two_player_game();
     let elf = g.add_card_to_library(0, catalog::llanowar_elves());
+    // The creature we target — a 2/2 that will die to a follow-up.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(elf))]));
     let id = g.add_card_to_hand(0, catalog::rushed_rebirth());
     g.players[0].mana_pool.add(Color::Black, 1);
     g.players[0].mana_pool.add(Color::Green, 1);
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
     }).expect("Rushed Rebirth castable for {B}{G}");
     drain_stack(&mut g);
-    assert!(g.players[0].hand.iter().any(|c| c.id == elf),
-        "Rushed Rebirth tutors a creature to hand");
+    // No fetch yet — the watched creature is still alive.
+    assert!(!g.battlefield.iter().any(|c| c.id == elf), "no fetch before the target dies");
+
+    // Bolt the bear; its death fires Rushed Rebirth's watch.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    let fetched = g.battlefield.iter().find(|c| c.id == elf);
+    assert!(fetched.is_some(), "creature fetched onto the battlefield on death");
+    assert!(fetched.unwrap().tapped, "fetched creature enters tapped");
 }
 
 #[test]

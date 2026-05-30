@@ -466,39 +466,23 @@ pub fn culling_ritual() -> CardDefinition {
 // ── Rushed Rebirth ─────────────────────────────────────────────────────────
 
 /// Rushed Rebirth — {B}{G} Instant. "Choose target creature. When that
-/// creature dies this turn, search your library for a creature card with
-/// lesser MV, put it onto the battlefield tapped, then shuffle."
-///
-/// Life is paid up front during cost-payment so the effect is a pure
-/// `AddMana` — qualifies as a true mana ability (CR 605.1a) and
-/// resolves without the stack. "B or G" is approximated as
-/// `ManaPayload::AnyOneColor`: broader than printed but matches the
-/// typical cube-pool ramp pattern.
-/// 🟡 Approximated as: search for any creature into hand (the MV check
-/// and battlefield entry are collapsed).
+/// creature dies this turn, search your library for a creature card, put it
+/// onto the battlefield tapped, then shuffle." Wired via the event-keyed
+/// `WhenTargetDiesThisTurn` death watch. (The printed "lesser mana value"
+/// constraint on the fetch is approximated as any creature — no source-
+/// relative MV filter yet; tracked in TODO.md.)
 pub fn rushed_rebirth() -> CardDefinition {
     CardDefinition {
         name: "Rushed Rebirth",
         cost: cost(&[b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Search {
-            who: PlayerRef::You,
-            filter: SelectionRequirement::Creature,
-            to: ZoneDest::Hand(PlayerRef::You),
+        effect: Effect::WhenTargetDiesThisTurn {
+            body: Box::new(Effect::Search {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
         ..Default::default()
     }
 }

@@ -7684,8 +7684,18 @@ candidate-cast's chosen target before payment. Probably a new
 
 ### Mana Ability from Non-Battlefield Zone
 `activate_ability` only walks the battlefield.  Cards like Elvish Spirit Guide
-and Simian Spirit Guide (exile from hand: add mana) are completely omitted
-because hand-activated mana abilities need a separate activation path.
+and Simian Spirit Guide (exile from hand: add mana) ship as vanilla bodies;
+the "exile from hand: add mana" half needs a from-hand activation zone (adding
+an `ActivatedAbility.from_hand` flag parallel to `from_graveyard` would mean
+touching ~240 literal constructors — migrate them to `..Default::default()`
+first).
+
+### Source-relative mana-value search filter
+`Effect::Search`/`SelectionRequirement::ManaValueAtMost(u32)` only take a
+constant. Rushed Rebirth ("search for a creature with *lesser* MV than the one
+that died") drops the relative constraint — it fetches any creature. A
+`ManaValueLessThanSource`-style filter (paired with the `WhenTargetDiesThisTurn`
+captured-source MV) would make it faithful.
 
 ### "Look At Top X, Pick One, Put Rest in Graveyard" Primitive
 Stirring Honormancer ("look at top X cards where X is creatures you

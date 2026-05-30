@@ -1830,8 +1830,8 @@ impl Effect {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::DelayUntil { body, .. } => body.requires_target(),
-            // Watches the already-chosen cast target; introduces none itself.
-            Effect::WhenTargetDiesThisTurn { .. } => false,
+            // Needs a creature to watch for death (the watched target).
+            Effect::WhenTargetDiesThisTurn { .. } => true,
             Effect::PayOrLoseGame { .. } => false,
             Effect::SacrificeAndRemember { .. } => false,
             Effect::AddFirstSpellTax { who, count } => {
@@ -1940,6 +1940,7 @@ impl Effect {
                 .primary_target_filter()
                 .or_else(|| else_.primary_target_filter()),
             Effect::DelayUntil { body, .. } => body.primary_target_filter(),
+            Effect::WhenTargetDiesThisTurn { .. } => Some(&SelectionRequirement::Creature),
             // Modal cards: surface the first mode's filter as the
             // representative one (UI/bot still need *some* filter to
             // narrow target candidates). Mode-specific validation lives
