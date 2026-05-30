@@ -7873,6 +7873,59 @@ pub fn werewolf_pack_leader() -> CardDefinition {
     }
 }
 
+/// Infernal Grasp — {1}{B} Instant. Destroy target creature. You lose 2 life.
+pub fn infernal_grasp() -> CardDefinition {
+    CardDefinition {
+        name: "Infernal Grasp",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Creature) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Village Rites — {B} Instant. As an additional cost, sacrifice a creature.
+/// Draw two cards.
+pub fn village_rites() -> CardDefinition {
+    CardDefinition {
+        name: "Village Rites",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::SacrificeAndRemember {
+                who: PlayerRef::You,
+                filter: SelectionRequirement::Creature,
+            },
+            Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Power Word Kill — {1}{B} Instant. Destroy target non-Angel, non-Demon,
+/// non-Dragon creature. (The printed "non-God" clause is dropped — no God
+/// creature type in the engine yet.)
+pub fn power_word_kill() -> CardDefinition {
+    use crate::card::CreatureType as CT;
+    CardDefinition {
+        name: "Power Word Kill",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(
+                SelectionRequirement::Creature
+                    .and(SelectionRequirement::HasCreatureType(CT::Angel).negate())
+                    .and(SelectionRequirement::HasCreatureType(CT::Demon).negate())
+                    .and(SelectionRequirement::HasCreatureType(CT::Dragon).negate()),
+            ),
+        },
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`

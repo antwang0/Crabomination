@@ -957,6 +957,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         snakeskin_veil,
         murmuring_mystic,
         werewolf_pack_leader,
+        infernal_grasp,
+        village_rites,
+        power_word_kill,
         crumble_to_dust,
         // ── modern_decks (claude/modern_decks) — new R cards ──
         pyroblast,
