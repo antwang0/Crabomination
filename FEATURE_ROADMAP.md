@@ -19,6 +19,11 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
   Elemental Expressionist's magecraft.
 - Ward enforcement (CR 702.21), Cascade, Casualty sac-copy, free-cast grants,
   Madness, Dredge, Enrage, Exalted — all live.
+- `StaticEffect::AdditionalCost` — unconditional "spells of [filter] cost N
+  more" (Thalia, Guardian of Thraben), no first-spell gate.
+- `Effect::WhenTargetDiesThisTurn` + `DelayedKind::WhenCardDies` — event-keyed
+  delayed trigger watching a card's death this turn (Searing Blood faithful,
+  incl. deferred deaths). Register the watch *before* the damage so it's live.
 
 ## Tier 1 — unblocks several partial cards each
 
@@ -30,9 +35,9 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
    distinct modes with a real decision. Unblocks Cryptic Command, Prismari
    Charm (multi-target), the Lorehold "choose two" instant. Today collapsed
    to a single `ChooseMode` of bundled pairs.
-3. **"When target dies this turn" delayed trigger** — event-keyed delayed
-   trigger (watch a specific card's death, expire at cleanup). Makes Searing
-   Blood fully faithful and unblocks Rushed Rebirth's reanimate-on-death.
+3. ~~**"When target dies this turn" delayed trigger**~~ — DONE
+   (`Effect::WhenTargetDiesThisTurn`). Searing Blood faithful; reusable for
+   Rushed Rebirth's reanimate-on-death.
 4. **`GrantActivatedAbility(applies_to)` static** — grant a `{T}: …` ability
    to a selector's permanents. Unblocks Galazeth Prismari ("artifacts tap for
    any color"), Cryptolith Rite-style mana grants.

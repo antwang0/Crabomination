@@ -8939,6 +8939,32 @@ fn searing_blood_spares_controller_when_creature_survives() {
 }
 
 #[test]
+fn searing_blood_burns_on_deferred_death_same_turn() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, p1_life, "no burn yet — 2 damage isn't lethal");
+
+    // Later this turn, a Lightning Bolt finishes the angel (2+3 ≥ 4).
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "angel dies to the combined damage");
+    assert_eq!(g.players[1].life, p1_life - 3, "Searing Blood's death watch burns 3");
+}
+
+#[test]
 fn harrow_sacrifices_land_and_searches_two_basics() {
     let mut g = two_player_game();
     // Stock the library with two Forests so Harrow has fetch targets.

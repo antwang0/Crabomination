@@ -2405,6 +2405,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::WhenTargetDiesThisTurn { body } => {
+                // Watch the targeted creature's death; capture its controller
+                // as the body's Target(0) so it survives the creature leaving
+                // play. No-op if there's no permanent target (the creature
+                // already left, or none was chosen).
+                if let Some(crate::game::Target::Permanent(cid)) = ctx.targets.first().cloned()
+                    && let Some(controller) = self.battlefield_find(cid).map(|c| c.controller)
+                {
+                    let source = ctx.source.unwrap_or(crate::card::CardId(0));
+                    self.delayed_triggers.push(DelayedTrigger {
+                        controller: ctx.controller,
+                        source,
+                        kind: crate::game::types::DelayedKind::WhenCardDies(cid),
+                        effect: (**body).clone(),
+                        target: Some(crate::game::Target::Player(controller)),
+                        fires_once: true,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::PayOrLoseGame { mana_cost, life_cost } => {
                 let p = ctx.controller;
                 // Try to pay mana via auto-tap, then deduct life. If any of

@@ -827,6 +827,11 @@ impl GameState {
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
         self.granted_triggers_eot.clear();
+        // Expire event-keyed "when [card] dies this turn" delayed triggers
+        // that never fired (CR 603.4 — the "this turn" window closes).
+        self.delayed_triggers.retain(|dt| {
+            !matches!(dt.kind, crate::game::types::DelayedKind::WhenCardDies(_))
+        });
         // CR 514.2 / CR 615.1 — "this turn" combat damage prevention
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.

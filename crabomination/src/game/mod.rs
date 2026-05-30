@@ -2196,6 +2196,45 @@ impl GameState {
         if events.is_empty() {
             return;
         }
+        // Event-keyed delayed triggers ("when [card] dies this turn, …").
+        // Fire any `WhenCardDies(cid)` whose watched card appears in a
+        // `CreatureDied` event in this batch, with its captured target.
+        let died: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                GameEvent::CreatureDied { card_id } => Some(*card_id),
+                _ => None,
+            })
+            .collect();
+        if !died.is_empty() {
+            use crate::game::types::DelayedKind;
+            let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
+            self.delayed_triggers.retain(|dt| {
+                if let DelayedKind::WhenCardDies(cid) = dt.kind
+                    && died.contains(&cid)
+                {
+                    fire.push(dt.clone());
+                    false
+                } else {
+                    true
+                }
+            });
+            for dt in fire {
+                self.stack.push(crate::game::types::StackItem::Trigger {
+                    source: dt.source,
+                    controller: dt.controller,
+                    effect: Box::new(dt.effect),
+                    target: dt.target,
+                    mode: None,
+                    x_value: 0,
+                    converged_value: 0,
+                    trigger_source: None,
+                    mana_spent: 0,
+                    event_amount: 0,
+                    intervening_if: None,
+                });
+            }
+        }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
         // and call `&self.evaluate_predicate` to gate each candidate by
