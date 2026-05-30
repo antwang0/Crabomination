@@ -725,52 +725,24 @@ pub fn veil_of_summer() -> CardDefinition {
 
 /// Crop Rotation — {G} Instant. As an additional cost, sacrifice a land.
 /// Search your library for a land card and put it onto the battlefield.
-/// Then shuffle.
-///
-/// The "sacrifice a land" additional cost is folded into the resolved
-/// effect's first step (matching Thud's sacrifice-as-resolution pattern).
+/// The sacrifice is a real cast-time cost (`AdditionalCastCost`).
 pub fn crop_rotation() -> CardDefinition {
     CardDefinition {
         name: "Crop Rotation",
         cost: cost(&[g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            // Sacrifice a land you control as part of resolution.
-            Effect::Sacrifice {
-                who: Selector::You,
-                count: Value::Const(1),
-                filter: SelectionRequirement::Land
-                    .and(SelectionRequirement::ControlledByYou),
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Land.and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::Search {
+            who: PlayerRef::You,
+            filter: SelectionRequirement::Land,
+            to: ZoneDest::Battlefield {
+                controller: PlayerRef::You,
+                tapped: false,
             },
-            // Tutor a land into play.
-            Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Land,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: false,
-                },
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        },
+        ..Default::default()
     }
 }
 

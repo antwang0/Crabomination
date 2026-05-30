@@ -278,48 +278,22 @@ pub fn summoners_pact() -> CardDefinition {
 
 /// Thud — {R} Sorcery. As an additional cost, sacrifice a creature. Thud
 /// deals damage equal to the sacrificed creature's power to any target.
-///
-/// The "additional cost" sacrifice is modelled as the first step of the
-/// effect tree (rather than at cast time): on resolution, Thud picks a
-/// creature its controller has and sacrifices it, recording the sacrificed
-/// power so the subsequent `DealDamage` can read it. With `AutoDecider`
-/// the engine auto-picks the first eligible creature; a future UI can
-/// surface the choice via a dedicated decision.
+/// The sacrifice is a real cast-time cost (`AdditionalCastCost`), threading
+/// the fodder's power into the spell's X (read by `Value::XFromCost`).
 pub fn thud() -> CardDefinition {
     CardDefinition {
         name: "Thud",
         cost: cost(&[r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            },
-            Effect::DealDamage {
-                to: Selector::Target(0),
-                amount: Value::SacrificedPower,
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-        additional_cast_cost: vec![],
+        additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::DealDamage {
+            to: Selector::Target(0),
+            amount: Value::XFromCost,
+        },
+        ..Default::default()
     }
 }
 
