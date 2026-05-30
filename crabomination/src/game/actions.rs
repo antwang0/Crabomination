@@ -3129,9 +3129,7 @@ impl GameState {
             // catalog card stripping abilities has a mana ability of
             // interest right now) by detecting them via `is_mana_ability`.
             let stripped = self
-                .compute_battlefield()
-                .into_iter()
-                .find(|c| c.id == card_id)
+                .computed_permanent(card_id)
                 .map(|c| c.lost_all_abilities)
                 .unwrap_or(false);
             // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,

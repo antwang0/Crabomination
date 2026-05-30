@@ -224,6 +224,18 @@ pub fn apply_layers(
         .collect()
 }
 
+/// Apply all active continuous effects to a single permanent, returning
+/// its `ComputedPermanent`. Same per-card work as one iteration of
+/// [`apply_layers`] — for callers that only need one card's computed
+/// state and shouldn't pay to build (and discard) every other
+/// permanent's view.
+pub fn apply_layers_one(
+    card: &crate::card::CardInstance,
+    effects: &[ContinuousEffect],
+) -> ComputedPermanent {
+    compute_permanent(card, effects)
+}
+
 fn compute_permanent(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],

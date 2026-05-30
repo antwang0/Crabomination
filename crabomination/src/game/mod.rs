@@ -111,7 +111,7 @@ use crate::effect::Effect;
 use crate::game::effects::EffectContext;
 use crate::game::layers::{
     AffectedPermanents, ComputedPermanent, ContinuousEffect, EffectDuration, Layer, Modification,
-    PtSublayer, apply_layers,
+    PtSublayer,
 };
 use crate::player::Player;
 use std::collections::HashMap;
@@ -1107,6 +1107,17 @@ impl GameState {
     /// Compute the current derived state of all battlefield permanents after
     /// applying all active continuous effects in layer order.
     pub fn compute_battlefield(&self) -> Vec<ComputedPermanent> {
+        crate::game::layers::apply_layers(&self.battlefield, &self.gather_continuous_effects())
+    }
+
+    /// Collect every continuous effect currently active in the game: the
+    /// resolved-spell/ability effects in `continuous_effects`, plus the
+    /// implicit effects derived each recompute from static abilities,
+    /// equipment attachments, combat keyword grants, characteristic-
+    /// defining P/T, life-gain pump/anthem tables, and graveyard-resident
+    /// anthems. Shared by [`compute_battlefield`] (applies to every
+    /// permanent) and [`computed_permanent`] (applies to just one).
+    fn gather_continuous_effects(&self) -> Vec<ContinuousEffect> {
         // Include static-ability effects from permanents currently on the battlefield.
         let mut all_effects: Vec<ContinuousEffect> = self.continuous_effects.clone();
         for card in &self.battlefield {
@@ -1383,7 +1394,7 @@ impl GameState {
                 }
             }
         }
-        apply_layers(&self.battlefield, &all_effects)
+        all_effects
     }
 
     /// Count of distinct card types (Artifact, Creature, Enchantment,
@@ -1402,8 +1413,17 @@ impl GameState {
     }
 
     /// Get the computed state of a single permanent (or None if not on battlefield).
+    ///
+    /// Gathers the same continuous-effect set as `compute_battlefield` but
+    /// applies the layer pass to only the one target card, instead of
+    /// building a `ComputedPermanent` for every permanent and discarding
+    /// all but one.
     pub fn computed_permanent(&self, id: CardId) -> Option<ComputedPermanent> {
-        self.compute_battlefield().into_iter().find(|c| c.id == id)
+        let card = self.battlefield.iter().find(|c| c.id == id)?;
+        Some(crate::game::layers::apply_layers_one(
+            card,
+            &self.gather_continuous_effects(),
+        ))
     }
 
     /// Add a transient continuous effect (from a spell/ability resolution).
@@ -2084,11 +2104,9 @@ impl GameState {
         // (CR 702.6c). Use the computed view so animated/becomes-a-creature
         // permanents are honored.
         let target_ok = self
-            .compute_battlefield()
-            .iter()
-            .any(|c| {
-                c.id == target
-                    && c.controller == p
+            .computed_permanent(target)
+            .is_some_and(|c| {
+                c.controller == p
                     && c.card_types.contains(&crate::card::CardType::Creature)
             });
         if !target_ok {
