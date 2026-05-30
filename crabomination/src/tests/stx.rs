@@ -76181,3 +76181,175 @@ fn lorehold_mentor_buffs_lesser_power_attacker() {
     assert_eq!(g.battlefield_find(smaller).unwrap().counter_count(CounterType::PlusOnePlusOne), 1,
         "lesser-power attacker gains a Mentor counter");
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Coverage backfill (modern_decks): functionality tests for previously
+// untested-by-name STX cards. All cards already wired; tests only.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn fracture_destroys_target_artifact() {
+    let mut g = two_player_game();
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let id = g.add_card_to_hand(0, catalog::fracture());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(rock)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fracture castable for {W}{B}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == rock), "target artifact destroyed");
+}
+
+#[test]
+fn closing_statement_exiles_creature_and_gains_x_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::closing_statement());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: Some(3),
+    }).expect("Closing Statement castable for {X}{W}{W} at X=3");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "creature exiled");
+    assert_eq!(g.players[0].life, life + 3, "gain X = 3 life");
+}
+
+#[test]
+fn devastating_mastery_destroys_all_nonland_permanents() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::devastating_mastery());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Devastating Mastery castable for {4}{W}{W}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == mine), "own creature destroyed");
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "opp creature destroyed");
+}
+
+#[test]
+fn quandrix_apprentice_magecraft_pumps_a_creature() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(0, catalog::quandrix_apprentice());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(app).unwrap().power(), 2, "magecraft pumped a creature +1/+1");
+    assert_eq!(g.battlefield_find(app).unwrap().toughness(), 2);
+}
+
+#[test]
+fn carving_cherub_magecraft_pumps_a_creature() {
+    let mut g = two_player_game();
+    let cherub = g.add_card_to_battlefield(0, catalog::carving_cherub());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(cherub).unwrap().power(), 2, "magecraft +1/+1");
+}
+
+#[test]
+fn eager_first_year_magecraft_pumps_a_creature() {
+    let mut g = two_player_game();
+    let efy = g.add_card_to_battlefield(0, catalog::eager_first_year());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(efy).unwrap().power(), 3, "magecraft +1/+1 on the 2/1");
+}
+
+#[test]
+fn disciplined_duelist_is_two_one_first_strike() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::disciplined_duelist());
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
+    assert_eq!(g.battlefield_find(id).unwrap().toughness(), 1);
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::FirstStrike),
+        "has first strike");
+}
+
+#[test]
+fn codespell_cleric_is_one_one_lifelink() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::codespell_cleric());
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 1);
+    assert!(g.battlefield_find(id).unwrap().has_keyword(&Keyword::Lifelink),
+        "has lifelink");
+}
+
+#[test]
+fn inkling_ambusher_is_two_two_flash_flier() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::inkling_ambusher());
+    assert_eq!(g.battlefield_find(id).unwrap().power(), 2);
+    assert_eq!(g.battlefield_find(id).unwrap().toughness(), 2);
+    let ci = g.battlefield_find(id).unwrap();
+    assert!(ci.has_keyword(&Keyword::Flash), "has flash");
+    assert!(ci.has_keyword(&Keyword::Flying), "has flying");
+}
+
+#[test]
+fn electrickery_deals_one_to_target_creature() {
+    let mut g = two_player_game();
+    let app = g.add_card_to_battlefield(1, catalog::quandrix_apprentice());
+    let id = g.add_card_to_hand(0, catalog::electrickery());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(app)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Electrickery castable for {R}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == app), "1 damage kills the 1/1");
+}
+
+#[test]
+fn blustersquall_taps_target_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::blustersquall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Blustersquall castable for {U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "target creature tapped");
+}
+
+#[test]
+fn multiple_choice_casts_and_resolves() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let id = g.add_card_to_hand(0, catalog::multiple_choice());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Multiple Choice castable for {1}{U}{U}");
+    drain_stack(&mut g);
+    // The modal sorcery resolves and is put into the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Multiple Choice"),
+        "Multiple Choice resolved to the graveyard");
+}

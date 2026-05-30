@@ -22,12 +22,12 @@ Two adjacent catalogs:
 | STX (327 cards) | 3144 (incl. synthesised variants — batches 155–206 add 902 cards across all five colleges) | 0 | 0 |
 | STA reprints (in STX boosters) | 49 | 0 | — |
 
-Push (claude/modern_decks, coverage backfill): added 13 SOS functionality
-tests for previously-untested-by-name commons — Arcane Omens, Mind Roots,
-Growth Curve, Stress Dream, Molten Note, Foolish Fate, End of the Hunt,
-Cost of Brilliance, Unsubtle Mockery, Vibrant Outburst, Traumatic
-Critique, Render Speechless, Withering Curse. No factory changes (cards
-already ✅); tests only. Full lib suite: 5578 passed / 0 failed.
+Push (claude/modern_decks, coverage backfill): added 12 STX functionality
+tests for previously-untested-by-name cards — Fracture, Closing Statement,
+Devastating Mastery, Quandrix Apprentice (magecraft), Carving Cherub
+(magecraft), Eager First-Year (magecraft), Disciplined Duelist, Codespell
+Cleric, Inkling Ambusher, Electrickery, Blustersquall, Multiple Choice. No
+factory changes (cards already ✅); tests only.
 
 Push (claude/modern_decks, Push XXXIX — coverage backfill): added
 functionality tests for 20 previously-untested-by-name SOS/STX cards (14
