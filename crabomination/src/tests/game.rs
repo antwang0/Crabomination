@@ -5269,6 +5269,46 @@ fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
 }
 
 #[test]
+fn cr_701_12c_exchange_life_totals_swaps_both_players() {
+    use crate::effect::{Effect, Selector};
+    use crate::game::effects::EffectContext;
+    // Soul Conduit / Magus of the Mirror: "Exchange life totals with target
+    // player." P0 (5 life) swaps with P1 (30) → P0 has 30, P1 has 5.
+    let mut g = two_player_game();
+    g.set_life(0, 5);
+    g.set_life(1, 30);
+    let p1_gained_before = g.players[1].life_gained_this_turn;
+    let ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
+    g.resolve_effect(
+        &Effect::ExchangeLifeTotals { a: Selector::You, b: Selector::Target(0) },
+        &ctx,
+    ).unwrap();
+    assert_eq!(g.players[0].life, 30, "P0 takes P1's previous total");
+    assert_eq!(g.players[1].life, 5, "P1 takes P0's previous total");
+    // The gainer's life-gain-this-turn bumped (lifegain-matters payoffs see it).
+    assert_eq!(g.players[0].life_gained_this_turn, 25,
+        "P0 gained 25 — lifegain-matters counter reflects the swing");
+    assert_eq!(g.players[1].life_gained_this_turn, p1_gained_before,
+        "P1 lost life — its life-gained counter is unchanged");
+}
+
+#[test]
+fn soul_conduit_activation_exchanges_life_totals() {
+    let mut g = two_player_game();
+    g.set_life(0, 4);
+    g.set_life(1, 28);
+    let conduit = g.add_card_to_battlefield(0, catalog::soul_conduit());
+    g.players[0].mana_pool.add_colorless(6);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: conduit, ability_index: 0, target: None, x_value: None,
+    }).expect("Soul Conduit activates at sorcery speed for {6}, {T}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 28, "P0 takes the opponent's previous total");
+    assert_eq!(g.players[1].life, 4, "opponent takes P0's previous total");
+}
+
+#[test]
 fn cr_702_15_landwalk_unblockable_only_when_defender_has_land_type() {
     use crate::card::{Keyword, LandType};
     // A Forestwalk attacker can't be blocked while the defending player

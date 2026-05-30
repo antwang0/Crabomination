@@ -645,6 +645,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExchangeLifeTotals { a, b } => {
+                // CR 701.12c — capture both previous totals, then move each
+                // player to the other's previous total.
+                let pa = self.resolve_selector(a, ctx).into_iter().find_map(|e| {
+                    if let EntityRef::Player(p) = e { Some(p) } else { None }
+                });
+                let pb = self.resolve_selector(b, ctx).into_iter().find_map(|e| {
+                    if let EntityRef::Player(p) = e { Some(p) } else { None }
+                });
+                if let (Some(pa), Some(pb)) = (pa, pb)
+                    && pa != pb
+                {
+                    let la = self.effective_life(pa);
+                    let lb = self.effective_life(pb);
+                    for (p, new_total, old) in [(pa, lb, la), (pb, la, lb)] {
+                        let delta = new_total - old;
+                        self.set_life(p, new_total);
+                        if delta > 0 {
+                            let amt = delta as u32;
+                            self.players[p].life_gained_this_turn =
+                                self.players[p].life_gained_this_turn.saturating_add(amt);
+                            events.push(GameEvent::LifeGained { player: p, amount: amt });
+                        } else if delta < 0 {
+                            events.push(GameEvent::LifeLost { player: p, amount: (-delta) as u32 });
+                        }
+                    }
+                    let mut sba = self.check_state_based_actions();
+                    events.append(&mut sba);
+                }
+                Ok(())
+            }
+
             Effect::LifeGainLockThisTurn { who } => {
                 for ent in self.resolve_selector(who, ctx) {
                     if let EntityRef::Player(p) = ent {

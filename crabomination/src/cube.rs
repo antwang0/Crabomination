@@ -207,6 +207,7 @@ fn colorless_pool() -> Vec<CardFactory> {
         aether_spellbomb,
         damping_sphere,
         zuran_orb,
+        soul_conduit,
         chromatic_star,
         soul_guide_lantern,
         wasteland,

@@ -329,6 +329,30 @@ pub fn zuran_orb() -> CardDefinition {
     }
 }
 
+/// Soul Conduit — {6} Artifact. "{6}, {T}: Exchange life totals with target
+/// player. Activate only as a sorcery." (CR 701.12c). Targets the opponent
+/// in heads-up via `Selector::Player(EachOpponent)` rather than a player
+/// prompt.
+pub fn soul_conduit() -> CardDefinition {
+    use crate::effect::Selector;
+    CardDefinition {
+        name: "Soul Conduit",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(6)]),
+            sorcery_speed: true,
+            effect: Effect::ExchangeLifeTotals {
+                a: Selector::You,
+                b: Selector::Player(PlayerRef::EachOpponent),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Chromatic Star — {1} Artifact. {1}, {T}, Sacrifice this: Add one mana
 /// of any color. When this is put into a graveyard from anywhere, draw a
 /// card.

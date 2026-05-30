@@ -1073,6 +1073,14 @@ pub enum Effect {
     /// or `LifeLost` event (delta < 0). Delta of 0 emits no event
     /// (matches CR 119.9 / 119.10 zero-life-change semantics).
     SetLifeTotal { who: Selector, amount: Value },
+    /// CR 701.12c — "exchange life totals" between the players the two
+    /// selectors resolve to (Soul Conduit, Magus of the Mirror, Mirror
+    /// Universe-style swaps). Each side's previous total is captured before
+    /// either changes, then each player gains/loses to reach the other's
+    /// previous total; `LifeGained`/`LifeLost` events fire so lifegain-
+    /// matters payoffs see the swing. A no-op when both selectors land on
+    /// the same player.
+    ExchangeLifeTotals { a: Selector, b: Selector },
     /// One-turn "[selected players] can't gain life this turn" lock.
     /// Sets `Player.cannot_gain_life_this_turn = true` for each player
     /// the selector resolves to. Cleared by `do_untap` at the start
@@ -1759,6 +1767,7 @@ impl Effect {
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::ExchangeLifeTotals { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::Drain { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
             }
