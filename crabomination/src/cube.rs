@@ -877,6 +877,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         shock,
         blazing_rootwalla,
         anjes_ravager,
+        reckless_wurm,
+        fiery_temper,
+        big_game_hunter,
         // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
         // (the printed Kindred Goblin subtype doesn't grant any tribal
         // payoff today). The 2-damage-to-any-target body works end-to-
@@ -1088,6 +1091,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grizzly_bears,
         elvish_archers,
         craw_wurm,
+        arrogant_wurm,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──

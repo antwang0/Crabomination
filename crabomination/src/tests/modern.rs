@@ -2130,6 +2130,57 @@ fn voldaren_epicure_etb_creates_blood_and_pings_each_opponent() {
 }
 
 #[test]
+fn big_game_hunter_etb_destroys_a_big_creature() {
+    let mut g = two_player_game();
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let small = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let bgh = g.add_card_to_hand(0, catalog::big_game_hunter());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bgh, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Big Game Hunter castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == big), "the 4/4 (power ≥ 4) is destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == small), "the 2/2 is untouched");
+}
+
+#[test]
+fn arrogant_wurm_is_a_four_four_trampling_madness_wurm() {
+    use crate::card::Keyword;
+    let def = catalog::arrogant_wurm();
+    assert_eq!((def.power, def.toughness), (4, 4));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
+}
+
+#[test]
+fn fiery_temper_deals_three_to_any_target() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::fiery_temper());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fiery Temper castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "3 damage to the opponent");
+}
+
+#[test]
+fn reckless_wurm_is_a_five_four_trampling_madness_wurm() {
+    use crate::card::Keyword;
+    let g = two_player_game();
+    let def = catalog::reckless_wurm();
+    assert_eq!((def.power, def.toughness), (5, 4));
+    assert!(def.keywords.contains(&Keyword::Trample));
+    assert!(def.keywords.iter().any(|k| matches!(k, Keyword::Madness(_))));
+    let _ = g;
+}
+
+#[test]
 fn anjes_ravager_attack_discards_hand_then_draws_three() {
     let mut g = two_player_game();
     let ravager = g.add_card_to_battlefield(0, catalog::anjes_ravager());

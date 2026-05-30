@@ -11665,6 +11665,90 @@ pub fn anjes_ravager() -> CardDefinition {
     }
 }
 
+/// Reckless Wurm — {3}{R} Creature — Wurm. 5/4. Trample. Madness {1}{R}.
+pub fn reckless_wurm() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Reckless Wurm",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 5,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Fiery Temper — {1}{R}{R} Instant. "Deal 3 damage to any target."
+/// Madness {R}.
+pub fn fiery_temper() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Fiery Temper",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Madness(ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]))],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Arrogant Wurm — {3}{G}{G} Creature — Wurm. 4/4. Trample. Madness {2}{G}.
+pub fn arrogant_wurm() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Arrogant Wurm",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(2), ManaSymbol::Colored(Color::Green)])),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Big Game Hunter — {2}{B} Creature — Human Mercenary. 1/1. Madness {B}.
+/// "When this creature enters, destroy target creature with power 4 or
+/// greater. It can't be regenerated."
+pub fn big_game_hunter() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Big Game Hunter",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Mercenary],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Madness(ManaCost::new(vec![ManaSymbol::Colored(Color::Black)]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::PowerAtLeast(4)),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Modern cube supplement: additional cube-playable cards ──────────────────
 
 /// Dreadhorde Arcanist — {1}{R} Creature — Zombie Wizard 1/3. Trample.
