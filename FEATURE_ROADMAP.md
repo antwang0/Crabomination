@@ -107,7 +107,10 @@ not how Magic works" moments.
   the 2/2-face-down object, manifest, disguise/cloak, cloak).
 - ⏳ **Ante / conspiracy / dungeon (venture) / sticker / attraction** zones
   (low priority; only for novelty formats).
-- ⏳ **Emblems** as command-zone objects (planeswalker ultimates).
+- ✅ **Emblems** as command-zone objects (planeswalker ultimates) —
+  `Player.emblems` + `Effect::CreateEmblem`; triggers dispatch event-keyed
+  (`emblem_event_matches`) and step-keyed (`fire_step_triggers`); surfaced in
+  `PlayerView.emblems`. Wired Dellian Fel -6, Dakkon -6, Saheeli Rai -7.
 - ⏳ **Sideboard zone** + "from outside the game" (wishes, companions).
 
 ## Tier 4 — Keyword & ability mechanics (the long tail)
