@@ -3518,12 +3518,16 @@ and tooltip strings, and apply it across `game_ui.rs` HUD buttons,
 button hard-codes 4 srgb branches per priority state with no hover feedback.
 
 ### Selective Attacker Picking
-The only attack option today is "Attack All" sending every untapped
-non-defender at `next_opp` (`game_ui.rs:2370-2396`). Inline comment at
-line 2369 admits "multi-defender targeting has no UI yet". Quick win:
-per-attacker click-to-opt-out before submitting the attack. Bigger lift:
-drag an arrow from attacker to defender / planeswalker. Restricts core
-MTG gameplay until done.
+✅ Click-based per-attacker picking is wired (`game_ui/mod.rs`, the
+"Attacker selection" block): click an own creature to toggle it into the
+plan, click an opponent planeswalker / player disc / 2-D HUD chip to
+reassign the last-added attacker's defender, Esc / right-click to clear,
+and `A` / the Attack button submits the picked plan (falling back to
+"attack all eligible at next opp" when the plan is empty). Selected
+attackers render gizmo diamonds (`gizmos.rs`).
+
+⏳ Bigger lift still open: **drag an arrow** from attacker to defender /
+planeswalker as an alternative to click-to-assign.
 
 ### Hover-Dwell Card Preview
 Today the only way to read full rules text is to hold Alt while hovering
@@ -5233,15 +5237,15 @@ landed three new shortcut helpers (`etb_mint_token_and_gain_life`,
 `etb_scry_and_draw`, `pump_and_grant_keyword`). Open items to explore
 next:
 
-- **`dies_mint_token_and_drain` shortcut** — mirror of
-  `etb_mint_token_and_drain` for the on-death event. Used by
-  "Pest dies → another Pest enters + drain" patterns. Currently
-  no card uses this, but Witherbloom's Pest-aristocrats archetype
-  would benefit from a one-line helper.
-- **`magecraft_mint_and_drain` shortcut** — composite of
-  `magecraft_mint_token` and `magecraft_drain`. Used in spells-
+- **`dies_mint_token_and_drain` shortcut** ✅ — mirror of
+  `etb_mint_token_and_drain` for the on-death event (`effect.rs`).
+  Used by "Pest dies → another Pest enters + drain" patterns.
+- **`magecraft_mint_and_drain` shortcut** ✅ — composite of
+  `magecraft_mint_token` and `magecraft_drain` (`effect.rs`):
+  `magecraft(Seq[CreateToken(count), Drain(amount)])` for spells-
   matter Pest aristocrat decks where each instant/sorcery makes a
-  Pest AND drains the table.
+  body AND drains the table. Test:
+  `tests::stx::shortcut_magecraft_mint_and_drain_seq_mints_then_drains`.
 - **Plant tribal lord at common rarity** — Witherbloom Vinetongue
   (b129) at {1}{G}{G} is the rare/uncommon Plant anthem. A
   {2}{G} 2/2 "Other Plants get +1/+1" lord would round out the
@@ -6145,8 +6149,7 @@ listed here so the next pass can pick them up.
   Adeliz the Cinder Wind) should be easy to implement — just add
   `prowess_trigger()` to their triggered abilities.
 
-- **Rofellos, Llanowar Emissary**: `{T}: Add {G} for each Forest you
-  control` needs `Value::CountOf(EachPermanent(HasLandType(Forest)))`.
-  The `EachPermanent` selector + `HasLandType` filter both exist; the
-  composition into a `ManaPayload::OfColor(Green, Count)` shape should
-  work with existing primitives.
+- **Rofellos, Llanowar Emissary** ✅ — `{T}: Add {G} for each Forest you
+  control` is wired via `ManaPayload::OfColor(Green,
+  CountOf(EachPermanent(HasLandType(Forest) ∧ ControlledByYou)))`. Test:
+  `tests::modern::rofellos_taps_for_green_per_forest`.

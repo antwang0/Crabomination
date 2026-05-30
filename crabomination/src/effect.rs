@@ -3601,6 +3601,33 @@ pub mod shortcut {
         })
     }
 
+    /// Magecraft-mint-and-drain shortcut: "Whenever you cast or copy an
+    /// instant or sorcery spell, create `count` of `definition`, then each
+    /// opponent loses `amount` life and you gain `amount` life." A composite
+    /// of [`magecraft_mint_token`] and [`magecraft_drain`] for the spells-
+    /// matter Pest-aristocrats shape (mint a body, drain the table per
+    /// spell). The `Seq` mints before draining so the freshly-created token
+    /// is on the battlefield by the time any "if you gained life" / sacrifice
+    /// payoff sees the drain.
+    pub fn magecraft_mint_and_drain(
+        definition: crate::card::TokenDefinition,
+        count: i32,
+        amount: i32,
+    ) -> TriggeredAbility {
+        magecraft(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                definition,
+                count: Value::Const(count),
+            },
+            Effect::Drain {
+                from: Selector::Player(PlayerRef::EachOpponent),
+                to: Selector::You,
+                amount: Value::Const(amount),
+            },
+        ]))
+    }
+
     /// Magecraft-add-+1/+1-counter-to-friendly shortcut: "Whenever you
     /// cast or copy an instant or sorcery spell, put a +1/+1 counter on
     /// target creature you control." Wraps [`magecraft`] with an

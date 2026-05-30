@@ -45,30 +45,37 @@ read of the code and should be re-verified before picking up an item.
 Each unblocks a large swath of cards and removes the most visible "that's
 not how Magic works" moments.
 
-1. ⏳ **Replacement-effect framework.** The single biggest missing
-   primitive. Currently stubbed per-card. Unlocks ETB replacement (enters
-   tapped / with counters / as a copy / under your control), damage
-   prevention & redirection (Fog family, Maze of Ith), draw/skip
-   replacement, counter-doubling (Doubling Season, Hardened Scales), and
-   "if it would die, exile instead."
-2. ⏳ **Multi-pick / "choose N" decisions.** "Choose two/three" modal cards
-   are hardcoded pairs today; reveal-and-sort is a flat Draw-N. Add
-   `Decision::ChooseModes { min, max }` + a "pick from revealed cards"
-   decision → Atraxa, Dig Through Time, Mind's Desire, every charm/command.
-3. ⏳ **Player-chosen combat damage assignment order.** `combat.rs:433`
-   sorts blockers by CardId instead of prompting. Add
-   `Decision::OrderBlockers` (trample-over-lethal, deathtouch spread).
+1. 🟡 **Replacement-effect framework.** A `replacement.rs` framework exists
+   but only models zone-change replacements (Commander "→ command zone
+   instead", CR 903.9b); the rest is stubbed per-card. Still to generalize:
+   ETB replacement (enters tapped / with counters / as a copy / under your
+   control), damage prevention & redirection (Fog family, Maze of Ith),
+   draw/skip replacement, counter-doubling (Doubling Season, Hardened
+   Scales), and "if it would die, exile instead."
+2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
+   wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). Remaining nicety:
+   a dedicated "pick from revealed cards" decision (Dig Through Time-style
+   reveal-and-sort still routes through flat Draw-N).
+3. ✅ **Player-chosen combat damage assignment order.**
+   `Decision::CombatDamageOrder { attacker, blockers }` prompts the attacker
+   (`combat.rs`, CR 510.1c) instead of sorting by CardId. (Trample-over-
+   lethal / deathtouch spread math rides on top — see Tier 6.)
 4. ⏳ **Linked "until this leaves play" exile.** Tidehollow Sculler, Brain
    Maggot, Banisher Priest, Oblivion Ring, Fiend Hunter — exile-and-return.
 5. ⏳ **Token-copy of a permanent (clone).** Phantasmal Image, Helm of the
    Host, Mockingbird, Saheeli/Esika copy clauses, Spark Double, populate.
-6. ⏳ **Copy-a-spell-on-the-stack** as a first-class primitive (beyond the
-   existing `CopySpell`) with new-target choice — Twinning, Fork, Storm.
+6. 🟡 **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
+   `CopySpellUnlessPaid` exist and ship Storm / sac-to-copy cards, but the
+   copy keeps the original's targets. Remaining: **new-target choice** on
+   the copy — Twinning, Fork.
 
 ## Tier 2 — Engine rules fidelity (beyond Tier 1)
 
-- ⏳ **APNAP trigger ordering** — controller orders simultaneous triggers
-  (CR 603.3b); add `Decision::OrderTriggers`.
+- 🟡 **APNAP trigger ordering** — inter-player APNAP is wired and tested
+  (`game/mod.rs` apnap_rank sort, CR 603.3b; test
+  `apnap_orders_simultaneous_triggers_active_pushed_first`). Remaining: let
+  a controller order their *own* simultaneous triggers via a
+  `Decision::OrderTriggers` prompt (today same-controller order is fixed).
 - ⏳ **"Choose targets as it resolves" / divided damage** across N targets
   (Fireball, Forked Bolt, Cryptic-style "tap up to N").
 - ⏳ **Targeting refinements:** "up to N targets", "target each", "another
@@ -298,14 +305,16 @@ Mostly buildable on existing `ClientView` / `StackItemView` data.
 
 ## Suggested sequencing
 
-1. **Replacement effects + combat damage-order + multi-pick decisions**
-   (Tier-1 #1–3) — the three primitives that most close the fidelity gap.
+1. **Replacement-effect framework** (Tier-1 #1) — the highest-leverage
+   primitive still open. (Combat damage-order and multi-pick "choose N"
+   decisions, formerly bundled here, are now wired.)
 2. **Card-zoom preview + stops/auto-yield + combat-math preview**
    (Tier-7 #1–3) — the trio that most closes the "feels like Arena" gap.
 3. **Best-of-3 + sideboard + deck legality** (Tier 10) — makes draft/cube
    and constructed competitive.
-4. **APNAP ordering, static-ability framework, mana provenance** — broad
-   correctness wins that unblock many cards at once.
+4. **Static-ability framework + mana provenance** — broad correctness wins
+   that unblock many cards at once. (Inter-player APNAP ordering is already
+   wired; only same-controller trigger ordering remains.)
 5. **Smarter AI blocking** (Tier 13) — biggest single-player upgrade.
 6. Then the **Tier-4 mechanic sweep** and **Tier-3 object-model** features,
    card batch by card batch, promoting entries in the per-card trackers.

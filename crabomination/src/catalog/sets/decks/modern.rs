@@ -5154,15 +5154,15 @@ pub fn elvish_reclaimer() -> CardDefinition {
 }
 
 /// Rofellos, Llanowar Emissary — {G}{G} Legendary Creature — Elf Druid. 2/1.
-/// {T}: Add {G}{G} for each Forest you control.
+/// {T}: Add {G} for each Forest you control.
 ///
-/// Push (modern_decks): the "for each Forest" rider is now wired
-/// faithfully via `ManaPayload::OfColor(Green, Value::Times(Const(2),
-/// CountOf(Forest ∧ ControlledByYou)))`. Tapping Rofellos with N Forests
-/// in play adds `2·N` green mana to the controller's pool. The activation
-/// cost remains a plain `{T}`; the dynamic payload reads the live Forest
-/// count at resolution time. Same shape as Topiary Lecturer / Molten-Core
-/// Maestro's power-scaled mana payouts (`PowerOf(This)`).
+/// Push (modern_decks): the "for each Forest" rider is wired faithfully via
+/// `ManaPayload::OfColor(Green, CountOf(Forest ∧ ControlledByYou))`. Tapping
+/// Rofellos with N Forests in play adds N green mana to the controller's
+/// pool. The activation cost remains a plain `{T}`; the dynamic payload
+/// reads the live Forest count at resolution time. Same shape as Topiary
+/// Lecturer / Molten-Core Maestro's power-scaled mana payouts
+/// (`PowerOf(This)`).
 pub fn rofellos_llanowar_emissary() -> CardDefinition {
     use crate::card::{ActivatedAbility, LandType, Supertype as Sup};
     CardDefinition {

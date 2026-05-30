@@ -59902,6 +59902,37 @@ fn shortcut_magecraft_mint_fractal_seq_creates_token_then_stamps_counters() {
 }
 
 #[test]
+fn shortcut_magecraft_mint_and_drain_seq_mints_then_drains() {
+    // Lock in that magecraft_mint_and_drain(def, count, amount) builds a
+    // magecraft trigger whose body is Seq[CreateToken(count), Drain(amount)]
+    // — the Pest-aristocrats "mint a body then drain the table per spell"
+    // shape. Mint must precede the drain so the token is on the battlefield
+    // before any "if you gained life" / sacrifice payoff sees the drain.
+    use crate::effect::shortcut::magecraft_mint_and_drain;
+    let trig = magecraft_mint_and_drain(crate::catalog::stx_pest_token(), 1, 2);
+    assert_eq!(trig.event.kind, crate::effect::EventKind::SpellCast);
+    match &trig.effect {
+        crate::effect::Effect::Seq(steps) => {
+            assert_eq!(steps.len(), 2);
+            match &steps[0] {
+                crate::effect::Effect::CreateToken { count, definition, .. } => {
+                    assert_eq!(*count, crate::effect::Value::Const(1));
+                    assert_eq!(definition.name, "Pest");
+                }
+                _ => panic!("step 0 must be CreateToken"),
+            }
+            match &steps[1] {
+                crate::effect::Effect::Drain { amount, .. } => {
+                    assert_eq!(*amount, crate::effect::Value::Const(2));
+                }
+                _ => panic!("step 1 must be Drain"),
+            }
+        }
+        _ => panic!("body must be Seq[CreateToken, Drain]"),
+    }
+}
+
+#[test]
 fn shortcut_dies_mint_pest_uses_creature_died_self_source() {
     // Lock in that dies_mint_pest() builds a CreatureDied/SelfSource
     // trigger whose body mints a Pest. Pulls the self-replacing-Pest
