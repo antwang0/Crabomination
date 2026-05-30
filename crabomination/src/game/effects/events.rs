@@ -317,7 +317,7 @@ pub(crate) fn emblem_event_matches(
     if !kind_ok {
         return false;
     }
-    let scope_ok = match spec.scope {
+    match spec.scope {
         EventScope::YourControl | EventScope::SelfSource => {
             event_actor(state, event).is_some_and(|p| state.same_team(p, controller))
         }
@@ -326,8 +326,7 @@ pub(crate) fn emblem_event_matches(
         }
         EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
         EventScope::FromYourGraveyard => false,
-    };
-    scope_ok
+    }
 }
 
 fn event_card(event: &GameEvent) -> Option<CardId> {
