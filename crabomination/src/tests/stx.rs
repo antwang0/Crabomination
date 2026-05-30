@@ -76039,3 +76039,25 @@ fn free_cast_rejected_without_omniscience() {
         additional_targets: vec![], mode: None, x_value: None,
     }).is_err(), "no free-cast permission without Omniscience");
 }
+
+#[test]
+fn blade_historian_grants_double_strike_to_attackers_only() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blade_historian());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let homebody = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    let bf = g.compute_battlefield();
+    let atk = bf.iter().find(|c| c.id == attacker).unwrap();
+    let home = bf.iter().find(|c| c.id == homebody).unwrap();
+    assert!(atk.keywords.contains(&Keyword::DoubleStrike),
+        "attacking creature you control gains double strike");
+    assert!(!home.keywords.contains(&Keyword::DoubleStrike),
+        "non-attacking creature does not");
+}

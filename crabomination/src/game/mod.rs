@@ -1160,6 +1160,43 @@ impl GameState {
                 });
             }
         }
+        // "Attacking creatures you control have <keyword>" (Blade Historian).
+        // Resolved here because `affects()` can't see combat state — we read
+        // the live `attacking` list and scope the grant to the source's own
+        // attackers. Layer-6 keyword addition, like the equipment grants.
+        if !self.attacking.is_empty() {
+            for card in &self.battlefield {
+                for sa in &card.definition.static_abilities {
+                    let crate::effect::StaticEffect::GrantKeywordToAttackers { keyword } =
+                        &sa.effect
+                    else {
+                        continue;
+                    };
+                    let ids: Vec<CardId> = self
+                        .attacking
+                        .iter()
+                        .map(|a| a.attacker)
+                        .filter(|id| {
+                            self.battlefield
+                                .iter()
+                                .any(|c| c.id == *id && c.controller == card.controller)
+                        })
+                        .collect();
+                    if ids.is_empty() {
+                        continue;
+                    }
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Specific(ids),
+                        layer: Layer::L6Ability,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::AddKeyword(keyword.clone()),
+                    });
+                }
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -3753,7 +3790,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::SpellCostFloor { .. }
             // CastHandSpellsFree (Omniscience) — read by the free-cast
             // action via `player_casts_hand_spells_free`; no layer effect.
-            | StaticEffect::CastHandSpellsFree => vec![],
+            | StaticEffect::CastHandSpellsFree
+            // GrantKeywordToAttackers — needs live combat state, resolved in
+            // `compute_battlefield` against `GameState.attacking`.
+            | StaticEffect::GrantKeywordToAttackers { .. } => vec![],
         })
         .collect()
 }

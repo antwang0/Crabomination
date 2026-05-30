@@ -2590,6 +2590,13 @@ pub enum StaticEffect {
     /// `GameState::player_casts_hand_spells_free`, which lets
     /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
     CastHandSpellsFree,
+    /// "Attacking creatures you control have <keyword>." Blade Historian
+    /// (double strike), and any future combat anthem keyed on the
+    /// declare-attackers set. Resolved at `compute_battlefield` time (which
+    /// has the live `GameState.attacking` list) into a layer-6 keyword grant
+    /// scoped to the controller's attackers — `affects()` can't see combat
+    /// state on its own, so this can't route through `selector_to_affected`.
+    GrantKeywordToAttackers { keyword: Keyword },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

@@ -16111,64 +16111,28 @@ pub fn silverquill_sting() -> CardDefinition {
 
 // ── Blade Historian ────────────────────────────────────────────────────────
 
-/// Blade Historian — {2}{R}{W}, 3/2 Human Wizard (printed STX Lorehold).
-///
-/// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
-/// attacking creatures you control get +1/+0 and gain double strike
-/// until end of turn."
-///
-/// Wired via `magecraft(ForEach(Creature & ControlledByYou & IsAttacking)
-/// → Seq(PumpPT +1/+0 EOT, GrantKeyword Double Strike EOT))`. The
-/// `IsAttacking` filter restricts to creatures currently declared as
-/// attackers, matching the printed Oracle. Tests:
-/// `blade_historian_is_a_four_mana_three_two_human_wizard`,
-/// `blade_historian_magecraft_pumps_attackers_and_grants_double_strike`.
+/// Blade Historian — {2}{R}{W}, 2/3 Human Cleric (STX Lorehold rare).
+/// "Attacking creatures you control have double strike." Wired via the
+/// `GrantKeywordToAttackers` static (resolved against the live attacking
+/// set at `compute_battlefield` time).
 pub fn blade_historian() -> CardDefinition {
     CardDefinition {
         name: "Blade Historian",
         cost: cost(&[generic(2), r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
             ..Default::default()
         },
-        power: 3,
-        toughness: 2,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou)
-                    .and(SelectionRequirement::IsAttacking),
-            ),
-            body: Box::new(Effect::Seq(vec![
-                Effect::PumpPT {
-                    what: Selector::TriggerSource,
-                    power: Value::Const(1),
-                    toughness: Value::Const(0),
-                    duration: Duration::EndOfTurn,
-                },
-                Effect::GrantKeyword {
-                    what: Selector::TriggerSource,
-                    keyword: Keyword::DoubleStrike,
-                    duration: Duration::EndOfTurn,
-                },
-            ])),
-        })],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "Attacking creatures you control have double strike.",
+            effect: StaticEffect::GrantKeywordToAttackers {
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        ..Default::default()
     }
 }
 

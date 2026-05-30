@@ -19792,43 +19792,7 @@ pub fn lorehold_spiritcaller_b164() -> CardDefinition {
     }
 }
 
-// ── Blade Historian ────────────────────────────────────────────────────────
-
-/// Blade Historian — {R}{R}{W}{W}, 2/3 Human Cleric.
-/// "Attacking creatures you control have double strike."
-///
-/// 🟡 The continuous static granting double strike to attackers needs a
-/// layer-based keyword-grant primitive. We ship the body only.
-#[allow(dead_code)]
-pub fn blade_historian() -> CardDefinition {
-    CardDefinition {
-        name: "Blade Historian",
-        cost: cost(&[r(), r(), w(), w()]),
-        supertypes: vec![],
-        card_types: vec![CardType::Creature],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
-            ..Default::default()
-        },
-        power: 2,
-        toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![magecraft(mint_lorehold_spirits(1))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
-    }
-}
+// (Blade Historian lives in `extras.rs` — the registered factory.)
 
 // ── Batch 165 (modern_decks) — More Lorehold ──────────────────────────────
 
