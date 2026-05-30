@@ -11700,6 +11700,45 @@ pub fn fiery_temper() -> CardDefinition {
     }
 }
 
+/// Brindle Boar — {2}{G} Creature — Boar. 3/3. "Sacrifice Brindle Boar: You
+/// gain 4 life."
+pub fn brindle_boar() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Brindle Boar",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Boar],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Reckless Abandon — {R} Sorcery. "As an additional cost to cast this
+/// spell, sacrifice a creature. Deal 4 damage to any target."
+pub fn reckless_abandon() -> CardDefinition {
+    use crate::card::{AdditionalCastCost, SelectionRequirement};
+    CardDefinition {
+        name: "Reckless Abandon",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Sorcery],
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
 /// Cloudgoat Ranger — {3}{W}{W} Creature — Giant. 2/2. "When this creature
 /// enters, create three 1/1 white Kithkin Soldier creature tokens."
 pub fn cloudgoat_ranger() -> CardDefinition {

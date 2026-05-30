@@ -2151,6 +2151,35 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
+fn brindle_boar_sacrifices_for_four_life() {
+    let mut g = two_player_game();
+    let boar = g.add_card_to_battlefield(0, catalog::brindle_boar());
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: boar, ability_index: 0, target: None, x_value: None,
+    }).expect("Brindle Boar sac ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 4, "gained 4 life");
+    assert!(!g.battlefield.iter().any(|c| c.id == boar), "Brindle Boar was sacrificed");
+}
+
+#[test]
+fn reckless_abandon_sacrifices_a_creature_and_deals_four() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // fodder
+    let id = g.add_card_to_hand(0, catalog::reckless_abandon());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Reckless Abandon castable with fodder present");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "dealt 4 to the opponent");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "the sacrificed creature is in the graveyard");
+}
+
+#[test]
 fn cloudgoat_ranger_etb_makes_three_kithkin() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::cloudgoat_ranger());

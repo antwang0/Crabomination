@@ -879,6 +879,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         blazing_rootwalla,
         anjes_ravager,
         reckless_wurm,
+        reckless_abandon,
         fiery_temper,
         big_game_hunter,
         // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
@@ -1097,6 +1098,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         call_of_the_herd,
         springbloom_druid,
         pelakka_wurm,
+        brindle_boar,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──
