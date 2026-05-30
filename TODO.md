@@ -7690,6 +7690,19 @@ an `ActivatedAbility.from_hand` flag parallel to `from_graveyard` would mean
 touching ~240 literal constructors — migrate them to `..Default::default()`
 first).
 
+### Delirium-conditional static buffs
+`Predicate::DeliriumActive` now gates spell effects (Unholy Heat). A
+*continuous* delirium buff — "as long as you have delirium, this gets +2/+2
+and has flying" (Dragon's Rage Channeler, Traverse the Ulvenwald-adjacent
+cards) — needs a layer-system static whose application is gated on a
+predicate. DRC isn't implemented yet pending this.
+
+### Client build can't be verified in the web sandbox
+`crabomination_client` links Bevy, which needs the system `wayland-client`
+library that isn't present here, so `cargo build/clippy -p crabomination_client`
+fails at the `wayland-sys` build script. Engine + server changes are fully
+verified; client-only edits (e.g. `keyword_label`) are reviewed by hand.
+
 ### Damage-as-(-1/-1)-counters replacement
 Soul-Scar Mage / Phyrexian Vatmother-style "if a source you control would
 deal noncombat damage to a creature, it deals that much in -1/-1 counters
