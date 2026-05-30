@@ -1846,11 +1846,9 @@ pub fn crackle_with_power() -> CardDefinition {
 /// controls. / • Draw a card for each creature with a +1/+1 counter
 /// on it you control."
 ///
-/// 🟡 Two-mode `ChooseMode`. Mode 0 deals `CountOf(YourCreatures)`
-/// damage to a target opp creature. Mode 1 draws `CountOf(YourCreatures
-/// WithCounter(+1/+1))` cards. The "target creature an opponent
-/// controls" filter on mode 0 is approximated as "any creature" — the
-/// auto-decider picks the largest opp creature for friendly damage.
+/// Two-mode `ChooseMode`. Mode 0 deals `CountOf(YourCreatures)` damage to
+/// a target creature an opponent controls (`ControlledByOpponent` filter).
+/// Mode 1 draws `CountOf(YourCreatures WithCounter(+1/+1))` cards.
 pub fn mentors_guidance() -> CardDefinition {
     CardDefinition {
         name: "Mentor's Guidance",
