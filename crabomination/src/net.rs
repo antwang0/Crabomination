@@ -316,6 +316,14 @@ pub struct GraveyardCardView {
     pub power: i32,
     #[serde(default)]
     pub toughness: i32,
+    /// Flashback cost (CR 702.34) if this card can be cast from the
+    /// graveyard via `GameAction::CastFlashback`. `None` otherwise.
+    #[serde(default)]
+    pub flashback_cost: Option<crate::mana::ManaCost>,
+    /// True if this card has Retrace (CR 702.81) and can be recast from
+    /// the graveyard via `GameAction::CastRetrace` (cost + discard a land).
+    #[serde(default)]
+    pub retrace: bool,
 }
 
 /// A single card sitting in the shared exile zone. Owners are surfaced so
