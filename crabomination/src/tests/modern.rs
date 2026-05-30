@@ -16496,6 +16496,47 @@ fn dakkon_shadow_slayer_minus_three_exiles_a_creature() {
 }
 
 #[test]
+fn dakkon_minus_six_emblem_draws_on_upkeep() {
+    // -6 grants an emblem "at the beginning of your upkeep, draw a card";
+    // exercises the step-keyed emblem path in fire_step_triggers.
+    let mut g = two_player_game();
+    let pw = g.add_card_to_battlefield(0, catalog::dakkon_shadow_slayer());
+    g.battlefield_find_mut(pw).unwrap().add_counters(crate::card::CounterType::Loyalty, 6);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: pw, ability_index: 2, target: None,
+    }).expect("Dakkon -6 castable at 9 loyalty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].emblems.len(), 1, "emblem created by -6");
+    let before = g.players[0].hand.len();
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), before + 1, "emblem drew a card on P0's upkeep");
+}
+
+#[test]
+fn saheeli_rai_minus_seven_emblem_copies_on_end_step() {
+    // -7 grants an emblem making two haste copies of a friendly permanent
+    // at each of your end steps (step-keyed emblem path).
+    let mut g = two_player_game();
+    let saheeli = g.add_card_to_battlefield(0, catalog::saheeli_rai());
+    g.battlefield_find_mut(saheeli).unwrap().add_counters(crate::card::CounterType::Loyalty, 7);
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: saheeli, ability_index: 2, target: None,
+    }).expect("Saheeli -7 castable at 10 loyalty");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].emblems.len(), 1, "emblem created by -7");
+    let before = g.battlefield.iter().filter(|c| c.is_token).count();
+    g.active_player_idx = 0;
+    g.fire_step_triggers(crate::game::TurnStep::End);
+    drain_stack(&mut g);
+    let after = g.battlefield.iter().filter(|c| c.is_token).count();
+    assert!(after >= before + 2, "emblem made two copies at P0's end step");
+}
+
+#[test]
 fn containment_priest_is_a_two_two_with_flash() {
     let g_def = catalog::containment_priest();
     assert_eq!((g_def.power, g_def.toughness), (2, 2));
