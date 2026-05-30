@@ -35,7 +35,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use crate::card::{
-    CardDefinition, CardId, CardInstance, CounterType, CreatureType,
+    CardDefinition, CardId, CardInstance, CounterType, CreatureType, Keyword,
 };
 use crate::game::{
     Attack, AttackTarget, GameState, PriorityState, StackItem, Target, TurnStep,
@@ -121,6 +121,18 @@ pub struct CardSnapshot {
     /// predating cast-from-exile load as `None`.
     #[serde(default)]
     pub may_play_until: Option<crate::card::MayPlayPermission>,
+    /// CR 122.1b keyword counters — permanent state (never cleared at
+    /// cleanup), so a spectator/reconnect sync must preserve them or it
+    /// would render an Indestructible-countered creature as destructible.
+    /// `Vec` because `Keyword` can't be a JSON map key; `#[serde(default)]`
+    /// so older snapshots load as empty.
+    #[serde(default)]
+    pub keyword_counters: Vec<(Keyword, u32)>,
+    /// Until-end-of-turn keyword grants. Kept for parity with
+    /// `power_bonus`/`toughness_bonus` (same lifetime, already captured).
+    /// `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    pub granted_keywords_eot: Vec<Keyword>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -245,6 +257,12 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
         chosen_creature_type: c.chosen_creature_type,
         once_per_turn_used: c.once_per_turn_used.clone(),
         may_play_until: c.may_play_until,
+        keyword_counters: c
+            .keyword_counters
+            .iter()
+            .map(|(k, v)| (k.clone(), *v))
+            .collect(),
+        granted_keywords_eot: c.granted_keywords_eot.clone(),
     }
 }
 
@@ -406,6 +424,8 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.chosen_creature_type = cs.chosen_creature_type;
     c.once_per_turn_used = cs.once_per_turn_used;
     c.may_play_until = cs.may_play_until;
+    c.keyword_counters = cs.keyword_counters.into_iter().collect();
+    c.granted_keywords_eot = cs.granted_keywords_eot;
     Ok(c)
 }
 
@@ -479,6 +499,46 @@ mod tests {
             .expect("Mindful Biomancer should round-trip");
         assert_eq!(bio_back.once_per_turn_used, vec![0],
             "Once-per-turn tracker must persist through snapshot/restore");
+    }
+
+    #[test]
+    fn snapshot_round_trips_keyword_counters_and_eot_keyword_grants() {
+        // CR 122.1b keyword counters are permanent state (granted while
+        // present, never cleared at cleanup), so a spectator/reconnect
+        // sync must preserve them — dropping them silently renders an
+        // Indestructible-countered creature as destructible. EOT-granted
+        // keywords share the power_bonus lifetime, which the snapshot
+        // already captures, so they must round-trip too for parity.
+        use crate::card::{CounterType, Keyword};
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        {
+            let c = g.battlefield_find_mut(bear).unwrap();
+            c.keyword_counters.insert(Keyword::Indestructible, 2);
+            c.add_counters(CounterType::Indestructible, 2);
+            c.granted_keywords_eot.push(Keyword::Trample);
+        }
+        assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Indestructible));
+        assert!(g.battlefield_find(bear).unwrap().has_keyword(&Keyword::Trample));
+
+        let snap = GameSnapshot::capture(&g);
+        let restored = snap.restore().expect("restore");
+        let back = restored
+            .battlefield
+            .iter()
+            .find(|c| c.id == bear)
+            .expect("bear should round-trip");
+        assert_eq!(
+            back.keyword_counters.get(&Keyword::Indestructible).copied(),
+            Some(2),
+            "keyword counters (CR 122.1b) must persist through snapshot/restore"
+        );
+        assert!(
+            back.granted_keywords_eot.contains(&Keyword::Trample),
+            "EOT-granted keywords must persist through snapshot/restore"
+        );
+        assert!(back.has_keyword(&Keyword::Indestructible));
+        assert!(back.has_keyword(&Keyword::Trample));
     }
 
     #[test]

@@ -1191,6 +1191,19 @@ struct CardInstanceWire {
     once_per_turn_used: Vec<usize>,
     #[serde(default)]
     may_play_until: Option<MayPlayPermission>,
+    /// CR 122.1b keyword counters — permanent state (never cleared at
+    /// cleanup), so it must survive a snapshot round-trip just like
+    /// `counters`. Stored as a `Vec` because `Keyword` can't be a JSON
+    /// map key. `#[serde(default)]` so snapshots predating the field
+    /// load as empty.
+    #[serde(default)]
+    keyword_counters: Vec<(Keyword, u32)>,
+    /// Until-end-of-turn keyword grants. Cleared at cleanup, but
+    /// `power_bonus`/`toughness_bonus` share that lifetime and are
+    /// serialized, so a mid-turn snapshot must preserve these too for a
+    /// consistent restore. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    granted_keywords_eot: Vec<Keyword>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1217,6 +1230,12 @@ impl serde::Serialize for CardInstance {
             chosen_creature_type: self.chosen_creature_type,
             once_per_turn_used: self.once_per_turn_used.clone(),
             may_play_until: self.may_play_until,
+            keyword_counters: self
+                .keyword_counters
+                .iter()
+                .map(|(k, v)| (k.clone(), *v))
+                .collect(),
+            granted_keywords_eot: self.granted_keywords_eot.clone(),
         };
         wire.serialize(ser)
     }
@@ -1247,6 +1266,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.chosen_creature_type = wire.chosen_creature_type;
         c.once_per_turn_used = wire.once_per_turn_used;
         c.may_play_until = wire.may_play_until;
+        c.keyword_counters = wire.keyword_counters.into_iter().collect();
+        c.granted_keywords_eot = wire.granted_keywords_eot;
         Ok(c)
     }
 }
