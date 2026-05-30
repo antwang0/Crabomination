@@ -38,15 +38,15 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
-- **Time Walk / Temporal Manipulation / Nexus of Fate** — now trivial to add
-  as real cards (`Effect::TakeExtraTurn { who: You, count: 1 }`); they were
-  not added this run only because the catalog registration site
-  (`catalog::mod::all_known_factories`) could not be safely edited. Add the
-  factories + register + a "extra turn taken" functionality test.
-- **Coin-flip extra-turn emblem test** — Ral Zarek's -7 emblem currently has
-  an emblem-creation test + a deterministic `extra_turns` engine test; add a
-  scripted-decider test that forces heads through the end-step coin flip to
-  cover the full path.
+- **Emblem zone (CR 114)** ✅ — `Player.emblems` / `Effect::CreateEmblem`,
+  dispatched event-keyed (`emblem_event_matches`) and step-keyed
+  (`fire_step_triggers`). Wired Dellian Fel -6, Dakkon -6, Saheeli -7;
+  surfaced via `PlayerView.emblems`. Replaces the `dellian_fel_emblem` bool.
+- **Extra-turn spells (CR 500.7)** ✅ — `Player.extra_turns` /
+  `Effect::TakeExtraTurn`, consumed in `do_cleanup`. Time Walk, Time Warp,
+  Temporal Manipulation, Capture of Jingzhou, Nexus of Fate (`sets::xtra`,
+  registered). Follow-up: Nexus's shuffle-instead-of-graveyard replacement
+  once a leaves-graveyard replacement primitive exists.
 - See `FEATURE_ROADMAP.md` Tier 1. DONE this run: additional cast costs
   (`AdditionalCastCost::SacrificePermanent`/`Discard`), `GrantActivatedAbility`
   static, "when target dies this turn" delayed trigger. Still open: choose-N
