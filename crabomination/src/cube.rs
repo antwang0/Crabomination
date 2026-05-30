@@ -875,6 +875,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         lightning_bolt,
         shock,
+        blazing_rootwalla,
+        anjes_ravager,
         // tarfire 🟡 — Kindred/Tribal type fully omitted from engine
         // (the printed Kindred Goblin subtype doesn't grant any tribal
         // payoff today). The 2-damage-to-any-target body works end-to-

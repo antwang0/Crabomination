@@ -2130,6 +2130,27 @@ fn voldaren_epicure_etb_creates_blood_and_pings_each_opponent() {
 }
 
 #[test]
+fn anjes_ravager_attack_discards_hand_then_draws_three() {
+    let mut g = two_player_game();
+    let ravager = g.add_card_to_battlefield(0, catalog::anjes_ravager());
+    g.clear_sickness(ravager);
+    // Two junk cards in hand; five in library to draw from.
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.add_card_to_hand(0, catalog::shock());
+    for _ in 0..5 { g.add_card_to_library(0, catalog::mountain()); }
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: ravager, target: AttackTarget::Player(1),
+    }])).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), 3, "discarded the 2-card hand, then drew 3");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "the discarded hand hit the graveyard");
+}
+
+#[test]
 fn goldspan_dragon_attack_creates_a_treasure() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::goldspan_dragon());
@@ -12206,6 +12227,26 @@ fn basking_rootwalla_pump_once_per_turn() {
     let pumped = g.computed_permanent(rootwalla).unwrap();
     assert_eq!(pumped.power, 3, "Rootwalla should be 3/3 after pump");
     assert_eq!(pumped.toughness, 3, "Rootwalla should be 3/3 after pump");
+}
+
+#[test]
+fn blazing_rootwalla_madness_zero_and_pump() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let rw = g.add_card_to_battlefield(0, catalog::blazing_rootwalla());
+    g.clear_sickness(rw);
+    // Madness {0}: the keyword is present so a discard offers a free cast.
+    assert!(g.battlefield_find(rw).unwrap().definition.keywords
+        .iter().any(|k| matches!(k, Keyword::Madness(_))), "carries Madness");
+    // {1}{R}: +1/+1 until end of turn.
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rw, ability_index: 0, target: None, x_value: None,
+    }).expect("pump activates");
+    drain_stack(&mut g);
+    let pumped = g.computed_permanent(rw).unwrap();
+    assert_eq!((pumped.power, pumped.toughness), (2, 2), "1/1 → 2/2 after +1/+1");
 }
 
 // ── Push XIX: cube creature tests ──────────────────────────────────────

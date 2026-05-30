@@ -140,7 +140,6 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Blazing Rootwalla | ⏳ | Madness creature. Needs Madness. |
 | Greasewrench Goblin | ✅ | {1}{R} 2/2 Haste. Treasure-on-death trigger via `EventKind::CreatureDied + SelfSource` + the shared `treasure_token()` helper (1-mana-of-any-color, sac on tap). The "can't block" Oracle rider collapses (no per-attacker block-restriction primitive yet). Tests: `greasewrench_goblin_enters_with_haste`, `greasewrench_goblin_creates_treasure_on_death`. |
 | Grim Lavamancer | ✅ | {R} 1/1 Human Wizard. {R}, {T}, Exile two cards from your graveyard: deal 2 damage to any target — the exile-two cost is wired via `exile_other_filter: Some((Any, 2))` (pre-flight rejects when <2 cards in gy). |
 | Marauding Mako | ✅ | `{U}{B}` 2/2 Fish (Shark not in `CreatureType`). Triggered ability listens for `CardDiscarded`+`YourControl` and adds a +1/+1 counter to itself — captures the discard-payoff payoff faithfully. Available cross-pool when both U and B are picked. Test: `marauding_mako_grows_when_you_discard`. |
@@ -151,7 +150,6 @@ still ⏳.
 | Dreadhorde Arcanist | ✅ | Attack-trigger flashback from grave. Reuses Flashback. |
 | Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves. Treasure-on-tap omitted. Tests: `magda_brazen_outlaw_is_legendary_dwarf`. |
 | Robber of the Rich | ⏳ | Cast-from-opp-library. Big primitive. |
-| Anje's Ravager | ⏳ | Madness payoff. |
 | Death-Greeter's Champion | ✅ (was ⏳) | Push (claude/modern_decks batch 103): {1}{R} 2/2 Human Warrior with Haste. Attack trigger drains 1 life from a target opponent. Test: `death_greeters_champion_drains_opp_on_attack`. |
 | Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
 | Simian Spirit Guide | 🟡 | `{2}{R}` 2/2 Ape Spirit. Body wired; the alt-cost "exile from hand to add {R}" half is still ⏳ — the existing `AlternativeCost` path replaces the entire spell's resolution, so an alt-cost mana ability would need a new "alt cast = mana ability" mode. Available in any red pool. |
@@ -183,7 +181,6 @@ still ⏳.
 
 | Card | Status | Notes |
 |---|---|---|
-| Basking Rootwalla | ⏳ | Madness creature. |
 | Elvish Reclaimer | 🟡 | {1}{G} 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider (3/4 with 7+ in graveyard) is omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Haywire Mite | ✅ | {2}, sac: destroy artifact/enchantment/planeswalker + gain 1 life (`ActivatedAbility::sac_cost`). |
 | Sylvan Safekeeper | ✅ | {G} 1/1 Human Wizard. Sacrifice a Forest: target creature gains shroud EOT. Sac-of-other-land cost folded into resolution. |

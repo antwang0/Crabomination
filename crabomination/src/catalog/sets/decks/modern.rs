@@ -11599,6 +11599,72 @@ pub fn basking_rootwalla() -> CardDefinition {
     }
 }
 
+/// Blazing Rootwalla — {R} Creature — Lizard. 1/1. Madness {0}.
+/// "{1}{R}: Blazing Rootwalla gets +1/+1 until end of turn. Activate only
+/// once each turn." The red sibling of Basking Rootwalla.
+pub fn blazing_rootwalla() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    CardDefinition {
+        name: "Blazing Rootwalla",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Lizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Madness(ManaCost::default())],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)]),
+            effect: Effect::PumpPT {
+                what: Selector::This,
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            once_per_turn: true,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Anje's Ravager — {2}{R}{R} Legendary Creature — Vampire Berserker. 3/3.
+/// Trample. Madness {1}{R}. "Whenever Anje's Ravager attacks, discard your
+/// hand, then draw three cards."
+pub fn anjes_ravager() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, Supertype, TriggeredAbility};
+    CardDefinition {
+        name: "Anje's Ravager",
+        cost: cost(&[generic(2), r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        keywords: vec![
+            Keyword::Trample,
+            Keyword::Madness(ManaCost::new(vec![ManaSymbol::Generic(1), ManaSymbol::Colored(Color::Red)])),
+        ],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::Discard {
+                    who: Selector::You,
+                    amount: Value::HandSizeOf(PlayerRef::You),
+                    random: false,
+                },
+                Effect::Draw { who: Selector::You, amount: Value::Const(3) },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 // ── Modern cube supplement: additional cube-playable cards ──────────────────
 
 /// Dreadhorde Arcanist — {1}{R} Creature — Zombie Wizard 1/3. Trample.
