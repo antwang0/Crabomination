@@ -7766,6 +7766,113 @@ pub fn archmages_charm() -> CardDefinition {
     }
 }
 
+/// Snakeskin Veil — {G} Instant. Target creature gets +1/+1 and gains
+/// hexproof until end of turn.
+pub fn snakeskin_veil() -> CardDefinition {
+    CardDefinition {
+        name: "Snakeskin Veil",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(1),
+                toughness: Value::Const(1),
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::Hexproof,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Murmuring Mystic — {3}{U}, 1/5 Human Wizard. Whenever you cast an instant
+/// or sorcery spell, create a 1/1 blue Bird Illusion with flying.
+pub fn murmuring_mystic() -> CardDefinition {
+    CardDefinition {
+        name: "Murmuring Mystic",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 5,
+        triggered_abilities: vec![crate::effect::shortcut::magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Bird Illusion".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![Color::Blue],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Bird, CreatureType::Illusion],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Werewolf Pack Leader — {G}{G}, 3/3 Wolf. Whenever it attacks, if you
+/// control three or more creatures, draw a card. {3}{G}{G}: it gets +1/+1
+/// and can't be blocked this turn.
+pub fn werewolf_pack_leader() -> CardDefinition {
+    CardDefinition {
+        name: "Werewolf Pack Leader",
+        cost: cost(&[g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wolf],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
+                Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    n: Value::Const(3),
+                },
+            ),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), g()]),
+            effect: Effect::Seq(vec![
+                Effect::PumpPT {
+                    what: Selector::This,
+                    power: Value::Const(1),
+                    toughness: Value::Const(1),
+                    duration: Duration::EndOfTurn,
+                },
+                Effect::GrantKeyword {
+                    what: Selector::This,
+                    keyword: Keyword::Unblockable,
+                    duration: Duration::EndOfTurn,
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`

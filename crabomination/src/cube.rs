@@ -954,6 +954,9 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         supreme_verdict,
         stubborn_denial,
         archmages_charm,
+        snakeskin_veil,
+        murmuring_mystic,
+        werewolf_pack_leader,
         crumble_to_dust,
         // ── modern_decks (claude/modern_decks) — new R cards ──
         pyroblast,

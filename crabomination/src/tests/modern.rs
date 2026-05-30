@@ -8888,6 +8888,55 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn snakeskin_veil_pumps_and_grants_hexproof() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::snakeskin_veil());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let c = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "+1/+1");
+    assert!(c.has_keyword(&Keyword::Hexproof), "gains hexproof");
+}
+
+#[test]
+fn murmuring_mystic_makes_a_bird_on_instant() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::murmuring_mystic());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bolt castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Bird Illusion"),
+        "casting an instant mints a Bird");
+}
+
+#[test]
+fn werewolf_pack_leader_draws_when_attacking_with_three() {
+    let mut g = two_player_game();
+    let leader = g.add_card_to_battlefield(0, catalog::werewolf_pack_leader());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    g.battlefield.iter_mut().find(|c| c.id == leader).unwrap().summoning_sick = false;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    let hand_before = g.players[0].hand.len();
+    g.declare_attackers(vec![Attack { attacker: leader, target: AttackTarget::Player(1) }])
+        .expect("attacks");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1,
+        "drew a card (controls 3+ creatures)");
+}
+
+#[test]
 fn supreme_verdict_destroys_all_creatures() {
     let mut g = two_player_game();
     let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
