@@ -47,6 +47,14 @@ sections, and one improvement each in engine / UI / server.
   Temporal Manipulation, Capture of Jingzhou, Nexus of Fate (`sets::xtra`,
   registered). Follow-up: Nexus's shuffle-instead-of-graveyard replacement
   once a leaves-graveyard replacement primitive exists.
+- **Auto-target through step-keyed triggers** — `auto_target_for_effect`
+  does not fill the target slot of a `Seq`-wrapped `CreateTokenCopyOf`
+  source when the trigger fires from the command zone (emblem) or a
+  step-keyed battlefield trigger, so Saheeli Rai's -7 emblem creates +
+  fires but its copy body resolves to 0 tokens. Fix: thread auto-target
+  through the `fire_step_triggers` push path the way
+  `dispatch_triggers_for_events` does (or surface `Decision::ChooseTarget`
+  for bot/auto deciders there).
 - See `FEATURE_ROADMAP.md` Tier 1. DONE this run: additional cast costs
   (`AdditionalCastCost::SacrificePermanent`/`Discard`), `GrantActivatedAbility`
   static, "when target dies this turn" delayed trigger. Still open: choose-N
