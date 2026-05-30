@@ -1558,6 +1558,11 @@ pub enum Effect {
     /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
     /// chain.
     SkipTurns { who: PlayerRef, count: Value },
+    /// CR 500.7 — "[Player] takes [count] extra turn(s) after this one."
+    /// Banks `count` onto each resolved player's `extra_turns`; consumed
+    /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
+    /// -7 coin-flip emblem.
+    TakeExtraTurn { who: PlayerRef, count: Value },
     /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
     /// Appends an `Emblem` (named after its source) to the player's
     /// emblem zone. Emblems never leave; their triggered abilities fire
@@ -1875,6 +1880,9 @@ impl Effect {
             Effect::NameCreatureType { what } => sel_has_target(what),
             Effect::WinGame { who } => player_has_target(who),
             Effect::SkipTurns { who, count } => {
+                player_has_target(who) || value_has_target(count)
+            }
+            Effect::TakeExtraTurn { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
             Effect::CreateEmblem { who, .. } => player_has_target(who),

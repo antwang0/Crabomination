@@ -144,6 +144,12 @@ pub struct Player {
     /// to 0 for snapshot back-compat.
     #[serde(default)]
     pub skip_turns: u32,
+    /// CR 500.7 — extra turns this player will take. When `advance_turn`
+    /// would pass the turn, an active player with `extra_turns > 0`
+    /// decrements it and keeps the turn instead (Time Walk, Ral Zarek's
+    /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub extra_turns: u32,
     /// CR 114 — emblems this player owns. Each carries a name (for
     /// display) and a set of triggered abilities that fire from the
     /// command zone; emblems never leave once created. The trigger
@@ -223,6 +229,7 @@ impl Player {
             no_maximum_hand_size: false,
             eliminated: false,
             skip_turns: 0,
+            extra_turns: 0,
             emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,

@@ -717,6 +717,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::DiminishCreaturesExceptChosenType { .. } => "Diminish creatures",
         Effect::CreateTokenCopyOf { .. } => "Copy permanent",
         Effect::CreateEmblem { .. } => "Get an emblem",
+        Effect::TakeExtraTurn { .. } => "Take an extra turn",
         _ => "Activate",
     }
 }
