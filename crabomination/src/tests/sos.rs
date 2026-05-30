@@ -13954,8 +13954,7 @@ fn zaffai_grants_a_free_instant_or_sorcery_each_turn() {
 }
 
 #[test]
-fn daydream_flickers_a_creature_back_at_end_of_turn() {
-    use crate::game::types::TurnStep;
+fn daydream_flickers_a_creature_and_adds_a_counter() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::daydream());
@@ -13966,11 +13965,11 @@ fn daydream_flickers_a_creature_back_at_end_of_turn() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Daydream castable for {1}{W}");
     drain_stack(&mut g);
-    // Creature is exiled now (flicker idiom defers the return).
-    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature exiled");
-    g.fire_step_triggers(TurnStep::End);
-    drain_stack(&mut g);
-    // Returns to the battlefield under its owner's control.
-    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
-        "creature flickered back at end of turn");
+    // Exile + return resolve in one shot — the bear is back (a fresh
+    // instance) carrying a +1/+1 counter.
+    let returned = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears")
+        .expect("creature returned to battlefield");
+    assert_eq!(returned.counter_count(CounterType::PlusOnePlusOne), 1,
+        "flicker leaves a +1/+1 counter");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Daydream"));
 }
