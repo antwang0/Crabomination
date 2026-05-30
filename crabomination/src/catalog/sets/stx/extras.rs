@@ -2467,12 +2467,8 @@ pub fn verdant_mastery() -> CardDefinition {
 
 // ── Sacred Fire ─────────────────────────────────────────────────────────────
 
-/// Sacred Fire — {R}{W} Sorcery. "Sacred Fire deals 3 damage to any
-/// target. You gain 3 life. / Flashback {5}{R}{W}."
-///
-/// 🟡 Body wired: 3 damage + 3 life. Flashback {5}{R}{W} declared via
-/// `Keyword::Flashback(ManaCost)` — the engine's `cast_flashback`
-/// path picks up the keyword and re-casts from graveyard.
+/// Sacred Fire — {R}{W} Sorcery. "Deals 3 damage to any target. You gain
+/// 3 life. / Flashback {5}{R}{W}" (re-cast from graveyard via `cast_flashback`).
 pub fn sacred_fire() -> CardDefinition {
     use crate::mana::{ManaCost, ManaSymbol};
     let flashback_cost = ManaCost {
@@ -2485,11 +2481,7 @@ pub fn sacred_fire() -> CardDefinition {
     CardDefinition {
         name: "Sacred Fire",
         cost: cost(&[r(), w()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
         keywords: vec![Keyword::Flashback(flashback_cost)],
         effect: Effect::Seq(vec![
             Effect::DealDamage {
@@ -2505,19 +2497,7 @@ pub fn sacred_fire() -> CardDefinition {
                 amount: Value::Const(3),
             },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 
@@ -3682,16 +3662,9 @@ pub fn defiant_strike() -> CardDefinition {
 
 /// Divine Gambit — {2}{W} Instant (Strixhaven Mystical Archive).
 /// "Exile target nonland permanent. Its controller may put a permanent
-/// card from their hand onto the battlefield."
-///
-/// 🟡 simplification: the "may put a permanent card from hand" gift
-/// half is omitted (engine has no "opp may put a permanent from
-/// hand" decision shape — would need a yes/no decision on the
-/// targeted permanent's controller's side + a permanent-from-hand
-/// selector at their hand zone). Body wires the exile half
-/// faithfully. Net play pattern: white instant-speed removal that
-/// hits any nonland permanent for 3 mana — strictly weaker than the
-/// printed gift back to the opp.
+/// card from their hand onto the battlefield." Both clauses ship: the
+/// gift-back is a `MayDo(Move(hand → battlefield))` offered to the
+/// target's controller (auto-decider declines by default).
 pub fn divine_gambit() -> CardDefinition {
     use crate::card::Zone;
     CardDefinition {
