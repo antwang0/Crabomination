@@ -19732,18 +19732,12 @@ pub fn lorehold_spectralward_b164() -> CardDefinition {
 
 /// Academic Dispute — {R} Instant. "Target creature gets +2/+0 and gains
 /// reach until end of turn. It must be blocked this turn if able."
-///
-/// 🟡 "Must be blocked" rider is omitted (no forced-block primitive).
+/// (Must-be-blocked rider via `Keyword::MustBeBlocked`, CR 509.1c.)
 pub fn academic_dispute() -> CardDefinition {
     CardDefinition {
         name: "Academic Dispute",
         cost: cost(&[r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Instant],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
         effect: Effect::Seq(vec![
             Effect::PumpPT {
                 what: target_filtered(SelectionRequirement::Creature),
@@ -19756,20 +19750,13 @@ pub fn academic_dispute() -> CardDefinition {
                 keyword: Keyword::Reach,
                 duration: Duration::EndOfTurn,
             },
+            Effect::GrantKeyword {
+                what: Selector::Target(0),
+                keyword: Keyword::MustBeBlocked,
+                duration: Duration::EndOfTurn,
+            },
         ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

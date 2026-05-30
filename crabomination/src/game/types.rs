@@ -689,6 +689,8 @@ pub enum GameError {
     CannotBlock(CardId),
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
+    #[error("Attacker {0:?} must be blocked if able and an idle blocker can block it")]
+    MustBeBlockedIfAble(CardId),
     #[error("Card {0:?} has Hexproof and cannot be targeted by opponents")]
     TargetHasHexproof(CardId),
     #[error("Card {0:?} has Shroud and cannot be targeted")]

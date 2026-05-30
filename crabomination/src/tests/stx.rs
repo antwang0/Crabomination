@@ -76061,3 +76061,46 @@ fn blade_historian_grants_double_strike_to_attackers_only() {
     assert!(!home.keywords.contains(&Keyword::DoubleStrike),
         "non-attacking creature does not");
 }
+
+#[test]
+fn academic_dispute_forces_block_if_able() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    // Academic Dispute's rider: must be blocked if able.
+    g.battlefield_find_mut(attacker).unwrap()
+        .granted_keywords_eot.push(Keyword::MustBeBlocked);
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = crate::game::types::TurnStep::DeclareBlockers;
+    // Leaving it unblocked while opp has an idle able blocker is illegal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_err(),
+        "must-be-blocked attacker can't be left unblocked");
+    // Assigning the idle blocker is legal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(opp, attacker)])).is_ok(),
+        "blocking it satisfies the requirement");
+}
+
+#[test]
+fn must_be_blocked_allows_unblocked_when_no_able_blocker() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    // Opponent's only creature is tapped — not able to block.
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(opp).unwrap().tapped = true;
+    g.clear_sickness(attacker);
+    g.battlefield_find_mut(attacker).unwrap()
+        .granted_keywords_eot.push(Keyword::MustBeBlocked);
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    g.step = crate::game::types::TurnStep::DeclareBlockers;
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_ok(),
+        "no able blocker → unblocked is legal");
+}

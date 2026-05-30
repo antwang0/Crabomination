@@ -335,6 +335,14 @@ pub enum Keyword {
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
     CantBlock,
+    /// CR 509.1c — "This creature must be blocked if able" (Lure-style
+    /// block requirement, also Academic Dispute's rider). Enforced in
+    /// `declare_blockers`: if an attacker carrying this keyword is left
+    /// unblocked while the defending player controls an idle creature
+    /// that could legally block it, the declaration is rejected. The
+    /// engine models the single-requirement case; multi-Lure
+    /// maximization (CR 509.1c's "as many as possible") is approximated.
+    MustBeBlocked,
     /// "When you cast this spell from your hand, exile it as it resolves.
     /// At the beginning of your next upkeep, you may cast this card from
     /// exile without paying its mana cost." Wired in

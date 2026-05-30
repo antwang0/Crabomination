@@ -296,6 +296,46 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute).
+        // If such an attacker is left unblocked while the defender controls
+        // an idle creature that could legally block it, reject the
+        // declaration. Considers the merged block set (already-declared
+        // blocks plus this batch) so independent multiplayer submissions
+        // compose. Single-requirement model; full CR maximization across
+        // multiple simultaneous requirements is approximated.
+        for atk in &self.attacking {
+            if !kws_of(atk.attacker).contains(&Keyword::MustBeBlocked) {
+                continue;
+            }
+            let already = self.block_map.values().any(|&aid| aid == atk.attacker);
+            let in_batch = assignments.iter().any(|(_, aid)| *aid == atk.attacker);
+            if already || in_batch {
+                continue;
+            }
+            let Some(defender_idx) = self.defender_for(atk.target) else { continue };
+            let attacker = match self.battlefield_find(atk.attacker) {
+                Some(a) => a,
+                None => continue,
+            };
+            let atk_colors = cp_of(atk.attacker).map(|c| c.colors.as_slice()).unwrap_or(&[]);
+            let idle_able_blocker = self.battlefield.iter().any(|b| {
+                b.definition.is_creature()
+                    && self.same_team(b.controller, defender_idx)
+                    && b.can_block()
+                    && !kws_of(b.id).contains(&Keyword::CantBlock)
+                    && !self.block_map.contains_key(&b.id)
+                    && !assignments.iter().any(|(bid, _)| *bid == b.id)
+                    && cp_of(b.id).is_some_and(|bcp| {
+                        super::can_block_attacker_computed(
+                            b, attacker, bcp, kws_of(atk.attacker), atk_colors,
+                        )
+                    })
+            });
+            if idle_able_blocker {
+                return Err(GameError::MustBeBlockedIfAble(atk.attacker));
+            }
+        }
+
         // All valid — apply (merge into existing block_map so multiple
         // defenders can submit independently in multiplayer).
         self.blockers_declared = true;
