@@ -41,6 +41,7 @@ pub fn glorious_anthem() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -85,5 +86,6 @@ pub fn animate_dead() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

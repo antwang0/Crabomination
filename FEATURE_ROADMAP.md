@@ -34,10 +34,13 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
 
 ## Tier 1 — unblocks several partial cards each
 
-1. **Additional cast costs (sacrifice / discard as a cost)** — a pre-flight
-   cost paid at cast time, not folded into resolution. Unblocks Tend the
-   Pests, Necrotic Fumes, and every "As an additional cost, sacrifice …"
-   card. Today these `Seq(Sacrifice, …)` at resolution.
+1. ~~**Additional cast costs (sacrifice / discard as a cost)**~~ — DONE
+   (`CardDefinition.additional_cast_cost: Vec<AdditionalCastCost>` —
+   `SacrificePermanent { filter }` / `Discard { count }`). Validated before
+   mana, paid during casting (CR 601.2b/601.2h) so death/discard triggers
+   fire before resolution; a sacrifice threads the fodder's power into the
+   spell's X. Wired Tend the Pests, Necrotic Fumes, Witherbloom Sacrosanct,
+   Illuminate History.
 2. **Choose-N modes ("choose two")** — a modal-spell primitive that picks N
    distinct modes with a real decision. Unblocks Cryptic Command, Prismari
    Charm (multi-target), the Lorehold "choose two" instant. Today collapsed

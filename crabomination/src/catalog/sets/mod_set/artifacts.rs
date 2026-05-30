@@ -35,6 +35,7 @@ pub fn ornithopter() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -81,6 +82,7 @@ pub fn ornithopter_of_paradise() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -128,6 +130,7 @@ pub fn millstone() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -197,6 +200,7 @@ pub fn mind_stone() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -269,6 +273,7 @@ pub fn aether_spellbomb() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -320,6 +325,7 @@ pub fn zuran_orb() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -383,6 +389,7 @@ pub fn chromatic_star() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -468,6 +475,7 @@ pub fn soul_guide_lantern() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -527,6 +535,7 @@ pub fn cankerbloom() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -581,6 +590,7 @@ pub fn fellwar_stone() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -631,5 +641,6 @@ pub fn monument_to_endurance() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

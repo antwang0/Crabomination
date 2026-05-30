@@ -66,6 +66,7 @@ pub fn galazeth_prismari() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -137,6 +138,7 @@ pub fn beledros_witherbloom() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -209,6 +211,7 @@ pub fn velomachus_lorehold() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -296,6 +299,7 @@ pub fn tanazir_quandrix() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -386,5 +390,6 @@ pub fn shadrix_silverquill() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

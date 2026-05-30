@@ -35,6 +35,7 @@ pub fn savannah_lions() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -66,6 +67,7 @@ pub fn white_knight() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -97,6 +99,7 @@ pub fn serra_angel() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -128,6 +131,7 @@ pub fn mahamoti_djinn() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -172,6 +176,7 @@ pub fn prodigal_sorcerer() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -203,6 +208,7 @@ pub fn black_knight() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -250,6 +256,7 @@ pub fn hypnotic_specter() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -281,6 +288,7 @@ pub fn sengir_vampire() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -312,6 +320,7 @@ pub fn shivan_dragon() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -343,6 +352,7 @@ pub fn grizzly_bears() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -390,6 +400,7 @@ pub fn birds_of_paradise() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -421,6 +432,7 @@ pub fn llanowar_elves() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -452,6 +464,7 @@ pub fn elvish_archers() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -483,5 +496,6 @@ pub fn craw_wurm() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

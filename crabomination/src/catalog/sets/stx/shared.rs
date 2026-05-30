@@ -12,8 +12,8 @@
 
 use super::no_abilities;
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition,
+    AdditionalCastCost, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
+    EventSpec, Keyword, SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition,
     TriggeredAbility, Value,
 };
 use crate::effect::PlayerRef;
@@ -107,6 +107,7 @@ pub fn inkling_summoning() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -115,54 +116,28 @@ pub fn inkling_summoning() -> CardDefinition {
 /// Tend the Pests — {1}{B}{G} Sorcery. "As an additional cost to cast this
 /// spell, sacrifice a creature. Create X 1/1 black and green Pest creature
 /// tokens with 'When this creature dies, you gain 1 life,' where X is the
-/// sacrificed creature's power."
-///
-/// 🟡 simplification: the "additional cost" sacrifice is folded into
-/// resolution (cost-as-first-step, same approximation Thud uses). The
-/// bot/UI never tries to interrupt between the cost being paid and the
-/// spell resolving. The spawned Pest tokens **now carry** the "die →
-/// gain 1 life" trigger via the new `TokenDefinition.triggered_abilities`
-/// field, so the Witherbloom lifegain chain works end-to-end (each Pest
-/// dies → +1 life → Pest Mascot / Killian's Confidence riders fire).
+/// sacrificed creature's power." The sacrifice is a real cast-time cost via
+/// `AdditionalCastCost::SacrificePermanent`, which threads the fodder's
+/// power into the spell's X (read by `Value::XFromCost`).
 pub fn tend_the_pests() -> CardDefinition {
     let pest = stx_pest_token();
     CardDefinition {
         name: "Tend the Pests",
         cost: cost(&[generic(1), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Seq(vec![
-            Effect::SacrificeAndRemember {
+        additional_cast_cost: vec![AdditionalCastCost::SacrificePermanent {
+            filter: SelectionRequirement::Creature
+                .and(SelectionRequirement::ControlledByYou),
+        }],
+        effect: Effect::Repeat {
+            count: Value::XFromCost,
+            body: Box::new(Effect::CreateToken {
                 who: PlayerRef::You,
-                filter: SelectionRequirement::Creature
-                    .and(SelectionRequirement::ControlledByYou),
-            },
-            Effect::Repeat {
-                count: Value::SacrificedPower,
-                body: Box::new(Effect::CreateToken {
-                    who: PlayerRef::You,
-                    count: Value::Const(1),
-                    definition: pest,
-                }),
-            },
-        ]),
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+                count: Value::Const(1),
+                definition: pest,
+            }),
+        },
+        ..Default::default()
     }
 }
 

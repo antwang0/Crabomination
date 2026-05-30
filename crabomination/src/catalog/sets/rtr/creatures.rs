@@ -27,5 +27,6 @@ pub fn ghor_clan_rampager() -> CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }

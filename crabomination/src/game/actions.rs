@@ -945,6 +945,16 @@ impl GameState {
             }
         }
 
+        // CR 601.2b — additional cast costs ("As an additional cost to cast
+        // this spell, sacrifice / discard …"). Validate payability up front
+        // so an unpayable spell reverts to hand before any mana is spent;
+        // the costs themselves are paid after the mana cost succeeds.
+        let additional_costs = card.definition.additional_cast_cost.clone();
+        if !additional_costs.is_empty() && !self.additional_costs_payable(p, &additional_costs) {
+            self.players[p].hand.push(card);
+            return Err(GameError::SelectionRequirementViolated);
+        }
+
         // Pay the cost (substitute X if present, then add any
         // static-ability tax such as Damping Sphere's "{1} more after the
         // first spell each turn").
@@ -1033,7 +1043,19 @@ impl GameState {
             card_id,
             face: self.pending_cast_face,
         });
+
+        // CR 601.2h — pay the additional cast costs now (during casting), so
+        // sacrifice/discard triggers fire before the spell resolves. A
+        // sacrifice reports the fodder's power, which becomes the spell's X
+        // for "X = the sacrificed creature's power" riders (Tend the Pests).
+        let mut sac_x = None;
+        if !additional_costs.is_empty() {
+            let (mut cost_events, power) = self.pay_additional_costs(p, &additional_costs);
+            auto_events.append(&mut cost_events);
+            sac_x = power;
+        }
         let events = auto_events;
+        let final_x = x_value.unwrap_or(0).max(sac_x.unwrap_or(0));
 
         self.finalize_cast(
             p,
@@ -1041,12 +1063,93 @@ impl GameState {
             target,
             additional_targets,
             mode,
-            x_value.unwrap_or(0),
+            final_x,
             converged_value,
             mana_spent,
         );
 
         Ok(events)
+    }
+
+    /// CR 601.2b — can every additional cast cost be paid right now? Checked
+    /// before mana so an unpayable spell reverts cleanly.
+    pub(crate) fn additional_costs_payable(
+        &self,
+        p: usize,
+        costs: &[crate::card::AdditionalCastCost],
+    ) -> bool {
+        use crate::card::AdditionalCastCost as A;
+        costs.iter().all(|c| match c {
+            A::SacrificePermanent { filter } => self.battlefield.iter().any(|c| {
+                c.controller == p
+                    && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), p, None)
+            }),
+            A::Discard { count } => self.players[p].hand.len() >= *count as usize,
+        })
+    }
+
+    /// CR 601.2h — pay each additional cast cost immediately. Returns the
+    /// emitted events plus, for a sacrifice, the sacrificed permanent's
+    /// power (threaded into the spell's X).
+    pub(crate) fn pay_additional_costs(
+        &mut self,
+        p: usize,
+        costs: &[crate::card::AdditionalCastCost],
+    ) -> (Vec<GameEvent>, Option<u32>) {
+        use crate::card::AdditionalCastCost as A;
+        let mut events = Vec::new();
+        let mut sac_power = None;
+        for cost in costs {
+            match cost {
+                A::SacrificePermanent { filter } => {
+                    // Auto-pick the cheapest matching permanent (tokens
+                    // first, then lowest mana value, then lowest power).
+                    let chosen = {
+                        let mut cands: Vec<&crate::card::CardInstance> = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && self.evaluate_requirement_static(
+                                        filter,
+                                        &Target::Permanent(c.id),
+                                        p,
+                                        None,
+                                    )
+                            })
+                            .collect();
+                        cands.sort_by_key(|c| {
+                            (!c.is_token, c.definition.cost.cmc(), c.power())
+                        });
+                        cands
+                            .first()
+                            .map(|c| (c.id, c.power().max(0) as u32, c.definition.is_creature()))
+                    };
+                    if let Some((id, power, is_creature)) = chosen {
+                        sac_power = Some(power);
+                        if is_creature {
+                            if let Some(c) = self.battlefield_find(id) {
+                                self.died_card_snapshots.insert(id, c.clone());
+                            }
+                            events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
+                            events.push(GameEvent::CreatureDied { card_id: id });
+                        }
+                        events.push(GameEvent::PermanentSacrificed { card_id: id, who: p });
+                        let mut die = self.remove_to_graveyard_with_triggers(id);
+                        events.append(&mut die);
+                    }
+                }
+                A::Discard { count } => {
+                    for _ in 0..*count {
+                        let pick = self.players[p].hand.first().map(|c| c.id);
+                        if let Some(id) = pick {
+                            self.discard_card(p, id, &mut events);
+                        }
+                    }
+                }
+            }
+        }
+        (events, sac_power)
     }
 
     /// Common post-cost-payment bookkeeping for the three cast paths

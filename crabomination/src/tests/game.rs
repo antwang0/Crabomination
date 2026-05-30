@@ -151,6 +151,7 @@ fn annihilator_1_attack_forces_defender_sacrifice() {
             exile_on_resolve: false,
             affinity_filter: None,
             equipped_bonus: None,
+            additional_cast_cost: vec![],
         }
     }
 
@@ -4360,6 +4361,44 @@ fn tend_the_pests_sacrifices_creature_and_creates_x_pests() {
     assert_eq!(pests, 4, "Should create X = 4 Pest tokens (one per sacrificed power)");
 }
 
+/// CR 601.2b — an "additional cost: sacrifice a creature" spell can't be
+/// cast when there's nothing to sacrifice; the spell stays in hand and no
+/// mana is spent.
+#[test]
+fn additional_cost_sacrifice_rejected_without_fodder() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let before = g.players[0].life;
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no creature to sacrifice → cast rejected");
+    assert!(g.players[0].has_in_hand(id), "spell reverts to hand");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "mana not spent on a rejected cast");
+    assert_eq!(g.players[1].life, before, "opponent not drained — spell never resolved");
+}
+
+/// CR 601.2h — the additional-cost sacrifice happens *during casting*, so
+/// the fodder leaves the battlefield immediately, before the spell resolves
+/// off the stack.
+#[test]
+fn additional_cost_sacrifice_pays_during_cast() {
+    let mut g = two_player_game();
+    let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::witherbloom_sacrosanct());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable with fodder present");
+    // Sacrifice paid as a cost — fodder is gone before the drain resolves.
+    assert!(!g.battlefield.iter().any(|c| c.id == fodder),
+        "fodder sacrificed during casting, not at resolution");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Witherbloom Sacrosanct drains the opponent for 3");
+}
+
 // ── CR 702.90b — Infect player damage → poison counters ─────────────────────
 
 /// CR 702.90b: "Damage dealt to a player by a source with infect doesn't
@@ -4542,6 +4581,7 @@ fn mill_caps_at_library_size_per_cr_701_17b() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let mill = g.add_card_to_hand(0, mill_def);
     g.perform_action(GameAction::CastSpell {

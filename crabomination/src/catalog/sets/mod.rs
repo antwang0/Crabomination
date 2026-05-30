@@ -150,6 +150,7 @@ pub fn dual_land_with(
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 

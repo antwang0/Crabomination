@@ -3616,6 +3616,7 @@ fn eyetwitch_brood_grows_when_another_pest_dies() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
     let pest_id = g.add_card_to_battlefield(0, pest_def);
     g.clear_sickness(pest_id);
@@ -6206,6 +6207,7 @@ fn zero_damage_does_not_trigger_damage_events_per_cr_120_8() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -6290,6 +6292,7 @@ fn zero_scry_does_not_trigger_scry_events_per_cr_701_22b() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -10765,6 +10768,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -16935,6 +16939,7 @@ fn set_life_total_emits_correct_delta_events_per_cr_119_5() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -16982,6 +16987,7 @@ fn set_life_total_higher_emits_life_gained() {
         max_counters_of_kind: None,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -17040,6 +17046,7 @@ fn zero_life_gain_does_not_trigger_lifegain_events_per_cr_119_9() {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     };
 
     let mut g = two_player_game();
@@ -49593,6 +49600,7 @@ fn test_card_die_roll_d6_midpoint() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49636,6 +49644,7 @@ fn test_card_die_roll_d6_big_gain() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49676,6 +49685,7 @@ fn test_card_die_roll_d6_partial_table() -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
@@ -49807,6 +49817,7 @@ fn test_card_die_roll_d6_plus(modifier: i32) -> crate::card::CardDefinition {
         exile_on_resolve: false,
         affinity_filter: None,
         equipped_bonus: None,
+        additional_cast_cost: vec![],
     }
 }
 
