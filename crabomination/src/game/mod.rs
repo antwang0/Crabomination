@@ -2209,17 +2209,22 @@ impl GameState {
         if !died.is_empty() {
             use crate::game::types::DelayedKind;
             let mut fire: Vec<crate::game::types::DelayedTrigger> = Vec::new();
+            let mut watched: Vec<CardId> = Vec::new();
             self.delayed_triggers.retain(|dt| {
                 if let DelayedKind::WhenCardDies(cid) = dt.kind
                     && died.contains(&cid)
                 {
                     fire.push(dt.clone());
+                    watched.push(cid);
                     false
                 } else {
                     true
                 }
             });
-            for dt in fire {
+            for (dt, cid) in fire.into_iter().zip(watched) {
+                // Expose the dead creature as the trigger's source so bodies
+                // can reference it (e.g. "exile it") via `Selector::This` /
+                // `TriggerSource`; `target` still carries its controller.
                 self.stack.push(crate::game::types::StackItem::Trigger {
                     source: dt.source,
                     controller: dt.controller,
@@ -2228,7 +2233,7 @@ impl GameState {
                     mode: None,
                     x_value: 0,
                     converged_value: 0,
-                    trigger_source: None,
+                    trigger_source: Some(crate::game::effects::EntityRef::Card(cid)),
                     mana_spent: 0,
                     event_amount: 0,
                     intervening_if: None,
