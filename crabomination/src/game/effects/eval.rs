@@ -507,6 +507,17 @@ impl GameState {
                 max_opp_lands > your_lands
             }
             Predicate::AttackingAlone => self.attacking.len() == 1,
+            Predicate::DeliriumActive { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return false };
+                let mut kinds: std::collections::HashSet<&crate::card::CardType> =
+                    std::collections::HashSet::new();
+                for c in &self.players[p].graveyard {
+                    for t in &c.definition.card_types {
+                        kinds.insert(t);
+                    }
+                }
+                kinds.len() >= 4
+            }
             Predicate::IncrementSatisfied => {
                 // SOS Increment: "Whenever you cast a spell, if the
                 // amount of mana you spent is greater than this
@@ -635,6 +646,9 @@ impl GameState {
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::PowerPlusToughnessAtMost(n) => {
+                        card.definition.is_creature() && card.power() + card.toughness() <= *n
+                    }
                     R::PowerLessThanSource => {
                         source
                             .and_then(|s| self.battlefield_find(s))
@@ -771,6 +785,9 @@ impl GameState {
             R::PowerLessThanSource => false,
             R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
             R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+            R::PowerPlusToughnessAtMost(n) => {
+                card.definition.is_creature() && card.power() + card.toughness() <= *n
+            }
             R::HasSupertype(st) => card.definition.supertypes.contains(st),
             R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
             R::HasLandType(lt) => card.definition.subtypes.land_types.contains(lt),

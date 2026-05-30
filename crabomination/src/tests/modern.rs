@@ -8888,6 +8888,129 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn unholy_heat_deals_two_without_delirium() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == angel).unwrap().damage, 2,
+        "deals 2 without delirium");
+}
+
+#[test]
+fn unholy_heat_deals_six_with_delirium() {
+    let mut g = two_player_game();
+    let angel = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    // Seed 4 card types in our graveyard: creature, instant, enchantment, artifact.
+    for def in [
+        catalog::grizzly_bears(),
+        catalog::lightning_bolt(),
+        catalog::seal_of_fire(),
+        catalog::mishras_bauble(),
+    ] {
+        let id = g.next_id();
+        g.players[0].graveyard.push(crate::card::CardInstance::new(id, def, 0));
+    }
+    let id = g.add_card_to_hand(0, catalog::unholy_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(angel)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == angel), "6 damage kills the 4/4 (delirium)");
+}
+
+#[test]
+fn cut_down_destroys_small_creature_only() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2+2=4 ≤ 5
+    let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4+4=8 > 5
+    let id = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable on the small creature");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "small creature destroyed");
+
+    // The big creature isn't a legal target.
+    let id2 = g.add_card_to_hand(0, catalog::cut_down());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let err = g.perform_action(GameAction::CastSpell {
+        card_id: id2, target: Some(Target::Permanent(big)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap_err();
+    assert!(matches!(err, GameError::SelectionRequirementViolated | GameError::InvalidTarget));
+}
+
+#[test]
+fn galvanic_blast_affinity_boosts_with_three_artifacts() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mishras_bauble());
+    }
+    let id = g.add_card_to_hand(0, catalog::galvanic_blast());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 4, "4 damage with 3 artifacts");
+}
+
+#[test]
+fn seal_of_fire_sacrifices_to_deal_two() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_fire());
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac Seal of Fire");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal is sacrificed");
+    assert_eq!(g.players[1].life, foe_life - 2, "deals 2 to the target");
+}
+
+#[test]
+fn abrade_mode_zero_burns_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::abrade());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "3 damage kills the 2/2");
+}
+
+#[test]
+fn boros_charm_mode_zero_deals_four_to_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::boros_charm());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 4, "4 damage to target player");
+}
+
+#[test]
 fn servant_of_tymaret_inspired_drains_on_untap() {
     let mut g = two_player_game();
     let servant = g.add_card_to_battlefield(0, catalog::servant_of_tymaret());

@@ -936,6 +936,12 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         grapeshot,
         ahn_crop_crasher,
         servant_of_tymaret,
+        unholy_heat,
+        cut_down,
+        galvanic_blast,
+        seal_of_fire,
+        abrade,
+        boros_charm,
         crumble_to_dust,
         // ── modern_decks (claude/modern_decks) — new R cards ──
         pyroblast,

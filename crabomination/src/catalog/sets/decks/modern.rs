@@ -7367,6 +7367,130 @@ pub fn servant_of_tymaret() -> CardDefinition {
     }
 }
 
+/// Unholy Heat — {R} Instant. Deals 2 damage to target creature or
+/// planeswalker; Delirium (4+ card types in your graveyard) deals 6 instead.
+pub fn unholy_heat() -> CardDefinition {
+    CardDefinition {
+        name: "Unholy Heat",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::DeliriumActive { who: PlayerRef::You },
+            then: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(6),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(2),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Cut Down — {B} Instant. Destroy target creature with total power and
+/// toughness 5 or less.
+pub fn cut_down() -> CardDefinition {
+    CardDefinition {
+        name: "Cut Down",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Destroy {
+            what: target_filtered(SelectionRequirement::PowerPlusToughnessAtMost(5)),
+        },
+        ..Default::default()
+    }
+}
+
+/// Galvanic Blast — {R} Instant. Deals 1 damage to any target; Affinity for
+/// artifacts (3+ artifacts you control) deals 4 instead.
+pub fn galvanic_blast() -> CardDefinition {
+    CardDefinition {
+        name: "Galvanic Blast",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::If {
+            cond: Predicate::SelectorCountAtLeast {
+                sel: Selector::EachPermanent(
+                    SelectionRequirement::Artifact.and(SelectionRequirement::ControlledByYou),
+                ),
+                n: Value::Const(3),
+            },
+            then: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) }),
+            else_: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Seal of Fire — {R} Enchantment. Sacrifice it: deals 2 damage to any target.
+pub fn seal_of_fire() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Fire",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![crate::effect::ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Abrade — {1}{R} Instant. Choose one — deal 3 damage to target creature;
+/// or destroy target artifact.
+pub fn abrade() -> CardDefinition {
+    CardDefinition {
+        name: "Abrade",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(3),
+            },
+            Effect::Destroy { what: target_filtered(SelectionRequirement::Artifact) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Boros Charm — {R}{W} Instant. Choose one — 4 damage to target player or
+/// planeswalker; or permanents you control gain indestructible until end of
+/// turn; or target creature gains double strike until end of turn.
+pub fn boros_charm() -> CardDefinition {
+    CardDefinition {
+        name: "Boros Charm",
+        cost: cost(&[r(), w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Player.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            },
+            Effect::GrantKeyword {
+                what: Selector::EachPermanent(SelectionRequirement::ControlledByYou),
+                keyword: Keyword::Indestructible,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::DoubleStrike,
+                duration: Duration::EndOfTurn,
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`

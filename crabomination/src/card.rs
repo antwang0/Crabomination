@@ -400,6 +400,10 @@ pub enum SelectionRequirement {
     HasEnchantmentSubtype(EnchantmentSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
+    /// Candidate's power + toughness (layer-computed) is at most `n`. Used
+    /// by Cut Down ("destroy target creature with total power and toughness
+    /// 5 or less"). Battlefield-only; false for non-creatures.
+    PowerPlusToughnessAtMost(i32),
     /// True when the candidate's power is strictly less than the source
     /// permanent's power (both read at evaluation time). Powers Mentor
     /// (CR 702.114 — "target attacking creature with lesser power") so the

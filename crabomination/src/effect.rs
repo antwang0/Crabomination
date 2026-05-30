@@ -568,6 +568,11 @@ pub enum Predicate {
     /// Exalted reminder ("Whenever a creature you control attacks
     /// alone, that creature gets +1/+1 until end of turn").
     AttackingAlone,
+    /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
+    /// least 4 distinct card types (the count of *types*, not cards). Backed
+    /// by scanning the graveyard's `definition.card_types`. Used by Unholy
+    /// Heat, Dragon's Rage Channeler, etc.
+    DeliriumActive { who: PlayerRef },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────
