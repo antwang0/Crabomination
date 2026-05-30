@@ -26,6 +26,7 @@ pub use sets::decks::*;
 pub use sets::mod_set::*;
 pub use sets::sos::*;
 pub use sets::stx::*;
+pub use sets::xtra::*;
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -55,6 +56,16 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     for &f in crate::catalog::sets::stx::all_stx_card_factories() {
         all.push(f);
     }
+    // Extra-turn spells (sets::xtra) — registered so mid-game snapshots
+    // involving them round-trip through the name→factory lookup.
+    let xtra: [CardFactory; 5] = [
+        sets::xtra::time_walk,
+        sets::xtra::time_warp,
+        sets::xtra::temporal_manipulation,
+        sets::xtra::capture_of_jingzhou,
+        sets::xtra::nexus_of_fate,
+    ];
+    all.extend_from_slice(&xtra);
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();
@@ -186,5 +197,14 @@ mod tests {
         let def = lookup_by_name("Spirited Companion")
             .expect("Spirited Companion should resolve via the STX catalog");
         assert_eq!(def.name, "Spirited Companion");
+    }
+
+    #[test]
+    fn lookup_resolves_extra_turn_spells() {
+        for name in ["Time Walk", "Time Warp", "Temporal Manipulation",
+                     "Capture of Jingzhou", "Nexus of Fate"] {
+            let def = lookup_by_name(name).expect(name);
+            assert_eq!(def.name, name);
+        }
     }
 }
