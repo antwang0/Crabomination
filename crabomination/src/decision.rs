@@ -136,6 +136,18 @@ pub enum Decision {
         commander: CardId,
         would_be: crate::card::Zone,
     },
+
+    /// CR 509.2 / 510.1c — the attacking player orders the creatures
+    /// blocking one attacker; combat damage is then assigned in that order
+    /// (each blocker must be dealt lethal before the next gets any). The
+    /// decider answers `DamageOrder(ordered_blocker_ids)`; `AutoDecider`
+    /// keeps the engine's default (declaration / CardId order). Any ids the
+    /// answer omits are appended in their original order, so a partial or
+    /// empty answer is always legal.
+    CombatDamageOrder {
+        attacker: CardId,
+        blockers: Vec<(CardId, String)>,
+    },
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
@@ -169,6 +181,10 @@ pub enum DecisionAnswer {
     /// `1..=sides` where `sides` is the die's face count from the
     /// matching `Decision::DieRoll { sides, .. }`.
     DieRoll(u8),
+    /// CR 510.1c — combat-damage assignment order: blocker ids in the order
+    /// the attacker assigns damage. Ids omitted from a partial answer keep
+    /// their original relative order at the end.
+    DamageOrder(Vec<CardId>),
 }
 
 pub trait Decider {
@@ -265,6 +281,9 @@ impl Decider for AutoDecider {
                 let midpoint = (*sides as u32).max(1).div_ceil(2);
                 DecisionAnswer::DieRoll(midpoint as u8)
             }
+            // CR 510.1c — keep the engine's default order (empty answer is
+            // treated as "all blockers in their original order").
+            Decision::CombatDamageOrder { .. } => DecisionAnswer::DamageOrder(vec![]),
         }
     }
 }

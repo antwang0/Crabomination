@@ -509,10 +509,11 @@ Vanguard-Captain (2nd Exalted), Pyrohistorian (ETB ping), Skydefender
 - **CR 702.15 — Lifelink** ✅ (lock-in, near the card work): combat damage
   from a lifelink creature gains its controller that much life.
   `cr_702_15_lifelink_combat_damage_gains_life`.
-- **CR 510 — Combat Damage Step** (in-progress 🟡): added
-  `cr_510_1c_trample_overflow_to_player` (4-power trampler vs a 2/2 →
-  2 lethal + 2 tramples). The attacker-chosen damage-assignment-order
-  gap is still ⏳ (auto-ordered by CardId — needs a Decision variant).
+- **CR 510 — Combat Damage Step** ✅ — trample overflow + the
+  attacker-chosen damage-assignment-order via the new
+  `Decision::CombatDamageOrder` (CR 509.2/510.1c). Default keeps CardId
+  order; a decider can reorder which blocker gets lethal first.
+  `cr_510_1c_attacker_chooses_damage_assignment_order`.
 - **CR 302.6 — Summoning sickness** ✅ (random lock-in): a freshly-entered
   creature can't attack unless it has Haste.
   `cr_302_6_summoning_sick_creature_cannot_attack`.

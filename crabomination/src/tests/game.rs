@@ -5269,6 +5269,35 @@ fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
 }
 
 #[test]
+fn cr_510_1c_attacker_chooses_damage_assignment_order() {
+    // A 3/3 attacker (no trample) is blocked by a 2/2 and a 3/3. The
+    // attacking player chooses the order: scripting [big, small] assigns
+    // all 3 to the 3/3 (lethal) and 0 to the 2/2 — so the 3/3 dies and the
+    // 2/2 lives, the opposite of the default (lowest-id-first) order.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || vanilla_body("Atk 3/3", 3, 3, vec![]));
+    let small = setup_attacker(&mut g, 1, || vanilla_body("Wall 2/2", 2, 2, vec![]));
+    let big = setup_attacker(&mut g, 1, || vanilla_body("Wall 3/3", 3, 3, vec![]));
+
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::DamageOrder(vec![big, small])]));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.perform_action(GameAction::DeclareBlockers(vec![(small, attacker), (big, attacker)]))
+        .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert!(!g.battlefield.iter().any(|c| c.id == big),
+        "attacker assigned all 3 to the 3/3 first → it dies");
+    assert!(g.battlefield.iter().any(|c| c.id == small),
+        "no damage left for the 2/2 → it survives");
+}
+
+#[test]
 fn cr_700_4_morbid_total_predicate_counts_deaths_across_players() {
     use crate::effect::Predicate;
     use crate::game::effects::EffectContext;
