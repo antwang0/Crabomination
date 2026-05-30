@@ -13635,44 +13635,24 @@ pub fn pop_quiz_recital() -> CardDefinition {
 
 // ── Diviner's Wand (synthesised STX-flavor Equipment) ─────────────────────
 
-/// Diviner's Wand — {4} Artifact — Equipment (synthesised STX-flavor
-/// rare Equipment). "Equipped creature gets +2/+1 and has 'When this
-/// creature deals combat damage to a player, draw a card.' / Equip {3}."
-///
-/// Push (modern_decks, NEW, `stx::extras`): A 4-mana equipment with
-/// equip {3}. Equip-grant statics are not yet a full primitive
-/// (Equipment-attached pump is engine-side; the combat-damage-draw
-/// rider needs a transient trigger grant). For now we ship the body
-/// + Equip ability shape only — wears as a +0/+0 placeholder.
-///
-/// Tests: `diviners_wand_is_a_four_mana_equipment_with_equip_three`.
+/// Diviner's Wand — {4} Artifact — Equipment (synthesised STX-flavor).
+/// Equipped creature gets +2/+1 and has flying. Equip {3}.
 pub fn diviners_wand() -> CardDefinition {
     CardDefinition {
         name: "Diviner's Wand",
         cost: cost(&[generic(4)]),
-        supertypes: vec![],
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes {
             artifact_subtypes: vec![crate::card::ArtifactSubtype::Equipment],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 2,
+            toughness: 1,
+            keywords: vec![Keyword::Flying],
+        }),
+        ..Default::default()
     }
 }
 

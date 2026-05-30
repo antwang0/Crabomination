@@ -209,6 +209,39 @@ pub(crate) fn cost_reduction_for_spell(
     reduction
 }
 
+/// Trinisphere floor: the largest `StaticEffect::SpellCostFloor` amount
+/// among untapped battlefield permanents (affects every player's spells).
+/// Returns 0 if none in play.
+pub(crate) fn spell_cost_floor(state: &crate::game::GameState) -> u32 {
+    use crate::effect::StaticEffect;
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !c.tapped)
+        .flat_map(|c| c.definition.static_abilities.iter())
+        .filter_map(|sa| match &sa.effect {
+            StaticEffect::SpellCostFloor { amount } => Some(*amount),
+            _ => None,
+        })
+        .max()
+        .unwrap_or(0)
+}
+
+/// Raise `cost` so its mana value is at least the active Trinisphere floor
+/// by padding generic mana. No-op when no floor is in play or the cost is
+/// already at/above it.
+pub(crate) fn apply_spell_cost_floor(
+    state: &crate::game::GameState,
+    cost: &mut crate::mana::ManaCost,
+) {
+    let floor = spell_cost_floor(state);
+    let mv = cost.cmc();
+    if floor > mv {
+        cost.symbols
+            .push(crate::mana::ManaSymbol::Generic(floor - mv));
+    }
+}
+
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
@@ -914,6 +947,9 @@ impl GameState {
         if !delve_cards.is_empty() {
             cost.reduce_generic(delve_cards.len() as u32);
         }
+        // Trinisphere floor (CR 117.7 / replacement-style): applied after
+        // every reduction so a discounted spell still owes the minimum.
+        apply_spell_cost_floor(self, &mut cost);
 
         // Snapshot pristine state before convoke + auto-tap mutate it, so a
         // failed payment can revert both convoke taps and any lands that
@@ -1350,6 +1386,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut cost);
         let receipt = self.try_pay_with_auto_tap(p, &cost)?;
         if receipt.side_effects.life_lost > 0 {
             self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
@@ -1703,6 +1740,7 @@ impl GameState {
         if reduction > 0 {
             cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut cost);
 
         // Pay. On failure put the card back in the command zone.
         let receipt = match self.try_pay_with_auto_tap(p, &cost) {
@@ -1928,6 +1966,7 @@ impl GameState {
         if reduction > 0 {
             mana_cost.reduce_generic(reduction);
         }
+        apply_spell_cost_floor(self, &mut mana_cost);
         let receipt = match self.try_pay_with_auto_tap(p, &mana_cost) {
             Ok(r) => r,
             Err(e) => {

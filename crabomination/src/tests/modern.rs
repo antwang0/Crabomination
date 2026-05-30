@@ -15740,3 +15740,37 @@ fn planar_nexus_taps_for_any_color() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Planar Nexus adds one mana of any color");
 }
+
+#[test]
+fn trinisphere_floors_cheap_spells_at_three() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    g.add_card_to_battlefield(0, catalog::trinisphere());
+    let id = g.add_card_to_hand(0, catalog::ponder());
+    // {U} alone is short of the {3} floor.
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "Ponder can't be paid for under Trinisphere with only {{U}}");
+    // Top up to three total; now it pays.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ponder castable once three mana are available");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "all three mana consumed");
+}
+
+#[test]
+fn trinisphere_does_not_tax_when_tapped() {
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let tri = g.add_card_to_battlefield(0, catalog::trinisphere());
+    g.battlefield.iter_mut().find(|c| c.id == tri).unwrap().tapped = true;
+    let id = g.add_card_to_hand(0, catalog::ponder());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("tapped Trinisphere imposes no floor");
+    drain_stack(&mut g);
+}

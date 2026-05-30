@@ -2578,6 +2578,13 @@ pub enum StaticEffect {
     PreventUntap {
         applies_to: Selector,
     },
+    /// Trinisphere: while the source is untapped, every spell that would
+    /// cost less than `amount` mana to cast costs that much instead
+    /// (generic is added to bring the total up). Applies to all players.
+    /// Read by the cast paths in `game/actions.rs` after cost reductions.
+    SpellCostFloor {
+        amount: u32,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

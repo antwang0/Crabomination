@@ -3740,7 +3740,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             // PreventUntap — consulted by `do_untap` (CR 502.3); no layer
             // effect since it gates a turn-based action rather than a
             // characteristic.
-            | StaticEffect::PreventUntap { .. } => vec![],
+            | StaticEffect::PreventUntap { .. }
+            // SpellCostFloor (Trinisphere) — read at cast time by
+            // `apply_spell_cost_floor`; no layer effect.
+            | StaticEffect::SpellCostFloor { .. } => vec![],
         })
         .collect()
 }

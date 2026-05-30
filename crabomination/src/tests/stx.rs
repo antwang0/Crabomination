@@ -75968,3 +75968,16 @@ fn cr_122_1d_academic_probation_stun_persists_through_untap() {
     assert!(!g.battlefield_find(opp_bear).unwrap().tapped,
         "untaps normally once the stun counter is gone");
 }
+
+#[test]
+fn diviners_wand_equips_for_three_and_buffs() {
+    let mut g = two_player_game();
+    let wand = g.add_card_to_battlefield(0, catalog::diviners_wand());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::Equip { equipment: wand, target: bear })
+        .expect("Diviner's Wand equips for {3}");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (4, 3), "+2/+1 over a 2/2 bear");
+    assert!(cp.keywords.contains(&Keyword::Flying), "grants flying");
+}

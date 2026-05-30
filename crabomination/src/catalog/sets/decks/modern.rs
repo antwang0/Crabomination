@@ -9102,20 +9102,21 @@ pub fn wall_of_blossoms() -> CardDefinition {
     }
 }
 
-/// Trinisphere — {3} Artifact. As long as Trinisphere is untapped, each
-/// spell costs at least {3} to cast.
-///
-/// Cube-style approximation: the "cost at least {3}" static is engine-
-/// wide ⏳ (no minimum-cost primitive — only the additional-cost-per-
-/// spell tax, Damping Sphere). Ships as a vanilla 3-mana artifact body
-/// — promote to ✅ once the minimum-cost-floor static lands. The card
-/// remains in pools as a colorless stop-gap pickup.
+/// Trinisphere — {3} Artifact. While untapped, each spell that would cost
+/// less than {3} to cast costs {3} instead.
 pub fn trinisphere() -> CardDefinition {
+    use crate::card::StaticAbility;
+    use crate::effect::StaticEffect;
     CardDefinition {
         name: "Trinisphere",
         cost: cost(&[generic(3)]),
         card_types: vec![CardType::Artifact],
-        effect: Effect::Noop,
+        static_abilities: vec![StaticAbility {
+            description: "As long as Trinisphere is untapped, each spell that \
+                          would cost less than three mana to cast costs three \
+                          instead.",
+            effect: StaticEffect::SpellCostFloor { amount: 3 },
+        }],
         ..Default::default()
     }
 }
