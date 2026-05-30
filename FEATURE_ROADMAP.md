@@ -48,9 +48,13 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
 3. ~~**"When target dies this turn" delayed trigger**~~ — DONE
    (`Effect::WhenTargetDiesThisTurn`). Searing Blood faithful; reusable for
    Rushed Rebirth's reanimate-on-death.
-4. **`GrantActivatedAbility(applies_to)` static** — grant a `{T}: …` ability
-   to a selector's permanents. Unblocks Galazeth Prismari ("artifacts tap for
-   any color"), Cryptolith Rite-style mana grants.
+4. ~~**`GrantActivatedAbility(applies_to)` static**~~ — DONE
+   (`StaticEffect::GrantActivatedAbility { applies_to, ability }`). Surfaced
+   as virtual activated abilities at indices ≥ a permanent's printed-ability
+   count; `applies_to` filter evaluated from the static source's controller.
+   Replaces the old name-keyed Galazeth/Resonating-Lute hack; shared
+   `shortcut::grant_tap_for_any_color(filter)` helper. Galazeth (artifacts),
+   Resonating Lute (lands) wired. Cryptolith Rite (creatures) ready to drop in.
 
 ## Tier 2 — single-card or niche
 

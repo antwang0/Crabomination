@@ -7052,6 +7052,23 @@ fn resonating_lute_draw_succeeds_at_seven_in_hand() {
 }
 
 #[test]
+fn resonating_lute_grants_lands_tap_for_any_color() {
+    // "Lands you control have '{T}: Add … mana of any one color'" — wired via
+    // StaticEffect::GrantActivatedAbility. A Forest (1 printed mana ability)
+    // gets the grant at index 1; tapping it adds one any-color mana.
+    let mut g = two_player_game();
+    let _lute = g.add_card_to_battlefield(0, catalog::resonating_lute());
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: forest, ability_index: 1, target: None, x_value: None })
+        .expect("Resonating Lute grants lands a tap-for-any-color ability at index 1");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1,
+        "granted land ability adds one mana");
+    assert!(g.battlefield_find(forest).unwrap().tapped, "land tapped for the grant");
+}
+
+#[test]
 fn potioners_trove_lifegain_blocked_without_spell_cast() {
     let mut g = two_player_game();
     let trove = g.add_card_to_battlefield(0, catalog::potioners_trove());

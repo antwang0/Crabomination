@@ -2650,6 +2650,19 @@ pub enum StaticEffect {
     /// scoped to the controller's attackers — `affects()` can't see combat
     /// state on its own, so this can't route through `selector_to_affected`.
     GrantKeywordToAttackers { keyword: Keyword },
+    /// "[Permanents matching `applies_to`] have '<ability>'." Grants a single
+    /// activated ability to every permanent the selector picks — Galazeth
+    /// Prismari ("Artifacts you control have '{T}: Add one mana of any
+    /// color'"), Cryptolith Rite ("Creatures you control have '{T}: Add one
+    /// mana of any color'"). `applies_to` is an `EachPermanent(filter)`
+    /// evaluated from the static source's controller, so "you control"
+    /// clauses scope correctly. Surfaced by `activate_ability` as a virtual
+    /// ability at index ≥ the permanent's printed-ability count, so the
+    /// standard cost-pay / mana-emit path works unchanged.
+    GrantActivatedAbility {
+        applies_to: Selector,
+        ability: ActivatedAbility,
+    },
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────
@@ -2911,6 +2924,23 @@ pub mod shortcut {
     }
     pub fn add_any_one_color(n: i32) -> Effect {
         Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(Value::Const(n)) }
+    }
+
+    /// "[Permanents matching `filter`] have '{T}: Add one mana of any
+    /// color.'" — the mana-dork-anthem static shared by Galazeth Prismari
+    /// (artifacts), Cryptolith Rite (creatures), Resonating Lute (lands).
+    pub fn grant_tap_for_any_color(filter: SelectionRequirement) -> StaticAbility {
+        StaticAbility {
+            description: "{T}: Add one mana of any color.",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(filter),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: add_any_one_color(1),
+                    ..Default::default()
+                },
+            },
+        }
     }
 
     pub fn etb(effect: Effect) -> TriggeredAbility {

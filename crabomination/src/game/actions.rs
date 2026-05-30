@@ -2804,50 +2804,39 @@ impl GameState {
 
     // ── Activate ability ──────────────────────────────────────────────────────
 
-    /// Static grant: "Permanents of type T you control have '{T}: Add
-    /// one mana of any one color.'" — returns the virtual mana ability
-    /// when a permanent named `source_name` is on the battlefield under
-    /// `controller`'s seat. Hooked into `activate_ability` so the
-    /// standard cost-pay / target-validation / mana-emit path "just
-    /// works" — no separate branch in the resolver. The granted ability
-    /// uses `ManaPayload::AnyOneColor(1)`, which routes through the
-    /// `AnyOneColorPending` decision (chooser picks the color) for UI
-    /// players; the AutoDecider picks the first legal color.
-    ///
-    /// Used by Galazeth Prismari (artifacts) and Resonating Lute
-    /// (lands; the printed text grants two restricted-spend mana —
-    /// collapsed to one unrestricted until the spend-restriction
-    /// primitive lands).
-    fn any_one_color_grant(
+    /// Collect the activated abilities granted to the permanent `card_id`
+    /// by `StaticEffect::GrantActivatedAbility` statics in play (Galazeth
+    /// Prismari, Cryptolith Rite). Each grant's `applies_to` filter is
+    /// evaluated from the static source's controller so "you control"
+    /// clauses scope to that player's permanents. Returned in battlefield
+    /// order so a permanent's granted-ability indices are stable within a
+    /// recompute. Surfaced by `activate_ability` at indices ≥ the
+    /// permanent's printed-ability count.
+    pub(crate) fn granted_abilities_for(
         &self,
-        controller: usize,
-        source_name: &str,
-    ) -> Option<crate::effect::ActivatedAbility> {
-        use crate::effect::{ActivatedAbility, Effect, ManaPayload, PlayerRef};
-        let source_in_play = self.battlefield.iter().any(|c| {
-            c.definition.name == source_name && c.controller == controller
-        });
-        if !source_in_play {
-            return None;
+        card_id: CardId,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::effect::{Selector, StaticEffect};
+        if self.battlefield_find(card_id).is_none() {
+            return vec![];
         }
-        Some(ActivatedAbility {
-            tap_cost: true,
-            mana_cost: crate::mana::ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(crate::card::Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false,
-            exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
-        })
+        let tgt = Target::Permanent(card_id);
+        let mut out = Vec::new();
+        for src in &self.battlefield {
+            for sa in &src.definition.static_abilities {
+                let StaticEffect::GrantActivatedAbility { applies_to, ability } = &sa.effect
+                else {
+                    continue;
+                };
+                let Selector::EachPermanent(req) = applies_to else { continue };
+                // Evaluate the filter from the granting source's controller
+                // so "ControlledByYou" picks that player's permanents.
+                if self.evaluate_requirement_static(req, &tgt, src.controller, None) {
+                    out.push(ability.clone());
+                }
+            }
+        }
+        out
     }
 
     pub(crate) fn activate_ability(
@@ -2900,24 +2889,19 @@ impl GameState {
                 .find(|c| c.id == card_id)
                 .map(|c| c.lost_all_abilities)
                 .unwrap_or(false);
-            // Galazeth Prismari static: "Artifacts you control have
-            // '{T}: Add one mana of any color.'" Surface this as a
-            // virtual activated ability at index = printed_count, so
-            // standard activate_ability validation and mana payment
-            // work without modifying every ability lookup path.
+            // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,
+            // Cryptolith Rite, …): surface granted abilities as virtual
+            // activated abilities at indices ≥ printed_count, so standard
+            // activate_ability validation and mana payment work without
+            // modifying every ability lookup path. Stripped permanents
+            // (CR 113.10b) keep their granted mana abilities but lose
+            // non-mana grants.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
-            let bf_card = &self.battlefield[pos];
-            let controller = bf_card.controller;
-            let is_artifact = bf_card.definition.is_artifact();
-            let is_land = bf_card.definition.is_land();
-            let granted = if ability_index == printed_count && !stripped {
-                if is_artifact {
-                    self.any_one_color_grant(controller, "Galazeth Prismari")
-                } else if is_land {
-                    self.any_one_color_grant(controller, "Resonating Lute")
-                } else {
-                    None
-                }
+            let granted = if ability_index >= printed_count {
+                self.granted_abilities_for(card_id)
+                    .into_iter()
+                    .nth(ability_index - printed_count)
+                    .filter(|a| !stripped || is_mana_ability(&a.effect))
             } else {
                 None
             };
