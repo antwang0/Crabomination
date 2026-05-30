@@ -2,8 +2,51 @@
 
 Improvement opportunities for the engine, client, and tooling.
 Items are grouped by area and roughly ordered by impact within each group.
-See `CUBE_FEATURES.md` (cube-card implementation status) and
-`STRIXHAVEN2.md` (Secrets-of-Strixhaven status).
+See `CUBE_FEATURES.md` (cube-card implementation status),
+`STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
+(prioritized engine functionality).
+
+## Recent additions (Push XLIII — claude/modern_decks: combat-requirement + same-name + Mentor primitives)
+
+New engine primitives, 16 partial cards completed/promoted with tests, 3 CR
+sections, and one improvement each in engine / UI / server.
+
+- **CR 509.1c — Must be blocked if able** ✅ — `Keyword::MustBeBlocked`
+  enforced in `declare_blockers` (reject leaving it unblocked while an idle
+  able blocker exists) + a bot `pick_blocks` post-pass so bot games can't
+  deadlock. Wires **Academic Dispute**.
+- **CR 702.114 — Mentor** ✅ — `SelectionRequirement::PowerLessThanSource`
+  (source-relative "lesser power"). Made **Combat Professor** + **Lorehold
+  Mentor** dynamic (were hard-coded `PowerAtMost`).
+- **CR 702.4 — Double strike** (lock-in test) via `GrantKeywordToAttackers`
+  static → **Blade Historian** ("attacking creatures you control have double
+  strike"); fixed its wrong P/T/subtype too.
+- **`Selector::SharingNameWith`** — "all permanents with the same name":
+  **Maelstrom Pulse**, **Echoing Truth**.
+- **`Value::PermanentsDestroyedThisResolution` + `ManaPayload::OfColors`** —
+  **Culling Ritual**'s "add {B} or {G} per permanent destroyed".
+- **Searing Blood** death-burn rider (Lava-Coil-style `If(toughness≤2)`),
+  **Elemental Expressionist** real flicker (`DelayUntil(NextEndStep)`),
+  **Symmetry Sage** merged to one magecraft `Seq`.
+- **Stale-doc promotions** (already wired in prior runs): Mica, Silverquill
+  the Disputant, Zaffai, Velomachus, Sacred Fire, Divine Gambit, Mentor's
+  Guidance; corrected Quandrix/Applied Geometry comments.
+- **UI** — `keyword_label` now prints friendly text for combat/evasion
+  keywords (Must be blocked, Can't block, Skulk, Fear, Intimidate, …) instead
+  of raw `{:?}`.
+- **Server** — `MatchOutcome.final_board_sizes` (per-seat battlefield count).
+
+### Follow-ups noticed this run (not yet done)
+
+- See `FEATURE_ROADMAP.md` Tier 1: additional cast costs (sacrifice/discard
+  as a cost), choose-N modes, "when target dies this turn" delayed trigger,
+  `GrantActivatedAbility` static (Galazeth Prismari).
+- **Echoing Truth same-name bounce** routes every copy to `OwnerOf(Target0)`;
+  mixed-ownership same-named permanents would all go to the target's owner.
+  Needs a per-moved-card owner destination to be fully correct.
+- **Client can't be built/clippy'd in the web sandbox** — `wayland-sys` needs
+  the `wayland-client` system lib. Engine + server clippy are clean. Re-run
+  `cargo clippy --workspace` locally to cover the client.
 
 ## Recent additions (Push XLII — claude/modern_decks: Madness + discard centralization + counter-trigger fix)
 

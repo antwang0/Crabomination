@@ -81,9 +81,7 @@ still ⏳.
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
 | Back to Basics | ✅ | Static "nonbasic lands don't untap" via `PreventUntap`. Fully functional. |
-| Opposition | 🟡 | Enchantment body only. Tap-creature-to-tap-permanent ability omitted. |
 | Parallax Tide | ⏳ | Fading + exile lands. Needs fade counters. |
-| Omniscience | 🟡 | Enchantment body only. Free-cast static omitted. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |

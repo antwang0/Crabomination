@@ -1,0 +1,46 @@
+# Feature roadmap
+
+Prioritized *engine functionality* backlog (the broader card/cleanup backlog
+lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
+
+## Already shipped (don't re-propose)
+
+- `GrantKeywordToAttackers` static — "attacking creatures you control have
+  <kw>" (Blade Historian, double strike).
+- `Keyword::MustBeBlocked` (CR 509.1c) — "must be blocked if able"
+  (Academic Dispute), enforced in `declare_blockers` + bot block post-pass.
+- `Selector::SharingNameWith` — "all permanents with the same name"
+  (Maelstrom Pulse, Echoing Truth).
+- `SelectionRequirement::PowerLessThanSource` (CR 702.114 Mentor) — source-
+  relative "lesser power" (Combat Professor, Lorehold Mentor).
+- `Value::PermanentsDestroyedThisResolution` + `ManaPayload::OfColors`
+  (Culling Ritual's "add {B} or {G} per permanent destroyed").
+- Flicker-and-return (`DelayUntil(NextEndStep, Move→battlefield)`) reused for
+  Elemental Expressionist's magecraft.
+- Ward enforcement (CR 702.21), Cascade, Casualty sac-copy, free-cast grants,
+  Madness, Dredge, Enrage, Exalted — all live.
+
+## Tier 1 — unblocks several partial cards each
+
+1. **Additional cast costs (sacrifice / discard as a cost)** — a pre-flight
+   cost paid at cast time, not folded into resolution. Unblocks Tend the
+   Pests, Necrotic Fumes, and every "As an additional cost, sacrifice …"
+   card. Today these `Seq(Sacrifice, …)` at resolution.
+2. **Choose-N modes ("choose two")** — a modal-spell primitive that picks N
+   distinct modes with a real decision. Unblocks Cryptic Command, Prismari
+   Charm (multi-target), the Lorehold "choose two" instant. Today collapsed
+   to a single `ChooseMode` of bundled pairs.
+3. **"When target dies this turn" delayed trigger** — event-keyed delayed
+   trigger (watch a specific card's death, expire at cleanup). Makes Searing
+   Blood fully faithful and unblocks Rushed Rebirth's reanimate-on-death.
+4. **`GrantActivatedAbility(applies_to)` static** — grant a `{T}: …` ability
+   to a selector's permanents. Unblocks Galazeth Prismari ("artifacts tap for
+   any color"), Cryptolith Rite-style mana grants.
+
+## Tier 2 — single-card or niche
+
+- Energy as a player resource (gain/pay energy) — ~1–2 modern cards.
+- Multi-target instants/sorceries ("any number of target …") prompt.
+- Copy-spell choosing new targets (CopySpell inherits originals today).
+- Emblem zone (planeswalker ult emblems).
+- Overload / alt-cost that swaps target filters at cast time.
