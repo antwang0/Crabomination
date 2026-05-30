@@ -736,6 +736,8 @@ mod tests {
             chosen_creature_type: None,
             once_per_turn_used: vec![],
             may_play_until: None,
+            keyword_counters: vec![],
+            granted_keywords_eot: vec![],
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {
