@@ -11665,6 +11665,24 @@ pub fn anjes_ravager() -> CardDefinition {
     }
 }
 
+/// Wind Drake — {2}{U} Creature — Drake. 2/2. Flying.
+pub fn wind_drake() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Wind Drake",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Drake],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
 /// Cunning Sparkmage — {1}{R} Creature — Human Shaman. 1/1. Haste.
 /// "{T}: This creature deals 1 damage to any target."
 pub fn cunning_sparkmage() -> CardDefinition {
@@ -11736,6 +11754,25 @@ pub fn fiery_temper() -> CardDefinition {
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Madness(ManaCost::new(vec![ManaSymbol::Colored(Color::Red)]))],
         effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) },
+        ..Default::default()
+    }
+}
+
+/// Vampire Nighthawk — {1}{B}{B} Creature — Vampire Shaman. 2/3. Flying,
+/// deathtouch, lifelink.
+pub fn vampire_nighthawk() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Vampire Nighthawk",
+        cost: cost(&[generic(1), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Vampire, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink],
         ..Default::default()
     }
 }

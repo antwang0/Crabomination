@@ -459,6 +459,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks (auras) ──
         spectral_flight,
+        wind_drake,
         flight,
         counterspell,
         mana_leak,
@@ -638,6 +639,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         terror,
         doom_blade,
         ravenous_chupacabra,
+        vampire_nighthawk,
         nekrataal,
         skinrender,
         fatal_push,

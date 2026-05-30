@@ -2151,6 +2151,24 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
+fn vampire_nighthawk_has_flying_deathtouch_lifelink() {
+    use crate::card::Keyword;
+    let def = catalog::vampire_nighthawk();
+    assert_eq!((def.power, def.toughness), (2, 3));
+    for kw in [Keyword::Flying, Keyword::Deathtouch, Keyword::Lifelink] {
+        assert!(def.keywords.contains(&kw), "Nighthawk has {kw:?}");
+    }
+}
+
+#[test]
+fn wind_drake_is_a_two_two_flier() {
+    use crate::card::Keyword;
+    let def = catalog::wind_drake();
+    assert_eq!((def.power, def.toughness), (2, 2));
+    assert!(def.keywords.contains(&Keyword::Flying));
+}
+
+#[test]
 fn nekrataal_etb_destroys_a_nonblack_creature() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
