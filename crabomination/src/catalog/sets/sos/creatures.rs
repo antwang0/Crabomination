@@ -4589,12 +4589,10 @@ pub fn elemental_mascot() -> CardDefinition {
 /// "Once during each of your turns, you may cast an instant or sorcery
 /// spell from your hand without paying its mana cost."
 ///
-/// 🟡 Body-only wire (push XVI). The "once-per-turn cast-IS-for-free"
-/// rider is omitted — engine has no per-turn alt-cost-grant primitive
-/// (would need `Player.zaffai_free_cast_used: bool` consumed by an
-/// alternative-cost path keyed off the source's controller). The 5/7
-/// vigilance-less body is still a powerful finisher in U/R aggro/spells
-/// pools.
+/// 5/7 Legendary Human Bard Sorcerer. "Once during each of your turns,
+/// you may cast an instant or sorcery spell from your hand without paying
+/// its mana cost" wired as a PreCombatMain StepBegins trigger granting a
+/// one-shot free-cast (`GrantMayPlay`) on an auto-picked IS card in hand.
 pub fn zaffai_and_the_tempests() -> CardDefinition {
     use crate::card::{MayPlayDuration, Supertype, Zone};
     use crate::game::types::TurnStep;
@@ -6284,12 +6282,10 @@ pub fn the_dawning_archaic() -> CardDefinition {
 /// "Flying, vigilance / Each instant and sorcery spell you cast has
 /// casualty 1."
 ///
-/// 🟡 Body wired (4/4 Legendary Elder Dragon Flying+Vigilance). The
-/// casualty-1 grant on instant/sorcery casts is omitted — engine has
-/// no static "spells of type X gain casualty N" primitive, and no
-/// Casualty keyword yet. The dragon body still serves as a 4/4
-/// flying/vigilance finisher in W/B decks. Tracked in TODO.md under
-/// "Casualty keyword".
+/// Silverquill, the Disputant — 4/4 Legendary Elder Dragon, Flying +
+/// Vigilance. "Each instant and sorcery spell you cast has casualty 1"
+/// wired as a SpellCast/YourControl trigger → may-sacrifice a power-≥1
+/// creature → copy the spell.
 pub fn silverquill_the_disputant() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, Supertype, TriggeredAbility};
     use crate::effect::shortcut::cast_is_instant_or_sorcery;
@@ -6464,16 +6460,10 @@ pub fn nita_forum_conciliator() -> CardDefinition {
 /// you may sacrifice an artifact. If you do, copy that spell and you
 /// may choose new targets for the copy."
 ///
-/// 🟡 Body + the printed sac-an-artifact-to-copy magecraft rider are
-/// both wired. Body: 4/4 Legendary Human Artificer. Magecraft trigger
-/// wraps `Effect::MayDo` around `Seq(Sacrifice(Artifact, 1) +
-/// CopySpell { what: TriggerSource })` — same template as Aziza, Mage
-/// Tower Captain's tap-three-to-copy trigger, but with a sacrifice cost
-/// in place of the tap-three. Auto-decider defaults to "no" (skip), so
-/// the trigger only fires the copy when the controller scripts a yes.
-/// Ward—Pay 3 life is tagged on the card via `Keyword::Ward(crate::card::WardCost::generic(3))` (engine
-/// keyword tag; ward enforcement still pending). Tracked in TODO.md
-/// under "Ward enforcement layer".
+/// Mica, Reader of Ruins — 4/4 Legendary Human Artificer, Ward—Pay 3 life
+/// (enforced). Magecraft trigger wraps `Effect::MayDo` around
+/// `Seq(Sacrifice(Artifact) + CopySpell(TriggerSource))`; the auto-decider
+/// declines by default, so the copy fires only when scripted yes.
 pub fn mica_reader_of_ruins() -> CardDefinition {
     use crate::effect::shortcut::magecraft;
     use crate::mana::r;
