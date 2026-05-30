@@ -135,6 +135,12 @@ pub struct MatchOutcome {
     /// the winner often ends a hair above an empty library. Empty if the
     /// match aborted before the game state was inspected.
     pub final_library_sizes: Vec<usize>,
+    /// Per-seat count of permanents the seat controls on the battlefield
+    /// at match end, parallel to `final_life_totals`. A "board development"
+    /// proxy: pairs with `final_turn` to tell a fast face-damage win
+    /// (small boards, low turn) apart from a grindy attrition game (wide
+    /// boards, high turn). Empty if the match aborted before inspection.
+    pub final_board_sizes: Vec<usize>,
 }
 
 /// How an eliminated player lost, inferred from their final state.
@@ -181,6 +187,9 @@ fn capture_outcome(state: &GameState) -> MatchOutcome {
         final_life_totals: state.players.iter().map(|p| p.life).collect(),
         loss_reasons: state.players.iter().map(classify_loss).collect(),
         final_library_sizes: state.players.iter().map(|p| p.library.len()).collect(),
+        final_board_sizes: (0..state.players.len())
+            .map(|seat| state.battlefield.iter().filter(|c| c.controller == seat).count())
+            .collect(),
     }
 }
 
@@ -723,6 +732,13 @@ mod tests {
             outcome.final_library_sizes[0],
             state.players[0].library.len()
         );
+        // Board sizes count the permanents each seat controls.
+        let bear = state.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        let _ = bear;
+        let outcome2 = capture_outcome(&state);
+        assert_eq!(outcome2.final_board_sizes.len(), state.players.len());
+        assert_eq!(outcome2.final_board_sizes[0], 1, "seat 0 controls one permanent");
+        assert_eq!(outcome2.final_board_sizes[1], 0);
     }
 
     fn drain_initial(seat: &ClientChannel) {
