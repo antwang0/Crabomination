@@ -2727,6 +2727,16 @@ pub struct ActivatedAbility {
     /// shapes).
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
+    /// Optional cost: tap an *untapped, different* permanent the activator
+    /// controls matching this filter (CR 602.5b "tap an untapped … you
+    /// control" costs). Mirrors `sac_other_filter` but taps rather than
+    /// sacrifices. Used by Opposition (`Tap an untapped creature you
+    /// control: Tap target …`) and similar. The auto-picker takes the
+    /// lowest-power matching untapped permanent so higher-value creatures
+    /// stay open. Rejected with `GameError::SelectionRequirementViolated`
+    /// when nothing matches. Defaults to None via `#[serde(default)]`.
+    #[serde(default)]
+    pub tap_other_filter: Option<SelectionRequirement>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

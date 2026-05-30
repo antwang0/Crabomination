@@ -14044,6 +14044,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
+                tap_other_filter: None,
                 self_counter_cost_reduction: None,
             },
             ActivatedAbility {
@@ -14062,6 +14063,7 @@ pub fn prismari_cogworks_b158() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 sac_other_filter: None,
+                tap_other_filter: None,
                 self_counter_cost_reduction: None,
             },
         ],

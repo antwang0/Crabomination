@@ -612,6 +612,7 @@ impl GameState {
                 exile_self_cost: false,
                 exile_other_filter: None,
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             });
             card.definition.activated_abilities = kept;
         }
@@ -2583,6 +2584,7 @@ impl GameState {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         })
     }
 
@@ -2825,6 +2827,28 @@ impl GameState {
             Vec::new()
         };
 
+        // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
+        // permanent (other than the source) the activator controls matches
+        // the cost's filter. Picks the lowest-power match so higher-value
+        // creatures stay open. Tapped after payment succeeds.
+        let tap_other_pick: Option<CardId> = if let Some(filter) =
+            ability.tap_other_filter.as_ref()
+        {
+            let pick = self
+                .battlefield
+                .iter()
+                .filter(|c| c.id != card_id && c.controller == p && !c.tapped)
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .min_by_key(|c| c.power())
+                .map(|c| c.id);
+            match pick {
+                Some(id) => Some(id),
+                None => return Err(GameError::SelectionRequirementViolated),
+            }
+        } else {
+            None
+        };
+
         // Apply self-counter cost reduction (Strixhaven Book artifacts).
         // Subtracts one generic pip per counter of the specified kind on
         // the source permanent. Clamped at the printed generic total via
@@ -2991,6 +3015,15 @@ impl GameState {
             events.push(GameEvent::PermanentSacrificed { card_id: other_cid, who: sac_who });
             let mut die_evs = self.remove_to_graveyard_with_triggers(other_cid);
             events.append(&mut die_evs);
+        }
+
+        // Tap-another-as-cost (CR 602.5b): with tap/mana/life paid, tap the
+        // pre-selected untapped permanent. Opposition's "Tap an untapped
+        // creature you control" cost runs here.
+        if let Some(other_cid) = tap_other_pick
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == other_cid)
+        {
+            c.tapped = true;
         }
 
         // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile

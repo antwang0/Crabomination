@@ -442,6 +442,7 @@ pub fn spell_satchel() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -470,6 +471,7 @@ pub fn spell_satchel() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1447,6 +1449,7 @@ pub fn hall_of_oracles() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -1607,6 +1610,7 @@ pub fn letter_of_acceptance() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![etb_gain_life(1)],
@@ -2223,6 +2227,7 @@ pub fn reckless_amplimancer() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -3410,6 +3415,7 @@ pub fn star_pupils_papers() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -3835,6 +3841,7 @@ pub fn soothsayer_adept() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -3997,6 +4004,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -4108,6 +4116,7 @@ pub fn pestilent_cauldron() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -4853,6 +4862,7 @@ pub fn manifold_key() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             // {T}: Untap target artifact.
             ActivatedAbility {
@@ -4871,6 +4881,7 @@ pub fn manifold_key() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -5451,6 +5462,7 @@ pub fn pursuit_of_knowledge() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl),
@@ -5772,6 +5784,7 @@ pub fn dueling_coach() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -8703,6 +8716,7 @@ pub fn tome_of_the_infinite() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -8868,6 +8882,7 @@ pub fn heirloom_mirror() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -8885,6 +8900,7 @@ pub fn heirloom_mirror() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -9398,6 +9414,7 @@ pub fn strixhaven_stadium() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![
             // Attack-trigger: pump the attacker +1/+1 EOT.
@@ -10724,6 +10741,7 @@ pub fn waker_of_waves() -> CardDefinition {
             exile_self_cost: true,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -11377,6 +11395,7 @@ pub fn witchs_cauldron() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -11482,6 +11501,7 @@ pub fn tome_of_the_guildpact() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -12266,6 +12286,7 @@ pub fn sungrass_egg() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -12673,6 +12694,7 @@ pub fn sneaky_snacker() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -12885,6 +12907,7 @@ pub fn pilgrim_of_the_ages() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -13219,6 +13242,7 @@ pub fn ember_anvil() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -13808,6 +13832,7 @@ pub fn lorehold_excavator() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -14797,6 +14822,7 @@ pub fn conjurers_bauble() -> CardDefinition {
                 amount: Value::Const(1),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -17668,6 +17694,7 @@ pub fn lorehold_wand() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -18090,6 +18117,7 @@ pub fn witherbloom_ritualist() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -18327,6 +18355,7 @@ pub fn witherbloom_channeler() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -18345,6 +18374,7 @@ pub fn witherbloom_channeler() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -18449,6 +18479,7 @@ pub fn prismari_bauble() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -18648,6 +18679,7 @@ pub fn silverquill_pen() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -19975,6 +20007,7 @@ pub fn witherbloom_wand() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -22765,6 +22798,7 @@ pub fn witherbloom_loremage() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![magecraft_drain_each_opp(1)],
         static_abilities: vec![],
@@ -23028,6 +23062,7 @@ pub fn witherbloom_apothecary() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -23143,6 +23178,7 @@ pub fn prismari_painter() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -24262,6 +24298,7 @@ pub fn lorehold_battlemage() -> CardDefinition {
                 },
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -24348,6 +24385,7 @@ pub fn witherbloom_plaguemage() -> CardDefinition {
                             .and(SelectionRequirement::ControlledByYou),
                         1,
                     )),
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -24651,6 +24689,7 @@ pub fn witherbloom_botanist() -> CardDefinition {
                 },
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -24784,6 +24823,7 @@ pub fn quandrix_schematist() -> CardDefinition {
                 amount: Value::Const(1),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -25207,6 +25247,7 @@ pub fn quandrix_calligrapher() -> CardDefinition {
                 },
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -25318,6 +25359,7 @@ pub fn lorehold_treasure_smith() -> CardDefinition {
                 },
             ]),
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -25475,6 +25517,7 @@ pub fn quandrix_geologist() -> CardDefinition {
                     },
                 ]),
                             self_counter_cost_reduction: None, sac_other_filter: None,
+                            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -27272,6 +27315,7 @@ pub fn witherbloom_brewer() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -28032,6 +28076,7 @@ pub fn strixhaven_sanctum() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -28147,6 +28192,7 @@ pub fn mystic_slate() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             // {2}, {T}: Draw a card. Sorcery speed.
             ActivatedAbility {
@@ -28165,6 +28211,7 @@ pub fn mystic_slate() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -28347,6 +28394,7 @@ pub fn bramble_brewer() -> CardDefinition {
                     .and(SelectionRequirement::OtherThanSource),
                 1,
             )),
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -28540,6 +28588,7 @@ pub fn lorehold_cathedral() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -29085,6 +29134,7 @@ pub fn witherbloom_reanimist() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -29369,6 +29419,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
             ActivatedAbility {
                 tap_cost: true,
@@ -29386,6 +29437,7 @@ pub fn strixhaven_reservoir() -> CardDefinition {
                 exile_self_cost: false,
                 exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -29680,6 +29732,7 @@ pub fn quandrix_loremind() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -29923,6 +29976,7 @@ pub fn lorehold_bookburner() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -30136,6 +30190,7 @@ pub fn quandrix_tessellator() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -30319,6 +30374,7 @@ pub fn strixhaven_vault() -> CardDefinition {
             exile_self_cost: false,
             exile_other_filter: None,
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
@@ -31120,6 +31176,7 @@ pub fn strixhaven_mage_hunter() -> CardDefinition {
                 filter: SelectionRequirement::HasCardType(CardType::Land).negate(),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -31592,6 +31649,7 @@ pub fn quandrix_counterstudent() -> CardDefinition {
                 ),
             },
                     self_counter_cost_reduction: None, sac_other_filter: None,
+                    tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -32110,6 +32168,7 @@ pub fn strixhaven_banner() -> CardDefinition {
                     pool: ManaPayload::AnyOneColor(Value::Const(1)),
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
             // {2}, {T}, Sacrifice this artifact: Draw a card.
             ActivatedAbility {
@@ -32128,6 +32187,7 @@ pub fn strixhaven_banner() -> CardDefinition {
                     amount: Value::Const(1),
                 },
                 self_counter_cost_reduction: None, sac_other_filter: None,
+                tap_other_filter: None,
             },
         ],
         triggered_abilities: vec![],
@@ -32264,6 +32324,7 @@ pub fn strixhaven_pupil() -> CardDefinition {
                 },
             ]),
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -32456,6 +32517,7 @@ pub fn strixhaven_crucible() -> CardDefinition {
                 amount: Value::Const(1),
             },
             self_counter_cost_reduction: None, sac_other_filter: None,
+            tap_other_filter: None,
         }],
         triggered_abilities: vec![],
         static_abilities: vec![],
@@ -37084,6 +37146,7 @@ pub fn witherbloom_cultivator_b120() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37171,6 +37234,7 @@ pub fn pest_cultmaster_b121() -> CardDefinition {
                 amount: Value::Const(1),
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37218,6 +37282,7 @@ pub fn witherbloom_sapdrinker_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37264,6 +37329,7 @@ pub fn witherbloom_bonechanter_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37305,6 +37371,7 @@ pub fn pest_ringleader_b121() -> CardDefinition {
             mana_cost: ManaCost::default(),
             effect: drain(2),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37352,6 +37419,7 @@ pub fn witherbloom_reaper_b121() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37409,6 +37477,7 @@ pub fn pest_cultcaller_b122() -> CardDefinition {
             mana_cost: cost(&[b()]),
             effect: drain(1),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -37507,6 +37576,7 @@ pub fn witherbloom_composter_b122() -> CardDefinition {
                 },
             ]),
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -38521,6 +38591,7 @@ pub fn witherbloom_bonesplitter_b123() -> CardDefinition {
                 duration: Duration::EndOfTurn,
             },
             sac_other_filter: Some((SelectionRequirement::Creature, 1)),
+            tap_other_filter: None,
             ..Default::default()
         }],
         triggered_abilities: vec![],
@@ -39822,35 +39893,24 @@ pub fn arclight_phoenix() -> CardDefinition {
 
 /// Opposition — {2}{U}{U} Enchantment.
 /// "Tap an untapped creature you control: Tap target artifact, creature,
-/// or land."
-///
-/// Body-only: the tap-creature-to-tap-permanent activated ability needs
-/// the engine to support "tap a creature as a cost" (non-self tap cost).
-/// The enchantment shell is here for the cube color pool.
+/// or land." (Tap-another-as-cost via `tap_other_filter`.)
 pub fn opposition() -> CardDefinition {
     CardDefinition {
         name: "Opposition",
         cost: cost(&[generic(2), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        activated_abilities: vec![ActivatedAbility {
+            tap_other_filter: Some(SelectionRequirement::Creature),
+            effect: Effect::Tap {
+                what: target_filtered(
+                    SelectionRequirement::Artifact
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Land),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
     }
 }
 
