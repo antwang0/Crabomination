@@ -8009,7 +8009,9 @@ pub fn saheeli_rai() -> CardDefinition {
             // -7: emblem — "At the beginning of your end step, create two
             // tokens that are copies of target artifact or creature you
             // control, except they have haste. Exile them at the next end
-            // step." Each end step fires copy_friendly() twice.
+            // step." Modeled as one CreateTokenCopyOf with count 2 (a
+            // single shared target slot, which the emblem step-trigger
+            // auto-target path fills once) + haste on the tokens.
             LoyaltyAbility {
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
@@ -8020,7 +8022,24 @@ pub fn saheeli_rai() -> CardDefinition {
                             EventKind::StepBegins(crate::game::TurnStep::End),
                             EventScope::YourControl,
                         ),
-                        effect: Effect::Seq(vec![copy_friendly(), copy_friendly()]),
+                        effect: Effect::Seq(vec![
+                            Effect::CreateTokenCopyOf {
+                                who: PlayerRef::You,
+                                count: Value::Const(2),
+                                source: target_filtered(
+                                    SelectionRequirement::Creature
+                                        .or(SelectionRequirement::Artifact)
+                                        .and(SelectionRequirement::ControlledByYou),
+                                ),
+                                extra_creature_types: vec![],
+                                override_pt: None,
+                            },
+                            Effect::GrantKeyword {
+                                what: Selector::LastCreatedToken,
+                                keyword: crate::card::Keyword::Haste,
+                                duration: Duration::Permanent,
+                            },
+                        ]),
                     }],
                 },
             },
