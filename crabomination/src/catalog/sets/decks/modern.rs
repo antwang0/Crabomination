@@ -7949,9 +7949,8 @@ pub fn sorin_grim_nemesis() -> CardDefinition {
 /// uses `CreateTokenCopyOf` with the target friendly creature or
 /// artifact; haste is granted via the granted-keyword pipeline; the
 /// "exile at next end step" rider uses `DelayUntil(NextEndStep)`. The
-/// -7 ult is approximated as the -2 body fired twice (emblem
-/// approximation; the engine's emblem primitive isn't wired yet for
-/// "create two more each turn" auto-recurring effects).
+/// -7 grants a real emblem (`Effect::CreateEmblem`) whose end-step
+/// trigger fires the copy body twice each turn.
 pub fn saheeli_rai() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     use crate::effect::{DelayedTriggerKind, Duration};
@@ -8007,9 +8006,23 @@ pub fn saheeli_rai() -> CardDefinition {
                 loyalty_cost: -2,
                 effect: copy_friendly(),
             },
+            // -7: emblem — "At the beginning of your end step, create two
+            // tokens that are copies of target artifact or creature you
+            // control, except they have haste. Exile them at the next end
+            // step." Each end step fires copy_friendly() twice.
             LoyaltyAbility {
                 loyalty_cost: -7,
-                effect: Effect::Seq(vec![copy_friendly(), copy_friendly()]),
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Saheeli Rai".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::End),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::Seq(vec![copy_friendly(), copy_friendly()]),
+                    }],
+                },
             },
         ],
         ..Default::default()
