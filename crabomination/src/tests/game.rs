@@ -5269,6 +5269,33 @@ fn cr_510_1c_deathtouch_attacker_assigns_one_to_each_blocker() {
 }
 
 #[test]
+fn cr_702_15_landwalk_unblockable_only_when_defender_has_land_type() {
+    use crate::card::{Keyword, LandType};
+    // A Forestwalk attacker can't be blocked while the defending player
+    // controls a Forest; remove the Forest and it blocks normally.
+    let mut g = two_player_game();
+    let attacker = setup_attacker(&mut g, 0, || {
+        vanilla_body("Forestwalker", 2, 2, vec![Keyword::Landwalk(LandType::Forest)])
+    });
+    let blocker = setup_attacker(&mut g, 1, || vanilla_body("Blocker", 2, 2, vec![]));
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    // Defender controls a Forest → block is illegal.
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_err(),
+        "Forestwalk: can't be blocked while defender controls a Forest");
+
+    // Remove the Forest → the same block is now legal.
+    g.remove_to_graveyard_with_triggers(forest);
+    assert!(g.perform_action(GameAction::DeclareBlockers(vec![(blocker, attacker)])).is_ok(),
+        "no Forest → Forestwalk grants no evasion");
+}
+
+#[test]
 fn cr_510_1c_attacker_chooses_damage_assignment_order() {
     // A 3/3 attacker (no trample) is blocked by a 2/2 and a 3/3. The
     // attacking player chooses the order: scripting [big, small] assigns

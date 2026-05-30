@@ -268,6 +268,10 @@ pub enum Keyword {
     Unblockable,
     Shadow,
     Horsemanship,
+    /// Landwalk (CR 702.15) — this creature can't be blocked as long as the
+    /// defending player controls a land of the named type (Forestwalk,
+    /// Islandwalk, Swampwalk, Mountainwalk, Plainswalk, …).
+    Landwalk(LandType),
     /// Flanking (CR 702.25) — a creature without flanking that blocks this gets -1/-1 until EOT.
     Flanking,
     /// Bushido N (CR 702.45) — when this blocks or becomes blocked, it gets +N/+N until EOT.

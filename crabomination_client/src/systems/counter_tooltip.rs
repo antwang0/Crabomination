@@ -469,6 +469,8 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Echo(cost) => format!("Echo {}", cost.summary()),
         K::CumulativeUpkeep(cost) => format!("Cumulative upkeep {}", cost.summary()),
         K::Equip(cost) => format!("Equip {}", cost.summary()),
+        // Landwalk: "Forestwalk", "Islandwalk", … (the printed Oracle shape).
+        K::Landwalk(lt) => format!("{lt:?}walk"),
         _ => format!("{kw:?}"),
     }
 }

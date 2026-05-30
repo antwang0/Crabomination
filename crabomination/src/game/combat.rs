@@ -288,6 +288,18 @@ impl GameState {
             ) {
                 return Err(GameError::CannotBlock(blocker_id));
             }
+
+            // Landwalk (CR 702.15): the attacker can't be blocked while the
+            // defending player controls a land of the named type. Needs
+            // game state (the defender's lands), so it lives here rather
+            // than in the pure two-creature `can_block_attacker_computed`.
+            for kw in kws_of(attacker_id) {
+                if let Keyword::Landwalk(lt) = kw
+                    && self.defender_controls_land_type(defender_idx, lt)
+                {
+                    return Err(GameError::CannotBlock(blocker_id));
+                }
+            }
         }
 
         // Menace: attackers with Menace must be blocked by 2+ creatures or not at all.
@@ -470,6 +482,19 @@ impl GameState {
 
         events.push(GameEvent::CombatResolved);
         Ok(events)
+    }
+
+    /// CR 702.15 — does `defender` control a land with the given land type?
+    /// Reads printed land subtypes (Forest/Island/…), so dual lands and
+    /// nonbasics with the type count.
+    fn defender_controls_land_type(
+        &self,
+        defender: usize,
+        lt: &crate::card::LandType,
+    ) -> bool {
+        self.battlefield.iter().any(|c| {
+            c.controller == defender && c.definition.has_land_type(*lt)
+        })
     }
 
     /// CR 510.1c — ask the attacking player's decider to order the blockers

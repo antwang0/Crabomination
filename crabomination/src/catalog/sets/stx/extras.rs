@@ -7919,9 +7919,10 @@ pub fn skywarp_skaab() -> CardDefinition {
 /// Mountain, layer 6 emits `AddKeyword(Haste)` over every creature
 /// the owner has on the battlefield. The keyword grant falls out
 /// automatically when Anger leaves the graveyard (exile, return-to-
-/// hand, etc.). The printed `Mountainwalk` evasion is omitted (no
-/// landwalk primitive — tracked in TODO.md).
+/// hand, etc.). Printed `Mountainwalk` is wired via
+/// `Keyword::Landwalk(Mountain)` (CR 702.15).
 pub fn anger() -> CardDefinition {
+    use crate::card::LandType;
     CardDefinition {
         name: "Anger",
         cost: cost(&[generic(2), r()]),
@@ -7933,7 +7934,7 @@ pub fn anger() -> CardDefinition {
         },
         power: 2,
         toughness: 2,
-        keywords: vec![Keyword::Haste],
+        keywords: vec![Keyword::Haste, Keyword::Landwalk(LandType::Mountain)],
         effect: Effect::Noop,
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
