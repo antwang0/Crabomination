@@ -76104,3 +76104,26 @@ fn must_be_blocked_allows_unblocked_when_no_able_blocker() {
     assert!(g.perform_action(GameAction::DeclareBlockers(vec![])).is_ok(),
         "no able blocker → unblocked is legal");
 }
+
+#[test]
+fn blade_historian_double_strike_deals_combat_damage_twice() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::blade_historian());
+    let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    g.clear_sickness(attacker);
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    // CR 702.4: double striker deals in the first-strike step…
+    g.step = TurnStep::FirstStrikeDamage;
+    g.resolve_first_strike_damage().expect("fs damage");
+    assert_eq!(g.players[1].life, 18, "first-strike hit for 2");
+    // …and again in the regular step.
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().expect("regular damage");
+    assert_eq!(g.players[1].life, 16, "regular hit for another 2");
+}
