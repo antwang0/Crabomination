@@ -35,6 +35,9 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Poison shades from a sickly green toward a warning red as it
         // approaches the CR 104.3c / 704.5c lethal threshold of 10.
         StatChipKind::Poison => (Color::srgba(0.20, 0.32, 0.14, 1.0), theme::TEXT_PRIMARY),
+        // Emblems (CR 114) are permanent command-zone effects — a regal
+        // gold tint distinguishes them from the other counters.
+        StatChipKind::Emblem => (Color::srgba(0.34, 0.28, 0.10, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -47,6 +50,7 @@ pub(super) enum StatChipKind {
     DeckLow,
     Grave,
     Poison,
+    Emblem,
 }
 
 /// Library size at or below which the Deck chip switches to its amber
@@ -217,6 +221,15 @@ pub fn update_player_stats_chips(
                 &ui_fonts,
                 StatChipKind::Poison,
                 format!("☠ {}/10", p.poison_counters),
+            );
+        }
+        // CR 114 emblems — only surface when the player actually owns one.
+        if !p.emblems.is_empty() {
+            spawn_stat_chip(
+                row,
+                &ui_fonts,
+                StatChipKind::Emblem,
+                format!("✦ {}", p.emblems.len()),
             );
         }
     });
@@ -414,6 +427,14 @@ pub fn update_opponent_stats_rows(
                         &ui_fonts,
                         StatChipKind::Poison,
                         format!("☠ {}/10", p.poison_counters),
+                    );
+                }
+                if !p.emblems.is_empty() {
+                    spawn_stat_chip(
+                        row,
+                        &ui_fonts,
+                        StatChipKind::Emblem,
+                        format!("✦ {}", p.emblems.len()),
                     );
                 }
             });
