@@ -3227,6 +3227,27 @@ impl GameState {
                 }
             }
 
+            Selector::SharingNameWith(inner) => {
+                // Resolve the anchor, read its printed name, then collect
+                // every battlefield permanent (anchor included) with that
+                // name. The anchor's name is read from the battlefield so a
+                // freshly-resolved target still matches.
+                let anchor = self
+                    .resolve_selector(inner, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id());
+                let Some(anchor_id) = anchor else { return vec![] };
+                let Some(name) = self.battlefield_find(anchor_id).map(|c| c.definition.name)
+                else {
+                    return vec![];
+                };
+                self.battlefield
+                    .iter()
+                    .filter(|c| c.definition.name == name)
+                    .map(|c| EntityRef::Permanent(c.id))
+                    .collect()
+            }
+
             Selector::EachMatching { zone, filter } => self.entities_in_zone(zone, filter, ctx),
             Selector::EachPermanent(filter) => self
                 .battlefield

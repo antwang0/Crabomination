@@ -209,6 +209,14 @@ pub enum Selector {
         value_of_each: Box<Value>,
     },
 
+    /// All battlefield permanents (including the anchor itself) whose
+    /// printed name matches the entity resolved by `inner`. Powers the
+    /// printed "and each other permanent with the same name" / "all
+    /// permanents with that name" riders — Maelstrom Pulse, Echoing Truth,
+    /// Bile Blight-style sweepers. `inner` is typically `Target(0)`; if it
+    /// resolves to nothing (or a non-permanent), this yields nothing.
+    SharingNameWith(Box<Selector>),
+
     /// No entities (placeholder/default).
     None,
 }
@@ -1637,7 +1645,9 @@ impl Effect {
         fn sel_has_target(s: &Selector) -> bool {
             match s {
                 Selector::Target(_) | Selector::TargetFiltered { .. } => true,
-                Selector::AttachedTo(i) | Selector::AttachedToMe(i) => sel_has_target(i),
+                Selector::AttachedTo(i)
+                | Selector::AttachedToMe(i)
+                | Selector::SharingNameWith(i) => sel_has_target(i),
                 Selector::Take { inner, count } => {
                     sel_has_target(inner) || value_has_target(count)
                 }
@@ -2287,7 +2297,9 @@ impl Effect {
         fn sel_find(s: &Selector, slot: u8) -> Option<&SelectionRequirement> {
             match s {
                 Selector::TargetFiltered { slot: s2, filter } if *s2 == slot => Some(filter),
-                Selector::AttachedTo(i) | Selector::AttachedToMe(i) => sel_find(i, slot),
+                Selector::AttachedTo(i)
+                | Selector::AttachedToMe(i)
+                | Selector::SharingNameWith(i) => sel_find(i, slot),
                 Selector::Take { inner, .. } => sel_find(inner, slot),
                 Selector::TakeWithSumCap { inner, .. } => sel_find(inner, slot),
                 _ => None,

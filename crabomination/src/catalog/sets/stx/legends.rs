@@ -142,10 +142,10 @@ pub fn beledros_witherbloom() -> CardDefinition {
 
 // ── Velomachus Lorehold (R/W) ──────────────────────────────────────────────
 
-/// Velomachus Lorehold — {3}{R}{R}{W}, 5/5 Legendary Dragon. Flying,
-/// vigilance, haste. Real Oracle attack-trigger reveals top X cards and
-/// lets you cast one with mana value ≤ X. Body wired with three keywords;
-/// the cast-from-exile-without-paying attack-trigger is 🟡.
+/// Velomachus Lorehold — {3}{R}{R}{W}, 5/5 Legendary Dragon, Flying /
+/// vigilance / haste. Attack trigger reveals from the top until an IS card
+/// with MV ≤ 5 (printed power) is found, exiles it, and grants a free cast
+/// this turn (`RevealUntilFind` + `GrantMayPlay`).
 pub fn velomachus_lorehold() -> CardDefinition {
     use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
     use crate::effect::{PlayerRef, RevealMissDest, ZoneDest};

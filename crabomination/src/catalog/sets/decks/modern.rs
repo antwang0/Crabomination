@@ -5933,21 +5933,21 @@ pub fn mortify() -> CardDefinition {
     }
 }
 
-/// Maelstrom Pulse — {1}{B}{G} Sorcery. Destroy target nonland permanent.
-///
-/// The "all permanents with the same name" rider is collapsed (no
-/// name-match selector primitive yet). Single-target nonland-permanent
-/// removal is still flexible: hits creatures, artifacts, enchantments,
-/// and planeswalkers. Tear Asunder + Vindicate's Golgari cousin.
+/// Maelstrom Pulse — {1}{B}{G} Sorcery. "Destroy target nonland permanent
+/// and all other permanents with the same name as that permanent."
+/// The same-name sweep rides via `Selector::SharingNameWith(Target(0))`.
 pub fn maelstrom_pulse() -> CardDefinition {
     CardDefinition {
         name: "Maelstrom Pulse",
         cost: cost(&[generic(1), b(), g()]),
         card_types: vec![CardType::Sorcery],
+        // Cast-time target validation runs on `Target(0)`; the destroy then
+        // hits every battlefield permanent sharing the target's name.
         effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-            ),
+            what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            })),
         },
         ..Default::default()
     }
@@ -5998,23 +5998,21 @@ pub fn dismember() -> CardDefinition {
     }
 }
 
-/// Echoing Truth — {1}{U} Instant. Return target nonland permanent and
+/// Echoing Truth — {1}{U} Instant. "Return target nonland permanent and
 /// all other permanents with the same name as that permanent to their
-/// owners' hands.
-///
-/// The "and all permanents with the same name" rider is collapsed (no
-/// name-match selector primitive). Single-target bounce of any nonland
-/// permanent is the gameplay-relevant default — Boomerang's wider land
-/// twin, Unsummon's nonland-permanent twin.
+/// owners' hands." Same-name sweep via `Selector::SharingNameWith`. The
+/// destination resolves to the target's owner (same-named permanents
+/// almost always share an owner — token swarms / your own multiples).
 pub fn echoing_truth() -> CardDefinition {
     CardDefinition {
         name: "Echoing Truth",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
-            ),
+            what: Selector::SharingNameWith(Box::new(Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Permanent.and(SelectionRequirement::Nonland),
+            })),
             to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
         },
         ..Default::default()

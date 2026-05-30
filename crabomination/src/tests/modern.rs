@@ -7904,6 +7904,29 @@ fn maelstrom_pulse_destroys_nonland_permanent() {
 }
 
 #[test]
+fn maelstrom_pulse_sweeps_all_with_same_name() {
+    let mut g = two_player_game();
+    // Three Grizzly Bears split across players + one other creature.
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b3 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::maelstrom_pulse());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    for id in [b1, b2, b3] {
+        assert!(!g.battlefield.iter().any(|c| c.id == id), "all Grizzly Bears destroyed");
+    }
+    assert!(g.battlefield.iter().any(|c| c.id == elf), "differently-named creature survives");
+}
+
+#[test]
 fn maelstrom_pulse_rejects_land_target() {
     let mut g = two_player_game();
     let mountain = g.add_card_to_battlefield(1, catalog::mountain());
@@ -8026,6 +8049,27 @@ fn echoing_truth_bounces_nonland_permanent() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear));
     assert!(g.players[1].hand.iter().any(|c| c.id == bear),
         "Bear bounces back to its owner's hand");
+}
+
+#[test]
+fn echoing_truth_bounces_all_with_same_name() {
+    let mut g = two_player_game();
+    // Opponent has a swarm of same-named tokens (e.g. three Bears).
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let elf = g.add_card_to_battlefield(1, catalog::llanowar_elves());
+    let id = g.add_card_to_hand(0, catalog::echoing_truth());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(b1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    for id in [b1, b2] {
+        assert!(g.players[1].hand.iter().any(|c| c.id == id), "both Bears bounce");
+    }
+    assert!(g.battlefield.iter().any(|c| c.id == elf), "Elf unaffected");
 }
 
 #[test]
