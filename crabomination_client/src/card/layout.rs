@@ -222,29 +222,6 @@ pub fn player_hand_anchor(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
     Vec3::new(x, 0.01, z)
 }
 
-/// Width along X that a 7-card hand fan occupies (the soft cap). Used to
-/// position the per-seat 3-D player-avatar disc just past the right
-/// edge of the hand so it's clearly visible from the camera without
-/// overlapping creature / land rows or the hand cards themselves.
-const HAND_HALF_WIDTH: f32 = HAND_CARD_SPACING * ((HAND_FAN_SOFT_CAP as f32) - 1.0) / 2.0;
-
-/// Resting position of `seat`'s 3-D player-avatar disc, just past the
-/// right edge of their hand fan.
-///
-/// NOTE: transitional. The disc is being retired in favour of a 2-D HUD
-/// panel; combat-lurch and targeting arrows already point at
-/// [`player_hand_anchor`] instead. This is kept only so the disc (still
-/// the keyboard-target carrier) has a stable home until it's removed.
-pub fn player_target_zone_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
-    let x = opp_x_offset(seat, viewer, n_seats) + HAND_HALF_WIDTH + 1.2;
-    let z = if is_viewer(seat, viewer) {
-        HAND_CENTER_Z
-    } else {
-        -(HAND_CENTER_Z + 2.0)
-    };
-    Vec3::new(x, 0.01, z)
-}
-
 // ── Hand cards ───────────────────────────────────────────────────────────────
 
 /// Hand-card transform for `seat`. Viewer's hand is face-up and fanned at the

@@ -44,7 +44,7 @@ use systems::animate::{
 use systems::game_ui::{
     apply_swap_front_material, auto_advance_p0, handle_ability_menu, handle_alt_cast_buttons,
     handle_export_keypress, handle_game_input, poll_action_buttons, poll_player_chip_clicks,
-    setup_game_hud, setup_player_life_labels,
+    setup_game_hud,
     spawn_ability_menu, spawn_alt_cast_modal, sync_command_zone, sync_flipped_hand_cards,
     sync_game_visuals,
     handle_audit_buttons, pulse_urgent_pass_button, sync_audit_buttons, sync_player_hud_seat,
@@ -52,8 +52,6 @@ use systems::game_ui::{
     update_attack_button_label,
     update_log_text, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_hint, update_pass_button, update_phase_chart, update_player_chip_target_outline,
-    update_player_crest_life_label, update_player_crest_ring,
-    update_player_target_zone_material,
     update_player_stats_chips, update_stack_panel, update_turn_text, ButtonState, GameLogicSet,
 };
 use systems::gizmos::{
@@ -241,7 +239,6 @@ fn main() {
                 start_net_session_from_menu,
                 setup_game_hud,
                 setup_quality_panel,
-                setup_player_life_labels,
             ),
         )
         // Audit-mode card picker.
@@ -393,9 +390,6 @@ fn main() {
         .add_systems(
             Update,
             (
-                update_player_target_zone_material,
-                update_player_crest_ring,
-                update_player_crest_life_label,
                 draw_attack_plan_gizmos,
             )
                 .run_if(in_state(AppState::InGame)),

@@ -261,55 +261,15 @@ pub struct DeckPile {
 #[derive(Component)]
 pub struct ValidTarget;
 
-/// Clickable zone representing a player as a target. Lives on the
-/// player-icon disc entity so the visible icon doubles as the click
-/// target for spells / abilities that take a player.
+/// Per-seat marker tagging a player as a targetable entity. Now a bare,
+/// invisible entity — the visible player representation is the 2-D HUD
+/// panel. It exists so keyboard targeting has something to stamp
+/// `CardHovered` onto: `kb_cursor::apply_keyboard_selection` places the
+/// selection here and `handle_game_input`'s `hovered_target_zone` query
+/// reads it to submit the Player target. Mouse clicks are submitted from
+/// the 2-D panel instead (`poll_player_chip_clicks`).
 #[derive(Component)]
 pub struct PlayerTargetZone(pub usize);
-
-/// Visible 3-D disc sitting on the table at each player's target-zone
-/// position. Doubles as the click hit-region for [`PlayerTargetZone`]
-/// (all seats including the viewer) and as the world-space anchor that
-/// attackers lunge toward during combat.
-#[derive(Component, Clone, Copy)]
-pub struct PlayerIcon {
-    #[allow(dead_code)]
-    pub seat: usize,
-}
-
-/// Parent marker for the per-seat "player crest" — the disc, halo ring,
-/// and floating life numeral cluster that represents the player on the
-/// 3-D table.
-///
-/// Replaces the bare [`PlayerIcon`] disc as the player-stats anchor;
-/// the disc and ring child entities carry their own markers
-/// ([`PlayerIcon`] / [`PlayerCrestRing`]) so per-mesh systems can find
-/// them without walking the hierarchy.
-#[derive(Component, Clone, Copy)]
-pub struct PlayerCrest {
-    pub seat: usize,
-}
-
-/// Marker for the halo / status ring sitting just below the player disc.
-/// `update_player_crest_ring` drives its material's `base_color` and
-/// `emissive` each frame based on the seat's current state (targetable,
-/// threatened, holding priority, active player).
-#[derive(Component, Clone, Copy)]
-pub struct PlayerCrestRing {
-    pub seat: usize,
-}
-
-/// Screen-space text node tied to the world position of a [`PlayerCrest`].
-/// `update_player_crest_life_label` re-projects the crest's world
-/// position to viewport coordinates each frame, updates the node's
-/// `top` / `left`, and writes the current life total. Independent of
-/// the 2-D `PlayerStatsRow` chip strip — this label is the *primary*
-/// life readout, anchored next to the avatar where the player is
-/// already looking.
-#[derive(Component, Clone, Copy)]
-pub struct PlayerLifeLabel {
-    pub seat: usize,
-}
 
 /// Combat-animation offset for a battlefield creature. `progress`
 /// interpolates 0..1 along `target_offset` (the world-space vector from

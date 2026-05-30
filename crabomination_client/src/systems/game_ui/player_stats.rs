@@ -9,6 +9,7 @@ use crabomination::game::TurnStep;
 
 use crate::game::TargetingState;
 use crate::net_plugin::CurrentView;
+use crate::systems::kb_cursor::{KbSelection, KeyboardCursor};
 use crate::theme::{self, UiFonts};
 
 use super::{
@@ -23,7 +24,6 @@ use super::{
 fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
     match kind {
         StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
-        StatChipKind::Life => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
         StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
         // Deck-out warning: a dangerously low library (≤ `LOW_LIBRARY_WARN`
@@ -44,7 +44,6 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
 #[derive(Clone, Copy)]
 pub(super) enum StatChipKind {
     Name,
-    Life,
     Hand,
     Deck,
     DeckLow,
@@ -99,6 +98,94 @@ pub(super) fn spawn_stat_chip(
         });
 }
 
+// ── Avatar + prominent life ───────────────────────────────────────────────────
+
+/// Stable per-seat identity colour. Indexed by seat so each player keeps
+/// the same colour all game (Arena / MTGO-style player colours), wrapping
+/// for more than `PALETTE.len()` seats. This is the player's visual
+/// identity in the HUD now that the 3-D coloured disc is gone.
+pub(super) fn seat_color(seat: usize) -> Color {
+    const PALETTE: [Color; 6] = [
+        Color::srgb(0.30, 0.55, 0.90), // blue
+        Color::srgb(0.85, 0.32, 0.28), // red
+        Color::srgb(0.35, 0.70, 0.40), // green
+        Color::srgb(0.80, 0.58, 0.22), // amber
+        Color::srgb(0.62, 0.42, 0.82), // purple
+        Color::srgb(0.28, 0.70, 0.72), // teal
+    ];
+    PALETTE[seat % PALETTE.len()]
+}
+
+/// Spawn a small square avatar badge — the seat's identity colour with
+/// the player's first initial. Leads each player row so the player is
+/// recognisable at a glance without reading the name.
+fn spawn_avatar(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, seat: usize, name: &str) {
+    let initial = name
+        .chars()
+        .next()
+        .map(|c| c.to_ascii_uppercase())
+        .unwrap_or('?');
+    parent
+        .spawn((
+            Node {
+                width: Val::Px(24.0),
+                height: Val::Px(24.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: BorderRadius::all(Val::Px(5.0)),
+                ..default()
+            },
+            BackgroundColor(seat_color(seat)),
+            Pickable::IGNORE,
+        ))
+        .with_children(|a| {
+            a.spawn((
+                Text::new(initial.to_string()),
+                ui_fonts.tf(15.0),
+                TextColor(Color::srgb(0.08, 0.08, 0.10)),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
+/// Threshold-graded `(background, text)` colours for the life badge,
+/// mirroring the tiers the old crest life numeral used.
+fn life_badge_style(life: i32) -> (Color, Color) {
+    match life {
+        l if l <= 0 => (Color::srgb(0.55, 0.10, 0.10), theme::TEXT_PRIMARY),
+        l if l <= 5 => (Color::srgb(0.45, 0.14, 0.14), theme::TEXT_DANGER),
+        l if l <= 10 => (Color::srgb(0.36, 0.26, 0.10), Color::srgb(1.0, 0.80, 0.42)),
+        _ => (Color::srgba(0.30, 0.18, 0.18, 1.0), theme::ACCENT_GOLD),
+    }
+}
+
+/// Spawn the prominent life readout — a larger badge than the other
+/// chips, since life is the number the eye goes to. Replaces the
+/// floating 3-D life numeral the crest used to project over each disc.
+fn spawn_life_badge(parent: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, life: i32) {
+    let (bg, fg) = life_badge_style(life);
+    parent
+        .spawn((
+            Node {
+                padding: UiRect::axes(Val::Px(8.0), Val::Px(2.0)),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                border_radius: BorderRadius::all(Val::Px(4.0)),
+                ..default()
+            },
+            BackgroundColor(bg),
+            Pickable::IGNORE,
+        ))
+        .with_children(|chip| {
+            chip.spawn((
+                Text::new(format!("\u{2665} {life}")),
+                ui_fonts.tf(18.0),
+                TextColor(fg),
+                Pickable::IGNORE,
+            ));
+        });
+}
+
 // ── Seat-stamp + targeting outline ───────────────────────────────────────────
 
 /// Patch the viewer's `PlayerHudPanel.seat` to match the current
@@ -122,7 +209,16 @@ pub fn sync_player_hud_seat(
 /// outlines and the blocker-selection diamond so the visual vocabulary
 /// is consistent across the targeting flow.
 const PLAYER_CHIP_BORDER_IDLE: Color = Color::NONE;
-const PLAYER_CHIP_BORDER_TARGET: Color = Color::srgb(1.0, 0.88, 0.0);
+/// Active player's panel — soft gold, mirrors the crest ring's
+/// active-player ambient.
+const PLAYER_PANEL_ACTIVE: Color = Color::srgb(0.85, 0.68, 0.32);
+/// Viewer's own panel when threatened (low life or lethal-on-board) —
+/// the red warning the crest ring used to glow.
+const PLAYER_PANEL_THREAT: Color = Color::srgb(1.0, 0.30, 0.30);
+/// Solid (non-pulsing) bright yellow for the seat currently under the
+/// keyboard cursor — replaces the disc's hover-brighten cue, so the user
+/// can see which player the keyboard has selected.
+const PLAYER_PANEL_KB_SELECTED: Color = Color::srgb(1.0, 0.95, 0.40);
 
 /// Pulse the border of any [`PlayerHudPanel`] that is currently a legal
 /// click target — i.e. either:
@@ -138,6 +234,7 @@ pub fn update_player_chip_target_outline(
     targeting: Res<TargetingState>,
     legal_targets: Res<crate::game::LegalTargets>,
     attacking: Res<crate::game::AttackingState>,
+    cursor: Res<KeyboardCursor>,
     view: Res<CurrentView>,
     time: Res<Time>,
     mut q: Query<(&PlayerHudPanel, &mut BorderColor)>,
@@ -173,8 +270,35 @@ pub fn update_player_chip_target_outline(
         && cv.priority == your_seat
         && attacking.last_added.is_some();
 
+    // Viewer threat — low life or lethal-on-board next combat. Same
+    // computation the crest ring used to drive its red glow; it now
+    // borders the viewer's own panel instead.
+    use crabomination::card::Keyword;
+    let viewer_life = cv
+        .players
+        .iter()
+        .find(|p| p.seat == your_seat)
+        .map(|p| p.life)
+        .unwrap_or(20);
+    let lethal_on_board: i32 = cv
+        .battlefield
+        .iter()
+        .filter(|c| {
+            c.owner != your_seat
+                && c.is_creature()
+                && !c.tapped
+                && (!c.summoning_sick || c.keywords.contains(&Keyword::Haste))
+                && !c.keywords.contains(&Keyword::Defender)
+        })
+        .map(|c| c.power.max(0))
+        .sum();
+    let viewer_threatened = viewer_life <= 5 || lethal_on_board >= viewer_life;
+
     for (panel, mut border) in &mut q {
-        let highlight = if let Some(set) = legal_player_set {
+        // Priority: a live targeting/attack pick (pulsing yellow) wins,
+        // then the viewer's own threat warning (red), then the active
+        // player's turn ambient (gold), else idle.
+        let targetable = if let Some(set) = legal_player_set {
             set.contains(&panel.seat)
         } else if targeting_active {
             true
@@ -183,8 +307,19 @@ pub fn update_player_chip_target_outline(
         } else {
             false
         };
-        *border = BorderColor::all(if highlight { pulsed } else { PLAYER_CHIP_BORDER_IDLE });
-        let _ = PLAYER_CHIP_BORDER_TARGET;
+        let kb_selected = cursor.selection == Some(KbSelection::PlayerZone(panel.seat));
+        let color = if kb_selected {
+            PLAYER_PANEL_KB_SELECTED
+        } else if targetable {
+            pulsed
+        } else if panel.seat == your_seat && viewer_threatened {
+            PLAYER_PANEL_THREAT
+        } else if panel.seat == cv.active_player {
+            PLAYER_PANEL_ACTIVE
+        } else {
+            PLAYER_CHIP_BORDER_IDLE
+        };
+        *border = BorderColor::all(color);
     }
 }
 
@@ -207,8 +342,9 @@ pub fn update_player_stats_chips(
     let Some(p) = cv.players.iter().find(|p| p.seat == cv.your_seat) else { return };
     commands.entity(row).despawn_children();
     commands.entity(row).with_children(|row| {
+        spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-        spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
+        spawn_life_badge(row, &ui_fonts, p.life);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
         spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));
@@ -416,8 +552,9 @@ pub fn update_opponent_stats_rows(
                 PlayerHudPanel { seat: p.seat },
             ))
             .with_children(|row| {
+                spawn_avatar(row, &ui_fonts, p.seat, &p.name);
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
-                spawn_stat_chip(row, &ui_fonts, StatChipKind::Life, format!("♥ {}", p.life));
+                spawn_life_badge(row, &ui_fonts, p.life);
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Hand, format!("✋ {}", p.hand.len()));
                 spawn_stat_chip(row, &ui_fonts, deck_chip_kind(p.library.size), format!("▤ {}", p.library.size));
                 spawn_stat_chip(row, &ui_fonts, StatChipKind::Grave, format!("✟ {}", p.graveyard.len()));

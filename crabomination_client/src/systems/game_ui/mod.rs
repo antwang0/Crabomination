@@ -6,7 +6,6 @@
 //! see the same flat namespace.
 
 mod buttons;
-mod crest;
 mod player_stats;
 mod popups;
 
@@ -14,10 +13,6 @@ pub use buttons::{
     handle_audit_buttons, handle_export_keypress, poll_action_buttons, poll_player_chip_clicks,
     pulse_urgent_pass_button, sync_audit_buttons, update_attack_all_visibility,
     update_attack_button_label, update_pass_button,
-};
-pub use crest::{
-    setup_player_life_labels, update_player_crest_life_label, update_player_crest_ring,
-    update_player_target_zone_material,
 };
 pub use player_stats::{
     sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,

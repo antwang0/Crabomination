@@ -5,12 +5,12 @@ use bevy::prelude::*;
 use super::components::{
     BackFaceMesh, Card, CardFrontTexture, CardHighlightAssets, CardHoverLift, CardMeshAssets,
     FrontFaceMesh,
-    GraveyardPile, PileHovered, PlayerCrest, PlayerCrestRing, PlayerIcon, PlayerTargetZone,
+    GraveyardPile, PileHovered, PlayerTargetZone,
     CARD_THICKNESS,
 };
-use super::layout::{back_face_rotation, graveyard_position, player_target_zone_position};
+use super::layout::{back_face_rotation, graveyard_position};
 use super::mesh::{card_border_mesh, card_mesh};
-use super::observers::{on_card_out, on_card_over, on_zone_out, on_zone_over};
+use super::observers::{on_card_out, on_card_over};
 
 use crate::game::GraveyardBrowserState;
 use crate::scryfall;
@@ -81,109 +81,21 @@ pub fn init_shared_assets(
             .observe(on_graveyard_click);
     }
 
-    // Per-seat **player crest** — a small composite avatar sitting on
-    // the table just past the right edge of each player's hand fan
-    // (see `player_target_zone_position`).
+    // Per-seat **player target marker** — a bare, invisible entity
+    // carrying the [`PlayerTargetZone`] tag for each seat. The player's
+    // visible representation is now the 2-D HUD panel (avatar / life /
+    // state), and mouse clicks are submitted from there
+    // (`poll_player_chip_clicks`); combat-lurch and targeting arrows
+    // point at the hand fan (`player_hand_anchor`).
     //
-    // Anatomy:
-    //   * **Halo ring** (bottom): a slightly larger, very flat cylinder
-    //     under the main disc. Its material is mutated each frame by
-    //     `update_player_crest_ring` to advertise seat state
-    //     (yellow = legal click target, red = threatened, white =
-    //     priority, gold = active player, dim ambient = idle).
-    //   * **Disc**: the main coloured puck. Blue for the viewer, red for
-    //     opponents. Carries the [`PlayerTargetZone`] click hit-region
-    //     for *every* seat (including the viewer's own — legal for
-    //     self-target spells like Healing Salve) and is the world-space
-    //     anchor that attacker combat-lurch animations / stack arrows
-    //     point at.
-    //   * **Floating life numeral**: spawned separately by
-    //     `setup_player_life_labels` as a UI text node, then re-projected
-    //     to follow the disc's world position each frame.
-    //
-    // Sized larger than the historical disc (radius 1.8 vs. 1.4) so the
-    // crest reads clearly from the slightly tilted top-down camera and
-    // has room to anchor the life label.
-    const CREST_DISC_RADIUS: f32 = 1.8;
-    const CREST_DISC_HEIGHT: f32 = 0.30;
-    const CREST_RING_RADIUS: f32 = 2.35;
-    const CREST_RING_HEIGHT: f32 = 0.05;
-
-    let disc_mesh = meshes.add(
-        Cylinder::new(CREST_DISC_RADIUS, CREST_DISC_HEIGHT)
-            .mesh()
-            .resolution(48),
-    );
-    let ring_mesh = meshes.add(
-        Cylinder::new(CREST_RING_RADIUS, CREST_RING_HEIGHT)
-            .mesh()
-            .resolution(64),
-    );
-
+    // This marker exists only so keyboard targeting has an entity to
+    // stamp `CardHovered` onto: `kb_cursor::apply_keyboard_selection`
+    // places the selection here and `handle_game_input`'s
+    // `hovered_target_zone` query reads it to submit the Player target.
+    // The visual cue for the keyboard-selected seat lives on its 2-D
+    // panel (see `update_player_chip_target_outline`).
     for seat in 0..n_seats {
-        let pos = player_target_zone_position(seat, viewer_seat, n_seats);
-        // Disc Y sits half its height above the table so the bottom face
-        // rests on the ground plane; ring Y sits just below the disc.
-        let disc_pos = Vec3::new(pos.x, CREST_DISC_HEIGHT * 0.5 + 0.01, pos.z);
-        let ring_pos = Vec3::new(pos.x, CREST_RING_HEIGHT * 0.5 + 0.005, pos.z);
-
-        let disc_base_color = if seat == viewer_seat {
-            Color::srgb(0.28, 0.50, 0.90)
-        } else {
-            Color::srgb(0.85, 0.28, 0.28)
-        };
-        let disc_emissive = if seat == viewer_seat {
-            LinearRgba::new(0.10, 0.18, 0.40, 1.0)
-        } else {
-            LinearRgba::new(0.40, 0.10, 0.10, 1.0)
-        };
-        let disc_mat = materials.add(StandardMaterial {
-            base_color: disc_base_color,
-            emissive: disc_emissive,
-            perceptual_roughness: 0.55,
-            metallic: 0.05,
-            ..default()
-        });
-
-        // Ring starts at a dim neutral; `update_player_crest_ring`
-        // overwrites both base_color and emissive each frame.
-        let ring_mat = materials.add(StandardMaterial {
-            base_color: Color::srgba(0.20, 0.20, 0.24, 1.0),
-            emissive: LinearRgba::new(0.05, 0.05, 0.07, 1.0),
-            perceptual_roughness: 0.70,
-            metallic: 0.0,
-            ..default()
-        });
-
-        // Ring sits below the disc. Pickable::IGNORE so clicks pass
-        // through to the disc itself (which is the canonical hit region).
-        commands.spawn((
-            Mesh3d(ring_mesh.clone()),
-            MeshMaterial3d(ring_mat),
-            Transform::from_translation(ring_pos),
-            Visibility::default(),
-            PlayerCrestRing { seat },
-            Pickable::IGNORE,
-        ));
-
-        // Disc carries both legacy `PlayerIcon` (consumed by combat-
-        // lurch / animation anchors that already look it up) and the
-        // new `PlayerCrest` (single source of truth for "this is the
-        // player's avatar entity"). `PlayerTargetZone` is now on
-        // every seat — the viewer's disc accepts clicks for spells
-        // that legally target you.
-        commands
-            .spawn((
-                Mesh3d(disc_mesh.clone()),
-                MeshMaterial3d(disc_mat),
-                Transform::from_translation(disc_pos),
-                Visibility::default(),
-                PlayerIcon { seat },
-                PlayerCrest { seat },
-                PlayerTargetZone(seat),
-            ))
-            .observe(on_zone_over)
-            .observe(on_zone_out);
+        commands.spawn(PlayerTargetZone(seat));
     }
 }
 
