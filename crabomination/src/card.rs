@@ -400,6 +400,13 @@ pub enum SelectionRequirement {
     HasEnchantmentSubtype(EnchantmentSubtype),
     PowerAtLeast(i32),
     ToughnessAtLeast(i32),
+    /// True when the candidate's power is strictly less than the source
+    /// permanent's power (both read at evaluation time). Powers Mentor
+    /// (CR 702.114 — "target attacking creature with lesser power") so the
+    /// "lesser power" check re-evaluates against the source's current power
+    /// instead of a hard-coded threshold. Battlefield-only; false when the
+    /// source is missing or either side isn't a creature.
+    PowerLessThanSource,
     IsToken,
     NotToken,
     IsBasicLand,

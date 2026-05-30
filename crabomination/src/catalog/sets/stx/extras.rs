@@ -294,14 +294,10 @@ pub fn igneous_inspiration() -> CardDefinition {
 /// Vigilance. "Mentor (Whenever this creature attacks, put a +1/+1
 /// counter on target attacking creature with lesser power.)"
 ///
-/// 🟡 Body + keywords ship faithful. The Mentor trigger is wired as an
-/// `Attacks/SelfSource` trigger that adds a +1/+1 counter to a target
-/// attacking creature with `PowerAtMost(1)` — since Combat Professor
-/// itself is base power 2, "lesser power" maps to power ≤ 1 here. The
-/// target restriction is approximated as power ≤ 1 (which is what
-/// "lesser than 2" means at base). Doesn't scale dynamically with
-/// post-counter power (a true Mentor would re-evaluate "lesser power"
-/// each attack), but matches the printed first-attack behaviour.
+/// Combat Professor — {3}{W}, 2/4 Cat Cleric, Flying / Vigilance. Mentor
+/// (attack trigger puts a +1/+1 counter on a target attacking creature
+/// with lesser power) wired via `SelectionRequirement::PowerLessThanSource`,
+/// so the "lesser power" check tracks Combat Professor's current power.
 pub fn combat_professor() -> CardDefinition {
     CardDefinition {
         name: "Combat Professor",
@@ -319,28 +315,20 @@ pub fn combat_professor() -> CardDefinition {
         activated_abilities: no_abilities(),
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            // Mentor (CR 702.114): counter goes on a target attacking
+            // creature with lesser power than this — `PowerLessThanSource`
+            // re-evaluates against Combat Professor's current power.
             effect: Effect::AddCounter {
                 what: target_filtered(
                     SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou)
                         .and(SelectionRequirement::IsAttacking)
-                        .and(SelectionRequirement::PowerAtMost(1)),
+                        .and(SelectionRequirement::PowerLessThanSource),
                 ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
         }],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

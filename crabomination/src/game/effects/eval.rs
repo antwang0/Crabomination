@@ -635,6 +635,13 @@ impl GameState {
                     R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
                     R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
                     R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
+                    R::PowerLessThanSource => {
+                        source
+                            .and_then(|s| self.battlefield_find(s))
+                            .is_some_and(|src| {
+                                card.definition.is_creature() && card.power() < src.power()
+                            })
+                    }
                     R::WithCounter(k) => card.counter_count(*k) > 0,
                     R::HasSupertype(st) => card.definition.supertypes.contains(st),
                     R::HasCreatureType(ct) => card.definition.subtypes.creature_types.contains(ct),
@@ -758,6 +765,10 @@ impl GameState {
             R::HasKeyword(kw) => card.has_keyword(kw),
             R::PowerAtMost(n) => card.definition.is_creature() && card.power() <= *n,
             R::PowerAtLeast(n) => card.definition.is_creature() && card.power() >= *n,
+            // No source/battlefield context in the on-card evaluator (used
+            // for hidden-zone cards); the source-relative Mentor check only
+            // makes sense for battlefield targets, so it's vacuously false.
+            R::PowerLessThanSource => false,
             R::ToughnessAtMost(n) => card.definition.is_creature() && card.toughness() <= *n,
             R::ToughnessAtLeast(n) => card.definition.is_creature() && card.toughness() >= *n,
             R::HasSupertype(st) => card.definition.supertypes.contains(st),

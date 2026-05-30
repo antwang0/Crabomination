@@ -4581,6 +4581,24 @@ fn combat_professor_mentor_buffs_a_smaller_attacker() {
     );
 }
 
+#[test]
+fn combat_professor_mentor_skips_equal_power_attacker() {
+    use crate::game::types::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let prof = g.add_card_to_battlefield(0, catalog::combat_professor()); // 2 power
+    let equal = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 — not lesser
+    g.clear_sickness(prof);
+    g.clear_sickness(equal);
+    g.step = crate::game::types::TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: prof, target: AttackTarget::Player(1) },
+        Attack { attacker: equal, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(equal).unwrap().counter_count(CounterType::PlusOnePlusOne), 0,
+        "equal-power attacker is not a legal Mentor target (PowerLessThanSource)");
+}
+
 /// Square Up sets the target creature's base power and toughness to 0/4
 /// for the turn, and the caster draws a card. We verify both the
 /// SetBasePT layer-7b effect and the cantrip.
