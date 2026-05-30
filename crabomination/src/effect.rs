@@ -2457,6 +2457,11 @@ pub enum StaticEffect {
     /// are taxed; the cost increase is applied at cast time when the
     /// caster's `Player.spells_cast_this_turn >= 1`.
     AdditionalCostAfterFirstSpell { filter: SelectionRequirement, amount: u32 },
+    /// Thalia-style unconditional tax: spells matching `filter` cost
+    /// `amount` more to cast, every time (no first-spell gate). Applied at
+    /// cast time alongside `AdditionalCostAfterFirstSpell` in
+    /// `extra_cost_for_spell`.
+    AdditionalCost { filter: SelectionRequirement, amount: u32 },
     /// Leyline-of-Sanctity-style "you have hexproof": opponents can't
     /// target the source's controller with spells or abilities they
     /// control. Checked by `check_target_legality` for `Target::Player(_)`.

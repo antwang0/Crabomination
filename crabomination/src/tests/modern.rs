@@ -1277,29 +1277,16 @@ fn dovins_veto_is_uncounterable() {
 // ── Modern creatures (mod_set/creatures) ─────────────────────────────────────
 
 #[test]
-fn thalia_taxes_noncreature_spells_after_first() {
+fn thalia_taxes_every_noncreature_spell() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::thalia_guardian_of_thraben());
 
-    // First Bolt this turn pays no tax — passes for {R}.
-    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
-    g.players[0].mana_pool.add(Color::Red, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: bolt1,
-        target: Some(Target::Player(1)),
-        additional_targets: vec![],
-        mode: None,
-        x_value: None,
-    })
-    .expect("first noncreature spell shouldn't pay Thalia tax");
-    drain_stack(&mut g);
-
-    // Second Bolt now requires {1}{R}; only {R} fails.
-    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // Even the first Bolt this turn owes {1} more — only {R} fails.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     let err = g
         .perform_action(GameAction::CastSpell {
-            card_id: bolt2,
+            card_id: bolt,
             target: Some(Target::Player(1)),
             additional_targets: vec![],
             mode: None,
@@ -1307,6 +1294,17 @@ fn thalia_taxes_noncreature_spells_after_first() {
         })
         .unwrap_err();
     assert!(matches!(err, GameError::Mana(_)));
+
+    // {1}{R} pays the taxed Bolt.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("{1}{R} covers Thalia's tax");
 }
 
 #[test]

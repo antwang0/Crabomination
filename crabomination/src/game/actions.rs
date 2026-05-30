@@ -84,14 +84,21 @@ pub(crate) fn extra_cost_for_spell(
         tax += 1;
     }
     let already_cast = state.players[caster].spells_cast_this_turn;
-    if already_cast > 0 {
-        for src in &state.battlefield {
-            for sa in &src.definition.static_abilities {
-                if let StaticEffect::AdditionalCostAfterFirstSpell { filter, amount } = &sa.effect
-                    && state.evaluate_requirement_on_card(filter, card, caster)
+    for src in &state.battlefield {
+        for sa in &src.definition.static_abilities {
+            match &sa.effect {
+                StaticEffect::AdditionalCostAfterFirstSpell { filter, amount }
+                    if already_cast > 0
+                        && state.evaluate_requirement_on_card(filter, card, caster) =>
                 {
                     tax += amount;
                 }
+                StaticEffect::AdditionalCost { filter, amount }
+                    if state.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    tax += amount;
+                }
+                _ => {}
             }
         }
     }
