@@ -24,6 +24,13 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
 - `Effect::WhenTargetDiesThisTurn` + `DelayedKind::WhenCardDies` — event-keyed
   delayed trigger watching a card's death this turn (Searing Blood faithful,
   incl. deferred deaths). Register the watch *before* the damage so it's live.
+- Storm (CR 702.40) — `finalize_cast` mints one token copy per prior spell
+  this turn for `Keyword::Storm` spells (Grapeshot).
+- Inspired (CR 702.108) — `EventKind::BecomesUntapped` fires off the untap
+  step's tapped→untapped flips (Servant of Tymaret).
+- Exert (CR 702.83) — `CardInstance.skip_next_untap`, set on attacking
+  `Keyword::Exert` creatures (auto-exert), consumed by `do_untap`
+  (Ahn-Crop Crasher).
 
 ## Tier 1 — unblocks several partial cards each
 

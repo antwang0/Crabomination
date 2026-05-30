@@ -8888,6 +8888,71 @@ fn fiery_impulse_deals_two_damage_without_spell_mastery() {
 }
 
 #[test]
+fn servant_of_tymaret_inspired_drains_on_untap() {
+    let mut g = two_player_game();
+    let servant = g.add_card_to_battlefield(0, catalog::servant_of_tymaret());
+    g.battlefield.iter_mut().find(|c| c.id == servant).unwrap().tapped = true;
+    let foe_life = g.players[1].life;
+
+    g.do_untap();
+    drain_stack(&mut g); // resolve the Inspired trigger
+
+    assert!(!g.battlefield.iter().find(|c| c.id == servant).unwrap().tapped, "Servant untaps");
+    assert_eq!(g.players[1].life, foe_life - 1, "Inspired drains each opponent 1 on untap");
+}
+
+#[test]
+fn exert_attacker_does_not_untap_next_turn() {
+    let mut g = two_player_game();
+    let crasher = g.add_card_to_battlefield(0, catalog::ahn_crop_crasher());
+    // Not summoning sick (has Haste anyway). Advance to declare attackers.
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.declare_attackers(vec![Attack {
+        attacker: crasher,
+        target: AttackTarget::Player(1),
+    }]).expect("Ahn-Crop Crasher attacks");
+    let c = g.battlefield.iter().find(|c| c.id == crasher).unwrap();
+    assert!(c.tapped, "attacker is tapped");
+    assert!(c.skip_next_untap, "exert flagged it to skip next untap");
+
+    // The controller's next untap step: the exerted creature stays tapped.
+    g.do_untap();
+    let c = g.battlefield.iter().find(|c| c.id == crasher).unwrap();
+    assert!(c.tapped, "exerted creature does not untap");
+    assert!(!c.skip_next_untap, "exert flag consumed — it untaps the turn after");
+}
+
+#[test]
+fn grapeshot_storm_copies_for_each_prior_spell() {
+    let mut g = two_player_game();
+    // Two prior spells this turn (Bolts at our own face are fine — we only
+    // care about the spell count). Each is cast and resolved.
+    for _ in 0..2 {
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(0)),
+            additional_targets: vec![], mode: None, x_value: None,
+        }).expect("bolt castable");
+        drain_stack(&mut g);
+    }
+    assert_eq!(g.spells_cast_this_turn, 2, "two prior spells recorded");
+
+    let gp = g.add_card_to_hand(0, catalog::grapeshot());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let foe_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: gp, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Grapeshot castable for {1}{R}");
+    drain_stack(&mut g);
+    // Original + 2 Storm copies = 3 instances of 1 damage.
+    assert_eq!(g.players[1].life, foe_life - 3, "Storm copies once per prior spell");
+}
+
+#[test]
 fn searing_blood_deals_two_damage_to_creature() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

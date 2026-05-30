@@ -107,6 +107,14 @@ impl GameState {
             if !computed_kw(id).contains(&Keyword::Vigilance) {
                 card.tapped = true;
             }
+            // CR 702.83 — Exert. We auto-exert any attacking creature with
+            // the keyword (the "you may" choice is collapsed; the AutoDecider
+            // would have no policy and a real exert is almost always taken for
+            // its bonus). The creature won't untap next untap step. Its exert
+            // bonus rides its normal SelfSource Attacks trigger.
+            if computed_kw(id).contains(&Keyword::Exert) {
+                card.skip_next_untap = true;
+            }
             self.attacking.push(atk);
             events.push(GameEvent::AttackerDeclared(id));
             // Walk printed Attacks triggers + any transient granted

@@ -1099,18 +1099,52 @@ impl GameState {
         let uncounterable = self.caster_grants_uncounterable_with_x(p, &card, x_value);
 
         let was_creature_spell = card.definition.is_creature();
-        
+        // CR 702.40 — Storm: when this spell is cast, copy it for each spell
+        // cast before it this turn. `spells_cast_this_turn` already includes
+        // this spell (bumped above), so prior spells = count - 1. Capture the
+        // bits needed to mint copies before `card` is moved onto the stack.
+        let storm_copies = card
+            .definition
+            .keywords
+            .contains(&Keyword::Storm)
+            .then(|| {
+                (
+                    card.definition.clone(),
+                    self.spells_cast_this_turn.saturating_sub(1),
+                )
+            });
+
         self.stack.push(StackItem::Spell {
             card: Box::new(card),
             caster: p,
-            target,
-            additional_targets,
+            target: target.clone(),
+            additional_targets: additional_targets.clone(),
             mode,
             x_value,
             converged_value,
             mana_spent,
             uncounterable,
         });
+        // Push Storm copies above the original (they resolve first, CR 702.40).
+        // Each is a token copy that can't be countered, inheriting target/mode.
+        if let Some((def, n)) = storm_copies {
+            for _ in 0..n {
+                let new_id = self.next_id();
+                let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
+                copy_inst.is_token = true;
+                self.stack.push(StackItem::Spell {
+                    card: Box::new(copy_inst),
+                    caster: p,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    mode,
+                    x_value,
+                    converged_value,
+                    mana_spent: 0,
+                    uncounterable: true,
+                });
+            }
+        }
         self.push_on_cast_triggers(card_id, p, on_cast_triggers);
         // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
         // fire *at cast time*, before the spell resolves. The trigger goes

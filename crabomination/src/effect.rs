@@ -805,6 +805,10 @@ pub enum EventKind {
     /// source card was the one cycled; `EventScope::YourControl` fires
     /// when any of the controller's cards were cycled.
     CardCycled,
+    /// CR 702.108 — a permanent became untapped (Inspired). Fired once per
+    /// permanent that flips tapped→untapped during the untap step. The
+    /// triggering permanent is the event subject.
+    BecomesUntapped,
 }
 
 /// Whose events does this trigger listen for?

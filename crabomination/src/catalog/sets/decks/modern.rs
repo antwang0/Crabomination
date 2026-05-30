@@ -7301,6 +7301,72 @@ pub fn searing_blood() -> CardDefinition {
     }
 }
 
+/// Grapeshot — {1}{R} Sorcery with Storm. Deals 1 damage to any target.
+/// Storm copies it once for each spell cast before it this turn (CR 702.40),
+/// each copy choosing its own target.
+pub fn grapeshot() -> CardDefinition {
+    CardDefinition {
+        name: "Grapeshot",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Storm],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+        ..Default::default()
+    }
+}
+
+/// Ahn-Crop Crasher — {2}{R}, 3/2 Minotaur Warrior with Haste and Exert
+/// (CR 702.83). We auto-exert it as it attacks: it gains its on-attack
+/// bonus (target creature can't block this turn) and won't untap on the
+/// controller's next untap step.
+pub fn ahn_crop_crasher() -> CardDefinition {
+    CardDefinition {
+        name: "Ahn-Crop Crasher",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 2,
+        keywords: vec![Keyword::Haste, Keyword::Exert],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::GrantKeyword {
+                what: target_filtered(SelectionRequirement::Creature),
+                keyword: Keyword::CantBlock,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Servant of Tymaret — {1}{B}, 2/1 Zombie with Inspired (CR 702.108):
+/// whenever it becomes untapped, each opponent loses 1 life.
+pub fn servant_of_tymaret() -> CardDefinition {
+    CardDefinition {
+        name: "Servant of Tymaret",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesUntapped, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::EachOpponent),
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Cremate — {B} Instant. Exile target card in a graveyard. Draw a card.
 ///
 /// Graveyard-hate cantrip — pulls a card out of any graveyard (`Any`

@@ -968,6 +968,11 @@ pub struct CardInstance {
     /// `granted_keywords_eot`), so it's intentionally **not** serialized —
     /// a mid-turn snapshot reload defaults shields back to 0.
     pub regeneration_shields: u32,
+    /// CR 702.83 — Exert. When this creature attacks and is exerted, it
+    /// won't untap during its controller's next untap step. Set at attack
+    /// time; consumed (and the untap skipped) by `do_untap`. Transient —
+    /// not serialized (defaults to false on snapshot reload).
+    pub skip_next_untap: bool,
 }
 
 impl CardInstance {
@@ -1005,6 +1010,7 @@ impl CardInstance {
             may_play_until: None,
             dealt_deathtouch_damage: false,
             regeneration_shields: 0,
+            skip_next_untap: false,
         }
     }
 
