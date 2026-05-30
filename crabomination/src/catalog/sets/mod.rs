@@ -163,5 +163,6 @@ pub mod zen;
 pub mod decks;
 pub mod mod_set;
 pub mod sos;
+pub mod staples;
 pub mod stx;
 pub mod xtra;
