@@ -11700,6 +11700,100 @@ pub fn fiery_temper() -> CardDefinition {
     }
 }
 
+/// Cloudgoat Ranger — {3}{W}{W} Creature — Giant. 2/2. "When this creature
+/// enters, create three 1/1 white Kithkin Soldier creature tokens."
+pub fn cloudgoat_ranger() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, TriggeredAbility};
+    let kithkin = TokenDefinition {
+        name: "Kithkin Soldier".to_string(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Kithkin, CreatureType::Soldier],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Cloudgoat Ranger",
+        cost: cost(&[generic(3), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: kithkin,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pelakka Wurm — {5}{G}{G} Creature — Wurm. 7/7. Trample. "When this
+/// creature enters, you gain 7 life. When this creature dies, draw a card."
+pub fn pelakka_wurm() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, TriggeredAbility};
+    CardDefinition {
+        name: "Pelakka Wurm",
+        cost: cost(&[generic(5), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wurm],
+            ..Default::default()
+        },
+        power: 7,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        triggered_abilities: vec![
+            etb(Effect::GainLife { who: Selector::You, amount: Value::Const(7) }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Springbloom Druid — {2}{G} Creature — Human Druid. 2/2. "When this
+/// creature enters, search your library for up to two basic land cards,
+/// put them onto the battlefield tapped, then shuffle." Two basic-land
+/// searches into play tapped.
+pub fn springbloom_druid() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    use crate::effect::ZoneDest;
+    let fetch = || Effect::Search {
+        who: PlayerRef::You,
+        filter: SelectionRequirement::IsBasicLand,
+        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+    };
+    CardDefinition {
+        name: "Springbloom Druid",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Seq(vec![fetch(), fetch()]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Cryptolith Rite — {1}{G} Enchantment. "Creatures you control have
 /// '{T}: Add one mana of any color.'" Wired via
 /// `StaticEffect::GrantActivatedAbility`.

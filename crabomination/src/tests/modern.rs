@@ -2151,6 +2151,67 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
+fn cloudgoat_ranger_etb_makes_three_kithkin() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::cloudgoat_ranger());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Cloudgoat Ranger castable");
+    drain_stack(&mut g);
+    let tokens = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Kithkin Soldier").count();
+    assert_eq!(tokens, 3, "creates three 1/1 Kithkin Soldier tokens");
+}
+
+#[test]
+fn pelakka_wurm_etb_gains_seven_and_death_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::pelakka_wurm());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(5);
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pelakka Wurm castable for {5}{G}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 7, "ETB gained 7 life");
+    let wurm = g.battlefield.iter().find(|c| c.definition.name == "Pelakka Wurm").unwrap().id;
+    let hand_before = g.players[0].hand.len();
+    g.remove_to_graveyard_with_triggers(wurm);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "death trigger drew a card");
+}
+
+#[test]
+fn springbloom_druid_etb_fetches_two_basics_tapped() {
+    use crate::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let f1 = g.add_card_to_library(0, catalog::forest());
+    let f2 = g.add_card_to_library(0, catalog::forest());
+    let lands_before = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    let id = g.add_card_to_hand(0, catalog::springbloom_druid());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    // Script the two tutor picks (AutoDecider declines searches by default).
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(f1)),
+        DecisionAnswer::Search(Some(f2)),
+    ]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Springbloom Druid castable");
+    drain_stack(&mut g);
+    let tapped_lands = g.battlefield.iter()
+        .filter(|c| c.controller == 0 && c.definition.is_land() && c.tapped).count();
+    let lands_after = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).count();
+    assert_eq!(lands_after - lands_before, 2, "two basics entered the battlefield");
+    assert!(tapped_lands >= 2, "the fetched basics entered tapped");
+}
+
+#[test]
 fn cryptolith_rite_grants_creatures_tap_for_any_color() {
     // "Creatures you control have '{T}: Add one mana of any color.'" — the
     // creature-filter path of StaticEffect::GrantActivatedAbility. A bear

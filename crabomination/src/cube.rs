@@ -295,6 +295,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── modern_decks (cascade/aura) ──
         ardent_plea,
+        cloudgoat_ranger,
         holy_strength,
         savannah_lions,
         white_knight,
@@ -1094,6 +1095,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arrogant_wurm,
         cryptolith_rite,
         call_of_the_herd,
+        springbloom_druid,
+        pelakka_wurm,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──
