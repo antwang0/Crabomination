@@ -12134,9 +12134,9 @@ pub fn fiend_hunter() -> CardDefinition {
 /// "+1: Surveil 2. / -3: Exile target creature. / -6: You get an
 ///  emblem with 'At the beginning of your upkeep, draw a card.'"
 ///
-/// Approximation: +1 Surveil 2, -3 exile target creature wired.
-/// -6 emblem omitted (no emblem zone). Base loyalty = 0 (printed:
-/// loyalty equals lands you control, approximated as 3).
+/// +1 Surveil 2, -3 exile target creature, -6 upkeep-draw emblem all
+/// wired. Base loyalty = 3 (printed: loyalty equals lands you control,
+/// approximated as a fixed 3).
 pub fn dakkon_shadow_slayer() -> CardDefinition {
     use crate::card::LoyaltyAbility;
     CardDefinition {
@@ -12157,6 +12157,22 @@ pub fn dakkon_shadow_slayer() -> CardDefinition {
                 loyalty_cost: -3,
                 effect: Effect::Exile {
                     what: target_filtered(SelectionRequirement::Creature),
+                },
+            },
+            // -6: You get an emblem with "At the beginning of your
+            // upkeep, draw a card."
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::CreateEmblem {
+                    who: PlayerRef::You,
+                    name: "Dakkon, Shadow Slayer".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(
+                            EventKind::StepBegins(crate::game::TurnStep::Upkeep),
+                            EventScope::YourControl,
+                        ),
+                        effect: Effect::Draw { who: PlayerRef::You, amount: Value::Const(1) },
+                    }],
                 },
             },
         ],

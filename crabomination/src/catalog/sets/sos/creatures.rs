@@ -4522,14 +4522,20 @@ pub fn professor_dellian_fel() -> CardDefinition {
                     what: target_filtered(SelectionRequirement::Creature),
                 },
             },
-            // -6: You get an emblem with "Whenever you gain life,
-            // target opponent loses that much life." Approximated as a
-            // per-player flag `Player.dellian_fel_emblem` that the
-            // unified dispatcher reads on LifeGained events.
+            // -6: You get an emblem with "Whenever you gain life, each
+            // opponent loses that much life."
             LoyaltyAbility {
                 loyalty_cost: -6,
-                effect: Effect::ActivateDellianEmblem {
+                effect: Effect::CreateEmblem {
                     who: PlayerRef::You,
+                    name: "Professor Dellian Fel".into(),
+                    triggered: vec![TriggeredAbility {
+                        event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                        effect: Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::EachOpponent),
+                            amount: Value::TriggerEventAmount,
+                        },
+                    }],
                 },
             },
         ],

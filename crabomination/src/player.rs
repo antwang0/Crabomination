@@ -6,6 +6,18 @@ use crate::mana::ManaPool;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct PlayerId(pub usize);
 
+/// CR 114 — an emblem owned by a player. Has no characteristics other
+/// than the triggered abilities it grants its owner, and sits in the
+/// command zone for the rest of the game (emblems never leave). Created
+/// by planeswalker ultimates via `Effect::CreateEmblem`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Emblem {
+    /// Source name, for display (e.g. "Professor Dellian Fel").
+    pub name: String,
+    /// Abilities the emblem grants its owner.
+    pub triggered: Vec<crate::effect::TriggeredAbility>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Player {
     pub id: PlayerId,
@@ -132,14 +144,16 @@ pub struct Player {
     /// to 0 for snapshot back-compat.
     #[serde(default)]
     pub skip_turns: u32,
-    /// True while this player has Professor Dellian Fel's -6 emblem
-    /// active: "Whenever you gain life, target opponent loses that much
-    /// life." Permanent (emblems don't leave). Set by Dellian Fel's -6
-    /// loyalty activation. Read by the trigger dispatcher when a
-    /// LifeGained event fires for this player. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// CR 114 — emblems this player owns. Each carries a name (for
+    /// display) and a set of triggered abilities that fire from the
+    /// command zone; emblems never leave once created. The trigger
+    /// dispatcher walks every player's emblems alongside battlefield
+    /// permanents (event-keyed kinds in `dispatch_triggers_for_events`,
+    /// step-keyed kinds in `fire_step_triggers`). Created by
+    /// `Effect::CreateEmblem` (planeswalker ultimates). `#[serde(default)]`
+    /// for snapshot back-compat.
     #[serde(default)]
-    pub dellian_fel_emblem: bool,
+    pub emblems: Vec<Emblem>,
     /// True while a continuous effect on the battlefield prevents this
     /// player from gaining life (CR 119.7). Set by
     /// `StaticEffect::CannotGainLife` in `compute_battlefield`'s player-
@@ -209,7 +223,7 @@ impl Player {
             no_maximum_hand_size: false,
             eliminated: false,
             skip_turns: 0,
-            dellian_fel_emblem: false,
+            emblems: Vec::new(),
             cannot_gain_life: false,
             wants_ui: false,
             coin_flip_advantage: 0,

@@ -1558,14 +1558,14 @@ pub enum Effect {
     /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
     /// chain.
     SkipTurns { who: PlayerRef, count: Value },
-    /// Activate Professor Dellian Fel's -6 emblem on `who`. Sets the
-    /// `Player.dellian_fel_emblem` flag. While the flag is true, every
-    /// LifeGained event for that player triggers "target opponent
-    /// loses that much life" (per the printed emblem text). Permanent
-    /// duration. CR 114 emblem semantics are approximated as a per-
-    /// player bool flag — the engine has no proper emblem zone yet,
-    /// but the play pattern is identical.
-    ActivateDellianEmblem { who: PlayerRef },
+    /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
+    /// Appends an `Emblem` (named after its source) to the player's
+    /// emblem zone. Emblems never leave; their triggered abilities fire
+    /// from the command zone alongside battlefield permanents (the
+    /// dispatcher walks each player's emblems). Used by planeswalker
+    /// ultimates — Professor Dellian Fel's -6, the upkeep-draw / end-step
+    /// emblems, etc.
+    CreateEmblem { who: PlayerRef, name: String, triggered: Vec<TriggeredAbility> },
 
     /// "[Player] wins the game." Used by Approach of the Second Sun's
     /// second-cast win condition, Coalition Victory, Test of Endurance,
@@ -1877,7 +1877,7 @@ impl Effect {
             Effect::SkipTurns { who, count } => {
                 player_has_target(who) || value_has_target(count)
             }
-            Effect::ActivateDellianEmblem { who } => player_has_target(who),
+            Effect::CreateEmblem { who, .. } => player_has_target(who),
             Effect::CreateTokenCopyOf { who, count, source, .. } => {
                 player_has_target(who) || value_has_target(count) || sel_has_target(source)
             }

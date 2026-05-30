@@ -292,6 +292,44 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
     }
 }
 
+/// Like `event_matches_spec`, but for a player-owned emblem (CR 114) that
+/// has no backing permanent. Handles the player-keyed event kinds emblem
+/// triggers actually use; scope is resolved against `controller` (the
+/// emblem's owner). Step-keyed kinds are dispatched separately in
+/// `fire_step_triggers`, so they're rejected here.
+pub(crate) fn emblem_event_matches(
+    state: &GameState,
+    event: &GameEvent,
+    spec: &EventSpec,
+    controller: usize,
+) -> bool {
+    let kind_ok = matches!(
+        (&spec.kind, event),
+        (EventKind::LifeGained, GameEvent::LifeGained { .. })
+            | (EventKind::LifeLost, GameEvent::LifeLost { .. })
+            | (EventKind::CardDrawn, GameEvent::CardDrawn { .. })
+            | (EventKind::CardDiscarded, GameEvent::CardDiscarded { .. })
+            | (EventKind::SpellCast, GameEvent::SpellCast { .. })
+            | (EventKind::LandPlayed, GameEvent::LandPlayed { .. })
+            | (EventKind::CreatureDied, GameEvent::CreatureDied { .. })
+            | (EventKind::Attacks, GameEvent::AttackerDeclared(_))
+    );
+    if !kind_ok {
+        return false;
+    }
+    let scope_ok = match spec.scope {
+        EventScope::YourControl | EventScope::SelfSource => {
+            event_actor(state, event).is_some_and(|p| state.same_team(p, controller))
+        }
+        EventScope::OpponentControl => {
+            event_actor(state, event).is_some_and(|p| !state.same_team(p, controller))
+        }
+        EventScope::AnyPlayer | EventScope::ActivePlayer | EventScope::AnotherOfYours => true,
+        EventScope::FromYourGraveyard => false,
+    };
+    scope_ok
+}
+
 fn event_card(event: &GameEvent) -> Option<CardId> {
     match event {
         GameEvent::PermanentEntered { card_id }

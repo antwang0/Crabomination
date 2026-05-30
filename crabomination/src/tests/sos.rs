@@ -7252,9 +7252,9 @@ fn professor_dellian_fel_minus_three_destroys_creature() {
 #[test]
 fn professor_dellian_fel_minus_six_activates_lifegain_drain_emblem() {
     // Push (modern_decks, batch 90): Dellian Fel's -6 emblem ult. After
-    // activation, Player.dellian_fel_emblem = true. Any subsequent
-    // LifeGained event on P0 fires "target opp loses that much life"
-    // via the unified dispatcher's player-emblem branch.
+    // activation, the player owns an emblem whose LifeGained trigger
+    // fires "each opponent loses that much life" via the dispatcher's
+    // player-emblem branch.
     let mut g = two_player_game();
     let pw = g.add_card_to_battlefield(0, catalog::professor_dellian_fel());
     // Bump loyalty so -6 is payable.
@@ -7262,13 +7262,13 @@ fn professor_dellian_fel_minus_six_activates_lifegain_drain_emblem() {
         let c = g.battlefield_find_mut(pw).unwrap();
         c.add_counters(crate::card::CounterType::Loyalty, 1);
     }
-    assert!(!g.players[0].dellian_fel_emblem);
+    assert!(g.players[0].emblems.is_empty());
     g.perform_action(GameAction::ActivateLoyaltyAbility {
         card_id: pw, ability_index: 3, target: None,
     }).expect("Dellian -6 castable at 6 loyalty");
     drain_stack(&mut g);
-    assert!(g.players[0].dellian_fel_emblem,
-        "Emblem flag set after -6 activation");
+    assert_eq!(g.players[0].emblems.len(), 1,
+        "Emblem added to the command zone after -6 activation");
 
     // Now gain 5 life on P0 — the emblem should drain P1 by 5.
     let p1_life_before = g.players[1].life;

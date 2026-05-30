@@ -716,7 +716,7 @@ fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::IfRevealFromHand { .. } => "Reveal from hand",
         Effect::DiminishCreaturesExceptChosenType { .. } => "Diminish creatures",
         Effect::CreateTokenCopyOf { .. } => "Copy permanent",
-        Effect::ActivateDellianEmblem { .. } => "Activate emblem",
+        Effect::CreateEmblem { .. } => "Get an emblem",
         _ => "Activate",
     }
 }

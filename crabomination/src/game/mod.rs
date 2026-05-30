@@ -2380,34 +2380,37 @@ impl GameState {
                 }
             }
         }
-        // Player-level emblems (CR 114). Professor Dellian Fel's -6 ult
-        // grants the controller an emblem "Whenever you gain life,
-        // target opponent loses that much life." Modeled as a per-
-        // player bool flag (`Player.dellian_fel_emblem`) rather than a
-        // proper emblem zone — when set, every LifeGained event for
-        // that player fires a drain trigger against an auto-targeted
-        // opponent. event_amount carries the gained-life amount through
-        // to the trigger body via `Value::TriggerEventAmount`.
-        for (seat_idx, player) in self.players.iter().enumerate() {
-            if !player.dellian_fel_emblem {
-                continue;
-            }
-            for ev in events {
-                if let GameEvent::LifeGained { player: gained_p, .. } = ev
-                    && *gained_p == seat_idx
-                {
-                    candidates.push(TriggerCandidate {
-                        source: CardId(0),
-                        effect: Effect::LoseLife {
-                            who: crate::effect::Selector::Player(crate::effect::PlayerRef::EachOpponent),
-                            amount: crate::effect::Value::TriggerEventAmount,
-                        },
-                        controller: seat_idx,
-                        filter: None,
-                        subject: None,
-                        event_amount: event_amount(ev),
-                        triggered_by_etb: false,
-                    });
+        // Player-level emblems (CR 114). Each player's emblems carry
+        // triggered abilities that fire from the command zone alongside
+        // battlefield permanents. Event-keyed emblem triggers are handled
+        // here (step-keyed ones — "at the beginning of your upkeep" — fire
+        // in `fire_step_triggers`). `event_amount` carries the magnitude
+        // through to the body via `Value::TriggerEventAmount`. Professor
+        // Dellian Fel's -6 emblem ("Whenever you gain life, each opponent
+        // loses that much life") rides this path.
+        for seat_idx in 0..self.players.len() {
+            for em_idx in 0..self.players[seat_idx].emblems.len() {
+                let triggers = self.players[seat_idx].emblems[em_idx].triggered.clone();
+                for ta in &triggers {
+                    if matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::StepBegins(_) | crate::effect::EventKind::TurnBegins
+                    ) {
+                        continue;
+                    }
+                    for ev in events {
+                        if crate::game::effects::emblem_event_matches(self, ev, &ta.event, seat_idx) {
+                            candidates.push(TriggerCandidate {
+                                source: CardId(0),
+                                effect: ta.effect.clone(),
+                                controller: seat_idx,
+                                filter: ta.event.filter.clone(),
+                                subject: crate::game::effects::event_subject(ev, &ta.event.kind),
+                                event_amount: event_amount(ev),
+                                triggered_by_etb: false,
+                            });
+                        }
+                    }
                 }
             }
         }

@@ -235,6 +235,25 @@ impl GameState {
                 }
             }
         }
+        // CR 114 — step-keyed emblem triggers ("at the beginning of your
+        // upkeep, draw a card"). "Your" scope fires only on the emblem
+        // owner's step; `AnyPlayer` fires for every player's step.
+        for (seat, player) in self.players.iter().enumerate() {
+            for em in &player.emblems {
+                for t in &em.triggered {
+                    let scoped_to_owner = matches!(
+                        t.event.scope,
+                        EventScope::YourControl | EventScope::ActivePlayer | EventScope::SelfSource
+                    );
+                    if t.event.kind == kind
+                        && (matches!(t.event.scope, EventScope::AnyPlayer)
+                            || (scoped_to_owner && seat == active))
+                    {
+                        candidates.push((CardId(0), t.effect.clone(), seat, t.event.filter.clone()));
+                    }
+                }
+            }
+        }
         // CR 603.4 — Intervening 'if' clause: "When the trigger event
         // occurs, the ability checks whether the stated condition is
         // true. The ability triggers only if it is; otherwise it does
