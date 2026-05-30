@@ -54,7 +54,7 @@ lives in `TODO.md`). Keep this lean: list what unblocks the most cards next.
    count; `applies_to` filter evaluated from the static source's controller.
    Replaces the old name-keyed Galazeth/Resonating-Lute hack; shared
    `shortcut::grant_tap_for_any_color(filter)` helper. Galazeth (artifacts),
-   Resonating Lute (lands) wired. Cryptolith Rite (creatures) ready to drop in.
+   Resonating Lute (lands), Cryptolith Rite (creatures) all wired + tested.
 
 ## Tier 2 — single-card or niche
 

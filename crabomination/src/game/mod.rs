@@ -3706,6 +3706,7 @@ fn graveyard_anthem_for_name(
         "Wonder" => Some((LandType::Island, Keyword::Flying)),
         "Brawn" => Some((LandType::Forest, Keyword::Trample)),
         "Valor" => Some((LandType::Plains, Keyword::FirstStrike)),
+        "Filth" => Some((LandType::Swamp, Keyword::Landwalk(LandType::Swamp))),
         _ => None,
     }
 }

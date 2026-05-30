@@ -1092,6 +1092,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         elvish_archers,
         craw_wurm,
         arrogant_wurm,
+        cryptolith_rite,
+        call_of_the_herd,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──

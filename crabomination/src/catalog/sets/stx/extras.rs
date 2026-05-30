@@ -8167,6 +8167,27 @@ pub fn sproutback_trudge() -> CardDefinition {
 /// creature the owner has on the battlefield. The keyword grant falls
 /// out automatically when Wonder leaves the graveyard. The body itself
 /// is a 2/2 flier on a 4-mana frame — playable on its own.
+/// Filth — {2}{B} Creature — Incarnation. 2/1. Swampwalk. "As long as Filth
+/// is in your graveyard and you control a Swamp, creatures you control have
+/// swampwalk." Body swampwalk via `Keyword::Landwalk(Swamp)`; the graveyard
+/// anthem is keyed in `graveyard_anthem_for_name`.
+pub fn filth() -> CardDefinition {
+    use crate::card::LandType;
+    CardDefinition {
+        name: "Filth",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Incarnation],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Landwalk(LandType::Swamp)],
+        ..Default::default()
+    }
+}
+
 pub fn wonder() -> CardDefinition {
     CardDefinition {
         name: "Wonder",

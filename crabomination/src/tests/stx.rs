@@ -9894,6 +9894,23 @@ fn light_of_promise_scales_with_lump_sum_lifegain() {
 }
 
 #[test]
+fn filth_in_graveyard_grants_swampwalk_with_swamp() {
+    use crate::card::LandType;
+    // Filth's graveyard anthem grants swampwalk to your creatures while you
+    // control a Swamp (reuses the graveyard_anthem_for_name table + the new
+    // Keyword::Landwalk).
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(bear).unwrap().keywords
+        .contains(&Keyword::Landwalk(LandType::Swamp)), "no swampwalk without Filth");
+    g.add_card_to_graveyard(0, catalog::filth());
+    g.add_card_to_battlefield(0, catalog::swamp());
+    assert!(g.computed_permanent(bear).unwrap().keywords
+        .contains(&Keyword::Landwalk(LandType::Swamp)),
+        "bear gains swampwalk from Filth in gy + Swamp controlled");
+}
+
+#[test]
 fn anger_in_graveyard_grants_haste_with_mountain() {
     // Push (modern_decks): NEW STA reprint. Anger's graveyard-resident
     // anthem grants Haste to your creatures while you control a Mountain.

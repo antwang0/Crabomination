@@ -11700,6 +11700,51 @@ pub fn fiery_temper() -> CardDefinition {
     }
 }
 
+/// Cryptolith Rite — {1}{G} Enchantment. "Creatures you control have
+/// '{T}: Add one mana of any color.'" Wired via
+/// `StaticEffect::GrantActivatedAbility`.
+pub fn cryptolith_rite() -> CardDefinition {
+    use crate::card::SelectionRequirement;
+    CardDefinition {
+        name: "Cryptolith Rite",
+        cost: cost(&[generic(1), g()]),
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+            SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+        )],
+        ..Default::default()
+    }
+}
+
+/// Call of the Herd — {2}{G} Sorcery. "Create a 3/3 green Elephant creature
+/// token. Flashback {3}{G}." Flashback via `Keyword::Flashback`.
+pub fn call_of_the_herd() -> CardDefinition {
+    let elephant = TokenDefinition {
+        name: "Elephant".to_string(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elephant],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Call of the Herd",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Flashback(cost(&[generic(3), g()]))],
+        effect: Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: elephant,
+        },
+        ..Default::default()
+    }
+}
+
 /// Arrogant Wurm — {3}{G}{G} Creature — Wurm. 4/4. Trample. Madness {2}{G}.
 pub fn arrogant_wurm() -> CardDefinition {
     use crate::card::Keyword;

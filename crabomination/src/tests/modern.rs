@@ -2130,6 +2130,44 @@ fn voldaren_epicure_etb_creates_blood_and_pings_each_opponent() {
 }
 
 #[test]
+fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::call_of_the_herd());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Call of the Herd castable");
+    drain_stack(&mut g);
+    let elephants = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Elephant").count();
+    assert_eq!(elephants, 1, "creates one 3/3 Elephant token");
+    // It carries Flashback so it can be recast from the graveyard.
+    assert!(g.players[0].graveyard.iter().any(|c|
+        c.definition.name == "Call of the Herd"
+        && c.definition.keywords.iter().any(|k| matches!(k, Keyword::Flashback(_)))),
+        "Call of the Herd is in the graveyard with Flashback");
+}
+
+#[test]
+fn cryptolith_rite_grants_creatures_tap_for_any_color() {
+    // "Creatures you control have '{T}: Add one mana of any color.'" — the
+    // creature-filter path of StaticEffect::GrantActivatedAbility. A bear
+    // (0 printed abilities) gets the grant at index 0.
+    let mut g = two_player_game();
+    let _rite = g.add_card_to_battlefield(0, catalog::cryptolith_rite());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let before = g.players[0].mana_pool.total();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bear, ability_index: 0, target: None, x_value: None,
+    }).expect("Cryptolith Rite grants the bear a tap-for-any-color ability");
+    assert_eq!(g.players[0].mana_pool.total() - before, 1, "added one mana");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "bear tapped for the grant");
+}
+
+#[test]
 fn big_game_hunter_etb_destroys_a_big_creature() {
     let mut g = two_player_game();
     let big = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
