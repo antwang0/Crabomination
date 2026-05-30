@@ -16,7 +16,7 @@ use crate::effect::shortcut::{
     magecraft, magecraft_loot, magecraft_ping_each_opp, magecraft_scry, magecraft_self_pump,
     magecraft_treasure, target_filtered,
 };
-use crate::effect::{Duration, PlayerRef, ZoneDest};
+use crate::effect::{DelayedTriggerKind, Duration, PlayerRef, ZoneDest};
 use crate::mana::{cost, generic, r, u, Color};
 
 // ── Prismari Pledgemage ─────────────────────────────────────────────────────
@@ -1036,18 +1036,11 @@ pub fn prismari_alchemist() -> CardDefinition {
 /// "Magecraft — Whenever you cast or copy an instant or sorcery spell,
 /// exile target creature an opponent controls, then return it to the
 /// battlefield under its owner's control at the beginning of the next
-/// end step."
-///
-/// 🟡 Approximated as Magecraft → tap target opponent creature + stun
-/// counter (same Frost Trickster pattern). Full flicker needs delayed
-/// zone-return which is not yet wired.
+/// end step." (Flickerwisp-style delayed return.)
 pub fn elemental_expressionist() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::magecraft;
     CardDefinition {
         name: "Elemental Expressionist",
         cost: cost(&[generic(2), u(), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Human, CreatureType::Wizard],
@@ -1055,33 +1048,25 @@ pub fn elemental_expressionist() -> CardDefinition {
         },
         power: 4,
         toughness: 3,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
         triggered_abilities: vec![magecraft(Effect::Seq(vec![
-            Effect::Tap {
+            Effect::Exile {
                 what: target_filtered(
                     SelectionRequirement::Creature
                         .and(SelectionRequirement::ControlledByOpponent),
                 ),
             },
-            Effect::AddCounter {
-                what: Selector::Target(0),
-                kind: CounterType::Stun,
-                amount: Value::Const(1),
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        tapped: false,
+                    },
+                }),
             },
         ]))],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

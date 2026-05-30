@@ -8845,6 +8845,38 @@ fn searing_blood_deals_two_damage_to_creature() {
 }
 
 #[test]
+fn searing_blood_burns_controller_when_creature_dies() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2 dies
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear dies");
+    assert_eq!(g.players[1].life, p1_life - 3, "controller takes 3 on death");
+}
+
+#[test]
+fn searing_blood_spares_controller_when_creature_survives() {
+    let mut g = two_player_game();
+    let wall = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 survives 2
+    let id = g.add_card_to_hand(0, catalog::searing_blood());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    let p1_life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(wall)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == wall), "4-toughness survives");
+    assert_eq!(g.players[1].life, p1_life, "no burn when creature survives");
+}
+
+#[test]
 fn harrow_sacrifices_land_and_searches_two_basics() {
     let mut g = two_player_game();
     // Stock the library with two Forests so Harrow has fetch targets.

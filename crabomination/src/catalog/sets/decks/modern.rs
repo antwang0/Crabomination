@@ -7271,22 +7271,39 @@ pub fn geier_reach_sanitarium() -> CardDefinition {
     }
 }
 
-/// Searing Blood — {R}{R} Instant. Searing Blood deals 2 damage to target
-/// creature. When that creature dies this turn, Searing Blood deals 3
-/// damage to that creature's controller.
+/// Searing Blood — {R}{R} Instant. Deals 2 damage to target creature;
+/// when that creature dies this turn, deals 3 to its controller.
 ///
-/// The "if it dies, deal 3 to its controller" rider collapses (no
-/// "if-this-effect's-target-dies" delayed trigger primitive yet).
-/// Resolves as flat 2 damage to a creature — strictly worse than
-/// Magma Spray for a half-cost increase but still efficient.
+/// The death rider is approximated (same shape as Lava Coil / Magma
+/// Spray): when the target's toughness ≤ 2 (lethal from the 2 damage),
+/// the controller also takes 3. Both hits land while the creature is
+/// still on the battlefield, so `ControllerOf` resolves. Prior-damage
+/// edge cases aren't captured.
 pub fn searing_blood() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Searing Blood",
         cost: cost(&[r(), r()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::DealDamage {
-            to: target_filtered(SelectionRequirement::Creature),
-            amount: Value::Const(2),
+        effect: Effect::If {
+            cond: Predicate::ValueAtMost(
+                Value::ToughnessOf(Box::new(Selector::Target(0))),
+                Value::Const(2),
+            ),
+            then: Box::new(Effect::Seq(vec![
+                Effect::DealDamage {
+                    to: Selector::Player(PlayerRef::ControllerOf(Box::new(Selector::Target(0)))),
+                    amount: Value::Const(3),
+                },
+                Effect::DealDamage {
+                    to: target_filtered(SelectionRequirement::Creature),
+                    amount: Value::Const(2),
+                },
+            ])),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            }),
         },
         ..Default::default()
     }

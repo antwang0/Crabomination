@@ -2081,11 +2081,10 @@ fn returned_pastcaller_returns_instant_from_graveyard_on_etb() {
 // ── Elemental Expressionist ───────────────────────────────────────────────
 
 #[test]
-fn elemental_expressionist_taps_and_stuns_on_magecraft() {
+fn elemental_expressionist_flickers_opp_creature_on_magecraft() {
     let mut g = two_player_game();
     let _expr = g.add_card_to_battlefield(0, catalog::elemental_expressionist());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    g.clear_sickness(bear);
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.perform_action(GameAction::CastSpell {
@@ -2093,10 +2092,11 @@ fn elemental_expressionist_taps_and_stuns_on_magecraft() {
     })
     .expect("Bolt castable for {R}");
     drain_stack(&mut g);
-    let bear_card = g.battlefield.iter().find(|c| c.id == bear).unwrap();
-    assert!(bear_card.tapped, "Opponent creature should be tapped by Magecraft");
-    assert_eq!(bear_card.counter_count(CounterType::Stun), 1,
-        "Opponent creature should have a stun counter");
+    // Magecraft exiles the opponent's creature and queues a delayed return.
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "bear exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear in exile");
+    assert!(g.delayed_triggers.iter().any(|d| d.controller == 0),
+        "delayed end-step return registered");
 }
 
 // ── Prowess wiring ─────────────────────────────────────────────────────────
