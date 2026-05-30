@@ -11665,6 +11665,46 @@ pub fn anjes_ravager() -> CardDefinition {
     }
 }
 
+/// Cunning Sparkmage — {1}{R} Creature — Human Shaman. 1/1. Haste.
+/// "{T}: This creature deals 1 damage to any target."
+pub fn cunning_sparkmage() -> CardDefinition {
+    use crate::card::{ActivatedAbility, Keyword};
+    CardDefinition {
+        name: "Cunning Sparkmage",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hill Giant — {3}{R} Creature — Giant. 3/3. A vanilla beater.
+pub fn hill_giant() -> CardDefinition {
+    CardDefinition {
+        name: "Hill Giant",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Giant],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
 /// Reckless Wurm — {3}{R} Creature — Wurm. 5/4. Trample. Madness {1}{R}.
 pub fn reckless_wurm() -> CardDefinition {
     use crate::card::Keyword;

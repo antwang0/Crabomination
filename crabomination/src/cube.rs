@@ -880,6 +880,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         lightning_bolt,
         shock,
         blazing_rootwalla,
+        cunning_sparkmage,
+        hill_giant,
         anjes_ravager,
         reckless_wurm,
         reckless_abandon,

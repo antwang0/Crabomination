@@ -2338,6 +2338,27 @@ fn arrogant_wurm_is_a_four_four_trampling_madness_wurm() {
 }
 
 #[test]
+fn hill_giant_is_a_vanilla_three_three() {
+    let def = catalog::hill_giant();
+    assert_eq!((def.power, def.toughness), (3, 3));
+    assert!(def.keywords.is_empty() && def.activated_abilities.is_empty()
+        && def.triggered_abilities.is_empty(), "vanilla beater");
+}
+
+#[test]
+fn cunning_sparkmage_taps_to_ping_for_one() {
+    let mut g = two_player_game();
+    let mage = g.add_card_to_battlefield(0, catalog::cunning_sparkmage());
+    g.clear_sickness(mage);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: mage, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("Cunning Sparkmage pings");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 19, "1 damage to the opponent");
+    assert!(g.battlefield_find(mage).unwrap().tapped, "mage tapped to ping");
+}
+
+#[test]
 fn fiery_temper_deals_three_to_any_target() {
     let mut g = two_player_game();
     let bolt = g.add_card_to_hand(0, catalog::fiery_temper());
