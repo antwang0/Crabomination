@@ -15639,6 +15639,25 @@ fn culling_ritual_destroys_small_nonland_permanents() {
 }
 
 #[test]
+fn culling_ritual_adds_mana_per_permanent_destroyed() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(1, catalog::grizzly_bears()); // MV 2
+    g.add_card_to_battlefield(1, catalog::llanowar_elves()); // MV 1
+    let id = g.add_card_to_hand(0, catalog::culling_ritual());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Cost was fully paid, so the pool now holds only the rider's mana:
+    // one B/G per destroyed permanent (two destroyed → two mana).
+    assert_eq!(g.players[0].mana_pool.total(), 2,
+        "two permanents destroyed → two B/G mana added");
+}
+
+#[test]
 fn rushed_rebirth_tutors_a_creature_to_hand() {
     let mut g = two_player_game();
     let elf = g.add_card_to_library(0, catalog::llanowar_elves());

@@ -290,6 +290,7 @@ impl GameState {
         self.creature_cards_discarded_this_resolution = 0;
         self.cards_discarded_per_player_this_resolution.clear();
         self.discarded_card_ids_this_resolution.clear();
+        self.permanents_destroyed_this_resolution = 0;
         let mut events = vec![];
         self.run_effect(effect, ctx, &mut events)?;
         Ok(events)
@@ -1013,6 +1014,26 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
+                    ManaPayload::OfColors(colors, v) => {
+                        // N pips, each chosen from the restricted palette
+                        // (Culling Ritual: {B} or {G} per permanent destroyed).
+                        let n = self.evaluate_value(v, ctx).max(0) as u32;
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let fallback = colors.first().copied().unwrap_or(Color::White);
+                        for _ in 0..n {
+                            let answer = self.decider.decide(&crate::decision::Decision::ChooseColor {
+                                source,
+                                legal: colors.clone(),
+                            });
+                            let color = match answer {
+                                crate::decision::DecisionAnswer::Color(c)
+                                    if colors.contains(&c) => c,
+                                _ => fallback,
+                            };
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
                 }
                 Ok(())
             }
@@ -1076,6 +1097,8 @@ impl GameState {
                         }
                         let mut dies = self.remove_to_graveyard_with_triggers(cid);
                         events.append(&mut dies);
+                        self.permanents_destroyed_this_resolution =
+                            self.permanents_destroyed_this_resolution.saturating_add(1);
                     }
                 }
                 let mut sba = self.check_state_based_actions();

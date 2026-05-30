@@ -384,6 +384,11 @@ pub enum Value {
     /// table-wide aristocrat scaling, mirroring
     /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
     CreaturesDiedThisTurnTotal,
+    /// Number of permanents destroyed by `Effect::Destroy` earlier in this
+    /// same resolution. Backed by `GameState.permanents_destroyed_this_resolution`.
+    /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed
+    /// this way" — evaluate it in a later `Seq` step after the destruction.
+    PermanentsDestroyedThisResolution,
 }
 
 impl Value {
@@ -662,6 +667,12 @@ pub enum ManaPayload {
     AnyOneColor(Value),
     /// Add `amount` mana of any colors (player chooses each).
     AnyColors(Value),
+    /// Add `amount` mana, each pip chosen from the given color subset
+    /// (player chooses per pip). The restricted-palette sibling of
+    /// `AnyColors`. Used by Culling Ritual's "Add {B} or {G} for each
+    /// permanent destroyed this way". Falls back to the first listed
+    /// color when the decider can't choose.
+    OfColors(Vec<Color>, Value),
     /// Add one mana of any color a controller's opponent's land could
     /// produce. The pool of legal colors is the union of basic-land
     /// types under any opponent's control (`Plains` → White, `Island`
@@ -1737,7 +1748,7 @@ impl Effect {
                     ManaPayload::Colorless(v)
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
-                    ManaPayload::OfColor(_, v) => value_has_target(v),
+                    ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
                     ManaPayload::Colors(_)
                     | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }

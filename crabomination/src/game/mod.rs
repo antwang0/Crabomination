@@ -259,6 +259,15 @@ pub struct GameState {
     /// to empty between independent resolutions.
     #[serde(skip)]
     pub(crate) discarded_card_ids_this_resolution: Vec<CardId>,
+    /// Transient: count of permanents destroyed by `Effect::Destroy` within
+    /// the current resolution. Read by `Value::PermanentsDestroyedThisResolution`
+    /// so a follow-up `Effect::Seq` step can scale off the kill count
+    /// (Culling Ritual's "Add {B} or {G} for each permanent destroyed this
+    /// way"). Counts only permanents that actually reach the graveyard —
+    /// indestructible / shielded survivors don't bump it. Reset to 0
+    /// between independent resolutions.
+    #[serde(skip)]
+    pub(crate) permanents_destroyed_this_resolution: u32,
     /// Transient: which face / cast path the in-progress cast is using.
     /// Set by `cast_spell_back_face` (`Back`) and `cast_flashback`
     /// (`Flashback`); reset to `Front` after each emitted SpellCast
@@ -406,6 +415,7 @@ impl Clone for GameState {
             creature_cards_discarded_this_resolution: self.creature_cards_discarded_this_resolution,
             cards_discarded_per_player_this_resolution: self.cards_discarded_per_player_this_resolution.clone(),
             discarded_card_ids_this_resolution: self.discarded_card_ids_this_resolution.clone(),
+            permanents_destroyed_this_resolution: self.permanents_destroyed_this_resolution,
             pending_cast_face: self.pending_cast_face,
             decider: self.decider.kind().into_boxed(),
             pending_decision: self.pending_decision.clone(),
@@ -469,6 +479,7 @@ impl GameState {
             creature_cards_discarded_this_resolution: 0,
             cards_discarded_per_player_this_resolution: HashMap::new(),
             discarded_card_ids_this_resolution: Vec::new(),
+            permanents_destroyed_this_resolution: 0,
             pending_cast_face: CastFace::Front,
             decider: Box::new(AutoDecider),
             pending_decision: None,

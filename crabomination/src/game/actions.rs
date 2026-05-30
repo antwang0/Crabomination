@@ -284,6 +284,7 @@ pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> boo
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::Colors(cs) => cs.len() > 1,
+            ManaPayload::OfColors(cs, _) => cs.len() > 1,
             ManaPayload::OfColor(_, _) => false,
             ManaPayload::Colorless(_) => false,
         };
@@ -539,6 +540,7 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             | ManaPayload::AnyColors(_)
             | ManaPayload::AnyColorOpponentCouldProduce => true,
             ManaPayload::OfColor(c, _) => *c == color,
+            ManaPayload::OfColors(cs, _) => cs.contains(&color),
             ManaPayload::Colorless(_) => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),

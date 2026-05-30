@@ -136,6 +136,9 @@ impl GameState {
             Value::CreatureCardsDiscardedThisEffect => {
                 self.creature_cards_discarded_this_resolution as i32
             }
+            Value::PermanentsDestroyedThisResolution => {
+                self.permanents_destroyed_this_resolution as i32
+            }
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::CastSpellManaSpent => {
                 // Prefer the spell stack item's stored `mana_spent` when

@@ -432,37 +432,33 @@ pub fn witherbloom_command() -> CardDefinition {
 
 /// Culling Ritual — {2}{B}{G} Sorcery. "Destroy each nonland permanent
 /// with mana value 2 or less. Add {B} or {G} for each permanent destroyed
-/// this way."
-///
-/// 🟡 Mana-add-per-destroyed rider omitted (no count-destroyed primitive).
-/// Destruction of MV ≤ 2 nonland permanents is faithful.
+/// this way." (Mana rider scales off the kill count via
+/// `Value::PermanentsDestroyedThisResolution`.)
 pub fn culling_ritual() -> CardDefinition {
+    use crate::effect::ManaPayload;
+    use crate::mana::Color;
     CardDefinition {
         name: "Culling Ritual",
         cost: cost(&[generic(2), b(), g()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::ForEach {
-            selector: Selector::EachPermanent(
-                SelectionRequirement::Nonland
-                    .and(SelectionRequirement::ManaValueAtMost(2)),
-            ),
-            body: Box::new(Effect::Destroy {
-                what: Selector::TriggerSource,
-            }),
-        },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
+        effect: Effect::Seq(vec![
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    SelectionRequirement::Nonland
+                        .and(SelectionRequirement::ManaValueAtMost(2)),
+                ),
+                body: Box::new(Effect::Destroy {
+                    what: Selector::TriggerSource,
+                }),
+            },
+            Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::OfColors(
+                    vec![Color::Black, Color::Green],
+                    Value::PermanentsDestroyedThisResolution,
+                ),
+            },
+        ]),
         ..Default::default()
     }
 }
