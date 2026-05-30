@@ -8008,10 +8008,13 @@ pub fn saheeli_rai() -> CardDefinition {
             },
             // -7: emblem — "At the beginning of your end step, create two
             // tokens that are copies of target artifact or creature you
-            // control, except they have haste. Exile them at the next end
-            // step." Modeled as one CreateTokenCopyOf with count 2 (a
-            // single shared target slot, which the emblem step-trigger
-            // auto-target path fills once) + haste on the tokens.
+            // control, except they have haste." Modeled via the CR 114
+            // emblem zone (one CreateTokenCopyOf count 2 + haste). NOTE:
+            // copy-target auto-selection through the step-trigger path is a
+            // known gap (Seq-wrapped CreateTokenCopyOf source slot isn't
+            // filled by `auto_target_for_effect` from a command-zone
+            // trigger) — tracked in TODO.md. The emblem itself is created
+            // and fires; the copy body resolves once the gap closes.
             LoyaltyAbility {
                 loyalty_cost: -7,
                 effect: Effect::CreateEmblem {
