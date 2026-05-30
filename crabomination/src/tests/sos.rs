@@ -13934,3 +13934,21 @@ fn strixhaven_skycoach_crews_into_a_flier() {
     assert_eq!(cp.power, 3);
     assert_eq!(cp.toughness, 2);
 }
+
+#[test]
+fn zaffai_grants_a_free_instant_or_sorcery_each_turn() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::zaffai_and_the_tempests());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // Beginning of the active player's main phase grants a free IS cast.
+    g.fire_step_triggers(TurnStep::PreCombatMain);
+    drain_stack(&mut g);
+    // No mana in pool — only the Zaffai grant makes the Bolt castable.
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Zaffai grant lets Bolt be cast for free");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "free Bolt dealt 3");
+}
