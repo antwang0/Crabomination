@@ -2,10 +2,10 @@
 //! (`catalog::sets::stx`). New STX cards added here should ship with at
 //! least one test exercising their primary play pattern.
 
-use crate::card::{CounterType, CreatureType, Keyword};
+use crate::card::CounterType;
 use crate::catalog;
 use crate::game::*;
-use crate::game::{drain_stack, two_player_game};
+use crate::game::drain_stack;
 use crate::mana::Color;
 
 

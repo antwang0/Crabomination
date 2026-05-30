@@ -393,7 +393,7 @@ impl MatchStats {
     /// rolling-summary line.
     fn avg_turns(&self) -> u64 {
         let n = self.total_matches();
-        if n == 0 { 0 } else { self.total_turns / n }
+        self.total_turns.checked_div(n).unwrap_or(0)
     }
     /// Increment the per-format match count. Used by both `record_bot`
     /// and `record_pair` so the per-format histogram covers every

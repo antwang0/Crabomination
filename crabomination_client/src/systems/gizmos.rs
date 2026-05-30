@@ -10,7 +10,7 @@ use crabomination::game::{AttackTarget, Target, TurnStep};
 use crabomination::net::StackItemView;
 
 use crate::card::{BattlefieldCard, CardOwner, GameCardId, StackCard};
-use crate::card::layout::player_target_zone_position;
+use crate::card::layout::player_hand_anchor;
 use crate::game::{AttackingState, BlockingState};
 use crate::net_plugin::CurrentView;
 
@@ -180,7 +180,7 @@ pub fn draw_stack_arrows(
             Target::Permanent(id) => bf_pos.get(id).copied(),
             Target::Player(idx) => {
                 if *idx < n_seats {
-                    let mut p = player_target_zone_position(*idx, viewer, n_seats);
+                    let mut p = player_hand_anchor(*idx, viewer, n_seats);
                     p.y = 0.2;
                     Some(p)
                 } else {
@@ -339,7 +339,7 @@ pub fn draw_attack_plan_gizmos(
         // Arrow to its current target.
         let to = match target {
             AttackTarget::Player(seat) => {
-                let mut p = player_target_zone_position(*seat, viewer, n_seats);
+                let mut p = player_hand_anchor(*seat, viewer, n_seats);
                 p.y = 0.3;
                 Some(p)
             }

@@ -19,11 +19,11 @@ use crate::mana::{Color, b, cost, g, generic, r, u, w, ManaCost};
 
 // ── Bookwurm ────────────────────────────────────────────────────────────────
 
-/// Bookwurm — {5}{G}{G}, 5/5 Wurm. "Trample / When this creature enters,
-/// you gain 4 life and draw a card."
-///
-/// ✅ ETB body is a simple `Seq(GainLife(4), Draw(1))`. The 5/5 trample
-/// body is a fine top-end finisher in any green deck.
+// Bookwurm — {5}{G}{G}, 5/5 Wurm. "Trample / When this creature enters,
+// you gain 4 life and draw a card."
+//
+// ✅ ETB body is a simple `Seq(GainLife(4), Draw(1))`. The 5/5 trample
+// body is a fine top-end finisher in any green deck.
 
 // ── Take Up the Shield ──────────────────────────────────────────────────────
 

@@ -1,6 +1,5 @@
 use crate::card::{CounterType, CreatureType, Keyword};
 use crate::catalog;
-use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
 use super::*;
@@ -1965,7 +1964,7 @@ fn prismari_sparkbright_attack_pings_target() {
     // Bear should have taken at least 1 damage from the trigger OR opp lost 1 life.
     let life_after = g.players[1].life;
     let bear = g.battlefield_find(opp_bear);
-    let damage_done = (20i32 - life_after as i32)
+    let damage_done = (20i32 - life_after)
         + bear.map(|b| b.damage as i32).unwrap_or(0);
     assert!(damage_done >= 1, "On-attack ping dealt at least 1 damage somewhere");
     assert!(catalog::prismari_sparkbright().keywords.contains(&Keyword::Haste));

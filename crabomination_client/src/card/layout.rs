@@ -193,23 +193,48 @@ pub fn back_face_rotation(seat: usize, viewer: usize) -> Quat {
     }
 }
 
+/// How far (in Z) to pull the hand anchor toward the table center from
+/// the hand fan's resting line, so combat lunges and targeting arrows
+/// land just in front of the fan rather than buried under the cards.
+const HAND_ANCHOR_PULLBACK: f32 = 2.5;
+
+/// World anchor for `seat`'s on-table "presence" — the center of their
+/// hand fan, pulled slightly toward the table center. Used as the 3-D
+/// anchor that combat-lurch, attack-plan, and stack-spell arrows point
+/// at (player *clicks* land on the 2-D HUD panel instead).
+///
+/// Pointing these at the hand — rather than a separate avatar disc —
+/// ties "the player" to the cluster of cards already sitting at their
+/// edge of the table: an attacker visibly lunges toward the defending
+/// player's hand, and a removal spell's arrow sweeps to the same player
+/// the 2-D panel click resolves to.
+///
+/// Y sits at table level; every current consumer overrides the height
+/// (gizmo arrows raise it to ~0.2–0.3; the combat lurch keeps attackers
+/// gliding flat at Y=0), so only X/Z are meaningful here.
+pub fn player_hand_anchor(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
+    let x = opp_x_offset(seat, viewer, n_seats);
+    let z = if is_viewer(seat, viewer) {
+        HAND_CENTER_Z - HAND_ANCHOR_PULLBACK
+    } else {
+        -(HAND_CENTER_Z + 2.0) + HAND_ANCHOR_PULLBACK
+    };
+    Vec3::new(x, 0.01, z)
+}
+
 /// Width along X that a 7-card hand fan occupies (the soft cap). Used to
 /// position the per-seat 3-D player-avatar disc just past the right
 /// edge of the hand so it's clearly visible from the camera without
 /// overlapping creature / land rows or the hand cards themselves.
 const HAND_HALF_WIDTH: f32 = HAND_CARD_SPACING * ((HAND_FAN_SOFT_CAP as f32) - 1.0) / 2.0;
 
-/// Center of `seat`'s player-avatar position. Used both as the
-/// click-target hit region for spell/ability targeting **and** as the
-/// 3-D anchor for combat-lurch + attack-plan + stack-spell arrows.
+/// Resting position of `seat`'s 3-D player-avatar disc, just past the
+/// right edge of their hand fan.
 ///
-/// Placed just past the right edge of each player's hand fan, at the
-/// same z as the hand. That puts the avatar in the empty table area
-/// between the hand and the deck/graveyard piles — clearly visible from
-/// the (slightly tilted top-down) camera and outside both the playable
-/// creature/land rows *and* the hand-card fan. Prior layouts placed it
-/// mid-board (overlapping rows) or under the hand (hidden by the hand
-/// cards from the camera POV).
+/// NOTE: transitional. The disc is being retired in favour of a 2-D HUD
+/// panel; combat-lurch and targeting arrows already point at
+/// [`player_hand_anchor`] instead. This is kept only so the disc (still
+/// the keyboard-target carrier) has a stable home until it's removed.
 pub fn player_target_zone_position(seat: usize, viewer: usize, n_seats: usize) -> Vec3 {
     let x = opp_x_offset(seat, viewer, n_seats) + HAND_HALF_WIDTH + 1.2;
     let z = if is_viewer(seat, viewer) {

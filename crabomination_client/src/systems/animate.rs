@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use bevy::prelude::*;
 
 use crate::card::{
-    hand_card_transform, layout::player_target_zone_position, Animating, BattlefieldCard,
+    hand_card_transform, layout::player_hand_anchor, Animating, BattlefieldCard,
     CardFlipAnimation, CardHoverLift, CardOwner, CombatLurch, DeckCard, DeckShuffleAnimation,
     DrawCardAnimation, GameCardId, HandCard, HandSlideAnimation, MdfcFlipAnimation,
     PlayCardAnimation, ReturnToDeckAnimation, ReturnToHandAnimation, RevealPeekAnimation,
@@ -113,7 +113,7 @@ pub fn update_combat_lurch_targets(
         // we just point at the first opponent — close enough for the
         // visual lunge until per-target metadata is plumbed through.
         let def_seat = (0..n_seats).find(|&s| s != owner.0).unwrap_or(owner.0);
-        let icon = player_target_zone_position(def_seat, viewer, n_seats);
+        let icon = player_hand_anchor(def_seat, viewer, n_seats);
         // base_translation tracks the card's resting transform. Falling
         // back to ZERO is a no-op direction (offset becomes ~icon) which
         // matters only on the one frame between spawn and the first

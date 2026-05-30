@@ -8,6 +8,11 @@
 //! the top-level `crabomination` crate, since it also aggregates the cube/demo
 //! pools.
 
+// Crate-level allows inherited from the original monolithic `crabomination`
+// crate, where the card factories lived.
+#![allow(clippy::doc_lazy_continuation)]
+#![allow(clippy::large_enum_variant)]
+
 // ── Crate-private compatibility shims ────────────────────────────────────────
 // To avoid rewriting the thousands of `crate::card` / `crate::effect` /
 // `crate::game` / `crate::catalog` paths in the factory modules, re-expose the

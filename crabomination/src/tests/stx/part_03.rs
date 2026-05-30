@@ -1,6 +1,5 @@
-use crate::card::{CounterType, CreatureType, Keyword};
+use crate::card::{CounterType, Keyword};
 use crate::catalog;
-use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
 use crate::mana::Color;
 use super::*;

@@ -262,11 +262,10 @@ impl ManaCost {
         let mut result = Vec::new();
         for s in &self.symbols {
             match s {
-                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => {
-                    if !result.contains(c) {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c)
+                    if !result.contains(c) => {
                         result.push(*c);
                     }
-                }
                 ManaSymbol::Hybrid(a, b) => {
                     if !result.contains(a) {
                         result.push(*a);
@@ -275,11 +274,10 @@ impl ManaCost {
                         result.push(*b);
                     }
                 }
-                ManaSymbol::MonoHybrid(_, c) => {
-                    if !result.contains(c) {
+                ManaSymbol::MonoHybrid(_, c)
+                    if !result.contains(c) => {
                         result.push(*c);
                     }
-                }
                 _ => {}
             }
         }
