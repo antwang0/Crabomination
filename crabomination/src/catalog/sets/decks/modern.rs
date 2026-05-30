@@ -11700,6 +11700,50 @@ pub fn fiery_temper() -> CardDefinition {
     }
 }
 
+/// Ravenous Chupacabra — {2}{B}{B} Creature — Beast Horror. 2/2. "When this
+/// creature enters, destroy target creature an opponent controls."
+pub fn ravenous_chupacabra() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Ravenous Chupacabra",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Beast, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Sentinel Spider — {3}{G}{G} Creature — Spider. 4/4. Vigilance, reach.
+pub fn sentinel_spider() -> CardDefinition {
+    use crate::card::Keyword;
+    CardDefinition {
+        name: "Sentinel Spider",
+        cost: cost(&[generic(3), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spider],
+            ..Default::default()
+        },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Vigilance, Keyword::Reach],
+        ..Default::default()
+    }
+}
+
 /// Brindle Boar — {2}{G} Creature — Boar. 3/3. "Sacrifice Brindle Boar: You
 /// gain 4 life."
 pub fn brindle_boar() -> CardDefinition {

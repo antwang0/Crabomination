@@ -2151,6 +2151,29 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
+fn ravenous_chupacabra_etb_destroys_an_opponent_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::ravenous_chupacabra());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Ravenous Chupacabra castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "opponent's creature destroyed on ETB");
+}
+
+#[test]
+fn sentinel_spider_has_vigilance_and_reach() {
+    use crate::card::Keyword;
+    let def = catalog::sentinel_spider();
+    assert_eq!((def.power, def.toughness), (4, 4));
+    assert!(def.keywords.contains(&Keyword::Vigilance) && def.keywords.contains(&Keyword::Reach));
+}
+
+#[test]
 fn brindle_boar_sacrifices_for_four_life() {
     let mut g = two_player_game();
     let boar = g.add_card_to_battlefield(0, catalog::brindle_boar());

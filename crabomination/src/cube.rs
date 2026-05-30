@@ -637,6 +637,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         terror,
         doom_blade,
+        ravenous_chupacabra,
         fatal_push,
         // ── modern_decks (dredge): Stinkweed Imp ──
         stinkweed_imp,
@@ -1099,6 +1100,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         springbloom_druid,
         pelakka_wurm,
         brindle_boar,
+        sentinel_spider,
         // ── modern_decks (cascade): Apex Devastator (cascade ×4) ──
         apex_devastator,
         // ── modern_decks (cascade/aura): Shardless Agent (GU) + Rancor ──
