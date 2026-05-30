@@ -192,7 +192,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Last Gasp | {1}{B} | ✅ | `PumpPT(-3/-3 EOT)` — kills 3-toughness creatures. |
 | Wild Mongrel | {1}{G} | 🟡 | 2/2 Hound; `Discard 1: +1/+1 EOT` (Psychic Frog mirror). The "becomes the color of your choice" half collapses. |
 | Tear Asunder | {1}{B}{G} | 🟡 | `Destroy(Artifact ∨ Enchantment)`. Kicker {2} "destroy any nonland permanent" mode collapsed (alt-cost can't yet swap target filters at cast time). |
-| Assassin's Trophy | {B}{G} | 🟡 | `Destroy(Permanent ∧ Nonland ∧ ControlledByOpponent)`. The "owner searches their library for a basic land" downside is omitted (Search always targets the caster). |
 | Volcanic Fallout | {1}{R}{R} | ✅ (was 🟡) | Push (modern_decks): body unchanged (2 damage to each creature + each player). The "can't be countered" rider now lands via `Keyword::CantBeCountered`. `caster_grants_uncounterable_with_x` reads this keyword and flips `StackItem::Spell.uncounterable = true` at cast time. Tests: `volcanic_fallout_deals_two_to_each_creature_and_player`, `volcanic_fallout_is_uncounterable`. |
 | Rout | {3}{W}{W} | 🟡 | `ForEach(Creature) + Destroy` — DoJ at +1 mana. Flash mode collapsed. |
 | Plague Wind | {8}{B}{B} | 🟡 | `ForEach(Creature ∧ ControlledByOpponent) + Destroy` — one-sided creature sweep. Regen rider collapsed. |

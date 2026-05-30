@@ -5562,26 +5562,32 @@ pub fn tear_asunder() -> CardDefinition {
     }
 }
 
-/// Assassin's Trophy — {B}{G} Instant. Destroy target permanent an
-/// opponent controls.
-///
-/// Two-mana destroy-anything-but-yours. The "owner searches their library
-/// for a basic land card and puts it onto the battlefield" downside is
-/// collapsed (search-for-basic-onto-opponent's-battlefield isn't yet
-/// supported by the engine — `Search` always targets the caster). For
-/// gameplay purposes this is the upside half: a clean flexible answer.
+/// Assassin's Trophy — {B}{G} Instant. "Destroy target permanent an
+/// opponent controls. Its controller may search their library for a basic
+/// land card, put it onto the battlefield, then shuffle." The destroyed
+/// permanent's owner (resolved post-destroy via the graveyard) does the
+/// basic-land search — the printed ramp downside.
 pub fn assassins_trophy() -> CardDefinition {
     CardDefinition {
         name: "Assassin's Trophy",
         cost: cost(&[b(), g()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Destroy {
-            what: target_filtered(
-                SelectionRequirement::Permanent
-                    .and(SelectionRequirement::Nonland)
-                    .and(SelectionRequirement::ControlledByOpponent),
-            ),
-        },
+        effect: Effect::Seq(vec![
+            Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByOpponent),
+                ),
+            },
+            Effect::Search {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                filter: SelectionRequirement::IsBasicLand,
+                to: ZoneDest::Battlefield {
+                    controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                    tapped: false,
+                },
+            },
+        ]),
         ..Default::default()
     }
 }
@@ -10797,9 +10803,7 @@ pub fn amped_raptor() -> CardDefinition {
 
 /// Thundertrap Trainer — {1}{W} Creature — Human Soldier. 2/2. Flash.
 /// "When Thundertrap Trainer enters, tap target creature an opponent
-/// controls."
-///
-/// 🟡 Body: 2/2 Flash + ETB tap target opponent creature. Fully wired.
+/// controls." (Synthesised body; ETB tap fully wired.)
 pub fn thundertrap_trainer() -> CardDefinition {
     CardDefinition {
         name: "Thundertrap Trainer",

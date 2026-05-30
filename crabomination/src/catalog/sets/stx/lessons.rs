@@ -1124,41 +1124,43 @@ pub fn test_of_patience() -> CardDefinition {
 }
 
 /// Reduce to Ashes — {3}{R} Sorcery — Lesson.
-/// Synthesised Oracle: "Reduce to Ashes deals 4 damage to target creature
-/// or planeswalker. If that creature or planeswalker would die this turn,
-/// exile it instead." (Damage-replacement rider omitted; body is 4 dmg.)
+/// Synthesised Oracle: "Deals 4 damage to target creature or planeswalker.
+/// If that creature or planeswalker would die this turn, exile it instead."
+/// The exile-on-death rider rides the Lava-Coil pattern: a creature with
+/// toughness ≤ 4 (lethal) is exiled instead of damaged; anything else
+/// (big creatures, planeswalkers) takes the 4 damage.
 pub fn reduce_to_ashes() -> CardDefinition {
+    use crate::card::Predicate;
     CardDefinition {
         name: "Reduce to Ashes",
         cost: cost(&[generic(3), r()]),
-        supertypes: vec![],
         card_types: vec![CardType::Sorcery],
         subtypes: Subtypes {
             spell_subtypes: vec![SpellSubtype::Lesson],
             ..Default::default()
         },
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(4),
+        effect: Effect::If {
+            cond: Predicate::All(vec![
+                Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::Creature,
+                },
+                Predicate::ValueAtMost(
+                    Value::ToughnessOf(Box::new(Selector::Target(0))),
+                    Value::Const(4),
+                ),
+            ]),
+            then: Box::new(Effect::Exile {
+                what: target_filtered(SelectionRequirement::Creature),
+            }),
+            else_: Box::new(Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(4),
+            }),
         },
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        ..Default::default()
     }
 }
 

@@ -7530,6 +7530,26 @@ fn assassins_trophy_destroys_opp_permanent() {
 }
 
 #[test]
+fn assassins_trophy_owner_ramps_a_basic_land() {
+    let mut g = two_player_game();
+    // Opponent's permanent to destroy is a land; they ramp a basic in return.
+    let opp_land = g.add_card_to_battlefield(1, catalog::mountain());
+    let forest = g.add_card_to_library(1, catalog::forest());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(forest))]));
+    let id = g.add_card_to_hand(0, catalog::assassins_trophy());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(opp_land)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("can target an opponent's land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == opp_land), "land destroyed");
+    assert!(g.battlefield.iter().any(|c| c.id == forest && c.controller == 1),
+        "owner searched a basic land onto the battlefield");
+}
+
+#[test]
 fn assassins_trophy_rejects_your_own_permanent() {
     // Filter is "permanent an opponent controls" — caster's own creature
     // should be rejected at cast time.

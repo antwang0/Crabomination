@@ -28516,8 +28516,26 @@ fn reduce_to_ashes_burns_creature_for_four() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("Reduce to Ashes castable");
     drain_stack(&mut g);
-    // 2/2 bear takes 4 dmg → dies via SBA
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
+    // 2/2 bear (toughness ≤ 4 = would die) is exiled, not sent to graveyard.
+    assert!(g.exile.iter().any(|c| c.id == bear), "lethal target is exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn reduce_to_ashes_only_damages_a_tall_creature() {
+    let mut g = two_player_game();
+    let hulk = g.add_card_to_battlefield(1, catalog::torrential_gearhulk()); // 5/6
+    let id = g.add_card_to_hand(0, catalog::reduce_to_ashes());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(crate::game::types::Target::Permanent(hulk)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let card = g.battlefield_find(hulk).expect("6-toughness survives 4 damage");
+    assert_eq!(card.damage, 4, "takes 4 damage, not exiled (toughness > 4)");
+    assert!(!g.exile.iter().any(|c| c.id == hulk));
 }
 
 #[test]
