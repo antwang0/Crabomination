@@ -33,7 +33,7 @@ mod tests_modern;
 #[path = "../tests/sos.rs"]
 mod tests_sos;
 #[cfg(test)]
-#[path = "../tests/stx.rs"]
+#[path = "../tests/stx/mod.rs"]
 mod tests_stx;
 #[cfg(test)]
 #[path = "../tests/multiplayer.rs"]
