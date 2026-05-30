@@ -2151,6 +2151,37 @@ fn call_of_the_herd_makes_an_elephant_and_can_flashback() {
 }
 
 #[test]
+fn nekrataal_etb_destroys_a_nonblack_creature() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // green
+    let id = g.add_card_to_hand(0, catalog::nekrataal());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Nekrataal castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == victim), "the nonblack creature is destroyed");
+}
+
+#[test]
+fn skinrender_etb_shrinks_target_with_three_minus_counters() {
+    let mut g = two_player_game();
+    let victim = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4
+    let id = g.add_card_to_hand(0, catalog::skinrender());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(victim)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Skinrender castable");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(victim).expect("4/4 survives three -1/-1");
+    assert_eq!((cp.power, cp.toughness), (1, 1), "4/4 → 1/1 after three -1/-1 counters");
+}
+
+#[test]
 fn ravenous_chupacabra_etb_destroys_an_opponent_creature() {
     let mut g = two_player_game();
     let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());

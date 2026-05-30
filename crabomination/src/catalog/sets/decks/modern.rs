@@ -11700,6 +11700,59 @@ pub fn fiery_temper() -> CardDefinition {
     }
 }
 
+/// Nekrataal — {2}{B}{B} Creature — Human Assassin. 2/1. First strike.
+/// "When this creature enters, destroy target nonartifact, nonblack
+/// creature. It can't be regenerated."
+pub fn nekrataal() -> CardDefinition {
+    use crate::card::{EventKind, EventScope, EventSpec, Keyword, SelectionRequirement, TriggeredAbility};
+    let filter = SelectionRequirement::Creature
+        .and(SelectionRequirement::HasColor(Color::Black).negate())
+        .and(SelectionRequirement::HasCardType(CardType::Artifact).negate());
+    CardDefinition {
+        name: "Nekrataal",
+        cost: cost(&[generic(2), b(), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Assassin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::DestroyNoRegen { what: target_filtered(filter) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Skinrender — {3}{B} Creature — Phyrexian Horror. 3/3. "When this creature
+/// enters, put three -1/-1 counters on target creature."
+pub fn skinrender() -> CardDefinition {
+    use crate::card::{CounterType, EventKind, EventScope, EventSpec, SelectionRequirement, TriggeredAbility};
+    CardDefinition {
+        name: "Skinrender",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Phyrexian, CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(3),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Ravenous Chupacabra — {2}{B}{B} Creature — Beast Horror. 2/2. "When this
 /// creature enters, destroy target creature an opponent controls."
 pub fn ravenous_chupacabra() -> CardDefinition {

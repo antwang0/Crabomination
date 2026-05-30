@@ -638,6 +638,8 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         terror,
         doom_blade,
         ravenous_chupacabra,
+        nekrataal,
+        skinrender,
         fatal_push,
         // ── modern_decks (dredge): Stinkweed Imp ──
         stinkweed_imp,
