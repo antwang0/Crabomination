@@ -183,6 +183,11 @@ pub struct PlayerView {
     /// players' portraits and skip them in turn order display.
     #[serde(default)]
     pub eliminated: bool,
+    /// Names of CR 114 emblems this player owns (command-zone, never
+    /// leave). Surfaced so the UI can show active planeswalker-ultimate
+    /// emblems. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub emblems: Vec<String>,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

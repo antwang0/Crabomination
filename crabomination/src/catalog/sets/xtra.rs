@@ -4,7 +4,7 @@
 
 use crate::card::{CardDefinition, CardType};
 use crate::effect::{Effect, PlayerRef, Value};
-use crate::mana::{blue, cost, generic};
+use crate::mana::{cost, generic, u};
 
 /// Take an extra turn after this one.
 fn extra_turn_body() -> Effect {
@@ -15,7 +15,7 @@ fn extra_turn_body() -> Effect {
 pub fn time_walk() -> CardDefinition {
     CardDefinition {
         name: "Time Walk",
-        cost: cost(&[generic(1), blue()]),
+        cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
         effect: extra_turn_body(),
         ..Default::default()
@@ -26,7 +26,7 @@ pub fn time_walk() -> CardDefinition {
 pub fn time_warp() -> CardDefinition {
     CardDefinition {
         name: "Time Warp",
-        cost: cost(&[generic(3), blue(), blue()]),
+        cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: extra_turn_body(),
         ..Default::default()
@@ -38,7 +38,7 @@ pub fn time_warp() -> CardDefinition {
 pub fn temporal_manipulation() -> CardDefinition {
     CardDefinition {
         name: "Temporal Manipulation",
-        cost: cost(&[generic(3), blue(), blue()]),
+        cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: extra_turn_body(),
         ..Default::default()
@@ -50,7 +50,7 @@ pub fn temporal_manipulation() -> CardDefinition {
 pub fn capture_of_jingzhou() -> CardDefinition {
     CardDefinition {
         name: "Capture of Jingzhou",
-        cost: cost(&[generic(3), blue(), blue()]),
+        cost: cost(&[generic(3), u(), u()]),
         card_types: vec![CardType::Sorcery],
         effect: extra_turn_body(),
         ..Default::default()
@@ -63,7 +63,7 @@ pub fn capture_of_jingzhou() -> CardDefinition {
 pub fn nexus_of_fate() -> CardDefinition {
     CardDefinition {
         name: "Nexus of Fate",
-        cost: cost(&[generic(5), blue(), blue()]),
+        cost: cost(&[generic(5), u(), u()]),
         card_types: vec![CardType::Instant],
         effect: extra_turn_body(),
         ..Default::default()
@@ -120,9 +120,11 @@ mod tests {
 
     #[test]
     fn extra_turn_then_taken_keeps_active_player() {
+        // The extra-turn bank is consumed in do_cleanup (CR 500.7): the
+        // active player keeps the turn instead of passing.
         let mut g = cast_and_resolve(catalog::time_walk(), 1, 1);
         g.active_player_idx = 0;
-        g.do_untap();
+        g.do_cleanup();
         assert_eq!(g.active_player_idx, 0, "extra turn keeps the same player");
         assert_eq!(g.players[0].extra_turns, 0, "charge consumed");
     }

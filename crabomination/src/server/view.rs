@@ -110,6 +110,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
             .collect(),
         commanders: player.commanders.clone(),
         eliminated: player.eliminated,
+        emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
     }
 }
 
@@ -1349,22 +1350,15 @@ mod tests {
         let entry = view.exile.iter().find(|c| c.id == bolt_id).expect("bolt in exile");
         assert_eq!(entry.may_play_recipient, Some(0));
     }
-}
-
-#[cfg(test)]
-mod emblem_view_tests {
-    use super::build_player_view;
-    use crate::game::two_player_game;
-    use crate::player::Emblem;
 
     #[test]
-    fn build_player_view_surfaces_emblem_names() {
-        let mut g = two_player_game();
-        g.players[0].emblems.push(Emblem {
+    fn project_surfaces_emblem_names() {
+        let mut state = two_player_game();
+        state.players[0].emblems.push(crate::player::Emblem {
             name: "Professor Dellian Fel".into(),
             triggered: vec![],
         });
-        let view = build_player_view(&g, 0, 0);
-        assert_eq!(view.emblems, vec!["Professor Dellian Fel".to_string()]);
+        let view = project(&state, 0);
+        assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
     }
 }

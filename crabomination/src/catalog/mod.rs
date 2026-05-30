@@ -25,7 +25,6 @@ pub use sets::ths::*;
 pub use sets::decks::*;
 pub use sets::mod_set::*;
 pub use sets::sos::*;
-pub use sets::staples::*;
 pub use sets::stx::*;
 pub use sets::xtra::*;
 
@@ -67,24 +66,6 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         sets::xtra::nexus_of_fate,
     ];
     all.extend_from_slice(&xtra);
-    // Burn / draw staples (sets::staples).
-    let staples: [CardFactory; 14] = [
-        sets::staples::shock,
-        sets::staples::searing_spear,
-        sets::staples::volcanic_hammer,
-        sets::staples::lava_spike,
-        sets::staples::skewer_the_critics,
-        sets::staples::char,
-        sets::staples::lightning_helix,
-        sets::staples::magma_jet,
-        sets::staples::flame_slash,
-        sets::staples::lava_coil,
-        sets::staples::galvanic_blast,
-        sets::staples::divination,
-        sets::staples::read_the_bones,
-        sets::staples::wall_of_omens,
-    ];
-    all.extend_from_slice(&staples);
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();
