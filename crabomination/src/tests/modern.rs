@@ -15774,3 +15774,41 @@ fn trinisphere_does_not_tax_when_tapped() {
     }).expect("tapped Trinisphere imposes no floor");
     drain_stack(&mut g);
 }
+
+#[test]
+fn ravens_crime_retrace_recasts_from_graveyard_for_a_land() {
+    let mut g = two_player_game();
+    // Opponent has two cards to discard.
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.add_card_to_hand(1, catalog::grizzly_bears());
+    // Put Raven's Crime in the graveyard and a land in hand for the cost.
+    let crime = g.add_card_to_graveyard(0, catalog::ravens_crime());
+    g.add_card_to_hand(0, catalog::forest());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let opp_hand_before = g.players[1].hand.len();
+
+    g.perform_action(GameAction::CastRetrace {
+        card_id: crime, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Raven's Crime retraces by discarding a land");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].hand.len(), opp_hand_before - 1, "opponent discarded a card");
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.is_land()), "land discarded as cost");
+    // Retrace returns the spell to the graveyard (not exile) — recastable.
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Raven's Crime"),
+        "Raven's Crime back in graveyard for another retrace");
+}
+
+#[test]
+fn ravens_crime_retrace_requires_a_land_in_hand() {
+    let mut g = two_player_game();
+    let crime = g.add_card_to_graveyard(0, catalog::ravens_crime());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    // No land in hand → retrace rejected, mana untouched.
+    assert!(g.perform_action(GameAction::CastRetrace {
+        card_id: crime, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "retrace needs a land to discard");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "mana not spent on failed retrace");
+}

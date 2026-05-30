@@ -9166,6 +9166,24 @@ pub fn trinisphere() -> CardDefinition {
     }
 }
 
+/// Raven's Crime — {B} Sorcery. "Target player discards a card. Retrace"
+/// (CR 702.81 — recast from the graveyard for its cost plus discarding a
+/// land card). Wired via `Keyword::Retrace` + `GameAction::CastRetrace`.
+pub fn ravens_crime() -> CardDefinition {
+    CardDefinition {
+        name: "Raven's Crime",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Retrace],
+        effect: Effect::Discard {
+            who: Selector::Target(0),
+            amount: Value::Const(1),
+            random: false,
+        },
+        ..Default::default()
+    }
+}
+
 /// Mulldrifter — {4}{U} Creature 2/2 Elemental. Flying. When this enters,
 /// draw two cards. Evoke {2}{U}.
 pub fn mulldrifter() -> CardDefinition {

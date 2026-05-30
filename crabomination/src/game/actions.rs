@@ -1457,6 +1457,82 @@ impl GameState {
         Ok(events)
     }
 
+    /// Cast a graveyard card with `Keyword::Retrace` (CR 702.81): pay its
+    /// normal mana cost plus discard a land card from hand. The spell
+    /// returns to the graveyard after resolving (no exile), so a single
+    /// land + the card can be recast every turn.
+    pub(crate) fn cast_retrace(
+        &mut self,
+        card_id: CardId,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        mode: Option<usize>,
+        x_value: Option<u32>,
+    ) -> Result<Vec<GameEvent>, GameError> {
+        let p = self.priority.player_with_priority;
+        let graveyard_pos = self.players[p]
+            .graveyard
+            .iter()
+            .position(|c| c.id == card_id)
+            .ok_or(GameError::CardNotInHand(card_id))?;
+        let card = self.players[p].graveyard[graveyard_pos].clone();
+        if !card.definition.has_retrace() {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        let must_be_sorcery_speed = !card.definition.is_instant_speed()
+            || self.player_locked_to_sorcery_timing(p);
+        if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
+            return Err(GameError::SorcerySpeedOnly);
+        }
+        // Additional cost: a land card in hand to discard. Reject before
+        // paying mana if none is available.
+        let land_in_hand = self.players[p]
+            .hand
+            .iter()
+            .find(|c| c.definition.is_land())
+            .map(|c| c.id)
+            .ok_or(GameError::SelectionRequirementViolated)?;
+        if let Some(ref tgt) = target {
+            self.check_target_legality(tgt, p)?;
+        }
+        // Pay the printed mana cost (Retrace doesn't change it).
+        let mut cost = if card.definition.cost.has_x() {
+            card.definition.cost.with_x_value(x_value.unwrap_or(0))
+        } else {
+            card.definition.cost.clone()
+        };
+        let reduction = cost_reduction_for_spell(self, p, &card, target.as_ref());
+        if reduction > 0 {
+            cost.reduce_generic(reduction);
+        }
+        apply_spell_cost_floor(self, &mut cost);
+        let receipt = self.try_pay_with_auto_tap(p, &cost)?;
+        if receipt.side_effects.life_lost > 0 {
+            self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+        }
+        let mana_spent = receipt
+            .pool_before
+            .total()
+            .saturating_sub(self.players[p].mana_pool.total());
+        // Discard the land as the additional cost (routes through the
+        // central discard path so discard-matters triggers fire).
+        let mut events = Vec::new();
+        self.discard_card(p, land_in_hand, &mut events);
+
+        // Lift the card from the graveyard and cast it normally — no
+        // `cast_via_flashback`, so it returns to the graveyard on
+        // resolution and can be retraced again.
+        let card = self.players[p].graveyard.remove(graveyard_pos);
+        self.players[p].cards_left_graveyard_this_turn =
+            self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+        events.push(GameEvent::CardLeftGraveyard { player: p, card_id });
+        events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
+        self.finalize_cast(
+            p, card, target, additional_targets, mode, x_value.unwrap_or(0), 0, mana_spent,
+        );
+        Ok(events)
+    }
+
     /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
     /// `tap_creatures` (must be exactly N untapped creatures the caster
     /// controls). The spell costs no mana — the tap is the entire

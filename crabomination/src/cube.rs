@@ -235,9 +235,8 @@ fn colorless_pool() -> Vec<CardFactory> {
         // ── modern_decks (claude/modern_decks) — new colorless ──
         howling_mine,
         // ── modern_decks batch 102: cube expansion ──
-        // trinisphere   — 🟡 minimum-cost static omitted; ships as a
-        //                  vanilla 3-mana artifact body.
         trinisphere,
+        ravens_crime,
         pithing_needle,
         trenchpost,
         three_tree_city,

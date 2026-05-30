@@ -842,6 +842,11 @@ impl CardDefinition {
             if let Keyword::FlashbackTap(n) = kw { Some(*n) } else { None }
         })
     }
+    /// True if this card has Retrace (CR 702.81) — castable from the
+    /// graveyard for its mana cost plus discarding a land card.
+    pub fn has_retrace(&self) -> bool {
+        self.keywords.contains(&Keyword::Retrace)
+    }
     pub fn has_kicker(&self) -> Option<&ManaCost> {
         self.keywords.iter().find_map(|kw| {
             if let Keyword::Kicker(cost) = kw { Some(cost) } else { None }
