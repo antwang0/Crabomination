@@ -3,11 +3,11 @@
 //! suitable for use as a battlefield permanent.
 
 use crate::card::{
-    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, Effect, Selector, Subtypes,
-    TokenDefinition, Value,
+    ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Selector, Subtypes, TokenDefinition, TriggeredAbility, Value,
 };
 use crate::effect::{ManaPayload, PlayerRef};
-use crate::mana::{ManaCost, ManaSymbol};
+use crate::mana::{Color, ManaCost, ManaSymbol};
 
 /// CR 111.4 — synthesize a token's display name from its subtypes when no
 /// explicit name was given. The result is the joined subtype names plus
@@ -172,6 +172,119 @@ pub fn blood_token() -> TokenDefinition {
             self_counter_cost_reduction: None, sac_other_filter: None,
             tap_other_filter: None,
         }],
+        triggered_abilities: vec![],
+    }
+}
+
+// ── College / set tokens ─────────────────────────────────────────────────────
+//
+// These engine-baked creature tokens are referenced both by the catalog
+// (cards that mint them) and by the `effect::shortcut::mint_*` builders, so
+// they live in the base crate to break the catalog↔effect cycle.
+
+/// Strixhaven Pest token: 1/1 black-and-green creature with
+/// "When this creature dies, you gain 1 life." Shared by Pest
+/// Summoning, Tend the Pests, Eyetwitch, Hunt for Specimens, etc.
+pub fn stx_pest_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Pest".to_string(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black, Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Pest],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        }],
+    }
+}
+
+/// 1/1 white-and-black Inkling creature token with flying. Used by several
+/// SOS Silverquill / White cards.
+pub fn inkling_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Inkling".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White, Color::Black],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Inkling],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// 0/0 green-and-blue Fractal creature token. Used by Quandrix scaling
+/// payoffs; lives or dies based on the +1/+1 counters its creator stamps on.
+pub fn fractal_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Fractal".into(),
+        power: 0,
+        toughness: 0,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green, Color::Blue],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Fractal],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// 2/2 red-and-white Spirit creature token. Used by Lorehold-flavoured
+/// SOS cards (Group Project, Living History's ETB, etc.).
+pub fn spirit_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    }
+}
+
+/// 2/2 red-and-white Spirit creature token with flying. Used by Lorehold
+/// cards (and SOS Group Project / Living History) that mint a Spirit body.
+pub fn lorehold_spirit_token() -> TokenDefinition {
+    TokenDefinition {
+        name: "Spirit".into(),
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red, Color::White],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spirit],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
         triggered_abilities: vec![],
     }
 }

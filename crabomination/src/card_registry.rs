@@ -1,39 +1,17 @@
-//! Card catalog — factory functions for every implemented Magic: The Gathering card.
-//! Cards are grouped by the set in which they first appeared.
-
-pub mod sets;
-
-// Re-export everything so callers use `catalog::some_card()`.
-pub use sets::all::*;
-pub use sets::ap::*;
-pub use sets::arn::*;
-pub use sets::dis::*;
-pub use sets::fem::*;
-pub use sets::gpt::*;
-pub use sets::ice::*;
-pub use sets::inv::*;
-pub use sets::lea::*;
-pub use sets::m11::*;
-pub use sets::ogw::*;
-pub use sets::pc2::*;
-pub use sets::por::*;
-pub use sets::rav::*;
-pub use sets::rtr::*;
-pub use sets::tmp::*;
-pub use sets::zen::*;
-pub use sets::ths::*;
-pub use sets::decks::*;
-pub use sets::mod_set::*;
-pub use sets::sos::*;
-pub use sets::stx::*;
-pub use sets::xtra::*;
+//! Card name → factory registry used by snapshot deserialization.
+//!
+//! Moved out of `crabomination_catalog` because it aggregates the cube, demo
+//! and SoS card pools, which are defined in this (top-level) crate. Installed
+//! as the resolver for `crabomination_base`'s `CardInstance` `Deserialize` impl
+//! at startup (see the `ctor` registration in `lib.rs`).
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-use crate::card::CardDefinition;
+use crabomination_catalog::sets;
+use crabomination_catalog::CardFactory;
 
-type CardFactory = fn() -> CardDefinition;
+use crate::card::CardDefinition;
 
 /// Aggregate of every card-producing factory the snapshot/restore path
 /// knows about: cube cards, SoS cards, demo decks, and engine-baked
@@ -53,7 +31,7 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     // exposed. Without this, mid-game snapshots involving STX
     // permanents would fail snapshot-reload at the `name → factory`
     // lookup stage.
-    for &f in crate::catalog::sets::stx::all_stx_card_factories() {
+    for &f in sets::stx::all_stx_card_factories() {
         all.push(f);
     }
     // Extra-turn spells (sets::xtra) — registered so mid-game snapshots
@@ -75,7 +53,7 @@ pub fn all_known_factories() -> Vec<CardFactory> {
 
 /// Build (once) a name → factory lookup from `all_known_factories`. Used
 /// by snapshot deserialization. Token cards generated mid-game (Clue,
-/// Treasure, etc.) are added separately via [`token_factories`].
+/// Treasure, etc.) are added separately via [`lookup_token_by_name`].
 fn name_index() -> &'static HashMap<&'static str, CardFactory> {
     static INDEX: OnceLock<HashMap<&'static str, CardFactory>> = OnceLock::new();
     INDEX.get_or_init(|| {
@@ -101,8 +79,8 @@ fn name_index() -> &'static HashMap<&'static str, CardFactory> {
 /// factory produces a card with that name. Used by snapshot
 /// deserialization to rebuild `CardInstance`s from saved game state.
 pub fn lookup_by_name(name: &str) -> Option<CardDefinition> {
-    // Token cards (Clue, Treasure, Food, Blood) come from
-    // `game::effects::*_token` — those don't go through `all_known_factories`
+    // Token cards (Clue, Treasure, Food, Blood) come from the engine-baked
+    // token factories — those don't go through `all_known_factories`
     // since they aren't in any deck. Try the token table first.
     if let Some(def) = lookup_token_by_name(name) {
         return Some(def);

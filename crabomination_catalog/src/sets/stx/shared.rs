@@ -11,9 +11,8 @@
 //! - **Tend the Pests** (B/G) — sacrifice a creature, create X Pest tokens.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope, EventSpec,
-    Keyword, SelectionRequirement, Selector, SpellSubtype, Subtypes, TokenDefinition,
-    TriggeredAbility, Value,
+    CardDefinition, CardType, CreatureType, Effect, Keyword, SelectionRequirement, SpellSubtype,
+    Subtypes, TokenDefinition, Value,
 };
 use crate::effect::PlayerRef;
 use crate::mana::{cost, generic, b, g, w, Color};
@@ -28,29 +27,7 @@ use crate::mana::{cost, generic, b, g, w, Color};
 /// consistently. Witherbloom payoffs (Witherbloom Apprentice's
 /// magecraft drain, Killian's Confidence's draw chain, etc.) get
 /// the printed lifegain trickle for free.
-pub fn stx_pest_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Pest".to_string(),
-        power: 1,
-        toughness: 1,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Black, Color::Green],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Pest],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            effect: Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        }],
-    }
-}
+pub use crabomination_base::tokens::stx_pest_token;
 
 // ── Inkling Summoning (Lesson) ──────────────────────────────────────────────
 

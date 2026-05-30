@@ -29,23 +29,7 @@ use crate::mana::{cost, generic, r, w, Color, ManaCost};
 /// SOS Group Project / Living History) that mint a Spirit body with no
 /// extra abilities. Pulled into a helper so future Lorehold cards can
 /// compose against the same definition.
-pub fn lorehold_spirit_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Spirit".into(),
-        power: 2,
-        toughness: 2,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    }
-}
+pub use crabomination_base::tokens::lorehold_spirit_token;
 
 // ── Lorehold Apprentice ─────────────────────────────────────────────────────
 

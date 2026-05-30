@@ -1,0 +1,12 @@
+[package]
+name = "crabomination_catalog"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+crabomination_base = { path = "../crabomination_base" }
+serde = { version = "1.0.228", features = ["derive"] }
+
+[lib]
+# The catalog is ~190k lines of static card-factory data with no proc-macro
+# heavy lifting; the default many-codegen-units build parallelizes well.

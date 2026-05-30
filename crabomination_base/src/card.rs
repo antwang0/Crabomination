@@ -1244,7 +1244,7 @@ impl serde::Serialize for CardInstance {
 impl<'de> serde::Deserialize<'de> for CardInstance {
     fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
         let wire = CardInstanceWire::deserialize(de)?;
-        let def = crate::catalog::lookup_by_name(&wire.name).ok_or_else(|| {
+        let def = crate::registry::resolve_card(&wire.name).ok_or_else(|| {
             serde::de::Error::custom(format!("unknown card name: {:?}", wire.name))
         })?;
         let mut c = CardInstance::new(wire.id, Arc::new(def), wire.owner);
@@ -1271,7 +1271,3 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         Ok(c)
     }
 }
-
-#[cfg(test)]
-#[path = "tests/card.rs"]
-mod tests;

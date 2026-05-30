@@ -705,7 +705,7 @@ pub enum ManaPayload {
 // ── Event specification (triggers) ───────────────────────────────────────────
 
 /// Kinds of game events a trigger can watch for. Mirrors the `GameEvent`
-/// stream in [`crate::game::types::GameEvent`].
+/// stream in [`GameEvent`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum EventKind {
     /// A permanent entered the battlefield.
@@ -776,7 +776,7 @@ pub enum EventKind {
     /// A player lost life.
     LifeLost,
     /// The game entered a particular step.
-    StepBegins(crate::game::types::TurnStep),
+    StepBegins(crate::turn_step::TurnStep),
     /// The active player's turn just began.
     TurnBegins,
     /// A counter was added to a permanent/player.
@@ -1606,7 +1606,7 @@ pub enum Effect {
     DiminishCreaturesExceptChosenType { power: Value, toughness: Value },
 }
 
-/// Lightweight mirror of `crate::game::types::DelayedKind` for use inside
+/// Lightweight mirror of `DelayedKind` for use inside
 /// `Effect`. Kept separate so `effect.rs` doesn't need to import from
 /// `game::`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -3810,20 +3810,20 @@ pub mod shortcut {
     /// `catalog::stx_pest_token` and includes the standard
     /// "this creature dies → you gain 1 life" trigger.
     pub fn mint_pests(count: i32) -> Effect {
-        let token = crate::catalog::stx_pest_token();
+        let token = crate::tokens::stx_pest_token();
         mint_token(token, count)
     }
 
     /// Mint N SOS Inkling tokens (1/1 W/B flying creature).
     pub fn mint_inklings(count: i32) -> Effect {
-        let token = crate::catalog::inkling_token();
+        let token = crate::tokens::inkling_token();
         mint_token(token, count)
     }
 
     /// Mint N SOS Spirit tokens (1/1 W flying creature, from SOS's
     /// Spirit Mascot template).
     pub fn mint_spirits(count: i32) -> Effect {
-        let token = crate::catalog::spirit_token();
+        let token = crate::tokens::spirit_token();
         mint_token(token, count)
     }
 
@@ -3831,14 +3831,14 @@ pub mod shortcut {
     /// `Effect::AddCounter` against `Selector::LastCreatedToken` to
     /// stamp +1/+1 counters on entry).
     pub fn mint_fractals(count: i32) -> Effect {
-        let token = crate::catalog::fractal_token();
+        let token = crate::tokens::fractal_token();
         mint_token(token, count)
     }
 
     /// Mint N Treasure tokens (`{T}, Sacrifice: add one mana of any
-    /// color`). Uses [`crate::game::effects::treasure_token`].
+    /// color`). Uses [`crate::tokens::treasure_token`].
     pub fn mint_treasures(count: i32) -> Effect {
-        let token = crate::game::effects::treasure_token();
+        let token = crate::tokens::treasure_token();
         mint_token(token, count)
     }
 
@@ -3846,7 +3846,7 @@ pub mod shortcut {
     /// `stx::lorehold::lorehold_excavation`-template cards and the
     /// `stx::extras::lorehold_*` mint bodies.
     pub fn mint_lorehold_spirits(count: i32) -> Effect {
-        let token = crate::catalog::lorehold_spirit_token();
+        let token = crate::tokens::lorehold_spirit_token();
         mint_token(token, count)
     }
 
@@ -4080,7 +4080,7 @@ pub mod shortcut {
         magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::catalog::lorehold_spirit_token(),
+            definition: crate::tokens::lorehold_spirit_token(),
         })
     }
 
@@ -4111,7 +4111,7 @@ pub mod shortcut {
         magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::game::effects::treasure_token(),
+            definition: crate::tokens::treasure_token(),
         })
     }
 
@@ -4388,7 +4388,7 @@ pub mod shortcut {
         magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::catalog::stx_pest_token(),
+            definition: crate::tokens::stx_pest_token(),
         })
     }
 
@@ -4401,7 +4401,7 @@ pub mod shortcut {
         magecraft(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::catalog::inkling_token(),
+            definition: crate::tokens::inkling_token(),
         })
     }
 
@@ -4418,7 +4418,7 @@ pub mod shortcut {
             Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                definition: crate::catalog::fractal_token(),
+                definition: crate::tokens::fractal_token(),
             },
             Effect::AddCounter {
                 what: Selector::LastCreatedToken,
@@ -4438,7 +4438,7 @@ pub mod shortcut {
         on_dies(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::catalog::stx_pest_token(),
+            definition: crate::tokens::stx_pest_token(),
         })
     }
 
@@ -4451,7 +4451,7 @@ pub mod shortcut {
         on_attack(Effect::CreateToken {
             who: PlayerRef::You,
             count: Value::Const(1),
-            definition: crate::catalog::lorehold_spirit_token(),
+            definition: crate::tokens::lorehold_spirit_token(),
         })
     }
 

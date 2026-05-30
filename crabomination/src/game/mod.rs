@@ -38,6 +38,9 @@ mod tests_stx;
 #[cfg(test)]
 #[path = "../tests/multiplayer.rs"]
 mod tests_multiplayer;
+#[cfg(test)]
+#[path = "../tests/xtra.rs"]
+mod tests_xtra;
 pub mod types;
 
 #[cfg(test)]

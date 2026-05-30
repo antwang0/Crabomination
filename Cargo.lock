@@ -2057,11 +2057,29 @@ dependencies = [
 name = "crabomination"
 version = "0.1.0"
 dependencies = [
+ "crabomination_base",
+ "crabomination_catalog",
+ "ctor",
  "rand 0.10.1",
  "serde",
  "serde_json",
  "socket2",
  "thiserror 2.0.18",
+]
+
+[[package]]
+name = "crabomination_base"
+version = "0.1.0"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "crabomination_catalog"
+version = "0.1.0"
+dependencies = [
+ "crabomination_base",
+ "serde",
 ]
 
 [[package]]
@@ -2130,6 +2148,16 @@ name = "crunchy"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
+
+[[package]]
+name = "ctor"
+version = "1.0.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01334b89b69ff726750c5ce5073fc8bd860e99aa9a8fc5ca11b04730e3aee97a"
+dependencies = [
+ "link-section",
+ "linktime-proc-macro",
+]
 
 [[package]]
 name = "ctrlc"
@@ -3112,6 +3140,18 @@ name = "linebender_resource_handle"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4a5ff6bcca6c4867b1c4fd4ef63e4db7436ef363e0ad7531d1558856bae64f4"
+
+[[package]]
+name = "link-section"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "014e440054ce8170890229eeef5bcda955305e056ec713de40ed366944483f09"
+
+[[package]]
+name = "linktime-proc-macro"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c7b0a3383c2a1002d11349c92c85a666a5fb679e96c79d782cf0dbe557fd6ee"
 
 [[package]]
 name = "linux-raw-sys"

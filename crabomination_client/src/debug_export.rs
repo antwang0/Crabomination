@@ -186,6 +186,7 @@ mod tests {
                 no_maximum_hand_size: false,
                 command: vec![],
                 commanders: vec![],
+                emblems: vec![],
                 eliminated: false,
             }],
             battlefield: vec![],

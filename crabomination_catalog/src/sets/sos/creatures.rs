@@ -2,7 +2,7 @@
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, SelectionRequirement, Subtypes, TokenDefinition, TriggeredAbility,
+    EventSpec, Keyword, SelectionRequirement, Subtypes, TriggeredAbility,
 };
 use crate::effect::shortcut::etb_gain_life;
 use crate::effect::{Duration, PlayerRef, Selector, Value};
@@ -12,23 +12,7 @@ use crate::mana::{Color, ManaCost, b, cost, generic, w};
 
 /// 1/1 white-and-black Inkling creature token with flying. Used by several
 /// SOS Silverquill / White cards.
-pub fn inkling_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Inkling".into(),
-        power: 1,
-        toughness: 1,
-        keywords: vec![Keyword::Flying],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::White, Color::Black],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Inkling],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    }
-}
+pub use crabomination_base::tokens::inkling_token;
 
 // ── White ───────────────────────────────────────────────────────────────────
 

@@ -54,24 +54,7 @@ pub fn pest_token() -> TokenDefinition {
 /// `Selector::LastCreatedToken` — a 0/0 with zero counters dies to SBA
 /// after the resolution finishes, matching the printed cards' "if X=0,
 /// the token dies" outcome.
-pub fn fractal_token() -> TokenDefinition {
-    use crate::mana::Color;
-    TokenDefinition {
-        name: "Fractal".into(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Green, Color::Blue],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Fractal],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    }
-}
+pub use crabomination_base::tokens::fractal_token;
 
 /// 3/3 blue-and-red flying Elemental creature token. Used by Prismari-
 /// flavoured SOS cards (Visionary's Dance, Muse's Encouragement, etc.).
@@ -96,23 +79,7 @@ pub fn elemental_token() -> TokenDefinition {
 
 /// 2/2 red-and-white Spirit creature token. Used by Lorehold-flavoured
 /// SOS cards (Group Project, Living History's ETB, etc.).
-pub fn spirit_token() -> TokenDefinition {
-    TokenDefinition {
-        name: "Spirit".into(),
-        power: 2,
-        toughness: 2,
-        keywords: vec![],
-        card_types: vec![CardType::Creature],
-        colors: vec![Color::Red, Color::White],
-        supertypes: vec![],
-        subtypes: Subtypes {
-            creature_types: vec![CreatureType::Spirit],
-            ..Default::default()
-        },
-        activated_abilities: vec![],
-        triggered_abilities: vec![],
-    }
-}
+pub use crabomination_base::tokens::spirit_token;
 
 // ── White ───────────────────────────────────────────────────────────────────
 

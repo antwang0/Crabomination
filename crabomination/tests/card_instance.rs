@@ -1,5 +1,5 @@
-use super::*;
-use crate::catalog;
+use crabomination::card::{CardId, CardInstance, CardType, CounterType, Keyword};
+use crabomination::catalog;
 
 #[test]
 fn grizzly_bears_base_stats() {

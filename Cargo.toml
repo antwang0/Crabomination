@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crabomination", "crabomination_client", "crabomination_server"]
+members = ["crabomination_base", "crabomination_catalog", "crabomination", "crabomination_client", "crabomination_server"]
 
 [profile.dev]
 # opt-level = 0 (default) keeps clean compile times short. Dependencies

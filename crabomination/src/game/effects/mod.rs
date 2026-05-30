@@ -11,9 +11,12 @@ mod eval;
 mod events;
 mod movement;
 mod targeting;
-mod tokens;
 
-pub use tokens::{blood_token, clue_token, food_token, token_to_card_definition, treasure_token};
+// Token factories now live in `crabomination_base`; re-exported here so the
+// engine's `game::effects::*_token` paths keep working.
+pub use crabomination_base::tokens::{
+    blood_token, clue_token, food_token, token_to_card_definition, treasure_token,
+};
 pub(crate) use delayed::delayed_kind_from_effect;
 pub(crate) use events::{emblem_event_matches, event_matches_spec, event_subject};
 
