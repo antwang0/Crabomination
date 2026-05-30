@@ -38,9 +38,14 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
-- See `FEATURE_ROADMAP.md` Tier 1: additional cast costs (sacrifice/discard
-  as a cost), choose-N modes, "when target dies this turn" delayed trigger,
-  `GrantActivatedAbility` static (Galazeth Prismari).
+- See `FEATURE_ROADMAP.md` Tier 1. DONE this run: additional cast costs
+  (`AdditionalCastCost::SacrificePermanent`/`Discard`), `GrantActivatedAbility`
+  static, "when target dies this turn" delayed trigger. Still open: choose-N
+  modes ("choose two").
+- **CR 702.15 Landwalk** ✅ — `Keyword::Landwalk(LandType)` enforced in
+  `declare_blockers`; Anger Mountainwalk, Filth swampwalk anthem wired.
+- **CR 701.12c Exchange life totals** ✅ — `Effect::ExchangeLifeTotals`;
+  Soul Conduit. **CR 510.1c** ✅ — `Decision::CombatDamageOrder`.
 - **Echoing Truth same-name bounce** routes every copy to `OwnerOf(Target0)`;
   mixed-ownership same-named permanents would all go to the target's owner.
   Needs a per-moved-card owner destination to be fully correct.
