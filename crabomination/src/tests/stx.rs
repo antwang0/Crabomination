@@ -76013,3 +76013,29 @@ fn opposition_requires_an_untapped_creature() {
         target: Some(Target::Permanent(target)), x_value: None,
     }).is_err(), "no creature to tap means no activation");
 }
+
+#[test]
+fn omniscience_casts_hand_spells_free() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::omniscience());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    // Empty mana pool — only Omniscience makes this castable.
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Omniscience casts Bolt for free");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 17, "Bolt dealt 3 with no mana paid");
+    // Spell goes to graveyard, not exile (Omniscience doesn't exile).
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"));
+}
+
+#[test]
+fn free_cast_rejected_without_omniscience() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    assert!(g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "no free-cast permission without Omniscience");
+}

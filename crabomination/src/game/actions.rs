@@ -242,6 +242,21 @@ pub(crate) fn apply_spell_cost_floor(
     }
 }
 
+/// True if `player` controls a permanent granting Omniscience-style free
+/// casting of hand spells (`StaticEffect::CastHandSpellsFree`).
+impl crate::game::GameState {
+    pub(crate) fn player_casts_hand_spells_free(&self, player: usize) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.iter().any(|c| {
+            c.controller == player
+                && c.definition
+                    .static_abilities
+                    .iter()
+                    .any(|sa| matches!(sa.effect, StaticEffect::CastHandSpellsFree))
+        })
+    }
+}
+
 /// True if any battlefield permanent has `StaticEffect::LandsTapColorlessOnly`
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
@@ -1557,6 +1572,17 @@ impl GameState {
                 }
                 found.ok_or(GameError::CardNotInHand(card_id))?
             }
+            Zone::Hand => {
+                // Omniscience-style free cast straight from hand.
+                let mut found: Option<crate::card::CardInstance> = None;
+                for player in self.players.iter_mut() {
+                    if let Some(pos) = player.hand.iter().position(|c| c.id == card_id) {
+                        found = Some(player.hand.remove(pos));
+                        break;
+                    }
+                }
+                found.ok_or(GameError::CardNotInHand(card_id))?
+            }
             _ => return Err(GameError::CardNotInHand(card_id)),
         };
 
@@ -1623,17 +1649,31 @@ impl GameState {
         let card_ref = self
             .find_card_anywhere(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        let permission = card_ref
-            .may_play_until
-            .ok_or(GameError::CardNotInHand(card_id))?;
-        if permission.player != p {
-            return Err(GameError::CardNotInHand(card_id));
-        }
+        let is_instant = card_ref.definition.is_instant_speed();
+        // Two ways to invoke a free cast: a per-card `may_play_until`
+        // permission (Discovery / Paradigm / etc.), or an Omniscience-style
+        // standing static letting the controller free-cast their own hand
+        // spells. The latter doesn't exile the spell afterwards (it goes
+        // wherever it normally would).
+        let exile_after = match card_ref.may_play_until {
+            Some(permission) => {
+                if permission.player != p {
+                    return Err(GameError::CardNotInHand(card_id));
+                }
+                permission.exile_after
+            }
+            None => {
+                let from_own_hand = zone == crate::card::Zone::Hand
+                    && self.players[p].hand.iter().any(|c| c.id == card_id);
+                if !(from_own_hand && self.player_casts_hand_spells_free(p)) {
+                    return Err(GameError::CardNotInHand(card_id));
+                }
+                false
+            }
+        };
         // Expiry check: EndOfThisTurn => only valid this turn;
         // EndOfControllersNextTurn => one full controller-turn later.
         // Defensive — the cleanup hook also clears expired permissions.
-        let is_instant = card_ref.definition.is_instant_speed();
-        let exile_after = permission.exile_after;
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);

@@ -3743,7 +3743,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::PreventUntap { .. }
             // SpellCostFloor (Trinisphere) — read at cast time by
             // `apply_spell_cost_floor`; no layer effect.
-            | StaticEffect::SpellCostFloor { .. } => vec![],
+            | StaticEffect::SpellCostFloor { .. }
+            // CastHandSpellsFree (Omniscience) — read by the free-cast
+            // action via `player_casts_hand_spells_free`; no layer effect.
+            | StaticEffect::CastHandSpellsFree => vec![],
         })
         .collect()
 }

@@ -2585,6 +2585,11 @@ pub enum StaticEffect {
     SpellCostFloor {
         amount: u32,
     },
+    /// Omniscience: the controller may cast spells from their hand without
+    /// paying their mana costs. Consulted by
+    /// `GameState::player_casts_hand_spells_free`, which lets
+    /// `CastFromZoneWithoutPaying` resolve a hand spell free of charge.
+    CastHandSpellsFree,
 }
 
 // ── Triggered / activated / loyalty ability shells ───────────────────────────

@@ -39918,33 +39918,18 @@ pub fn opposition() -> CardDefinition {
 
 /// Omniscience — {7}{U}{U}{U} Enchantment.
 /// "You may cast spells from your hand without paying their mana costs."
-///
-/// Body-only: the free-cast static needs a `StaticEffect::FreeCast`
-/// primitive. The 10-mana enchantment shell is here for the cube.
+/// (Free cast via `GameAction::CastFromZoneWithoutPaying`.)
 pub fn omniscience() -> CardDefinition {
     CardDefinition {
         name: "Omniscience",
         cost: cost(&[generic(7), u(), u(), u()]),
-        supertypes: vec![],
         card_types: vec![CardType::Enchantment],
-        subtypes: Subtypes::default(),
-        power: 0,
-        toughness: 0,
-        keywords: vec![],
-        effect: Effect::Noop,
-        activated_abilities: no_abilities(),
-        triggered_abilities: vec![],
-        static_abilities: vec![],
-        base_loyalty: 0,
-        loyalty_abilities: vec![],
-        alternative_cost: None,
-        back_face: None,
-        opening_hand: None,
-        enters_with_counters: None,
-        max_counters_of_kind: None,
-        exile_on_resolve: false,
-        affinity_filter: None,
-        equipped_bonus: None,
+        static_abilities: vec![StaticAbility {
+            description: "You may cast spells from your hand without paying \
+                          their mana costs.",
+            effect: StaticEffect::CastHandSpellsFree,
+        }],
+        ..Default::default()
     }
 }
 
