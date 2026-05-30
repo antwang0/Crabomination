@@ -13952,3 +13952,25 @@ fn zaffai_grants_a_free_instant_or_sorcery_each_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 17, "free Bolt dealt 3");
 }
+
+#[test]
+fn daydream_flickers_a_creature_back_at_end_of_turn() {
+    use crate::game::types::TurnStep;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::daydream());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Daydream castable for {1}{W}");
+    drain_stack(&mut g);
+    // Creature is exiled now (flicker idiom defers the return).
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature exiled");
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    // Returns to the battlefield under its owner's control.
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "creature flickered back at end of turn");
+}
