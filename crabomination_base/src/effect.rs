@@ -706,6 +706,9 @@ pub enum ManaPayload {
     /// Fellwar Stone — `{T}: Add one mana of any color an opponent's
     /// land could produce.`
     AnyColorOpponentCouldProduce,
+    /// Player chooses a color, then adds mana of that color equal to their
+    /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
+    DevotionOfChosenColor,
     /// Resolve the inner payload normally, but tag every colored pip it
     /// produces with `restriction` ("Spend this mana only to …"). Used by
     /// the Strixhaven school mana sources (Abstract Paintmage, Tablet of
@@ -1924,6 +1927,7 @@ impl Effect {
                         _ => false,
                     },
                     ManaPayload::Colors(_)
+                    | ManaPayload::DevotionOfChosenColor
                     | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }
             }

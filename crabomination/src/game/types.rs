@@ -396,6 +396,10 @@ pub enum PendingEffectState {
         count: u32,
         restriction: Option<crate::mana::SpendRestriction>,
     },
+    /// Suspended on a `ChooseColor` for a `DevotionOfChosenColor` mana
+    /// payload — Nykthos, Shrine to Nyx. The player picks a color, then the
+    /// engine adds mana of that color equal to their devotion to it.
+    DevotionColorPending { player: usize },
     /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.

@@ -1078,6 +1078,34 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
+                    ManaPayload::DevotionOfChosenColor => {
+                        // Nykthos — choose a color, then add mana of that
+                        // color equal to your devotion to it (CR 700.5).
+                        let source = ctx.source.unwrap_or(CardId(0));
+                        let legal = vec![
+                            Color::White, Color::Blue, Color::Black, Color::Red, Color::Green,
+                        ];
+                        if self.players[p].wants_ui {
+                            self.suspend_signal = Some((
+                                crate::decision::Decision::ChooseColor { source, legal },
+                                PendingEffectState::DevotionColorPending { player: p },
+                                Effect::Noop,
+                            ));
+                            return Ok(());
+                        }
+                        let answer = self.decider.decide(
+                            &crate::decision::Decision::ChooseColor { source, legal },
+                        );
+                        let color = match answer {
+                            crate::decision::DecisionAnswer::Color(c) => c,
+                            _ => Color::White,
+                        };
+                        let n = self.devotion_to(p, &[color]).max(0) as u32;
+                        for _ in 0..n {
+                            self.players[p].mana_pool.add(color, 1);
+                            events.push(GameEvent::ManaAdded { player: p, color });
+                        }
+                    }
                     ManaPayload::AnyColorOpponentCouldProduce => {
                         // Fellwar Stone — scan opponents' battlefield for
                         // basic-typed lands, build the legal-color set from

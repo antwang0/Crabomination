@@ -3292,6 +3292,18 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::DevotionColorPending { player } => {
+                let DecisionAnswer::Color(c) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let n = self.devotion_to(player, &[*c]).max(0) as u32;
+                let mut events = Vec::with_capacity(n as usize);
+                for _ in 0..n {
+                    self.players[player].mana_pool.add(*c, 1);
+                    events.push(GameEvent::ManaAdded { player, color: *c });
+                }
+                Ok(events)
+            }
             PendingEffectState::DiscardChosenPending { target_player } => {
                 let DecisionAnswer::Discard(card_ids) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

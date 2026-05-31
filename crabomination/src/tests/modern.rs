@@ -18211,3 +18211,24 @@ fn master_of_cruelties_attacks_alone_and_sets_life_to_one() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 1, "attack sets the defender's life to 1");
 }
+
+#[test]
+fn nykthos_taps_for_devotion_of_chosen_color() {
+    use crate::decision::{Decision, DecisionAnswer};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    // Three black pips on the battlefield → devotion to black = 3.
+    for _ in 0..3 { g.add_card_to_battlefield(0, catalog::putrid_imp()); }
+    let nyk = g.add_card_to_battlefield(0, catalog::nykthos_shrine_to_nyx());
+    g.clear_sickness(nyk);
+    g.players[0].mana_pool.add_colorless(2); // pay the {2} activation cost
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: nyk, ability_index: 1, target: None, x_value: None,
+    }).expect("Nykthos devotion ability activates");
+    let pd = g.pending_decision.as_ref().expect("ChooseColor suspends");
+    assert!(matches!(pd.decision, Decision::ChooseColor { .. }));
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Color(Color::Black)))
+        .unwrap();
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3,
+        "adds black mana equal to devotion to black");
+}
