@@ -889,6 +889,58 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Clone — {3}{U}, 0/0 Shapeshifter. "You may have Clone enter the
+/// battlefield as a copy of any creature on the battlefield." Wired via
+/// the `enters_as_copy` CR-707 hook; with no creature to copy the 0/0
+/// dies to SBA (the printed "you may" decline).
+pub fn clone_card() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Clone",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature,
+            extra_creature_types: vec![],
+            extra_triggered: vec![],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Phantasmal Image — {U}, 0/0 Illusion. Enters as a copy of any creature,
+/// except it's an Illusion in addition to its types and gains "When this
+/// becomes the target of a spell or ability, sacrifice it." Both the
+/// extra type and the sacrifice rider ride on the `enters_as_copy` hook.
+pub fn phantasmal_image() -> CardDefinition {
+    use crate::card::EntersAsCopy;
+    CardDefinition {
+        name: "Phantasmal Image",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Illusion],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature,
+            extra_creature_types: vec![CreatureType::Illusion],
+            extra_triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::BecameTarget, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Graveyard,
+                },
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
 /// Simian Spirit Guide — {2}{R}, 2/2 Ape Spirit. Ships as the vanilla body;
 /// the "exile from hand: add {R}" mana ability needs a from-hand activation
 /// zone (tracked in TODO.md).

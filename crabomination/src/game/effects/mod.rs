@@ -265,6 +265,66 @@ impl EntityRef {
 }
 
 impl GameState {
+    /// CR 707 — apply a permanent's `enters_as_copy` replacement as it
+    /// enters the battlefield. Auto-picks the highest-power matching
+    /// permanent (excluding the copier itself); no-op when nothing
+    /// matches. Called from the spell-resolution ETB path before SBA.
+    pub(crate) fn apply_enters_as_copy(
+        &mut self,
+        card_id: CardId,
+        controller: usize,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let spec = self
+            .battlefield
+            .iter()
+            .find(|c| c.id == card_id)
+            .and_then(|c| c.definition.enters_as_copy.clone());
+        let Some(spec) = spec else { return };
+        // Best legal copy source: highest power among matching permanents,
+        // never the copier itself.
+        let source = self
+            .battlefield
+            .iter()
+            .filter(|c| c.id != card_id)
+            .filter(|c| {
+                self.evaluate_requirement_static(
+                    &spec.filter,
+                    &Target::Permanent(c.id),
+                    controller,
+                    None,
+                )
+            })
+            .max_by_key(|c| c.definition.power)
+            .map(|c| c.id);
+        let Some(source) = source else { return };
+        let ctx = EffectContext::for_trigger(
+            card_id,
+            controller,
+            Some(Target::Permanent(source)),
+            0,
+        );
+        if let Ok(evs) = self.resolve_effect(
+            &Effect::BecomeCopyOf {
+                what: crate::effect::Selector::This,
+                source: crate::effect::Selector::Target(0),
+                extra_creature_types: spec.extra_creature_types.clone(),
+            },
+            &ctx,
+        ) {
+            events.extend(evs);
+        }
+        // Layer the copy-exception triggered abilities on top of the
+        // copiable characteristics (e.g. Phantasmal Image's sacrifice rider).
+        if !spec.extra_triggered.is_empty()
+            && let Some(c) = self.battlefield.iter_mut().find(|c| c.id == card_id)
+        {
+            std::sync::Arc::make_mut(&mut c.definition)
+                .triggered_abilities
+                .extend(spec.extra_triggered.iter().cloned());
+        }
+    }
+
     // ── Entry points ─────────────────────────────────────────────────────────
 
     pub(crate) fn resolve_effect(
@@ -2715,6 +2775,39 @@ impl GameState {
                 }
                 let mut sba = self.check_state_based_actions();
                 events.append(&mut sba);
+                Ok(())
+            }
+
+            Effect::BecomeCopyOf {
+                what,
+                source,
+                extra_creature_types,
+            } => {
+                // CR 707.2 — `what` becomes a copy of `source`'s copiable
+                // characteristics. One-shot definition rewrite: clone the
+                // source's current definition Arc and stamp it onto each
+                // resolved `what`, preserving instance state. Locked in at
+                // resolution; later changes to the source don't propagate.
+                let src_def = self
+                    .resolve_selector(source, ctx)
+                    .into_iter()
+                    .find_map(|e| e.as_permanent_id())
+                    .and_then(|id| self.battlefield.iter().find(|c| c.id == id))
+                    .map(|c| c.definition.clone());
+                if let Some(src_def) = src_def {
+                    for ent in self.resolve_selector(what, ctx) {
+                        let Some(cid) = ent.as_permanent_id() else { continue };
+                        if let Some(c) = self.battlefield.iter_mut().find(|c| c.id == cid) {
+                            let mut new_def = (*src_def).clone();
+                            for t in extra_creature_types {
+                                if !new_def.subtypes.creature_types.contains(t) {
+                                    new_def.subtypes.creature_types.push(*t);
+                                }
+                            }
+                            c.definition = std::sync::Arc::new(new_def);
+                        }
+                    }
+                }
                 Ok(())
             }
 

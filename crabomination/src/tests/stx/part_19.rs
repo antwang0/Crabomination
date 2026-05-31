@@ -2162,6 +2162,7 @@ fn cr_122_4_excess_counters_pruned_by_sba() {
         name: "Pinnacle Test (synthetic)",
         cost: cost(&[]),
         card_types: vec![CardType::Artifact],
+        enters_as_copy: None,
         max_counters_of_kind: Some((CounterType::PlusOnePlusOne, 3)),
         ..Default::default()
     };

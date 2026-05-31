@@ -9973,6 +9973,7 @@ pub fn helix_pinnacle() -> CardDefinition {
         name: "Helix Pinnacle",
         cost: cost(&[g()]),
         card_types: vec![CardType::Enchantment],
+        enters_as_copy: None,
         max_counters_of_kind: Some((CounterType::Charge, 100)),
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[x()]),

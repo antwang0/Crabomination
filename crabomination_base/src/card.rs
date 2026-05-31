@@ -648,6 +648,19 @@ pub struct CardDefinition {
     /// CardDefinition initialisations pick up the new field automatically.
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
+    /// CR 707 — "You may have this enter as a copy of [filter] permanent."
+    /// Applied during ETB placement (in `continue_spell_resolution`), before
+    /// the first state-based-action sweep, so a printed 0/0 body (Clone,
+    /// Phantasmal Image) never dies as a 0/0 before the copy locks in. The
+    /// engine auto-picks the highest-power matching permanent (best for the
+    /// controller); if none matches, the permanent stays itself and a 0/0
+    /// dies to SBA — matching the printed "you may" decline. The copy reuses
+    /// `Effect::BecomeCopyOf`, so the copied card's own ETB triggers do not
+    /// re-fire (printed/static characteristics only).
+    ///
+    /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub enters_as_copy: Option<EntersAsCopy>,
     /// CR 122.4 — "This permanent can't have more than N counters of
     /// `kind` on it." When this card has more than `max` counters of
     /// `kind` on it, the state-based-action sweep removes the excess
@@ -708,6 +721,24 @@ pub struct CardDefinition {
     /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
+}
+
+/// CR 707 — "enters as a copy of [filter] permanent" spec, stored on
+/// `CardDefinition.enters_as_copy`. The copier becomes a copy of the
+/// chosen permanent; `extra_creature_types` are layered on top of the
+/// copied subtypes (Phantasmal Image's "it's an Illusion in addition to
+/// its other types").
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EntersAsCopy {
+    pub filter: SelectionRequirement,
+    #[serde(default)]
+    pub extra_creature_types: Vec<CreatureType>,
+    /// Triggered abilities layered on top of the copy (Phantasmal Image's
+    /// "it gains 'When this becomes the target of a spell or ability,
+    /// sacrifice it'"). Appended after the copiable characteristics are
+    /// stamped, so they survive the definition rewrite.
+    #[serde(default)]
+    pub extra_triggered: Vec<crate::effect::TriggeredAbility>,
 }
 
 /// CR 601.2b/601.2f — an additional cost paid as the spell is cast, listed

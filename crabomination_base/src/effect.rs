@@ -1278,6 +1278,26 @@ pub enum Effect {
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
     },
+    /// CR 707.2 — `what` becomes a copy of the permanent resolved by
+    /// `source`: its copiable characteristics (name, mana cost, card
+    /// types, subtypes, abilities, P/T, loyalty) are overwritten with a
+    /// clone of the source's current definition. The copy is locked in at
+    /// resolution time — later changes to the source don't propagate (a
+    /// one-shot definition rewrite, the same mechanism the engine uses for
+    /// MDFC face-swap, rather than a layer-1 continuous effect). Instance
+    /// state (id, owner, controller, counters, tapped, summoning sickness,
+    /// token-ness) is preserved. `extra_creature_types` are added on top
+    /// of the copied subtypes (Phantasmal Image's "it's an Illusion in
+    /// addition to its other types"). Powers Clone, Phantasmal Image,
+    /// Mockingbird (enter-as-a-copy). If `source` resolves to nothing the
+    /// effect is a no-op (the copier stays itself — usually a 0/0 that
+    /// dies to SBA, matching the printed "you may" decline).
+    BecomeCopyOf {
+        what: Selector,
+        source: Selector,
+        #[serde(default)]
+        extra_creature_types: Vec<crate::card::CreatureType>,
+    },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
     /// Target becomes a creature with the given P/T and creature types,
@@ -1881,6 +1901,9 @@ impl Effect {
             }
             Effect::BecomeBasicLand { what, .. }
             | Effect::ResetCreature { what, .. } => sel_has_target(what),
+            Effect::BecomeCopyOf { what, source, .. } => {
+                sel_has_target(what) || sel_has_target(source)
+            }
             Effect::Attach { what, to } => sel_has_target(what) || sel_has_target(to),
             Effect::CopySpell { what, count } => sel_has_target(what) || value_has_target(count),
             Effect::CopySpellUnlessPaid { what, count, .. } => {

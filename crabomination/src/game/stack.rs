@@ -477,6 +477,11 @@ impl GameState {
                             });
                         }
                     }
+                    // CR 707 — "enters as a copy of [filter]" replacement.
+                    // Applied here, before the first SBA sweep, so a 0/0
+                    // copier (Clone, Phantasmal Image) never dies as a 0/0.
+                    self.apply_enters_as_copy(card_id, caster, &mut events);
+
                     events.push(GameEvent::PermanentEntered { card_id });
 
                     // CR 303.4f / 303.4h — an Aura permanent spell enters

@@ -31,9 +31,9 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Mockingbird | ⏳ | ETB copy-the-name-of a creature you control. |
+| Mockingbird | ⏳ | Enter as a copy of a creature you control, except its name stays Mockingbird. The `enters_as_copy` hook covers the copy; the name-retention exception needs a copy-name override (TODO.md). |
 | Dandân | 🟡 | {2}{U} 4/1 Fish. Wired with the "if you control no Island at your upkeep, sacrifice this" downside (an upkeep `If(Not(SelectorExists(Island ∧ ControlledByYou)), Move(self → Graveyard))` trigger). The "can attack only if defending player controls an Island" half is omitted (no per-attacker target restriction). Tests: `dandan_sacrifices_at_upkeep_when_no_island`, `dandan_stays_in_play_with_an_island`. |
-| Phantasmal Image | ⏳ | ETB enter-as-copy of any creature. Needs token-copy-of-permanent primitive. |
+| Phantasmal Image | 🟡 | Enters as a copy of any creature via the `enters_as_copy` CR-707 hook, keeping its Illusion type + the "sacrifice when targeted" rider. Copied ETB triggers don't re-fire. Tests: `phantasmal_image_copies_and_keeps_illusion_plus_sacrifice_rider`. (Clone is fully faithful — `clone_enters_as_a_copy_of_a_creature`.) |
 | Thundertrap Trainer | 🟡 | 2/2 Flash; ETB taps target creature an opponent controls. Body fully wired; the trap/discount text is dropped. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |

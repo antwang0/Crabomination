@@ -211,12 +211,11 @@ pub fn banishing_betrayal() -> CardDefinition {
 /// "This spell costs {1}{U} less to cast if it targets an instant or
 /// sorcery spell. / Counter target spell."
 ///
-/// Approximation: the cost-reduction-when-targeting-IS-spell rider is
-/// omitted (the engine has no target-aware cost reduction yet — same
-/// shape as Killian, Ink Duelist's "spells you cast that target a
-/// creature cost {2} less"). The counter half is wired faithfully via
-/// `Effect::CounterSpell`. Net: a 4-mana hard counter rather than the
-/// printed conditional 2-mana counter.
+/// Counter half wired via `Effect::CounterSpell`. The "{1}{U} less when
+/// it targets an instant/sorcery" rider is modeled as an `AlternativeCost`
+/// of `{1}{U}` gated by a `target_filter` of IS spells on the stack — aim
+/// at an IS spell and the reduced cost is available; anything else pays
+/// the full `{2}{U}{U}`.
 pub fn brush_off() -> CardDefinition {
     use crate::mana::u;
     CardDefinition {

@@ -2392,6 +2392,7 @@ fn zero_surveil_does_not_trigger_surveil_events_per_cr_701_25c() {
         back_face: None,
         opening_hand: None,
         enters_with_counters: None,
+        enters_as_copy: None,
         max_counters_of_kind: None,
         exile_on_resolve: false,
         affinity_filter: None,

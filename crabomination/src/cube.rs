@@ -328,6 +328,11 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // still functions; activate the card for the cube pool with a
         // best-effort body.
         containment_priest,
+        // Clone / Phantasmal Image — CR-707 enter-as-a-copy via the
+        // `enters_as_copy` hook (Clone is fully faithful; Phantasmal
+        // Image carries its Illusion type + sacrifice-when-targeted rider).
+        clone_card,
+        phantasmal_image,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,
