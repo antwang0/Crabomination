@@ -217,15 +217,8 @@ pub fn guiding_voice() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },
-            // Learn approximation: draw a card. Same shortcut every other
-            // STX Learn card uses (Eyetwitch's die-trigger, Hunt for
-            // Specimens's rider, Field Trip's rider, Igneous Inspiration's
-            // rider). Tracked in STRIXHAVEN2.md as the engine-wide Lesson
-            // sideboard gap.
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -438,10 +431,8 @@ pub fn mascot_interpretation() -> CardDefinition {
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(2),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -491,10 +482,8 @@ pub fn reduce_rubble() -> CardDefinition {
                 ),
                 amount: Value::Const(3),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

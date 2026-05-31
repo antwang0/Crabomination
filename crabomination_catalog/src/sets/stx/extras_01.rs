@@ -1945,11 +1945,8 @@ pub fn divide_by_zero() -> CardDefinition {
                 ),
                 to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
             },
-            // Learn — approximated as Draw 1 (Lesson sideboard is engine-wide ⏳).
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

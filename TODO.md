@@ -2955,14 +2955,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `Decision::Learn` (reveal a Lesson into hand / discard-to-draw /
   decline) via `DecisionAnswer::Learn(LearnChoice)`, and falls back to
   `Draw 1` when no Lessons sideboard is configured (so existing
-  no-sideboard games and tests are unchanged). Eyetwitch, Hunt for
-  Specimens, Field Trip, and Igneous Inspiration are wired to it; covered
-  by `tests::game::{learn_fetches_a_lesson_from_the_sideboard,
-  learn_rummage_discards_then_draws, learn_decline_does_nothing}`.
-  Remaining: migrate the other `Draw 1`-approximated Learn cards in
-  `stx/extras_*`, populate per-player Lesson sideboards in deck
-  construction (`sos_mode` / formats / draft), and add the client UI
-  suspend flow for `Decision::Learn`.
+  no-sideboard games and tests are unchanged). **All** Strixhaven Learn
+  cards are now wired to `Effect::Learn` — the four canonical ones plus the
+  Lessons that themselves Learn (Guiding Voice, Mascot Interpretation,
+  Reduce // Rubble, Lesson in Honor) and Professor of Symbology.
+  `cube::build_cube_state` seats each player with the standard
+  `cube::lessons_sideboard()` via `GameState::add_card_to_sideboard`, so
+  Learn fetches in real cube games. Covered by
+  `tests::game::{learn_fetches_a_lesson_from_the_sideboard,
+  learn_rummage_discards_then_draws, learn_decline_does_nothing}` and
+  `cube::tests::build_cube_state_gives_each_seat_a_lessons_sideboard`.
+  Remaining: populate sideboards in the other deck-build paths (formats /
+  draft) and add the client UI suspend flow for `Decision::Learn`.
 - ⏳ **Counter-multiplier primitive** — Already used by Tanazir
   (via the ForEach idiom). Future cards (Vorinclex, Doubling
   Season) want a true multiplier on counter accrual; tracked

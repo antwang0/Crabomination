@@ -227,10 +227,8 @@ pub fn lesson_in_honor() -> CardDefinition {
                 toughness: Value::Const(2),
                 duration: Duration::EndOfTurn,
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: crate::effect::PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

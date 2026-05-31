@@ -40,14 +40,17 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
 
 ## Known engine gaps surfaced by these catalogs
 
-- **Lessons sideboard / Learn** — 🟡 **primitive landed.** `Player.sideboard`
-  holds Lessons "outside the game"; `Effect::Learn` surfaces `Decision::Learn`
-  (reveal a Lesson into hand / discard-to-draw / decline) and falls back to
-  `Draw 1` when no Lessons sideboard is configured. The canonical Learn cards
-  (Eyetwitch, Hunt for Specimens, Field Trip, Igneous Inspiration) are wired
-  to it. Remaining: migrate the other `Draw 1`-approximated Learn cards in
-  `stx/extras_*`, populate sideboards in deck construction (`sos_mode` /
-  formats), and add the client UI suspend flow for the Learn decision.
+- **Lessons sideboard / Learn** — 🟡 **wired end-to-end (engine + cube).**
+  `Player.sideboard` holds Lessons "outside the game"; `Effect::Learn`
+  surfaces `Decision::Learn` (reveal a Lesson into hand / discard-to-draw /
+  decline) and falls back to `Draw 1` when no Lessons sideboard is
+  configured. **All Strixhaven Learn cards** now use `Effect::Learn` (the
+  four canonical ones plus the Lessons that themselves Learn and Professor
+  of Symbology). `cube::build_cube_state` gives every seat the standard
+  Lessons sideboard via `cube::lessons_sideboard()`, so Learn fetches in
+  real cube games. Remaining: populate sideboards in the other deck-build
+  paths (formats / draft), and add the client UI suspend flow for the Learn
+  decision.
 - **Multi-target prompts on instants/sorceries** — "choose one or both"
   with a target per chosen mode now works via `Effect::ChooseN`'s per-mode
   target slots (Steal the Show). The remaining gap is *divided* targeting
@@ -55,7 +58,7 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   Cover-Up, Crackle with Power, Magma Opus — divided-damage / split-N
   slots), distinct from the bag-of-targets primitives.
 
-All printed SOS cards are now ✅. The Learn / Lessons-sideboard mechanic has
-a working engine primitive (see "Known engine gaps" above); the remaining
-work is migrating the rest of the `Draw 1`-approximated Learn cards and
-wiring sideboards into deck construction + the client.
+All printed SOS cards are now ✅, and the Learn / Lessons-sideboard mechanic
+is wired end-to-end (engine + every Learn card + cube sideboards). The only
+remaining Learn work is the other deck-build paths (formats / draft) and the
+client UI suspend flow — see "Known engine gaps" above.

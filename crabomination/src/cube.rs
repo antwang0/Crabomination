@@ -62,9 +62,32 @@ pub fn build_cube_state() -> GameState {
     }
     state.players[1].library.shuffle(&mut rng);
 
+    // Every seat carries the standard Lessons sideboard so Learn abilities
+    // (Eyetwitch, Field Trip, Igneous Inspiration, …) can fetch a Lesson
+    // rather than falling back to the Draw 1 approximation.
+    for p in 0..2 {
+        for &f in &lessons_sideboard() {
+            state.add_card_to_sideboard(p, f());
+        }
+    }
+
     state.players[0].wants_ui = true;
     state.players[1].wants_ui = true;
     state
+}
+
+/// The standard Strixhaven Lessons every cube seat carries in its sideboard
+/// ("outside the game"). A Learn ability may reveal one of these into hand.
+/// The set spans several colors so any Learn deck has a useful fetch target.
+pub fn lessons_sideboard() -> Vec<CardFactory> {
+    vec![
+        environmental_sciences,
+        introduction_to_prophecy,
+        introduction_to_annihilation,
+        spirit_summoning,
+        pest_summoning,
+        mascot_exhibition,
+    ]
 }
 
 /// Pick two distinct colors uniformly at random from {W, U, B, R, G}.
@@ -1627,5 +1650,28 @@ mod tests {
         // Player names carry their color pair tag.
         assert!(state.players[0].name.contains('('));
         assert!(state.players[1].name.contains('('));
+    }
+
+    #[test]
+    fn build_cube_state_gives_each_seat_a_lessons_sideboard() {
+        use crate::card::SpellSubtype;
+        let state = build_cube_state();
+        for p in 0..2 {
+            assert_eq!(
+                state.players[p].sideboard.len(),
+                lessons_sideboard().len(),
+                "seat {p} carries the full Lessons sideboard",
+            );
+            // Every sideboard card must be a Lesson, or a Learn ability
+            // (which filters on `SpellSubtype::Lesson`) couldn't fetch it.
+            assert!(
+                state.players[p].sideboard.iter().all(|c| c
+                    .definition
+                    .subtypes
+                    .spell_subtypes
+                    .contains(&SpellSubtype::Lesson)),
+                "seat {p}'s sideboard is all Lessons",
+            );
+        }
     }
 }

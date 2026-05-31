@@ -106,7 +106,10 @@ pub fn mascot_exhibition() -> CardDefinition {
         name: "Mascot Exhibition",
         cost: cost(&[generic(5), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![],
@@ -620,7 +623,8 @@ pub fn big_play() -> CardDefinition {
 // ── Push XVII (session 2): additional mono-color staples ────────────────
 
 /// Professor of Symbology — {1}{W}, 2/1 Human Cleric.
-/// ETB: learn (approximated as draw 1).
+/// ETB: Learn (CR 701.45) — reveal a Lesson from the sideboard into hand or
+/// discard-to-draw; falls back to Draw 1 with no Lessons sideboard.
 pub fn professor_of_symbology() -> CardDefinition {
     CardDefinition {
         name: "Professor of Symbology",
@@ -636,10 +640,7 @@ pub fn professor_of_symbology() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            effect: Effect::Learn { who: crate::effect::PlayerRef::You },
         }],
         ..Default::default()
     }
@@ -814,7 +815,10 @@ pub fn introduction_to_prophecy() -> CardDefinition {
         name: "Introduction to Prophecy",
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
-        subtypes: Subtypes::default(),
+        subtypes: Subtypes {
+            spell_subtypes: vec![crate::card::SpellSubtype::Lesson],
+            ..Default::default()
+        },
         power: 0,
         toughness: 0,
         keywords: vec![],

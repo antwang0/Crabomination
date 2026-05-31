@@ -1587,6 +1587,17 @@ impl GameState {
         id
     }
 
+    /// Put a card into `player_idx`'s Lessons sideboard ("outside the
+    /// game"). A Learn ability may later reveal it into hand. Used by deck
+    /// construction and test fixtures exercising the Learn mechanic.
+    pub fn add_card_to_sideboard(&mut self, player_idx: usize, def: CardDefinition) -> CardId {
+        let id = self.next_id();
+        self.players[player_idx]
+            .sideboard
+            .push(crate::card::CardInstance::new(id, def, player_idx));
+        id
+    }
+
     /// Put a card directly into `player_idx`'s graveyard. Useful for test
     /// fixtures that exercise flashback / reanimate / dredge paths without
     /// the bookkeeping of casting and resolving the spell first.
