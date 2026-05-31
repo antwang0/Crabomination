@@ -5073,26 +5073,43 @@ fn mine_collapse_sacrifices_mountain_and_deals_four() {
         "Target player should take 4 damage");
 }
 
-/// Satyr Wayfinder: ETB mills 4 from your library.
+/// Satyr Wayfinder: ETB reveals 4, takes a land to hand, rest to graveyard.
 #[test]
-fn satyr_wayfinder_etb_mills_four() {
+fn satyr_wayfinder_etb_takes_a_land_rest_to_graveyard() {
     let mut g = two_player_game();
-    for _ in 0..6 {
-        g.add_card_to_library(0, catalog::forest());
-    }
-    let lib_before = g.players[0].library.len();
-    let yard_before = g.players[0].graveyard.len();
+    // Top of library: 3 nonland + 1 land among the top four.
+    for _ in 0..3 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    g.add_card_to_library(0, catalog::forest());
     let sw = g.add_card_to_hand(0, catalog::satyr_wayfinder());
     g.players[0].mana_pool.add(Color::Green, 1);
     g.players[0].mana_pool.add_colorless(1);
     g.perform_action(GameAction::CastSpell {
         card_id: sw, target: None, additional_targets: vec![], mode: None, x_value: None,
-    }).expect("Satyr Wayfinder castable for {{1}}{{G}}");
+    }).expect("Satyr Wayfinder castable for {1}{G}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].library.len(), lib_before - 4,
-        "Four cards should leave the library");
-    assert_eq!(g.players[0].graveyard.len(), yard_before + 4,
-        "Four cards should land in the graveyard");
+    // The Forest is taken to hand; the three nonlands hit the graveyard.
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"),
+        "the land is taken to hand");
+    // The three nonland cards go to the graveyard.
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Lightning Bolt").count(), 3);
+}
+
+/// Satyr Wayfinder takes nothing when no land is among the revealed cards.
+#[test]
+fn satyr_wayfinder_takes_nothing_with_no_land_revealed() {
+    let mut g = two_player_game();
+    for _ in 0..4 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    let sw = g.add_card_to_hand(0, catalog::satyr_wayfinder());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: sw, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "no land → nothing to hand");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Lightning Bolt").count(), 4,
+        "all four revealed nonlands hit the graveyard");
 }
 
 /// Fireblast: {4}{R}{R} for 4 damage to any target. (Alt cost path —

@@ -384,7 +384,17 @@ pub enum PendingEffectState {
     /// Planning / Flow State). `revealed` is the peeked top-of-library set;
     /// the chosen card goes to hand and the rest to the bottom of the
     /// library (or graveyard if `rest_to_graveyard`).
-    ImpulsePending { player: usize, revealed: Vec<CardId>, rest_to_graveyard: bool },
+    ImpulsePending {
+        player: usize,
+        revealed: Vec<CardId>,
+        rest_to_graveyard: bool,
+        /// Subset of `revealed` eligible to take (Satyr Wayfinder — lands
+        /// only). `None` means "all revealed are eligible" (no filter /
+        /// back-compat); `Some(vec)` lists the only takeable cards (which
+        /// may be empty when nothing matched the filter).
+        #[serde(default)]
+        eligible: Option<Vec<CardId>>,
+    },
     PutOnLibraryPending { player: usize, count: usize },
     /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks

@@ -2450,25 +2450,45 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::LookPickToHand { who, count, rest_to_graveyard } => {
+            Effect::LookPickToHand { who, count, rest_to_graveyard, pick_filter } => {
                 use crate::decision::Decision;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
-                let revealed: Vec<(crate::card::CardId, String)> = self.players[p]
-                    .library
-                    .iter()
-                    .take(n)
-                    .map(|c| (c.id, c.definition.name.to_string()))
-                    .collect();
-                if revealed.is_empty() {
+                let top_ids: Vec<crate::card::CardId> =
+                    self.players[p].library.iter().take(n).map(|c| c.id).collect();
+                if top_ids.is_empty() {
                     return Ok(());
                 }
-                let ids: Vec<crate::card::CardId> = revealed.iter().map(|(id, _)| *id).collect();
-                let decision = Decision::SearchLibrary { player: p, candidates: revealed };
+                // Eligible-to-take set: filtered by `pick_filter` when present
+                // (Satyr Wayfinder — lands only). `revealed` keeps all top-N
+                // for the rest-to-graveyard sweep.
+                let eligible: Option<Vec<crate::card::CardId>> = pick_filter.as_ref().map(|f| {
+                    top_ids
+                        .iter()
+                        .copied()
+                        .filter(|id| {
+                            self.evaluate_requirement_static(f, &Target::Permanent(*id), p, ctx.source)
+                        })
+                        .collect()
+                });
+                let candidates: Vec<(crate::card::CardId, String)> = eligible
+                    .as_ref()
+                    .unwrap_or(&top_ids)
+                    .iter()
+                    .filter_map(|id| {
+                        self.players[p]
+                            .library
+                            .iter()
+                            .find(|c| c.id == *id)
+                            .map(|c| (*id, c.definition.name.to_string()))
+                    })
+                    .collect();
+                let decision = Decision::SearchLibrary { player: p, candidates };
                 let pending = PendingEffectState::ImpulsePending {
                     player: p,
-                    revealed: ids,
+                    revealed: top_ids,
                     rest_to_graveyard: *rest_to_graveyard,
+                    eligible,
                 };
                 if self.players[p].wants_ui {
                     self.suspend_signal = Some((decision, pending, Effect::Noop));

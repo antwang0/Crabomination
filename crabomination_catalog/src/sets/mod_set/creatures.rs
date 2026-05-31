@@ -1054,6 +1054,7 @@ pub fn augur_of_bolas() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
+                pick_filter: None,
             },
         }],
         ..Default::default()
@@ -1313,6 +1314,7 @@ pub fn sea_gate_oracle() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(2),
                 rest_to_graveyard: false,
+                pick_filter: None,
             },
         }],
         ..Default::default()

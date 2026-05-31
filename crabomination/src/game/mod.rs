@@ -3236,15 +3236,21 @@ impl GameState {
                 }
                 Ok(events)
             }
-            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard } => {
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard, eligible } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
-                // Default (AutoDecider returns None / out-of-set): keep the
-                // top revealed card rather than whiff your own selection.
+                // `None` eligible means "any revealed card" (no filter).
+                let is_eligible = |id: &CardId| match &eligible {
+                    None => true,
+                    Some(v) => v.contains(id),
+                };
+                // Default (AutoDecider returns None / out-of-set): take the
+                // first *eligible* revealed card. When nothing is eligible
+                // (Satyr Wayfinder revealing no land), take nothing.
                 let pick = chosen_id
-                    .filter(|id| revealed.contains(id))
-                    .or_else(|| revealed.first().copied());
+                    .filter(|id| revealed.contains(id) && is_eligible(id))
+                    .or_else(|| revealed.iter().copied().find(|id| is_eligible(id)));
                 let mut events = vec![];
                 if let Some(pick) = pick
                     && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {

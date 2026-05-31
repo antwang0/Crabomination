@@ -1805,13 +1805,8 @@ pub fn elvish_spirit_guide() -> CardDefinition {
 /// Satyr Wayfinder — {1}{G} Creature — Satyr Druid. 1/1.
 /// "When this creature enters, reveal the top four cards of your library.
 /// You may put a land card from among them into your hand. Put the rest
-/// into your graveyard."
-///
-/// Approximation: ETB mills 4. The "may take a land" half is
-/// gameplay-equivalent to "tutor a land from the milled cards", which the
-/// existing primitives don't expose as a single op. Wired here as the
-/// graveyard-fill half (which is the gameplay-relevant outcome for the
-/// reanimator-adjacent shells Satyr Wayfinder slots into).
+/// into your graveyard." Wired via `LookPickToHand` with a land
+/// `pick_filter`; the rest go to the graveyard.
 pub fn satyr_wayfinder() -> CardDefinition {
     CardDefinition {
         name: "Satyr Wayfinder",
@@ -1827,9 +1822,11 @@ pub fn satyr_wayfinder() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Mill {
-                who: Selector::You,
-                amount: Value::Const(4),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(4),
+                rest_to_graveyard: true,
+                pick_filter: Some(SelectionRequirement::Land),
             },
         }],
         ..Default::default()
@@ -6924,6 +6921,7 @@ pub fn strategic_planning() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::Const(3),
             rest_to_graveyard: true,
+            pick_filter: None,
         },
         ..Default::default()
     }

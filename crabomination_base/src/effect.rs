@@ -1139,7 +1139,18 @@ pub enum Effect {
     /// graveyard if `rest_to_graveyard`)." Impulse / Strategic Planning /
     /// Flow State. The controller picks via the `SearchLibrary` decision
     /// (auto-decider keeps the top card).
-    LookPickToHand { who: PlayerRef, count: Value, #[serde(default)] rest_to_graveyard: bool },
+    /// `pick_filter` restricts which revealed cards are eligible to take
+    /// (Satyr Wayfinder — "you may put a *land* card into your hand"); the
+    /// rest (including non-eligible cards) follow `rest_to_graveyard`.
+    /// `None` means any revealed card is eligible.
+    LookPickToHand {
+        who: PlayerRef,
+        count: Value,
+        #[serde(default)]
+        rest_to_graveyard: bool,
+        #[serde(default)]
+        pick_filter: Option<SelectionRequirement>,
+    },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.

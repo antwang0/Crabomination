@@ -2093,6 +2093,7 @@ pub fn flow_state() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(3),
                 rest_to_graveyard: false,
+                pick_filter: None,
             }),
         },
         triggered_abilities: vec![],
