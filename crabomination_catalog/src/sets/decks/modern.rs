@@ -4468,11 +4468,13 @@ pub fn plague_wind() -> CardDefinition {
         name: "Plague Wind",
         cost: cost(&[generic(7), b(), b()]),
         card_types: vec![CardType::Sorcery],
+        // "Destroy all creatures you don't control. They can't be
+        // regenerated." — DestroyNoRegen honors the printed regen rider.
         effect: Effect::ForEach {
             selector: Selector::EachPermanent(
                 SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
             ),
-            body: Box::new(Effect::Destroy { what: Selector::TriggerSource }),
+            body: Box::new(Effect::DestroyNoRegen { what: Selector::TriggerSource }),
         },
         ..Default::default()
     }

@@ -8073,6 +8073,28 @@ fn plague_wind_destroys_only_opponent_creatures() {
         "Plague Wind destroys opp's dragon");
 }
 
+/// Plague Wind's "can't be regenerated" rider: a shielded regenerator on
+/// the opponent's side still dies.
+#[test]
+fn plague_wind_ignores_regeneration_shields() {
+    let mut g = two_player_game();
+    let skel = g.add_card_to_battlefield(1, catalog::drudge_skeletons());
+    g.clear_sickness(skel);
+    g.players[1].mana_pool.add(Color::Black, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: skel, ability_index: 0, target: None, x_value: None,
+    }).expect("regenerate activates");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    let id = g.add_card_to_hand(0, catalog::plague_wind());
+    g.players[0].mana_pool.add_colorless(7);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    cast(&mut g, id);
+    assert!(g.battlefield_find(skel).is_none(),
+        "regenerator dies through its shield to Plague Wind");
+}
+
 #[test]
 fn carnage_tyrant_resolves_through_counterspell() {
     let mut g = two_player_game();

@@ -51,7 +51,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Tear Asunder | {1}{B}{G} | 🟡 | `Destroy(Artifact ∨ Enchantment)`. Kicker {2} "destroy any nonland permanent" mode collapsed (alt-cost can't yet swap target filters at cast time). |
 | Assassin's Trophy | {B}{G} | 🟡 | `Destroy(Permanent ∧ Nonland ∧ ControlledByOpponent)`. The "owner searches their library for a basic land" downside is omitted (Search always targets the caster). |
 | Rout | {3}{W}{W} | 🟡 | `ForEach(Creature) + Destroy` — DoJ at +1 mana. Flash mode collapsed. |
-| Plague Wind | {8}{B}{B} | 🟡 | `ForEach(Creature ∧ ControlledByOpponent) + Destroy` — one-sided creature sweep. Regen rider collapsed. |
 | Dismember | {1}{B}{B} | 🟡 | `PumpPT(-5/-5 EOT)` — Phyrexian-mana cost ({1}{B/Φ}{B/Φ}{B/Φ}) collapsed to flat black; the body kills 5-toughness creatures. |
 | Cling to Dust | {B} | 🟡 | `Seq([Move(target Any → Exile), If(EntityMatches Creature, GainLife 2)])`. Escape mode ({2}{B}, exile five other graveyard cards) collapsed (no escape-cost primitive). |
 | Chaos Warp | {2}{R} | 🟡 | `Move(target Permanent → Library(OwnerOf, Shuffled))`. The library actually reshuffles via the new `LibraryPosition::Shuffled` engine path. The "reveal top, cast if permanent" half is collapsed. Test: `chaos_warp_sends_target_permanent_to_owners_library`. |
