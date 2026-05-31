@@ -903,10 +903,11 @@ pub fn moment_of_reckoning() -> CardDefinition {
 /// of colors of mana spent to cast this spell."
 ///
 /// Wired faithfully via `Effect::Discard` with `Value::ConvergedValue`.
-/// The "target player" target slot is approximated by `EachOpponent`
-/// — the auto-decider always targets an opponent, which matches the
-/// printed-card use case (no one targets themselves with discard).
+/// The "target player" is a real `target_filtered(Player)` slot, so the
+/// caster is prompted to choose a player (the auto-decider points it at an
+/// opponent by default).
 pub fn arcane_omens() -> CardDefinition {
+    use crate::effect::shortcut::target_filtered;
     CardDefinition {
         name: "Arcane Omens",
         cost: cost(&[generic(4), b()]),
@@ -916,7 +917,7 @@ pub fn arcane_omens() -> CardDefinition {
         toughness: 0,
         keywords: vec![],
         effect: Effect::Discard {
-            who: Selector::Player(PlayerRef::EachOpponent),
+            who: target_filtered(SelectionRequirement::Player),
             amount: Value::ConvergedValue,
             random: false,
         },

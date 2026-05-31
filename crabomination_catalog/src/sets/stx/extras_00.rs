@@ -233,8 +233,16 @@ pub fn baleful_mastery() -> CardDefinition {
                     who: Selector::Player(PlayerRef::EachOpponent),
                     amount: Value::Const(1),
                 },
+                // Same target-filtered slot 0 as the base effect, so the
+                // alt-cast path surfaces the "target creature or planeswalker"
+                // requirement (the client prompts for it) instead of leaving
+                // slot 0 unfiltered — which made the alt cast resolve the
+                // opponent's draw without actually exiling anything.
                 Effect::Exile {
-                    what: Selector::Target(0),
+                    what: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
                 },
             ])),
         }),

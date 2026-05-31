@@ -1,6 +1,6 @@
 use crate::card::{CardDefinition, CardType, SelectionRequirement, Subtypes};
 use crate::effect::shortcut::{
-    add_mana, counter_target_spell, deal, draw, exile_target, pump_target, target, target_filtered,
+    add_mana, counter_target_spell, deal, exile_target, pump_target, target, target_filtered,
 };
 use crate::effect::Effect;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
@@ -47,7 +47,13 @@ pub fn ancestral_recall() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: draw(3),
+        // "Target player draws three cards" — the caster picks any player
+        // (themselves or an opponent), so the draw resolves on the chosen
+        // target rather than always the caster.
+        effect: Effect::Draw {
+            who: target_filtered(SelectionRequirement::Player),
+            amount: crate::effect::Value::Const(3),
+        },
         triggered_abilities: vec![],
         ..Default::default()
     }

@@ -2136,12 +2136,12 @@ fn arcane_omens_discards_x_cards_using_converged_value() {
     let opp_hand_before = g.players[1].hand.len();
 
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Arcane Omens castable for {4}{B}");
     drain_stack(&mut g);
 
-    // Mono-black cast → ConvergedValue = 1 → opp discards 1.
+    // Mono-black cast → ConvergedValue = 1 → targeted opponent discards 1.
     assert_eq!(g.players[1].hand.len(), opp_hand_before - 1);
 }
 

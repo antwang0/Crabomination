@@ -318,9 +318,27 @@ fn ancestral_recall_draws_three_cards() {
     }
     let id = g.add_card_to_hand(0, catalog::ancestral_recall());
     g.players[0].mana_pool.add(Color::Blue, 1);
-    cast(&mut g, id);
-    // Drew 3 cards (Ancestral Recall has no target in this engine version)
+    // "Target player draws three cards" — target self to draw 3.
+    cast_at(&mut g, id, crate::game::types::Target::Player(0));
     assert_eq!(g.players[0].hand.len(), 3);
+}
+
+#[test]
+fn ancestral_recall_can_target_an_opponent() {
+    let mut g = two_player_game();
+    for _ in 0..5 {
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    let id = g.add_card_to_hand(0, catalog::ancestral_recall());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let opp_hand_before = g.players[1].hand.len();
+    cast_at(&mut g, id, crate::game::types::Target::Player(1));
+    assert_eq!(
+        g.players[1].hand.len(),
+        opp_hand_before + 3,
+        "the targeted opponent draws three"
+    );
+    assert_eq!(g.players[0].hand.len(), 0, "the caster did not draw");
 }
 
 #[test]
