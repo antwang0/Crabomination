@@ -525,7 +525,21 @@ pub fn update_opponent_panel_tint(
         .map(|c| c.power.max(0))
         .sum();
 
-    let threatened = viewer.life <= 5 || lethal_on_board >= viewer.life;
+    // During an actual combat the engine's `combat_preview` projects the
+    // *declared* damage to each player — use that exact figure when present
+    // (more accurate than the all-untapped-power pre-combat estimate).
+    let projected = cv
+        .combat_preview
+        .as_ref()
+        .and_then(|cp| {
+            cp.damage_to_players
+                .iter()
+                .find(|(seat, _)| *seat == cv.your_seat)
+                .map(|(_, d)| *d)
+        })
+        .unwrap_or(lethal_on_board);
+
+    let threatened = viewer.life <= 5 || projected >= viewer.life;
     *bg = BackgroundColor(if threatened { theme::HUD_BG_DANGER } else { theme::HUD_BG });
 }
 
