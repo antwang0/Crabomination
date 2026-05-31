@@ -230,3 +230,80 @@ pub fn fade_into_antiquity() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nylea's Disciple — {3}{G} Creature — Centaur Shaman 2/3. ETB: you gain
+/// life equal to your devotion to green (CR 700.5).
+pub fn nyleas_disciple() -> CardDefinition {
+    CardDefinition {
+        name: "Nylea's Disciple",
+        cost: cost(&[generic(3), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::GainLife {
+            who: Selector::You,
+            amount: Value::DevotionTo(vec![crate::mana::Color::Green]),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Traveling Philosopher — {2}{W} Creature — Human Advisor 1/4.
+pub fn traveling_philosopher() -> CardDefinition {
+    CardDefinition {
+        name: "Traveling Philosopher",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Advisor],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 4,
+        ..Default::default()
+    }
+}
+
+/// Cavalry Pegasus — {1}{W} Creature — Pegasus 1/1. Flying. (The "Humans
+/// you control gain flying when it attacks" rider is omitted.)
+pub fn cavalry_pegasus() -> CardDefinition {
+    CardDefinition {
+        name: "Cavalry Pegasus",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Pegasus], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        ..Default::default()
+    }
+}
+
+/// Mnemonic Wall — {4}{U} Creature — Wall 0/4. Defender. ETB: return target
+/// instant or sorcery card from your graveyard to your hand.
+pub fn mnemonic_wall() -> CardDefinition {
+    use crate::card::CardType as Ct;
+    CardDefinition {
+        name: "Mnemonic Wall",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Wall], ..Default::default() },
+        power: 0,
+        toughness: 4,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(
+                SelectionRequirement::InGraveyard.and(
+                    SelectionRequirement::HasCardType(Ct::Instant)
+                        .or(SelectionRequirement::HasCardType(Ct::Sorcery)),
+                ),
+            ),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}

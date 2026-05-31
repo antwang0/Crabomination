@@ -18485,3 +18485,47 @@ fn fade_into_antiquity_exiles_an_enchantment() {
     assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment exiled");
     assert!(g.exile.iter().any(|c| c.id == ench), "to exile zone");
 }
+
+#[test]
+fn nyleas_disciple_gains_life_for_green_devotion() {
+    let mut g = two_player_game();
+    // Two green pips already out; Disciple's own {3}{G} adds 1 → devotion 3.
+    g.add_card_to_battlefield(0, catalog::elvish_mystic());
+    g.add_card_to_battlefield(0, catalog::elvish_mystic());
+    let id = g.add_card_to_hand(0, catalog::nyleas_disciple());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Nylea's Disciple castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 3, "gain life = devotion to green (2 + self)");
+}
+
+#[test]
+fn mnemonic_wall_returns_an_instant_from_graveyard() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.add_card_to_graveyard(0, catalog::grizzly_bears()); // a creature, ineligible
+    let id = g.add_card_to_hand(0, catalog::mnemonic_wall());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Mnemonic Wall castable");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Lightning Bolt"),
+        "instant returned to hand");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"),
+        "creature stays in the graveyard");
+}
+
+#[test]
+fn cavalry_pegasus_and_traveling_philosopher_bodies() {
+    let mut g = two_player_game();
+    let peg = g.add_card_to_battlefield(0, catalog::cavalry_pegasus());
+    let phil = g.add_card_to_battlefield(0, catalog::traveling_philosopher());
+    assert!(g.battlefield_find(peg).unwrap().has_keyword(&crate::card::Keyword::Flying));
+    assert_eq!((g.battlefield_find(phil).unwrap().power(), g.battlefield_find(phil).unwrap().toughness()), (1, 4));
+}
