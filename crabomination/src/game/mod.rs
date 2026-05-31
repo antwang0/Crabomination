@@ -1252,6 +1252,32 @@ impl GameState {
                 }
             }
         }
+        // CR 700.5 / Theros gods — "isn't a creature unless your devotion
+        // to [colors] ≥ threshold." Emit a layer-4 RemoveCardType(Creature)
+        // self-effect while the gate is unmet; reading devotion needs the
+        // live GameState, so it can't route through static_ability_to_effects.
+        for card in &self.battlefield {
+            for sa in &card.definition.static_abilities {
+                let crate::effect::StaticEffect::NotCreatureWhileDevotionBelow {
+                    colors,
+                    threshold,
+                } = &sa.effect
+                else {
+                    continue;
+                };
+                if (self.devotion_to(card.controller, colors) as u32) < *threshold {
+                    all_effects.push(ContinuousEffect {
+                        timestamp: card.id.0 as u64,
+                        source: card.id,
+                        affected: AffectedPermanents::Source,
+                        layer: Layer::L4Type,
+                        sublayer: None,
+                        duration: EffectDuration::WhileSourceOnBattlefield,
+                        modification: Modification::RemoveCardType(CardType::Creature),
+                    });
+                }
+            }
+        }
         // CR 604.x — characteristic-defining dynamic P/T injection. The
         // per-card formula lookup lives in `dynamic_pt_for_name`; we
         // resolve it here on every layer recompute and emit a layer-7
@@ -3970,7 +3996,10 @@ fn static_ability_to_effects(card: &CardInstance, timestamp: u64) -> Vec<Continu
             | StaticEffect::GrantKeywordToAttackers { .. }
             // GrantActivatedAbility — surfaced as a virtual activated ability
             // in `activate_ability`; not a characteristic layer effect.
-            | StaticEffect::GrantActivatedAbility { .. } => vec![],
+            | StaticEffect::GrantActivatedAbility { .. }
+            // NotCreatureWhileDevotionBelow — needs live devotion count,
+            // resolved in `gather_continuous_effects` against the GameState.
+            | StaticEffect::NotCreatureWhileDevotionBelow { .. } => vec![],
         })
         .collect()
 }

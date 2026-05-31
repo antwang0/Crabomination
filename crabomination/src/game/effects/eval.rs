@@ -12,6 +12,27 @@ use crate::game::{GameState, StackItem, Target};
 use crate::mana::ManaSymbol;
 
 impl GameState {
+    /// CR 700.5 — `player`'s devotion to `colors`: the number of mana
+    /// symbols matching any listed color among the mana costs of
+    /// permanents they control. A hybrid / Phyrexian / mono-hybrid pip
+    /// counts once if it contains any of the colors.
+    pub(crate) fn devotion_to(&self, player: usize, colors: &[crate::mana::Color]) -> i32 {
+        use crate::mana::ManaSymbol;
+        let matches = |c: &crate::mana::Color| colors.contains(c);
+        self.battlefield
+            .iter()
+            .filter(|card| card.controller == player)
+            .flat_map(|card| card.definition.cost.symbols.iter())
+            .filter(|sym| match sym {
+                ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) | ManaSymbol::MonoHybrid(_, c) => {
+                    matches(c)
+                }
+                ManaSymbol::Hybrid(a, b) => matches(a) || matches(b),
+                _ => false,
+            })
+            .count() as i32
+    }
+
     pub(crate) fn evaluate_value(&self, v: &Value, ctx: &EffectContext) -> i32 {
         match v {
             Value::Const(n) => *n,
@@ -88,6 +109,7 @@ impl GameState {
             Value::XFromCost => ctx.x_value as i32,
             Value::TriggerEventAmount => ctx.event_amount as i32,
             Value::StormCount => self.spells_cast_this_turn.saturating_sub(1) as i32,
+            Value::DevotionTo(colors) => self.devotion_to(ctx.controller, colors),
             Value::CountersOn { what, kind } => self
                 .resolve_selector(what, ctx)
                 .into_iter()

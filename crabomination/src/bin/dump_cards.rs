@@ -106,7 +106,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         // keyword, so it's filtered the same way as Unblockable.)
         Keyword::Regenerate(_) | Keyword::Unblockable | Keyword::CantBeCountered
         | Keyword::Recursion | Keyword::Inspired | Keyword::CantBlock
-        | Keyword::CantAttack | Keyword::MustBeBlocked
+        | Keyword::CantAttack | Keyword::MustBeBlocked | Keyword::AttacksAlone
         | Keyword::CantBeCounteredIfXAtLeast(_) => return None,
     };
     Some(s.to_string())

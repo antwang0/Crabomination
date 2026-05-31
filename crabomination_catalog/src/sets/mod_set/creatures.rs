@@ -1625,15 +1625,10 @@ pub fn eternal_witness() -> CardDefinition {
 }
 
 /// Heliod, Sun-Crowned — {1}{W}{W}, Legendary Enchantment Creature — God.
-/// 3/4. Indestructible. As long as your devotion to white is less than
-/// five, Heliod isn't a creature. {1}{W}: target creature gains lifelink
-/// until end of turn. (The real card adds a "whenever you gain life, put
-/// a +1/+1 counter on target creature with lifelink" trigger — that
-/// payoff is omitted; the activated lifelink-grant is what matters most.)
-///
-/// Devotion-flicker (creature ↔ enchantment based on white devotion) is
-/// also omitted: Heliod is just a 3/4 indestructible Legendary Creature
-/// here. Tests assert the activated-ability lifelink grant.
+/// 5/5. Indestructible. (Heliod, Sun-Crowned has no devotion clause —
+/// it's always a creature.) {1}{W}: target creature gains lifelink until
+/// end of turn. Whenever you gain life, put a +1/+1 counter on target
+/// creature you control with lifelink.
 pub fn heliod_sun_crowned() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {

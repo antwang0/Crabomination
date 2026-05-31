@@ -8455,16 +8455,11 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
 /// total becomes 1. Master of Cruelties deals no combat damage this
 /// turn."
 ///
-/// Cube-style approximation: the printed "can attack only alone" combat
-/// restriction is dropped (engine has no attack-alone restriction
-/// primitive — same gap as Mortician Beetle's "first creature you cast
-/// each turn" gate). The attack-trigger uses `SetLifeTotal` on the
-/// defending player (currently routes to the active defending opponent
-/// via `target_filtered(Player)`); the "deals no combat damage" rider
-/// is also dropped — combined with the SetLifeTotal → 1 effect, the
-/// engine's combat-damage step would land the deathtouch ping on top,
-/// so the net play is "attack alone → opp at 0 → opp loses." This is
-/// the printed kill condition in any case.
+/// "Can attack only alone" is wired via `Keyword::AttacksAlone` (CR 508.0)
+/// — declaring it alongside any other attacker is rejected. The attack
+/// trigger sets the defending opponent's life to 1. The "deals no combat
+/// damage this turn" rider is still dropped, so its deathtouch ping lands
+/// on top — net play is the printed kill condition.
 pub fn master_of_cruelties() -> CardDefinition {
     use crate::card::Supertype as Sup;
     CardDefinition {
@@ -8478,7 +8473,7 @@ pub fn master_of_cruelties() -> CardDefinition {
         },
         power: 1,
         toughness: 4,
-        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch],
+        keywords: vec![Keyword::FirstStrike, Keyword::Deathtouch, Keyword::AttacksAlone],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
             effect: Effect::SetLifeTotal {

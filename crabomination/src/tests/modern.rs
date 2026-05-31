@@ -18102,3 +18102,112 @@ fn ravens_crime_retrace_requires_a_land_in_hand() {
     }).is_err(), "retrace needs a land to discard");
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "mana not spent on failed retrace");
 }
+
+// ── Devotion (CR 700.5) — Value::DevotionTo / Gray Merchant of Asphodel ───────
+
+#[test]
+fn devotion_to_black_counts_black_pips_on_your_permanents() {
+    let mut g = two_player_game();
+    // Putrid Imp is {B} (one black pip); add two of them.
+    g.add_card_to_battlefield(0, catalog::putrid_imp());
+    g.add_card_to_battlefield(0, catalog::putrid_imp());
+    // An opponent's black permanent doesn't count toward your devotion.
+    g.add_card_to_battlefield(1, catalog::putrid_imp());
+    assert_eq!(g.devotion_to(0, &[Color::Black]), 2);
+    assert_eq!(g.devotion_to(1, &[Color::Black]), 1);
+}
+
+#[test]
+fn gray_merchant_drains_for_devotion_to_black() {
+    let mut g = two_player_game();
+    // One pre-existing black pip on the battlefield; Gray Merchant adds two.
+    g.add_card_to_battlefield(0, catalog::putrid_imp());
+    let id = g.add_card_to_hand(0, catalog::gray_merchant_of_asphodel());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 2);
+    let opp_life = g.players[1].life;
+    let my_life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Gray Merchant castable for {3}{B}{B}");
+    drain_stack(&mut g);
+    // Devotion = 1 (Imp) + 2 (Gray Merchant itself, on the battlefield by
+    // the time its ETB resolves) = 3.
+    assert_eq!(g.players[1].life, opp_life - 3, "opponent loses devotion");
+    assert_eq!(g.players[0].life, my_life + 3, "you gain devotion");
+}
+
+// ── Theros gods — devotion-gated creature toggle (CR 700.5) ───────────────────
+
+#[test]
+fn nylea_is_not_a_creature_below_five_devotion() {
+    let mut g = two_player_game();
+    // Nylea alone contributes 1 green pip ({3}{G}); devotion 1 < 5.
+    let nylea = g.add_card_to_battlefield(0, catalog::nylea_god_of_the_hunt());
+    let cp = g.computed_permanent(nylea).unwrap();
+    assert!(!cp.card_types.contains(&CardType::Creature),
+        "Nylea isn't a creature at devotion 1");
+    assert!(cp.card_types.contains(&CardType::Enchantment));
+}
+
+#[test]
+fn nylea_becomes_a_creature_at_five_devotion_and_anthems_others() {
+    let mut g = two_player_game();
+    let nylea = g.add_card_to_battlefield(0, catalog::nylea_god_of_the_hunt());
+    // Four more green-pip permanents push devotion to 5.
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::elvish_mystic());
+    }
+    let cp = g.computed_permanent(nylea).unwrap();
+    assert!(cp.card_types.contains(&CardType::Creature),
+        "Nylea is a creature once devotion ≥ 5");
+    // Anthem: another creature you control gets +2/+0.
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bcp = g.computed_permanent(bear).unwrap();
+    assert_eq!(bcp.power, 4, "Nylea grants +2/+0 to other creatures");
+    assert_eq!(bcp.toughness, 2);
+}
+
+#[test]
+fn erebos_prevents_controller_life_gain() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::erebos_god_of_the_dead());
+    let before = g.players[0].life;
+    g.adjust_life(0, 5);
+    assert_eq!(g.players[0].life, before, "Erebos stops your life gain");
+}
+
+// ── CR 508.0 — "attacks only alone" (Master of Cruelties) ─────────────────────
+
+#[test]
+fn master_of_cruelties_cannot_attack_alongside_another_creature() {
+    let mut g = two_player_game();
+    let moc = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(moc);
+    g.clear_sickness(bear);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // Declaring both is illegal — AttacksAlone rejects the batch.
+    assert!(g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: moc, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).is_err(), "Master of Cruelties can't attack alongside another creature");
+}
+
+#[test]
+fn master_of_cruelties_attacks_alone_and_sets_life_to_one() {
+    let mut g = two_player_game();
+    let moc = g.add_card_to_battlefield(0, catalog::master_of_cruelties());
+    g.clear_sickness(moc);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: moc, target: AttackTarget::Player(1) },
+    ])).expect("attacking alone is fine");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 1, "attack sets the defender's life to 1");
+}

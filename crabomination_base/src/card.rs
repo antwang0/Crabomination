@@ -86,6 +86,8 @@ pub enum CreatureType {
     Spike,
     // Artifact-creature token subtype (Hangarback Walker's Thopters).
     Thopter,
+    // Theros devotion gods (Nylea, Thassa, Erebos, ...).
+    God,
 }
 
 /// Land subtypes (basic land types + others).
@@ -363,6 +365,11 @@ pub enum Keyword {
     /// Silence). Enforced from the *computed* keyword set in
     /// `declare_attackers`, so layer-granted variants are honored.
     CantAttack,
+    /// CR 508.0 — "This creature can't attack unless it's the only creature
+    /// attacking" (Master of Cruelties). Enforced in `declare_attackers`:
+    /// a batch that declares this creature alongside any other attacker is
+    /// rejected.
+    AttacksAlone,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left

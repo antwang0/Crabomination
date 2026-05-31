@@ -48,6 +48,22 @@ impl GameState {
             }
         }
 
+        // CR 508.0 — "attacks only alone" (Master of Cruelties). If any
+        // declared attacker carries AttacksAlone, the batch must be a
+        // single attacker. Read from the computed keyword set so granted
+        // variants count.
+        if attacks.len() > 1 {
+            let computed_pre = self.compute_battlefield();
+            if attacks.iter().any(|atk| {
+                computed_pre
+                    .iter()
+                    .find(|c| c.id == atk.attacker)
+                    .is_some_and(|c| c.keywords.contains(&Keyword::AttacksAlone))
+            }) {
+                return Err(GameError::CannotAttack(attacks[0].attacker));
+            }
+        }
+
         let mut events = vec![];
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each

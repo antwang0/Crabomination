@@ -44,6 +44,15 @@ pub fn all_known_factories() -> Vec<CardFactory> {
         sets::xtra::nexus_of_fate,
     ];
     all.extend_from_slice(&xtra);
+    // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
+    // snapshots involving them round-trip through the name→factory lookup.
+    let ths: [CardFactory; 4] = [
+        sets::ths::gray_merchant_of_asphodel,
+        sets::ths::nylea_god_of_the_hunt,
+        sets::ths::thassa_god_of_the_sea,
+        sets::ths::erebos_god_of_the_dead,
+    ];
+    all.extend_from_slice(&ths);
     // Dedupe by function-pointer address so repeated copies of the same
     // card across decks/cube don't bloat the registry.
     let mut seen = std::collections::HashSet::new();

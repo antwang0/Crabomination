@@ -268,6 +268,12 @@ pub enum Value {
     XFromCost,
     /// Number of spells cast this turn by controller (Storm).
     StormCount,
+    /// CR 700.5 — controller's devotion to the given color(s): the number
+    /// of mana symbols matching any listed color among the mana costs of
+    /// permanents they control. Hybrid / Phyrexian pips count for each
+    /// color half they contain. Drives Gray Merchant of Asphodel, the Nyx
+    /// gods, Nykthos.
+    DevotionTo(Vec<crate::mana::Color>),
     /// Counters of the given type on `what`.
     CountersOn { what: Box<Selector>, kind: CounterType },
     Sum(Vec<Value>),
@@ -2831,6 +2837,16 @@ pub enum StaticEffect {
     GrantActivatedAbility {
         applies_to: Selector,
         ability: ActivatedAbility,
+    },
+    /// CR 700.5 / Theros gods — "As long as your devotion to [colors] is
+    /// less than `threshold`, this isn't a creature." Resolved at
+    /// `gather_continuous_effects` time (which can read devotion via the
+    /// live `GameState`) into a layer-4 `RemoveCardType(Creature)` self-
+    /// effect, but only while the gate is unmet. Heliod, Erebos, Thassa,
+    /// Nylea, Purphoros, and the rest of the Nyx pantheon.
+    NotCreatureWhileDevotionBelow {
+        colors: Vec<crate::mana::Color>,
+        threshold: u32,
     },
 }
 
