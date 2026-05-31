@@ -596,6 +596,13 @@ pub fn build_draft_match_state(
     state.players[1].library.shuffle(&mut rng);
     state.players[0].wants_ui = true;
     state.players[1].wants_ui = true;
+    // Seat each player's Lessons sideboard so Learn fetches resolve in
+    // drafted matches, matching the cube/format build paths.
+    for seat in 0..2 {
+        for &f in &crate::cube::lessons_sideboard() {
+            state.add_card_to_sideboard(seat, f());
+        }
+    }
     state
 }
 
@@ -977,6 +984,24 @@ mod tests {
             history.push(pack.remove(idx));
         }
         assert_eq!(history.len(), PACK_SIZE);
+    }
+
+    #[test]
+    fn draft_match_state_seats_lessons_sideboard() {
+        let deck: Vec<CardFactory> = vec![crate::catalog::grizzly_bears];
+        let state = build_draft_match_state(
+            deck.clone(),
+            deck,
+            "You".to_string(),
+            "Opp".to_string(),
+        );
+        for seat in 0..2 {
+            assert_eq!(
+                state.players[seat].sideboard.len(),
+                crate::cube::lessons_sideboard().len(),
+                "drafted match seats the standard Lessons sideboard"
+            );
+        }
     }
 }
 // touch

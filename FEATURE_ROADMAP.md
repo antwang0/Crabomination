@@ -151,7 +151,8 @@ feature; sweep card-batch by card-batch.
   ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty, ⏳ Connive, ⏳ Backup,
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
   ⏳ Offspring, ⏳ Impending, ⏳ Ninjutsu, ⏳ Embalm/Eternalize.
-- **Counter / +1+1 matters:** ⏳ Proliferate (effect), ⏳ Bolster,
+- **Counter / +1+1 matters:** ✅ Proliferate (`Effect::Proliferate` —
+  reducer-wired + tested in `tests::classic`), ⏳ Bolster,
   ⏳ Adapt, ✅ Evolve (`shortcut::evolve` +
   `SelectionRequirement::GreaterPowerOrToughnessThanSource` — Cloudfin
   Raptor, Experiment One, Fathom Mage), ✅ Mentor (`shortcut` — Sunhome

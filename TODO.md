@@ -6287,3 +6287,17 @@ listed here so the next pass can pick them up.
 - **Plunge into Darkness mode 1** — now that `LookPickToHand` exists, the
   "pay X life, look at top X, take one" half can use it with an X-driven
   count instead of the flat tutor approximation.
+
+## Backlog (modern_decks session)
+
+- **Coveted Jewel "steal" rider** — ETB draw-3 + tap-for-3 are wired; the
+  "whenever a creature deals combat damage to its controller, that creature's
+  controller gains control of it and untaps it" rider needs a cross-controller
+  `Effect::GainControl` whose recipient is the *triggerer's* controller
+  (`Selector::Triggerer`), not the resolving controller.
+- **Coalition Relic / Karn, Scion of Urza / Pentad Prism** remain 🟡 — need
+  charge-counter mana burst, artifact-count card draw + ultimate, and
+  Sunburst + remove-counter-for-mana respectively.
+- **Client crate clippy/test** can't run in this sandbox: `wayland-sys`'s build
+  script needs the `wayland-client` system lib, which isn't installed. Engine,
+  catalog, and server crates build/clippy/test clean.
