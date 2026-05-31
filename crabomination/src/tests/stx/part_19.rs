@@ -1868,6 +1868,41 @@ fn bot_blocks_smart_value_trade() {
     assert_eq!(blocks[0].1, attacker);
 }
 
+#[test]
+fn bot_gang_blocks_to_kill_when_life_threatened() {
+    // Facing lethal from a 6/6 no single blocker can kill, the bot should
+    // gang two 3/3s onto it (combined power 6 ≥ toughness 6) to remove the
+    // threat rather than scatter chumps.
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.players[0].life = 5; // a 6-power attacker is lethal
+    let big = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Huge Bear";
+        d.power = 6;
+        d.toughness = 6;
+        d
+    };
+    let attacker = g.add_card_to_battlefield(1, big);
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let mk = |g: &mut crate::game::GameState| {
+        let mut d = catalog::grizzly_bears();
+        d.power = 3;
+        d.toughness = 3;
+        let id = g.add_card_to_battlefield(0, d);
+        g.clear_sickness(id);
+        id
+    };
+    let b1 = mk(&mut g);
+    let b2 = mk(&mut g);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert_eq!(blocks.len(), 2, "both blockers gang the lethal attacker");
+    assert!(blocks.iter().all(|(_, a)| *a == attacker));
+    let blockers: std::collections::HashSet<_> = blocks.iter().map(|(b, _)| *b).collect();
+    assert!(blockers.contains(&b1) && blockers.contains(&b2));
+}
+
 // ── CR 603.4 — intervening 'if' clause re-check at resolve time ────────────
 
 #[test]

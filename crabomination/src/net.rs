@@ -359,6 +359,12 @@ pub struct ExileCardView {
     /// token entries distinctly.
     #[serde(default)]
     pub is_token: bool,
+    /// CR 603.6e — if this card is exiled "until ~ leaves the
+    /// battlefield" (Banisher Priest / Oblivion Ring / Brain Maggot),
+    /// the `CardId` of the permanent it's linked to. Lets the client draw
+    /// a "returns when X leaves" tether. `None` for plain exile.
+    #[serde(default)]
+    pub exiled_by: Option<CardId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

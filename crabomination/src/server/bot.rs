@@ -727,6 +727,64 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             *attacker_damage_taken.entry(a_id).or_insert(0) += b_tough;
         }
     }
+    // Gang-block-to-kill when our life is threatened. The greedy single-
+    // blocker pass above only starts blocking an attacker when one blocker
+    // alone can kill it (or we chump). When we're facing lethal, trading
+    // several spare creatures to *remove* a big attacker permanently beats
+    // scattering chumps that die for nothing. For each still-unblocked
+    // attacker (largest power first), pile idle blockers on until their
+    // combined power reaches the attacker's toughness, then commit only if
+    // the gang actually kills it.
+    if life_threatened {
+        let mut used: std::collections::HashSet<CardId> =
+            assignments.iter().map(|(b, _)| *b).collect();
+        let mut idle: Vec<(CardId, i32, i32, bool, bool, bool)> = state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.can_block() && !used.contains(&c.id))
+            .map(|c| {
+                (
+                    c.id,
+                    c.power(),
+                    c.toughness(),
+                    c.has_keyword(&Keyword::Flying),
+                    c.has_keyword(&Keyword::Reach),
+                    c.has_keyword(&Keyword::Deathtouch),
+                )
+            })
+            .collect();
+        let mut uncovered: Vec<(CardId, i32, i32, bool)> = attacker_info
+            .iter()
+            .filter(|(a_id, _, _, _)| !assignments.iter().any(|(_, aid)| aid == a_id))
+            .copied()
+            .collect();
+        uncovered.sort_by_key(|(_, p, _, _)| -*p);
+        for (a_id, _a_pow, a_tough, a_flying) in uncovered {
+            // Collect a gang of legal idle blockers that together kill it.
+            let mut gang: Vec<CardId> = Vec::new();
+            let mut dmg = 0i32;
+            let mut kills = false;
+            for (b_id, b_pow, _bt, b_fly, b_reach, b_dt) in &idle {
+                if a_flying && !b_fly && !b_reach {
+                    continue;
+                }
+                gang.push(*b_id);
+                dmg += *b_pow;
+                if *b_dt || dmg >= a_tough {
+                    kills = true;
+                    break;
+                }
+            }
+            if kills {
+                for b_id in &gang {
+                    assignments.push((*b_id, a_id));
+                    used.insert(*b_id);
+                }
+                idle.retain(|(id, ..)| !gang.contains(id));
+            }
+        }
+    }
+
     // CR 509.1c — satisfy "must be blocked if able" (Academic Dispute /
     // Lure). The engine rejects a declaration that leaves such an attacker
     // unblocked while an idle able blocker exists, so the bot must assign

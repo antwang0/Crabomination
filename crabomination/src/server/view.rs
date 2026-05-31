@@ -68,6 +68,7 @@ fn exile_entry(card: &CardInstance) -> ExileCardView {
         may_play_recipient: card.may_play_until.as_ref().map(|p| p.player),
         mana_value: card.definition.cost.cmc(),
         is_token: card.is_token,
+        exiled_by: card.exiled_by.map(|l| l.source),
     }
 }
 
@@ -1326,6 +1327,26 @@ mod tests {
         assert!(!entry.is_token);
         // No may-play grant — recipient is None.
         assert_eq!(entry.may_play_recipient, None);
+        // Not a linked exile.
+        assert_eq!(entry.exiled_by, None);
+    }
+
+    #[test]
+    fn exile_card_view_surfaces_linked_exile_source() {
+        // A card exiled "until ~ leaves the battlefield" carries the
+        // linking source's CardId so the client can tether it.
+        let mut state = two_player_game();
+        let src = crate::card::CardId(4242);
+        let bolt_id = state.next_id();
+        let mut bolt = crate::card::CardInstance::new(bolt_id, catalog::lightning_bolt(), 0);
+        bolt.exiled_by = Some(crate::card::ExileLink {
+            source: src,
+            return_to: crate::card::ExileReturnZone::Hand,
+        });
+        state.exile.push(bolt);
+        let view = project(&state, 0);
+        let entry = view.exile.iter().find(|c| c.id == bolt_id).expect("bolt in exile");
+        assert_eq!(entry.exiled_by, Some(src));
     }
 
     #[test]
