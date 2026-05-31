@@ -5114,6 +5114,41 @@ fn fireblast_deals_four_to_any_target() {
     assert_eq!(g.players[1].life, 16, "Target should take 4 damage");
 }
 
+#[test]
+fn fireblast_alt_cost_sacrifices_two_mountains() {
+    // Free Fireblast: no mana, sacrifice two Mountains.
+    let mut g = two_player_game();
+    let m1 = g.add_card_to_battlefield(0, catalog::mountain());
+    let m2 = g.add_card_to_battlefield(0, catalog::mountain());
+    let _keep = g.add_card_to_battlefield(0, catalog::mountain());
+    let fb = g.add_card_to_hand(0, catalog::fireblast());
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fb, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fireblast castable by sacrificing two Mountains");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 16, "deals 4 damage");
+    assert!(!g.battlefield.iter().any(|c| c.id == m1 || c.id == m2),
+        "two Mountains sacrificed");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Mountain").count(), 1,
+        "the third Mountain stays");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Mountain").count(), 2);
+}
+
+#[test]
+fn fireblast_alt_cost_rejected_without_two_mountains() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::mountain()); // only one
+    let fb = g.add_card_to_hand(0, catalog::fireblast());
+    let err = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: fb, pitch_card: None, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "can't pay the alt cost with one Mountain");
+    assert!(g.players[0].hand.iter().any(|c| c.id == fb), "Fireblast stays in hand");
+}
+
 /// Talisman of Progress: {T}: Add {C} via index 0; {T}: lose 1 + add
 /// {W} via index 1; index 2 adds {U}.
 #[test]

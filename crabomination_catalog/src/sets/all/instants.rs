@@ -26,6 +26,7 @@ pub fn force_of_will() -> CardDefinition {
             condition: None,
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()

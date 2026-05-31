@@ -1355,6 +1355,7 @@ pub fn snuff_out() -> CardDefinition {
             condition: None,
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -1970,18 +1971,10 @@ pub fn talisman_of_dominance() -> CardDefinition {
 /// Fireblast — {4}{R}{R} Instant. "Fireblast deals 4 damage to any target."
 /// Alternative cost: sacrifice two Mountains.
 ///
-/// The alt-cost is "sacrifice two Mountains" — currently the
-/// `AlternativeCost` model only supports exile-from-hand pitch cards.
-/// We instead model the alt path as a free-mana cast that sacrifices the
-/// Mountains as the resolution's first step (cost-as-first-step). Two
-/// `Effect::Sacrifice` invocations precede the damage. Players who can't
-/// afford the regular {4}{R}{R} *or* don't have two Mountains simply
-/// can't cast — the regular and alt costs are both gated by `cast_spell`.
-///
-/// Wired as the regular {4}{R}{R} cost only; alt-cost path is omitted
-/// pending a sacrifice-as-cost primitive on `AlternativeCost`. Promote to
-/// 🟡 once that lands.
+/// Alt cost: sacrifice two Mountains (the classic free-burn line) via
+/// `AlternativeCost.sacrifice_permanents`.
 pub fn fireblast() -> CardDefinition {
+    use crate::card::{AlternativeCost, LandType};
     CardDefinition {
         name: "Fireblast",
         cost: cost(&[generic(4), r(), r()]),
@@ -1994,6 +1987,10 @@ pub fn fireblast() -> CardDefinition {
             to: Selector::Target(0),
             amount: Value::Const(4),
         },
+        alternative_cost: Some(AlternativeCost {
+            sacrifice_permanents: Some((SelectionRequirement::HasLandType(LandType::Mountain), 2)),
+            ..Default::default()
+        }),
         triggered_abilities: vec![],
         ..Default::default()
     }
@@ -2838,6 +2835,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             condition: None,
             exile_from_graveyard_count: 0,
             return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Nonland

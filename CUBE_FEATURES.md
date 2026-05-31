@@ -83,7 +83,6 @@ work is listed below.
 | Goldspan Dragon | 🟡 | 4/4 Flying Haste; attack-trigger Treasure (using the now-functional Treasure mana ability). "Becomes target of a spell" trigger and the Treasure-2-mana static rider are omitted. |
 | Balefire Dragon | 🟡 | {5}{R}{R} 6/6 Flying. `DealsCombatDamageToPlayer + SelfSource` trigger sweeps each opp creature for 6. The "that much damage" → fixed 6 collapse holds at unboosted-power play; pump-effect interactions don't retroactively boost the trigger payload. Test: `balefire_dragon_combat_damage_burns_each_opp_creature`. |
 | Chaos Warp | 🟡 | {2}{R} Instant. `Move(target Permanent → Library(OwnerOf, Shuffled))` — the new `LibraryPosition::Shuffled` engine path actually reshuffles the library. The "reveal top, cast if permanent" half is collapsed (info-only without a cast-from-top pipeline). Test: `chaos_warp_sends_target_permanent_to_owners_library`. |
-| Fireblast | 🟡 | {4}{R}{R} instant. 4 damage to any target — regular cost wired. Sacrifice-two-Mountains alt cost still ⏳ (no sacrifice-as-alt-cost on `AlternativeCost` today). Test: `fireblast_deals_four_to_any_target`. |
 | Pyrokinesis | 🟡 | {4}{R}{R} Instant. Pitch-cost alt cast: exile a red card from hand → 4 damage. The "divide 4 damage among any number of creatures" half is approximated as a single 4-damage hit. |
 | Legion Extruder | ⏳ | Equip-ish artifact. |
 

@@ -821,6 +821,13 @@ pub struct AlternativeCost {
     /// caster controls fewer than N matches.
     #[serde(default)]
     pub return_to_hand: Option<(SelectionRequirement, u32)>,
+    /// Optional additional cost: sacrifice N permanents the caster controls
+    /// matching the filter. Powers free spells whose alt cost is a sacrifice
+    /// (Fireblast "sacrifice two Mountains", Snuff Out, Disappear). Rejected
+    /// with `SelectionRequirementViolated` if the caster controls fewer than
+    /// N matches; the auto-picker sacrifices the lowest-impact matches.
+    #[serde(default)]
+    pub sacrifice_permanents: Option<(SelectionRequirement, u32)>,
     /// Optional effect override when casting via the alternative cost.
     /// When `Some`, the spell uses this effect instead of its normal
     /// `definition.effect` on resolution. Powers Overload ("change each

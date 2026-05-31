@@ -110,6 +110,7 @@ pub fn vandalblast() -> CardDefinition {
             condition: None,
             exile_from_graveyard_count: 0,
             return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Artifact

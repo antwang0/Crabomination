@@ -253,6 +253,7 @@ pub fn brush_off() -> CardDefinition {
             condition: None,
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -369,6 +370,7 @@ pub fn run_behind() -> CardDefinition {
             condition: None,
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -1259,6 +1261,7 @@ pub fn ajanis_response() -> CardDefinition {
             condition: None,
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -1450,6 +1453,7 @@ pub fn wilt_in_the_heat() -> CardDefinition {
             }),
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()

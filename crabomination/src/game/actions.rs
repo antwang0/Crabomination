@@ -2187,6 +2187,32 @@ impl GameState {
             Vec::new()
         };
 
+        // Sacrifice-N-permanents additional cost (Fireblast). Same up-front
+        // pick / late commit discipline as `return_picks`.
+        let sacrifice_picks: Vec<CardId> = if let Some((filter, count)) = &alt.sacrifice_permanents {
+            let n = *count as usize;
+            let matches: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            None,
+                        )
+                })
+                .map(|c| c.id)
+                .collect();
+            if matches.len() < n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            matches.into_iter().take(n).collect()
+        } else {
+            Vec::new()
+        };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -2332,6 +2358,16 @@ impl GameState {
                 });
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+            }
+        }
+
+        // Sacrifice additional cost: sacrifice the picked permanents now
+        // that mana/life are paid (CR 701.16). Fires dies/sacrifice triggers.
+        for sac_cid in &sacrifice_picks {
+            if self.battlefield_find(*sac_cid).is_some() {
+                auto_events.push(GameEvent::PermanentSacrificed { card_id: *sac_cid, who: p });
+                let mut die_evs = self.remove_to_graveyard_with_triggers(*sac_cid);
+                auto_events.append(&mut die_evs);
             }
         }
 

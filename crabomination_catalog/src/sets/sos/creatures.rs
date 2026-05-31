@@ -3270,6 +3270,7 @@ pub fn orysa_tide_choreographer() -> CardDefinition {
             )),
                     exile_from_graveyard_count: 0,
                     return_to_hand: None,
+                    sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -3480,6 +3481,7 @@ pub fn soaring_stoneglider() -> CardDefinition {
             condition: None,
             exile_from_graveyard_count: 2,
             return_to_hand: None,
+            sacrifice_permanents: None,
             effect_override: None,
         }),
         ..Default::default()
