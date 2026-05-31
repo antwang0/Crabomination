@@ -156,3 +156,19 @@ pub fn darkness() -> CardDefinition {
     }
 }
 
+
+/// Essence Scatter — {1}{U} Instant. "Counter target creature spell."
+pub fn essence_scatter() -> CardDefinition {
+    CardDefinition {
+        name: "Essence Scatter",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::CounterSpell {
+            what: target_filtered(
+                SelectionRequirement::IsSpellOnStack
+                    .and(SelectionRequirement::HasCardType(CardType::Creature)),
+            ),
+        },
+        ..Default::default()
+    }
+}

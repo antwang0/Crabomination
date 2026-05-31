@@ -192,6 +192,9 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
 /// "always-available" bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
+        // ── classic colorless core-set bodies (claude/modern_decks) ──
+        obsianus_golem,
+        yotian_soldier,
         sol_ring,
         ornithopter,
         ornithopter_of_paradise,
@@ -293,6 +296,14 @@ fn pair_contains(pair: [Color; 2], c: Color) -> bool {
 
 fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── classic core-set bodies (claude/modern_decks) ──
+        eager_cadet,
+        elite_vanguard,
+        devoted_hero,
+        pearled_unicorn,
+        tundra_wolves,
+        mesa_pegasus,
+        wall_of_swords,
         // ── modern_decks (cascade/aura) ──
         ardent_plea,
         cloudgoat_ranger,
@@ -510,6 +521,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── classic core-set bodies (claude/modern_decks) ──
+        air_elemental,
+        wall_of_air,
+        essence_scatter,
         // ── modern_decks (auras) ──
         spectral_flight,
         wind_drake,
@@ -689,6 +704,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── classic core-set bodies (claude/modern_decks) ──
+        royal_assassin,
         terror,
         doom_blade,
         ravenous_chupacabra,
@@ -932,6 +949,13 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── classic core-set bodies (claude/modern_decks) ──
+        gray_ogre,
+        hurloon_minotaur,
+        wall_of_stone,
+        wall_of_fire,
+        flame_spirit,
+        goblin_balloon_brigade,
         lightning_bolt,
         shock,
         // Battle cry (CR 702.92)
@@ -1152,6 +1176,12 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
 
 fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
+        // ── classic core-set bodies (claude/modern_decks) ──
+        spined_wurm,
+        trained_armodon,
+        giant_spider,
+        scryb_sprites,
+        wall_of_wood,
         llanowar_elves,
         giant_growth,
         grizzly_bears,

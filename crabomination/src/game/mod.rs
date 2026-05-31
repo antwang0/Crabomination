@@ -44,6 +44,9 @@ mod tests_xtra;
 #[cfg(test)]
 #[path = "../tests/combat_keywords.rs"]
 mod tests_combat_keywords;
+#[cfg(test)]
+#[path = "../tests/classic.rs"]
+mod tests_classic;
 pub mod types;
 
 #[cfg(test)]
