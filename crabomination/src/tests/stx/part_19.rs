@@ -1826,6 +1826,40 @@ fn bot_does_not_aim_at_walker_too_tough_to_finish() {
 }
 
 #[test]
+fn bot_prefers_surviving_trade_over_deathtouch_attacker() {
+    // With one 3/3 blocker and two 2/2 attackers — one vanilla, one with
+    // deathtouch — the bot should block the vanilla one (3/3 kills it and
+    // survives) rather than the deathtouch one (which would kill the 3/3).
+    use crate::card::Keyword;
+    use crate::server::bot;
+    let mut g = two_player_game();
+    // Deathtouch attacker declared first (so the old tie-break would pick it).
+    let dt_atk = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Venom Bear";
+        d.keywords = vec![Keyword::Deathtouch];
+        g.add_card_to_battlefield(1, d)
+    };
+    let vanilla_atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(dt_atk);
+    g.clear_sickness(vanilla_atk);
+    g.attacking.push(Attack { attacker: dt_atk, target: AttackTarget::Player(0) });
+    g.attacking.push(Attack { attacker: vanilla_atk, target: AttackTarget::Player(0) });
+    let blocker = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Wall Bear";
+        d.power = 3;
+        d.toughness = 3;
+        g.add_card_to_battlefield(0, d)
+    };
+    g.clear_sickness(blocker);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert_eq!(blocks.len(), 1);
+    assert_eq!(blocks[0].1, vanilla_atk,
+        "bot blocks the vanilla attacker it can kill and survive, not the deathtouch one");
+}
+
+#[test]
 fn bot_blocks_smart_value_trade() {
     // Push (this run): smarter blocker AI. With one 3/3 attacker
     // attacking us and a 2/2 blocker, the blocker should still chump

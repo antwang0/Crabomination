@@ -528,6 +528,13 @@ pub struct PermanentView {
     /// offer the "crew" action. Populated by `project_permanent`.
     #[serde(default)]
     pub crew_value: u32,
+    /// True when this creature's marked damage is already lethal (≥ its
+    /// current toughness) and it isn't indestructible — i.e. it will die
+    /// at the next state-based-action check. Lets the client grey out /
+    /// flag doomed creatures during combat-damage preview without
+    /// recomputing toughness. Populated by `project_permanent`.
+    #[serde(default)]
+    pub marked_lethal: bool,
 }
 
 impl PermanentView {

@@ -271,6 +271,16 @@ fn project_permanent(
         regeneration_shields: card.regeneration_shields,
         equippable: card.definition.is_equipment() && card.definition.has_equip().is_some(),
         crew_value: card.definition.crew_cost().unwrap_or(0),
+        marked_lethal: {
+            let tough = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
+            let indestructible = cp
+                .map(|c| c.keywords.contains(&crate::card::Keyword::Indestructible))
+                .unwrap_or_else(|| card.has_keyword(&crate::card::Keyword::Indestructible));
+            card.definition.is_creature()
+                && !indestructible
+                && tough > 0
+                && card.damage as i32 >= tough
+        },
     }
 }
 
@@ -888,6 +898,19 @@ mod tests {
             StackItemView::Known(k) => assert_eq!(k.kind, StackItemKind::Trigger),
             _ => panic!("expected Known"),
         }
+    }
+
+    #[test]
+    fn marked_lethal_flags_doomed_creatures_in_view() {
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+        // No damage → not lethal.
+        assert!(!project(&state, 0).battlefield.iter()
+            .find(|p| p.id == bear).unwrap().marked_lethal);
+        // 2 damage on a 2-toughness creature → marked lethal.
+        state.battlefield.iter_mut().find(|c| c.id == bear).unwrap().damage = 2;
+        assert!(project(&state, 0).battlefield.iter()
+            .find(|p| p.id == bear).unwrap().marked_lethal);
     }
 
     #[test]

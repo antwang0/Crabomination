@@ -642,7 +642,11 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     //      blocker can't kill it — the loop falls through to try the
     //      next blocker.
     use crate::card::Keyword;
-    let attacker_info: Vec<(CardId, i32, i32, bool)> = state
+    // (id, power, toughness, flying, deathtouch). Deathtouch makes the
+    // attacker lethal to any blocker it damages regardless of power, so
+    // the bot must treat a block against it as a likely loss of the
+    // blocker when scoring trades.
+    let attacker_info: Vec<(CardId, i32, i32, bool, bool)> = state
         .attacking()
         .iter()
         .filter(|atk| state.defender_for(atk.target) == Some(seat))
@@ -657,11 +661,12 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                         a.power(),
                         a.toughness(),
                         a.has_keyword(&Keyword::Flying),
+                        a.has_keyword(&Keyword::Deathtouch),
                     )
                 })
         })
         .collect();
-    let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _)| *p).sum();
+    let total_incoming: i32 = attacker_info.iter().map(|(_, p, _, _, _)| *p).sum();
     let life_threatened = state.players[seat].life <= total_incoming;
 
     let mut blockers: Vec<(CardId, i32, i32, bool, bool, bool)> = state
@@ -692,7 +697,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     for (b_id, b_pow, b_tough, b_flying, b_reach, b_dt) in blockers {
         // Pick the best attacker for this blocker.
         let mut best: Option<(CardId, i32, bool)> = None; // (attacker, score, was_kill)
-        for (a_id, a_pow, a_tough, a_flying) in &attacker_info {
+        for (a_id, a_pow, a_tough, a_flying, a_dt) in &attacker_info {
             if *a_flying && !b_flying && !b_reach {
                 continue;
             }
@@ -703,7 +708,8 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 continue;
             }
             let kills_attacker = b_dt || b_pow >= (a_tough - queued);
-            let dies_to_attacker = *a_pow >= b_tough;
+            // A deathtouch attacker kills the blocker on any damage.
+            let dies_to_attacker = *a_pow >= b_tough || (*a_dt && *a_pow >= 1);
             // Scoring: clean trade (kill, don't die) > kill-and-die >
             // chump (don't kill, die). Higher attacker power adds value.
             let score = if kills_attacker && !dies_to_attacker {
@@ -753,13 +759,13 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 )
             })
             .collect();
-        let mut uncovered: Vec<(CardId, i32, i32, bool)> = attacker_info
+        let mut uncovered: Vec<(CardId, i32, i32, bool, bool)> = attacker_info
             .iter()
-            .filter(|(a_id, _, _, _)| !assignments.iter().any(|(_, aid)| aid == a_id))
+            .filter(|(a_id, _, _, _, _)| !assignments.iter().any(|(_, aid)| aid == a_id))
             .copied()
             .collect();
-        uncovered.sort_by_key(|(_, p, _, _)| -*p);
-        for (a_id, _a_pow, a_tough, a_flying) in uncovered {
+        uncovered.sort_by_key(|(_, p, _, _, _)| -*p);
+        for (a_id, _a_pow, a_tough, a_flying, _a_dt) in uncovered {
             // Collect a gang of legal idle blockers that together kill it.
             let mut gang: Vec<CardId> = Vec::new();
             let mut dmg = 0i32;
@@ -791,7 +797,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // one or it would deadlock the combat step. Pull any unused creature
     // that can legally block (respecting flying/reach) onto each
     // must-be-blocked attacker still missing a blocker.
-    for (a_id, _a_pow, _a_tough, a_flying) in &attacker_info {
+    for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
         let must_block = state
             .battlefield
             .iter()
@@ -818,7 +824,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
     // the whole declaration. For each Menace attacker with exactly one
     // assigned blocker, pull in a second legal idle blocker; if none is
     // available, drop the lone block (better unblocked than illegal).
-    for (a_id, _a_pow, _a_tough, a_flying) in &attacker_info {
+    for (a_id, _a_pow, _a_tough, a_flying, _a_dt) in &attacker_info {
         let is_menace = state
             .battlefield
             .iter()
