@@ -1656,14 +1656,17 @@ pub fn chelonian_tackle() -> CardDefinition {
 /// • Steal the Show deals damage equal to the number of instant and
 ///   sorcery cards in your graveyard to target creature or planeswalker.
 ///
-/// Push (modern_decks): mode 0 now uses the new `Effect::DiscardAnyNumber`
-/// primitive (same as Colossus of the Blood Age + Borrowed Knowledge),
-/// so the targeted player chooses how many cards to discard, then draws
-/// that many cards (read via `Value::CardsDiscardedThisEffect`).
-/// AutoDecider picks 0 (no discard → no draw); ScriptedDecider can
-/// supply specific picks. The "choose one or both" rider still
-/// collapses to "pick one mode" (no multi-mode-pick primitive that
-/// generalises ChooseN to per-target slots).
+/// Push (modern_decks): mode 0 uses `Effect::DiscardAnyNumber` (same as
+/// Colossus of the Blood Age + Borrowed Knowledge), so the targeted player
+/// chooses how many cards to discard, then draws that many (read via
+/// `Value::CardsDiscardedThisEffect`).
+///
+/// The "choose one or both" rider is now wired via `Effect::ChooseN`'s
+/// per-mode target slots: the default `picks: [0, 1]` runs both modes, and
+/// each target-bearing mode consumes its own cast-time target slot — mode 0
+/// takes the player target (slot 0), mode 1 the creature/planeswalker
+/// target (slot 1). A `ScriptedDecider`/UI can instead pick a single mode
+/// (`[0]` or `[1]`).
 pub fn steal_the_show() -> CardDefinition {
     use crate::card::Zone;
     use crate::mana::r;
@@ -1681,30 +1684,33 @@ pub fn steal_the_show() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::ChooseMode(vec![
-            // Mode 0: target player discards any number, then draws
-            // exactly that many. Each discard bumps
-            // `cards_discarded_this_resolution`, so the follow-up
-            // Draw(CardsDiscardedThisEffect) reads the exact count.
-            Effect::Seq(vec![
-                Effect::DiscardAnyNumber {
-                    who: target_filtered(SelectionRequirement::Player),
+        effect: Effect::ChooseN {
+            picks: vec![0, 1],
+            modes: vec![
+                // Mode 0: target player discards any number, then draws
+                // exactly that many. Each discard bumps
+                // `cards_discarded_this_resolution`, so the follow-up
+                // Draw(CardsDiscardedThisEffect) reads the exact count.
+                Effect::Seq(vec![
+                    Effect::DiscardAnyNumber {
+                        who: target_filtered(SelectionRequirement::Player),
+                    },
+                    Effect::Draw {
+                        who: Selector::Target(0),
+                        amount: Value::CardsDiscardedThisEffect,
+                    },
+                ]),
+                // Mode 1: damage = # of instant/sorcery cards in your
+                // graveyard, to target creature or planeswalker.
+                Effect::DealDamage {
+                    to: target_filtered(
+                        SelectionRequirement::Creature
+                            .or(SelectionRequirement::Planeswalker),
+                    ),
+                    amount: is_graveyard_count,
                 },
-                Effect::Draw {
-                    who: Selector::Target(0),
-                    amount: Value::CardsDiscardedThisEffect,
-                },
-            ]),
-            // Mode 1: damage = # of instant/sorcery cards in your
-            // graveyard, to target creature or planeswalker.
-            Effect::DealDamage {
-                to: target_filtered(
-                    SelectionRequirement::Creature
-                        .or(SelectionRequirement::Planeswalker),
-                ),
-                amount: is_graveyard_count,
-            },
-        ]),
+            ],
+        },
         triggered_abilities: vec![],
         ..Default::default()
     }

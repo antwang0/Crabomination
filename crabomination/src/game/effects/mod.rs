@@ -537,9 +537,41 @@ impl GameState {
                     }
                 }
                 let run = if seen.is_empty() { picks.clone() } else { seen };
+                // Each target-bearing mode owns one cast-time target slot,
+                // assigned by its position among the target-bearing modes in
+                // the card's *default* `picks` (not the run order). Keying off
+                // the default picks keeps the slot stable so the targets the
+                // caster supplied (validated against the same default-picks
+                // ordering in `target_filter_for_slot_in_mode`) line up at
+                // resolution even when the decider runs only a subset. This
+                // lets "choose one or both" spells whose modes target
+                // different things — Steal the Show's mode 0 (target player) +
+                // mode 1 (target creature) — run each with the right target.
+                // Single-target-mode cards (the Strixhaven Commands) are
+                // unaffected since only one picked mode consumes slot 0.
+                let mut slot_of_mode: std::collections::HashMap<u8, usize> =
+                    std::collections::HashMap::new();
+                let mut next_slot = 0usize;
+                for &i in picks {
+                    if modes.get(i as usize).is_some_and(|m| m.requires_target()) {
+                        slot_of_mode.entry(i).or_insert_with(|| {
+                            let s = next_slot;
+                            next_slot += 1;
+                            s
+                        });
+                    }
+                }
                 for &i in &run {
                     if let Some(m) = modes.get(i as usize) {
-                        self.run_effect(m, ctx, events)?;
+                        if m.requires_target() {
+                            let slot = slot_of_mode.get(&i).copied().unwrap_or(0);
+                            let mut sub_ctx = ctx.clone();
+                            sub_ctx.targets =
+                                ctx.targets.get(slot).cloned().into_iter().collect();
+                            self.run_effect(m, &sub_ctx, events)?;
+                        } else {
+                            self.run_effect(m, ctx, events)?;
+                        }
                     }
                 }
                 Ok(())

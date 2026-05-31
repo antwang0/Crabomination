@@ -979,11 +979,21 @@ pub enum Effect {
     /// them in deterministically (a sensible default for each card),
     /// and a later mode-pick UI can override the picks per-cast.
     ///
-    /// Modes share the spell's single target slot (`ctx.targets[0]`).
-    /// The picked modes are run in `picks` order; if multiple modes
-    /// each need a target, only the *first* picked mode's target
-    /// filter is enforced (engine has no multi-target slots yet).
-    /// Mode-pick UI plumbing is tracked in TODO.md as future work.
+    /// Each target-bearing mode owns its own target slot, assigned by the
+    /// mode's position among the target-bearing modes in `picks`: the first
+    /// such mode reads `ctx.targets[0]`, the second `ctx.targets[1]`, and so
+    /// on. This lets "choose one or both" spells whose modes target
+    /// different things (Steal the Show — target player for one mode, target
+    /// creature for the other) supply and resolve a target per chosen mode.
+    /// Non-targeting modes run with the full context. Cast-time validation
+    /// keys off the same default-`picks` ordering
+    /// (`target_filter_for_slot_in_mode`), so targets line up at resolution
+    /// even when a decider runs only a subset.
+    ///
+    /// Limitation: because `picks` is the card's default, cast-time target
+    /// validation assumes the default mode set; a decider that picks a
+    /// different subset still supplies targets in the default-picks slot
+    /// order. Full cast-time mode selection is tracked in TODO.md.
     ChooseN { picks: Vec<u8>, modes: Vec<Effect> },
     /// "You may [body]" — emit a yes/no decision via
     /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
@@ -2537,13 +2547,26 @@ impl Effect {
                     // Legacy path: first hit across all modes.
                     _ => modes.iter().find_map(|m| eff_find(m, slot, None)),
                 },
-                // ChooseN: the auto-decider picks specific mode indices;
-                // the slot-0 target should match whichever picked mode
-                // is first to require one. Scan only the picked modes.
-                Effect::ChooseN { picks, modes } => picks
-                    .iter()
-                    .filter_map(|&i| modes.get(i as usize))
-                    .find_map(|m| eff_find(m, slot, None)),
+                // ChooseN: each target-bearing picked mode occupies one
+                // cast-time slot in pick order — slot 0 = the first picked
+                // mode that needs a target, slot 1 = the second, etc. This
+                // mirrors the resolution-time slot assignment so a "choose
+                // one or both" spell (Steal the Show) can take a player
+                // target for one mode and a creature target for the other.
+                Effect::ChooseN { picks, modes } => {
+                    let mut s = 0u8;
+                    for &i in picks {
+                        if let Some(m) = modes.get(i as usize) {
+                            if m.requires_target() {
+                                if s == slot {
+                                    return eff_find(m, 0, None);
+                                }
+                                s += 1;
+                            }
+                        }
+                    }
+                    None
+                }
                 Effect::MayDo { body, .. } | Effect::MayPay { body, .. } => {
                     eff_find(body, slot, mode)
                 }

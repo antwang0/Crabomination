@@ -11773,7 +11773,8 @@ fn transcendent_archaic_etb_may_draw_accepts_via_scripted_decider() {
 #[test]
 fn steal_the_show_mode_zero_discard_any_number_drops_zero_by_default() {
     // Mode 0 — target player discards any number, draws that many.
-    // AutoDecider picks 0 (no discard, no draw).
+    // AutoDecider runs both default modes; with no creature target at
+    // slot 1, mode 1 fizzles, and mode 0's discard auto-picks 0 (no draw).
     use crate::game::types::Target;
     let mut g = two_player_game();
     // Give P0 a few hand cards so a non-zero pick would be observable.
@@ -11804,12 +11805,15 @@ fn steal_the_show_mode_zero_discard_any_number_drops_zero_by_default() {
 }
 
 #[test]
-fn steal_the_show_mode_one_burns_creature_by_is_graveyard_count() {
-    // Mode 1 — damage = # of IS cards in your graveyard.
+fn steal_the_show_runs_both_modes_with_per_mode_targets() {
+    // "Choose one or both" — default picks [0, 1] run both modes, each
+    // reading its own target slot: mode 0 the player (slot 0), mode 1 the
+    // creature (slot 1). 3 IS cards in P0's graveyard → 3 damage kills the
+    // bear, proving mode 1 read the slot-1 creature rather than the slot-0
+    // player.
     use crate::game::types::Target;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
-    // Seed 3 IS cards in P0's gy.
     for _ in 0..3 {
         g.add_card_to_graveyard(0, catalog::lightning_bolt());
     }
@@ -11819,18 +11823,55 @@ fn steal_the_show_mode_one_burns_creature_by_is_graveyard_count() {
 
     g.perform_action(GameAction::CastSpell {
         card_id: id,
-        target: Some(Target::Permanent(bear)),
-        additional_targets: vec![],
-        mode: Some(1),
+        target: Some(Target::Player(1)),                    // slot 0 → mode 0 (player)
+        additional_targets: vec![Target::Permanent(bear)],  // slot 1 → mode 1 (creature)
+        mode: None,
         x_value: None,
     })
-    .expect("Steal the Show castable for {2}{R} mode 1");
+    .expect("Steal the Show castable for {2}{R} with both modes' targets");
     drain_stack(&mut g);
 
-    // 3 IS cards in gy → 3 damage → bear dies (toughness 2).
     assert!(
         !g.battlefield.iter().any(|c| c.id == bear),
-        "Bear destroyed by 3 damage from Steal the Show mode 1"
+        "mode 1 read the slot-1 creature target → bear takes 3 and dies"
+    );
+}
+
+#[test]
+fn steal_the_show_scripted_pick_runs_only_the_chosen_mode() {
+    // A ScriptedDecider picks only mode 1; mode 0 is skipped. The stable
+    // slot mapping still routes the creature (slot 1) to mode 1, so the bear
+    // dies while the slot-0 player is left alone (no discard/draw).
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    for _ in 0..3 {
+        g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    }
+    g.add_card_to_hand(1, catalog::lightning_bolt()); // P1 hand, would shrink if mode 0 ran
+    let p1_hand_before = g.players[1].hand.len();
+    let id = g.add_card_to_hand(0, catalog::steal_the_show());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(vec![1])]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id,
+        target: Some(Target::Player(1)),                    // slot 0 (validated, unused)
+        additional_targets: vec![Target::Permanent(bear)],  // slot 1 → mode 1
+        mode: None,
+        x_value: None,
+    })
+    .expect("castable with both slots filled (validated against default picks)");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == bear),
+        "only-mode-1 pick still routes the slot-1 creature → bear dies"
+    );
+    assert_eq!(
+        g.players[1].hand.len(), p1_hand_before,
+        "mode 0 was not chosen → target player did not discard/draw"
     );
 }
 

@@ -4138,14 +4138,23 @@ resolution time" in the Suggested next-up tasks section.
   The existing fallback order is correct; the new audit row in CR 118
   documents the cost-introspection patterns.
 
-- ⏳ **Engine — multi-mode picker with per-mode targets (CR 700.2d)**
-  — Choreographed Sparks' "choose one or both" still collapses to
-  "pick one mode" today. Same gap exists for Moment of Reckoning
-  ("choose up to four. you may choose the same mode more than once").
-  A proper fix needs `Effect::ChooseN` to accept per-mode targets via
-  `ctx.targets` slot windows (mode 0 → slot 0, mode 1 → slots 1+, …)
-  or a `Decision::ModePicks` shape that surfaces N (mode, target)
-  tuples.
+- 🟡 **Engine — multi-mode picker with per-mode targets (CR 700.2d)**
+  — `Effect::ChooseN` now gives each target-bearing mode its own
+  `ctx.targets` slot, assigned by the mode's position among the
+  target-bearing modes in the card's default `picks` (mode 0 → slot 0,
+  mode 1 → slot 1, …). Cast-time validation keys off the same ordering
+  in `target_filter_for_slot_in_mode`, so a "choose one or both" spell
+  resolves a target per chosen mode — **Steal the Show is done** (target
+  player for mode 0, target creature for mode 1). Covered by
+  `tests::sos::{steal_the_show_runs_both_modes_with_per_mode_targets,
+  steal_the_show_scripted_pick_runs_only_the_chosen_mode}`.
+  Remaining (still ⏳): the mode set is the card's **default** `picks`, so
+  a decider that runs a different subset still supplies targets in the
+  default-picks slot order — full *cast-time* mode selection (a
+  `Decision::ModePicks` shape surfacing N (mode, target) tuples) would
+  let a human pick modes first, then target only the chosen ones. Also
+  unblocks Moment of Reckoning ("choose up to four; same mode more than
+  once").
 
 - ⏳ **Engine — `AlternativeCost.condition` predicate framework
   unlocked** — push batch 16's new `AlternativeCost.condition: Option<

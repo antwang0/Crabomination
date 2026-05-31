@@ -42,16 +42,12 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
 
 - **Lessons sideboard / Learn** — Eyetwitch, Pest Summoning, Hunt for
   Specimens, Field Trip, Igneous Inspiration. Approximated as `Draw 1`.
-- **Multi-target prompts on instants/sorceries** — recurring 🟡 reason
-  across SOS/STX (Vibrant Outburst, Snow Day, Devious Cover-Up, Crackle
-  with Power, Magma Opus). Divided-damage / per-mode multi-target slots
-  remain a gap distinct from the bag-of-targets primitives.
-
-## Red
-
-| Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
-|---|---|---|---|---|---|---|
-| Steal the Show | {2}{R} | Sorcery |  | Choose one or both — / • Target player discards any number of cards, then draws that many cards. / • Steal the Show deals damage equal to the number of instant and sorcery cards in your graveyard to target creature or planeswalker. | 🟡 | Per-mode behavior is faithful (mode 0 = `DiscardAnyNumber` then draw-that-many via `Value::CardsDiscardedThisEffect`; mode 1 = damage = IS-cards in your gy). Only the "choose one **or both**" rider collapses to a single mode pick (no multi-mode-pick that fills two target slots). |
+- **Multi-target prompts on instants/sorceries** — "choose one or both"
+  with a target per chosen mode now works via `Effect::ChooseN`'s per-mode
+  target slots (Steal the Show). The remaining gap is *divided* targeting
+  within a single mode/effect (Vibrant Outburst, Snow Day, Devious
+  Cover-Up, Crackle with Power, Magma Opus — divided-damage / split-N
+  slots), distinct from the bag-of-targets primitives.
 
 ## Lorehold (Red-White)
 
