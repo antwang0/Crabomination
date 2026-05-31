@@ -889,6 +889,140 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Spark Double — {3}{U}, 0/0 Shapeshifter. "You may have Spark Double
+/// enter as a copy of a creature you control, except it enters with an
+/// additional +1/+1 counter on it." (The planeswalker-copy half is
+/// omitted.) The extra counter rides an appended ETB trigger, which the
+/// CR-707.5 copy path fires.
+pub fn spark_double() -> CardDefinition {
+    use crate::card::{CounterType, EntersAsCopy};
+    CardDefinition {
+        name: "Spark Double",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Shapeshifter],
+            ..Default::default()
+        },
+        enters_as_copy: Some(EntersAsCopy {
+            filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            extra_creature_types: vec![],
+            extra_keywords: vec![],
+            extra_triggered: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+            }],
+        }),
+        ..Default::default()
+    }
+}
+
+/// Reflector Mage — {1}{W}{U}, 2/3 Human Wizard. ETB: return target
+/// creature an opponent controls to its owner's hand. (The "can't recast
+/// until your next turn" rider is omitted.)
+pub fn reflector_mage() -> CardDefinition {
+    CardDefinition {
+        name: "Reflector Mage",
+        cost: cost(&[generic(1), w(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Man-o'-War — {2}{U}, 2/2 Jellyfish. ETB: return target creature to its
+/// owner's hand.
+pub fn man_o_war() -> CardDefinition {
+    CardDefinition {
+        name: "Man-o'-War",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Jellyfish],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Move {
+                what: target_filtered(SelectionRequirement::Creature),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Siege-Gang Commander — {3}{R}{R}, 2/2 Goblin. ETB: create three 1/1 red
+/// Goblin tokens. "{1}{R}, Sacrifice a Goblin: it deals 2 damage to any
+/// target."
+pub fn siege_gang_commander() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let goblin = TokenDefinition {
+        name: "Goblin".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![crate::mana::Color::Red],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Siege-Gang Commander",
+        cost: cost(&[generic(3), r(), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                definition: goblin,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), r()]),
+            sac_other_filter: Some((
+                SelectionRequirement::HasCreatureType(CreatureType::Goblin),
+                1,
+            )),
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sea Gate Oracle — {2}{U}, 1/3 Human Wizard. ETB: look at the top two
 /// cards, put one into your hand. (The "other on the bottom" half is
 /// approximated by leaving it on top.)

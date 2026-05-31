@@ -16954,6 +16954,79 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
 }
 
 #[test]
+fn spark_double_copies_with_an_extra_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 you control
+    let id = g.add_card_to_hand(0, catalog::spark_double());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    let dbl = g.battlefield.iter().find(|c| c.id == id).expect("on battlefield");
+    assert_eq!(dbl.definition.name, "Grizzly Bears");
+    assert_eq!(dbl.counter_count(CounterType::PlusOnePlusOne), 1,
+        "Spark Double enters with the extra +1/+1 counter (via CR 707.5 copied trigger)");
+}
+
+#[test]
+fn reflector_mage_bounces_an_opponent_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::reflector_mage());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "opp creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "returned to owner's hand");
+}
+
+#[test]
+fn man_o_war_bounces_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::man_o_war());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear));
+}
+
+#[test]
+fn siege_gang_commander_makes_three_goblins_and_pings() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::siege_gang_commander());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {3}{R}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count(), 3);
+    // Sac a Goblin to ping the opponent for 2.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("sac-goblin ping");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "ping dealt 2");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Goblin").count(), 2,
+        "one Goblin sacrificed as cost");
+}
+
+#[test]
 fn walking_ballista_enters_with_x_counters_and_pings() {
     use crate::card::CounterType;
     let mut g = two_player_game();
