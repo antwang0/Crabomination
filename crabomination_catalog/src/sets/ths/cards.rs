@@ -121,3 +121,46 @@ pub fn voyages_end() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Nessian Courser — {2}{G} Creature — Centaur Warrior 3/3.
+pub fn nessian_courser() -> CardDefinition {
+    CardDefinition {
+        name: "Nessian Courser",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Centaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Vulpine Goliath — {5}{G} Creature — Fox 4/4. Trample.
+pub fn vulpine_goliath() -> CardDefinition {
+    CardDefinition {
+        name: "Vulpine Goliath",
+        cost: cost(&[generic(5), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Fox], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Trample],
+        ..Default::default()
+    }
+}
+
+/// Felhide Minotaur — {2}{R} Creature — Minotaur 3/2.
+pub fn felhide_minotaur() -> CardDefinition {
+    CardDefinition {
+        name: "Felhide Minotaur",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Minotaur], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        ..Default::default()
+    }
+}

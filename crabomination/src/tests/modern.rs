@@ -18392,3 +18392,16 @@ fn voyages_end_bounces_and_scrys() {
     assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature bounced");
     assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "to owner's hand");
 }
+
+#[test]
+fn theros_vanilla_bodies_have_expected_stats() {
+    let mut g = two_player_game();
+    let ox = g.add_card_to_battlefield(0, catalog::yoked_ox());
+    let courser = g.add_card_to_battlefield(0, catalog::nessian_courser());
+    let goliath = g.add_card_to_battlefield(0, catalog::vulpine_goliath());
+    let minotaur = g.add_card_to_battlefield(0, catalog::felhide_minotaur());
+    assert_eq!((g.battlefield_find(ox).unwrap().power(), g.battlefield_find(ox).unwrap().toughness()), (0, 4));
+    assert_eq!((g.battlefield_find(courser).unwrap().power(), g.battlefield_find(courser).unwrap().toughness()), (3, 3));
+    assert!(g.battlefield_find(goliath).unwrap().has_keyword(&crate::card::Keyword::Trample));
+    assert_eq!((g.battlefield_find(minotaur).unwrap().power(), g.battlefield_find(minotaur).unwrap().toughness()), (3, 2));
+}
