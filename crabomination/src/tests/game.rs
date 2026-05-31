@@ -4245,6 +4245,88 @@ fn eyetwitch_dies_triggers_learn_draw() {
 }
 
 #[test]
+fn learn_fetches_a_lesson_from_the_sideboard() {
+    // With a Lesson in the sideboard, Learn's AutoDecider reveals it into
+    // hand (card advantage) instead of falling back to Draw 1.
+    use crate::card::CardInstance;
+    let mut g = two_player_game();
+    let lesson = g.next_id();
+    g.players[0]
+        .sideboard
+        .push(CardInstance::new(lesson, catalog::pest_summoning(), 0));
+    let twitch = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    let hand_before = g.players[0].hand.len();
+
+    g.remove_to_graveyard_with_triggers(twitch); // Eyetwitch dies → Learn
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == lesson),
+        "the Lesson was revealed into hand"
+    );
+    assert!(
+        !g.players[0].sideboard.iter().any(|c| c.id == lesson),
+        "the Lesson left the sideboard"
+    );
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "hand +1 from the fetched Lesson");
+}
+
+#[test]
+fn learn_rummage_discards_then_draws() {
+    // A ScriptedDecider takes the rummage branch: discard a chosen card,
+    // then draw one. Net hand size is unchanged; the discarded card is in
+    // the graveyard and the library's top card is in hand.
+    use crate::card::CardInstance;
+    use crate::decision::LearnChoice;
+    let mut g = two_player_game();
+    let lesson_in_sb = g.next_id();
+    g.players[0]
+        .sideboard
+        .push(CardInstance::new(lesson_in_sb, catalog::pest_summoning(), 0));
+    let discard_me = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let lib_top = g.next_id();
+    g.players[0].add_to_library_top(lib_top, catalog::lightning_bolt());
+    let twitch = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Learn(
+        LearnChoice::Rummage { discard: discard_me },
+    )]));
+
+    g.remove_to_graveyard_with_triggers(twitch);
+    drain_stack(&mut g);
+
+    assert!(
+        g.players[0].graveyard.iter().any(|c| c.id == discard_me),
+        "the rummaged card was discarded"
+    );
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == lib_top),
+        "the top card was drawn"
+    );
+}
+
+#[test]
+fn learn_decline_does_nothing() {
+    // Declining Learn leaves hand and sideboard untouched.
+    use crate::card::CardInstance;
+    use crate::decision::LearnChoice;
+    let mut g = two_player_game();
+    let lesson_in_sb = g.next_id();
+    g.players[0]
+        .sideboard
+        .push(CardInstance::new(lesson_in_sb, catalog::pest_summoning(), 0));
+    let twitch = g.add_card_to_battlefield(0, catalog::eyetwitch());
+    let hand_before = g.players[0].hand.len();
+    let sideboard_before = g.players[0].sideboard.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Learn(LearnChoice::Decline)]));
+
+    g.remove_to_graveyard_with_triggers(twitch);
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[0].hand.len(), hand_before, "hand unchanged");
+    assert_eq!(g.players[0].sideboard.len(), sideboard_before, "sideboard unchanged");
+}
+
+#[test]
 fn closing_statement_exiles_target_and_gains_x_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

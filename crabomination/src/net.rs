@@ -741,6 +741,13 @@ pub enum DecisionWire {
         count: usize,
         default: Vec<u8>,
     },
+    /// CR 701.45 — Learn: reveal a Lesson from `lessons` into hand, or
+    /// discard a card from `hand` to draw.
+    Learn {
+        player: usize,
+        lessons: Vec<(CardId, String)>,
+        hand: Vec<(CardId, String)>,
+    },
 }
 
 impl From<&Decision> for DecisionWire {
@@ -823,6 +830,11 @@ impl From<&Decision> for DecisionWire {
                     default: default.clone(),
                 }
             }
+            Decision::Learn { player, lessons, hand } => DecisionWire::Learn {
+                player: *player,
+                lessons: lessons.clone(),
+                hand: hand.clone(),
+            },
         }
     }
 }

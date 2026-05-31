@@ -97,11 +97,8 @@ pub fn field_trip() -> CardDefinition {
                     tapped: false,
                 },
             },
-            // Learn → Draw 1 (same approximation as Eyetwitch / Pop Quiz).
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],
@@ -278,10 +275,8 @@ pub fn igneous_inspiration() -> CardDefinition {
                 ),
                 amount: Value::Const(3),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PlayerRef::You },
         ]),
         activated_abilities: no_abilities(),
         triggered_abilities: vec![],

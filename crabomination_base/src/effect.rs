@@ -1123,6 +1123,12 @@ pub enum Effect {
 
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },
+    /// CR 701.45 — Learn. `who` may reveal a Lesson card they own from their
+    /// sideboard ("outside the game") and put it into their hand, or discard
+    /// a card to draw a card. Resolved via `Decision::Learn`. When `who`'s
+    /// sideboard holds no Lesson, falls back to the legacy `Draw 1`
+    /// approximation so no-sideboard games behave as before.
+    Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
     /// Discard any number of cards (0 to hand-size, player's choice). Used by
@@ -1916,6 +1922,7 @@ impl Effect {
             Effect::SetLifeTotal { who, amount } => {
                 sel_has_target(who) || value_has_target(amount)
             }
+            Effect::Learn { who } => player_has_target(who),
             Effect::ExchangeLifeTotals { a, b } => sel_has_target(a) || sel_has_target(b),
             Effect::Drain { from, to, amount } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)

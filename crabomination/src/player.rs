@@ -38,6 +38,13 @@ pub struct Player {
     /// existed deserialize cleanly as empty.
     #[serde(default)]
     pub command: Vec<CardInstance>,
+    /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
+    /// the game). A Learn ability may reveal a Lesson card here and put it
+    /// into hand. Populated by deck construction; empty by default (in
+    /// which case Learn falls back to the legacy `Draw 1` approximation).
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub sideboard: Vec<CardInstance>,
     /// CardIds of cards this player has designated as Commanders
     /// (Phase J). Populated by `GameState::seat_commanders`. Read by
     /// the Phase M 21-commander-damage SBA via
@@ -211,6 +218,7 @@ impl Player {
             hand: Vec::new(),
             graveyard: Vec::new(),
             command: Vec::new(),
+            sideboard: Vec::new(),
             commanders: Vec::new(),
             lands_played_this_turn: 0,
             extra_land_plays: 0,

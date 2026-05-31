@@ -83,13 +83,11 @@ pub fn eyetwitch() -> CardDefinition {
         effect: Effect::Noop,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
-            // "Learn" approximation: draw a card. The Oracle text alternates
-            // between "search Lessons sideboard" and "discard a card, then
-            // draw a card". Since there is no Lessons sideboard model yet,
-            // the cleanest single-effect substitute is a plain draw.
-            effect: Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
+            // Learn (CR 701.45): reveal a Lesson from your sideboard into
+            // hand, or discard a card to draw. `Effect::Learn` falls back to
+            // a plain draw when no Lessons sideboard is configured.
+            effect: Effect::Learn {
+                who: crate::effect::PlayerRef::You,
             },
         }],
         ..Default::default()
@@ -412,10 +410,8 @@ pub fn hunt_for_specimens() -> CardDefinition {
                 count: Value::Const(1),
                 definition: pest,
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
+            // Learn (CR 701.45) — reveal a Lesson into hand or discard-to-draw.
+            Effect::Learn { who: PR::You },
         ]),
         triggered_abilities: vec![],
         ..Default::default()

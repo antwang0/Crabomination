@@ -2950,12 +2950,19 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `auto_target_for_effect_avoiding` to take a slot count and return
   `Vec<Target>` with per-slot legality.
 
-- ⏳ **Lesson sideboard model** — Learn currently collapses to
-  Draw 1. A true Lesson sideboard would let Eyetwitch / Hunt for
-  Specimens / Field Trip / Igneous Inspiration etc. search a
-  sideboard of Lesson cards. Needs a per-player Lesson sideboard
-  slot plus a search-by-spell-subtype primitive on top of
-  `Effect::Search`.
+- 🟡 **Lesson sideboard model** — primitive landed. `Player.sideboard`
+  holds Lessons "outside the game"; `Effect::Learn { who }` surfaces
+  `Decision::Learn` (reveal a Lesson into hand / discard-to-draw /
+  decline) via `DecisionAnswer::Learn(LearnChoice)`, and falls back to
+  `Draw 1` when no Lessons sideboard is configured (so existing
+  no-sideboard games and tests are unchanged). Eyetwitch, Hunt for
+  Specimens, Field Trip, and Igneous Inspiration are wired to it; covered
+  by `tests::game::{learn_fetches_a_lesson_from_the_sideboard,
+  learn_rummage_discards_then_draws, learn_decline_does_nothing}`.
+  Remaining: migrate the other `Draw 1`-approximated Learn cards in
+  `stx/extras_*`, populate per-player Lesson sideboards in deck
+  construction (`sos_mode` / formats / draft), and add the client UI
+  suspend flow for `Decision::Learn`.
 - ⏳ **Counter-multiplier primitive** — Already used by Tanazir
   (via the ForEach idiom). Future cards (Vorinclex, Doubling
   Season) want a true multiplier on counter accrual; tracked

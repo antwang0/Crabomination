@@ -850,6 +850,63 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::Learn { who } => {
+                // CR 701.45 — Learn. Reveal a Lesson from the sideboard into
+                // hand, or discard a card to draw a card. When no Lesson is
+                // available (no sideboard configured), fall back to the
+                // legacy `Draw 1` approximation so existing games are
+                // unaffected.
+                use crate::card::SpellSubtype;
+                use crate::decision::{Decision, DecisionAnswer, LearnChoice};
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let lessons: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .sideboard
+                    .iter()
+                    .filter(|c| {
+                        c.definition.subtypes.spell_subtypes.contains(&SpellSubtype::Lesson)
+                    })
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if lessons.is_empty() {
+                    if !self.draw_one(p, events) {
+                        self.players[p].eliminated = true;
+                    }
+                    return Ok(());
+                }
+                let hand: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .hand
+                    .iter()
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let answer = self
+                    .decider
+                    .decide(&Decision::Learn { player: p, lessons, hand });
+                let choice = match answer {
+                    DecisionAnswer::Learn(c) => c,
+                    _ => LearnChoice::Decline,
+                };
+                match choice {
+                    LearnChoice::FetchLesson(cid) => {
+                        if let Some(pos) =
+                            self.players[p].sideboard.iter().position(|c| c.id == cid)
+                        {
+                            let card = self.players[p].sideboard.remove(pos);
+                            self.players[p].hand.push(card);
+                        }
+                    }
+                    LearnChoice::Rummage { discard } => {
+                        if self.players[p].hand.iter().any(|c| c.id == discard) {
+                            self.discard_card(p, discard, events);
+                            if !self.draw_one(p, events) {
+                                self.players[p].eliminated = true;
+                            }
+                        }
+                    }
+                    LearnChoice::Decline => {}
+                }
+                Ok(())
+            }
+
             Effect::Discard { who, amount, random } => {
                 use crate::decision::Decision;
                 let n = self.evaluate_value(amount, ctx).max(0) as usize;

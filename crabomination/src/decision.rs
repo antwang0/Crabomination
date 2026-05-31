@@ -159,6 +159,28 @@ pub enum Decision {
         count: usize,
         default: Vec<u8>,
     },
+
+    /// CR 701.45 — Learn. The player may reveal a Lesson from their
+    /// sideboard (`lessons`) and put it into hand, discard a card from
+    /// `hand` to draw a card, or decline. Only surfaced when `lessons` is
+    /// non-empty (with no Lessons, the engine takes the legacy `Draw 1`
+    /// path without a decision).
+    Learn {
+        player: usize,
+        lessons: Vec<(CardId, String)>,
+        hand: Vec<(CardId, String)>,
+    },
+}
+
+/// The decider's answer to a `Decision::Learn`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LearnChoice {
+    /// Reveal this Lesson from the sideboard and put it into hand.
+    FetchLesson(CardId),
+    /// Discard this card from hand, then draw a card.
+    Rummage { discard: CardId },
+    /// Do neither.
+    Decline,
 }
 
 /// The decider's answer to a `Decision`. Variants must match the decision kind.
@@ -198,6 +220,8 @@ pub enum DecisionAnswer {
     DamageOrder(Vec<CardId>),
     /// CR 700.2d — the chosen distinct mode indices for a "choose N" spell.
     Modes(Vec<u8>),
+    /// CR 701.45 — the chosen Learn action.
+    Learn(LearnChoice),
 }
 
 pub trait Decider {
@@ -299,6 +323,14 @@ impl Decider for AutoDecider {
             Decision::CombatDamageOrder { .. } => DecisionAnswer::DamageOrder(vec![]),
             // CR 700.2d — keep the card's sensible default mode picks.
             Decision::ChooseModes { default, .. } => DecisionAnswer::Modes(default.clone()),
+            // CR 701.45 — prefer fetching a Lesson (card advantage) over
+            // rummaging; the decision is only surfaced when a Lesson exists.
+            Decision::Learn { lessons, .. } => DecisionAnswer::Learn(
+                lessons
+                    .first()
+                    .map(|(id, _)| LearnChoice::FetchLesson(*id))
+                    .unwrap_or(LearnChoice::Decline),
+            ),
         }
     }
 }
