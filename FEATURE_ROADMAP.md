@@ -152,8 +152,8 @@ feature; sweep card-batch by card-batch.
 - **Spell-matters:** ⏳ Splice, ⏳ Replicate, ⏳ Overload, ⏳ Cipher,
   ⏳ Surge, ⏳ Spectacle, ⏳ Addendum, ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ⏳ Energy ({E}), ⏳ Experience counters,
-  ⏳ Poison/Toxic + corrosion (poison counters exist; needs Toxic + the
-  10-poison SBA path verified), ⏳ Ascend / city's blessing,
+  ✅ Poison/Toxic (`Keyword::Toxic(N)` adds N poison on combat damage,
+  CR 702.180c; 10-poison loss SBA wired), ⏳ Ascend / city's blessing,
   ⏳ Initiative / monarch, ⏳ Day/Night, ⏳ Ring-bearer (the Ring tempts you).
 - **Fading family:** ⏳ Fading, ⏳ Vanishing (Parallax cards in cube).
 - **Older mechanics:** ⏳ Soulshift, ⏳ Offering, ⏳ Epic, ⏳ Absorb,

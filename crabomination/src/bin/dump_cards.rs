@@ -66,6 +66,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         Keyword::Prowess => "Prowess",
         Keyword::Infect => "Infect",
         Keyword::Wither => "Wither",
+        Keyword::Toxic(_) => "Toxic",
         Keyword::Changeling => "Changeling",
         Keyword::Phasing => "Phasing",
         Keyword::Banding => "Banding",

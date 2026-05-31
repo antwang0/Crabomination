@@ -570,6 +570,10 @@ impl GameState {
                     has_deathtouch: kws.contains(&Keyword::Deathtouch),
                     has_infect: kws.contains(&Keyword::Infect),
                     has_wither: kws.contains(&Keyword::Wither),
+                    toxic: kws.iter().filter_map(|k| match k {
+                        Keyword::Toxic(n) => Some(*n),
+                        _ => None,
+                    }).sum(),
                     should_deal: attacker_filter(kws),
                 })
             })
@@ -809,6 +813,16 @@ impl GameState {
                         amount,
                     });
                 }
+                // CR 702.180c — Toxic N adds N poison on combat damage to a
+                // player, on top of any life loss (and stacks with Infect's
+                // poison). Only when damage was actually dealt.
+                if atk.toxic > 0 && amount > 0 {
+                    self.players[p].poison_counters += atk.toxic;
+                    events.push(GameEvent::PoisonAdded {
+                        player: p,
+                        amount: atk.toxic,
+                    });
+                }
                 // Phase M: bump the 21-commander-damage tally when the
                 // attacker is a Commander. Both Infect and regular
                 // damage paths credit here — CR 704.5v doesn't restrict
@@ -959,5 +973,6 @@ struct AttackerInfo {
     has_deathtouch: bool,
     has_infect: bool,
     has_wither: bool,
+    toxic: u32,
     should_deal: bool,
 }

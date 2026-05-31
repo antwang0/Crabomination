@@ -294,6 +294,10 @@ pub enum Keyword {
     Deathtouch,
     Infect,
     Wither,
+    /// Toxic N (CR 702.180) — whenever this deals combat damage to a
+    /// player, that player also gets N poison counters (in addition to
+    /// the normal damage).
+    Toxic(u32),
     Defender,
     Protection(Color),
     Hexproof,

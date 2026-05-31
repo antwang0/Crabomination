@@ -446,6 +446,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         K::Intimidate => "Intimidate".into(),
         K::Infect => "Infect".into(),
         K::Wither => "Wither".into(),
+        K::Toxic(n) => format!("Toxic {n}"),
         K::Prowess => "Prowess".into(),
         K::Shadow => "Shadow".into(),
         // Keyword-action / ability words that previously printed the raw

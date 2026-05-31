@@ -4482,6 +4482,32 @@ fn non_infect_spell_damage_to_player_reduces_life_per_cr_702_90b_control() {
     assert_eq!(g.players[1].poison_counters, p1_poison_before);
 }
 
+/// CR 702.180c — a Toxic N attacker that connects with a player deals
+/// normal combat damage *and* gives that player N poison counters.
+#[test]
+fn toxic_attacker_adds_poison_on_combat_damage() {
+    use crate::card::Keyword;
+    use crate::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = setup_attacker(&mut g, 0, catalog::grizzly_bears);
+    std::sync::Arc::make_mut(&mut g.battlefield_find_mut(bear).unwrap().definition)
+        .keywords
+        .push(Keyword::Toxic(2));
+
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+
+    assert_eq!(g.players[1].life, 18, "still takes 2 combat damage");
+    assert_eq!(g.players[1].poison_counters, 2, "Toxic 2 adds 2 poison");
+}
+
 // ── CR 111.4 — token name auto-derives from subtypes ─────────────────────
 
 #[test]
