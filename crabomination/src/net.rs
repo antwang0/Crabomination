@@ -198,6 +198,13 @@ pub struct PlayerView {
     /// player. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_prevention_shield: bool,
+    /// CR 700.5 — this player's devotion to each color, ordered W, U, B, R,
+    /// G (the count of mana symbols of that color among the mana costs of
+    /// permanents they control). Surfaced so UIs can show a devotion readout
+    /// for Theros decks (Nyx gods, Nykthos, Gray Merchant). `#[serde(default)]`
+    /// for snapshot back-compat (defaults to all-zero).
+    #[serde(default)]
+    pub devotion: [u32; 5],
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to

@@ -38,6 +38,8 @@ fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
         // Emblems (CR 114) are permanent command-zone effects — a regal
         // gold tint distinguishes them from the other counters.
         StatChipKind::Emblem => (Color::srgba(0.34, 0.28, 0.10, 1.0), theme::TEXT_PRIMARY),
+        // Devotion (CR 700.5) — a Theros-nyx indigo to set it apart.
+        StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
     }
 }
 
@@ -50,6 +52,7 @@ pub(super) enum StatChipKind {
     Grave,
     Poison,
     Emblem,
+    Devotion,
 }
 
 /// Library size at or below which the Deck chip switches to its amber
@@ -367,6 +370,20 @@ pub fn update_player_stats_chips(
                 StatChipKind::Emblem,
                 format!("✦ {}", p.emblems.len()),
             );
+        }
+        // CR 700.5 devotion — only surface in Theros-flavored games (any
+        // nonzero color). Compact per-color readout, e.g. "◆ B3 G1".
+        if p.devotion.iter().any(|&d| d > 0) {
+            const SYM: [&str; 5] = ["W", "U", "B", "R", "G"];
+            let body: String = p
+                .devotion
+                .iter()
+                .enumerate()
+                .filter(|&(_, &d)| d > 0)
+                .map(|(i, &d)| format!("{}{}", SYM[i], d))
+                .collect::<Vec<_>>()
+                .join(" ");
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
     });
 }

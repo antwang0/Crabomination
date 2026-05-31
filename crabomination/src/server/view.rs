@@ -30,7 +30,12 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
             .players
             .iter()
             .enumerate()
-            .map(|(i, p)| project_player(p, i, seat, &state.prevention_shields))
+            .map(|(i, p)| {
+                use crate::mana::Color;
+                let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
+                    .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
+                project_player(p, i, seat, &state.prevention_shields, devotion)
+            })
             .collect(),
         battlefield: {
             let attacker_ids = state.attacking_ids();
@@ -86,6 +91,7 @@ fn project_player(
     player_seat: usize,
     viewer_seat: usize,
     prevention_shields: &[crate::game::types::PreventionShield],
+    devotion: [u32; 5],
 ) -> PlayerView {
     use crate::game::types::PreventionTarget;
     let has_prevention_shield = prevention_shields
@@ -131,6 +137,7 @@ fn project_player(
         eliminated: player.eliminated,
         emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
         has_prevention_shield,
+        devotion,
     }
 }
 
@@ -873,6 +880,19 @@ mod tests {
         assert!(!v.players[1].has_prevention_shield, "P1 is not");
         assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().has_prevention_shield);
         assert!(v.damage_cant_be_prevented_this_turn);
+    }
+
+    #[test]
+    fn devotion_surfaces_per_color_in_the_view() {
+        let mut state = two_player_game();
+        // P0: Erebos ({3}{B}) + Gray Merchant ({3}{B}{B}) → 3 black pips.
+        state.add_card_to_battlefield(0, catalog::erebos_god_of_the_dead());
+        state.add_card_to_battlefield(0, catalog::gray_merchant_of_asphodel());
+        let v = project(&state, 0);
+        // Index 2 = Black (W,U,B,R,G).
+        assert_eq!(v.players[0].devotion[2], 3, "devotion to black = 3");
+        assert_eq!(v.players[0].devotion[0], 0, "no white devotion");
+        assert_eq!(v.players[1].devotion[2], 0, "opponent has no devotion");
     }
 
     #[test]
