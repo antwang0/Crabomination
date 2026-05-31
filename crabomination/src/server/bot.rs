@@ -123,7 +123,20 @@ impl Bot for RandomBot {
                     let raw_attackers: Vec<&crate::card::CardInstance> = state
                         .battlefield
                         .iter()
-                        .filter(|c| c.controller == seat && c.can_attack())
+                        .filter(|c| {
+                            c.controller == seat
+                                && c.can_attack()
+                                // Honor layer-granted Defender / can't-attack
+                                // (Pacifism, crewed-Vehicle states) — can_attack
+                                // only sees printed keywords.
+                                && state
+                                    .computed_permanent(c.id)
+                                    .map(|cp| {
+                                        !cp.keywords.contains(&Keyword::Defender)
+                                            && !cp.keywords.contains(&Keyword::CantAttack)
+                                    })
+                                    .unwrap_or(true)
+                        })
                         .collect();
                     let total_raw_power: i32 = raw_attackers.iter().map(|c| c.power()).sum();
                     let lethal_swing = total_raw_power >= opp_life;

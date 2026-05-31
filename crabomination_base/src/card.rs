@@ -354,6 +354,11 @@ pub enum Keyword {
     /// Veteran). Enforced inside `declare_blockers` — any blocker
     /// declaration involving a creature with this keyword is rejected.
     CantBlock,
+    /// "This creature can't attack." A static restriction on the bearer
+    /// (or an Aura/effect grant — Pacifism, Faith's Fetters, Bound in
+    /// Silence). Enforced from the *computed* keyword set in
+    /// `declare_attackers`, so layer-granted variants are honored.
+    CantAttack,
     /// CR 509.1c — "This creature must be blocked if able" (Lure-style
     /// block requirement, also Academic Dispute's rider). Enforced in
     /// `declare_blockers`: if an attacker carrying this keyword is left
@@ -1218,6 +1223,7 @@ impl CardInstance {
         self.definition.is_creature()
             && !self.tapped
             && !self.has_keyword(&Keyword::Defender)
+            && !self.has_keyword(&Keyword::CantAttack)
             && (!self.summoning_sick || self.has_keyword(&Keyword::Haste))
     }
 

@@ -683,6 +683,8 @@ pub enum GameError {
     SummoningSickness(CardId),
     #[error("Creature {0:?} cannot block (tapped, not a creature, or flying restriction)")]
     CannotBlock(CardId),
+    #[error("Creature {0:?} cannot attack (Defender / can't-attack restriction)")]
+    CannotAttack(CardId),
     #[error("Attacker {0:?} has Menace and must be blocked by two or more creatures")]
     MenaceRequiresTwoBlockers(CardId),
     #[error("Attacker {0:?} must be blocked if able and an idle blocker can block it")]

@@ -97,10 +97,14 @@ impl GameState {
             let can_attack = is_creature_now
                 && !card.tapped
                 && !kws.contains(&Keyword::Defender)
+                && !kws.contains(&Keyword::CantAttack)
                 && (!card.summoning_sick || kws.contains(&Keyword::Haste));
             if !can_attack {
                 if card.tapped {
                     return Err(GameError::CardIsTapped(id));
+                }
+                if kws.contains(&Keyword::Defender) || kws.contains(&Keyword::CantAttack) {
+                    return Err(GameError::CannotAttack(id));
                 }
                 return Err(GameError::SummoningSickness(id));
             }

@@ -9694,6 +9694,18 @@ pub fn holy_strength() -> CardDefinition {
     simple_aura("Holy Strength", cost(&[w()]), 1, 2, vec![])
 }
 
+/// Pacifism — {1}{W} Aura. "Enchant creature. Enchanted creature can't
+/// attack or block." (CR 702 — granted via the aura's keyword bonus.)
+pub fn pacifism() -> CardDefinition {
+    simple_aura(
+        "Pacifism",
+        cost(&[generic(1), w()]),
+        0,
+        0,
+        vec![Keyword::CantAttack, Keyword::CantBlock],
+    )
+}
+
 /// Loot, the Pathfinder — {1}{G}{W} Legendary Creature — Otter Scout.
 /// 2/3 with Vigilance. "When this creature enters, create a Map token."
 ///

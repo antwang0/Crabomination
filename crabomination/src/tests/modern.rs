@@ -16576,6 +16576,33 @@ fn spectral_flight_grants_plus_two_two_and_flying() {
     assert!(c.keywords.contains(&crate::card::Keyword::Flying));
 }
 
+/// Pacifism stops the enchanted creature from attacking (CR — granted
+/// CantAttack/CantBlock via the aura).
+#[test]
+fn pacifism_stops_the_creature_attacking() {
+    let mut g = two_player_game();
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let aura = g.add_card_to_hand(0, catalog::pacifism());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura, target: Some(Target::Permanent(bears)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pacifism castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let c = view.iter().find(|c| c.id == bears).unwrap();
+    assert!(c.keywords.contains(&crate::card::Keyword::CantAttack));
+    // Declaring it as an attacker is now rejected.
+    g.step = TurnStep::DeclareAttackers;
+    let err = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bears,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(matches!(err, Err(GameError::CannotAttack(_))), "pacified creature can't attack");
+}
+
 #[test]
 fn unholy_and_holy_strength_apply_their_buffs() {
     // Unholy Strength: +2/+1.

@@ -440,6 +440,7 @@ fn keyword_label(kw: &crabomination::card::Keyword) -> String {
         // Combat / evasion riders that previously fell through to the raw
         // `{:?}` debug shape — give them printed-Oracle phrasing.
         K::CantBlock => "Can't block".into(),
+        K::CantAttack => "Can't attack".into(),
         K::MustBeBlocked => "Must be blocked if able".into(),
         K::Skulk => "Skulk".into(),
         K::Fear => "Fear".into(),

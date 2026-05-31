@@ -196,8 +196,11 @@ feature; sweep card-batch by card-batch.
   multiple/deathtouch blockers.
 - ⏳ **Banding** combat rules (keyword exists; rules not wired).
 - ⏳ **Multiple combat phases / extra attack steps** (Aggravated Assault).
-- ⏳ **"Must attack/block", "can't attack alone", "attacks each combat"**
+- 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
   restrictions and requirements (Master of Cruelties currently drops these).
+  `Keyword::CantAttack` / `CantBlock` are wired (enforced from computed
+  keywords in `declare_attackers`/`declare_blockers`) — Pacifism. Still
+  open: must-attack/must-block requirements, "attacks each combat".
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ⏳ **Ninjutsu attacking-creature swap**, **Goad**, **Lure**, **provoke**.
 
