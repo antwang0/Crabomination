@@ -3985,13 +3985,10 @@ pub fn tragedy_feaster() -> CardDefinition {
 /// sorcery spell that targets a creature, return target creature card
 /// from your graveyard to the battlefield."
 ///
-/// Body + Repartee wired. The Ward—Discard a card rider is omitted (no
-/// Ward keyword primitive yet — tracked in TODO.md). The Repartee
-/// trigger uses the existing `repartee()` shortcut chained with a
-/// graveyard → battlefield Move. The auto-target picker chooses a
-/// creature card from your graveyard (Repartee fires off any IS spell
-/// targeting a creature, and the body picks the highest-impact eligible
-/// gy card).
+/// Body + Ward—Discard a card (`WardCost::Discard(1)`) + Repartee wired.
+/// The Repartee trigger uses the `repartee()` shortcut chained with a
+/// graveyard → battlefield Move (the auto-target picker chooses a
+/// creature card from your graveyard).
 pub fn forum_necroscribe() -> CardDefinition {
     use crate::effect::ZoneDest;
     use crate::effect::shortcut::repartee;

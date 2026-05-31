@@ -2806,11 +2806,8 @@ pub fn boomerang() -> CardDefinition {
 }
 
 /// Cyclonic Rift — {1}{U} Instant. Return target nonland permanent your
-/// opponents control to its owner's hand.
-///
-/// Overload `{6}{U}` ("each nonland permanent your opponents control") is
-/// omitted (no overload primitive yet). Cast-time filter pins the target
-/// to opponent-controlled nonland permanents.
+/// opponents control to its owner's hand. Overload `{6}{U}` bounces *each*
+/// such permanent via the alt-cost `effect_override` (CR 702.96).
 pub fn cyclonic_rift() -> CardDefinition {
     use crate::card::AlternativeCost;
     CardDefinition {

@@ -46,7 +46,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Lava Dart | {R} | 🟡 | Flashback cost approximated as `{0}` — engine has no "sacrifice a Mountain" alt-cost primitive |
 | Putrid Imp | {B} | 🟡 | Discard outlet wired (grants Menace EOT); madness flavor stubbed |
 | Veil of Summer | {G} | 🟡 | Cantrip half wired; "if blue/black spell cast" gate + uncounterable rider stubbed |
-| Cyclonic Rift | {1}{U} | 🟡 | Cast-time filter `Permanent ∧ Nonland ∧ ControlledByOpponent`; `Move → Hand(OwnerOf)`. Overload `{6}{U}` mode still ⏳. |
 | Lay Down Arms | {W} | 🟡 | `Exile(Creature ∧ PowerAtMost(4))`. Plains-count cost-rebate clause collapsed (no count-based-cost-rebate primitive). |
 | Spectral Procession | {2}{W} | 🟡 | `CreateToken(3 × 1/1 white Spirit with Flying)`. Hybrid white-or-2-life pips collapsed to {2}{W} (most permissive). |
 | Wild Mongrel | {1}{G} | 🟡 | 2/2 Hound; `Discard 1: +1/+1 EOT` (Psychic Frog mirror). The "becomes the color of your choice" half collapses. |
