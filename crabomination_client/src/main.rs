@@ -17,6 +17,7 @@ mod menu;
 mod net_plugin;
 mod render_quality;
 mod scryfall;
+mod synthesized_cards;
 mod systems;
 mod theme;
 
