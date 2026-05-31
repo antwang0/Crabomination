@@ -71,10 +71,11 @@ not how Magic works" moments.
 5. 🟡 **Copy of a permanent (clone).** `Effect::BecomeCopyOf` (CR 707.2,
    one-shot definition rewrite) + the `CardDefinition.enters_as_copy` ETB
    hook (applied before SBA so a 0/0 copier never dies first) ship Clone
-   and Phantasmal Image (Illusion + sacrifice-when-targeted rider). Token
-   copies already ride `CreateTokenCopyOf`. Remaining: copied ETB triggers
-   don't re-fire, and "becomes a copy" *continuous* layer-1 effects (Helm
-   of the Host's haste-token loop, Mirrorform aura) aren't modeled.
+   and Phantasmal Image (Illusion + sacrifice-when-targeted rider), Mirror
+   Image, Stunt Double. Copied ETB triggers re-fire (CR 707.5). Token
+   copies ride `CreateTokenCopyOf` (Cackling Counterpart). Remaining:
+   "becomes a copy" *continuous* layer-1 effects (Helm of the Host's
+   haste-token loop, Mirrorform aura) and copied enters-with-counters.
 6. 🟡 **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
    `CopySpellUnlessPaid` exist and ship Storm / sac-to-copy cards, but the
    copy keeps the original's targets. Remaining: **new-target choice** on

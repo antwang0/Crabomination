@@ -106,6 +106,11 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   added card users Akrasan Squire / Aven Squire + a multi-source stacking
   test (`cr_702_83b_multiple_exalted_stack_on_lone_attacker`).
 
+- ✅ **CR 702.135 — Mentor** (claude/modern_decks). Attacks/SelfSource
+  trigger adding a +1/+1 counter to a target `IsAttacking ∧
+  PowerLessThanSource ∧ OtherThanSource` creature. Sunhome Stalwart.
+  Test: `cr_702_135_mentor_counters_lesser_power_attacker`.
+
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
   2922–2939). The "change a word on a card" primitive — Mind Bend,
@@ -1032,8 +1037,10 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (g) **122.1f** 10+ poison → lose — ✅ (`Player.poison_counters` +
   SBA check at `stack.rs::check_state_based_actions`). (h) **122.1g**
   defense counters on battles — ⏳ (Battle card type not modelled).
-  (i) **122.1h** finality counters — ⏳ (no `CounterType::Finality` +
-  bf→exile replacement). (j) **122.1i** rad counters — ⏳ (no
+  (i) **122.1h** finality counters — ✅ (`CounterType::Finality`; the
+  Battlefield→Graveyard move at `stack.rs:1438` redirects to exile when
+  the permanent has a finality counter. Tested in `tests/stx/part_21`,
+  `part_22`). (j) **122.1i** rad counters — ⏳ (no
   `CounterType::Rad` + per-upkeep mill).
   (k) **122.2** counters cease to exist on zone change — 🟡 (the engine
   preserves counters across moves for the Felisa "creature with +1/+1
@@ -1237,12 +1244,13 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   (g) **707.4** copying-while-on-battlefield doesn't trigger ETB/LBF
   — ⏳ (no in-place copy primitive; Unstable Shapeshifter, Cytoshape
   not in catalog).
-  (h) **707.5** "enters as a copy" picks up ETB-replacement effects
-  + ETB triggers of the copied object — 🟡 (the `enters_as_copy` hook
-  applies the copy *before* the first SBA sweep, so a 0/0 copier never
-  dies first; but the copied object's own ETB triggers don't re-fire —
-  they were collected from the pre-copy definition. Copied
-  enters-with-counters / ETB triggers are the remaining gap).
+  (h) **707.5** "enters as a copy" picks up ETB triggers of the copied
+  object — ✅ (the `enters_as_copy` hook applies the copy *before* the
+  first SBA sweep, so a 0/0 copier never dies first; the spell-resolution
+  path then re-reads the copied definition's `EntersBattlefield`/SelfSource
+  triggers and pushes those instead of the copier's. Test:
+  `cr_707_5_clone_fires_copied_etb_trigger`. Remaining gap: copied
+  enters-with-counters / "as enters" choices (707.6) aren't re-applied.)
   (i) **707.6** copying doesn't snapshot "as it enters" choices — ⏳
   (Clone-on-Adaptive-Automaton creature-type prompt deferred to copy
   controller; Adaptive Automaton not in catalog).

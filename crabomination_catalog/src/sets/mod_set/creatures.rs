@@ -889,6 +889,38 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Sunhome Stalwart — {1}{W}, 2/1 Human Soldier with First strike + Mentor.
+/// Mentor (CR 702.135): when it attacks, put a +1/+1 counter on target
+/// attacking creature with lesser power (wired via `PowerLessThanSource`).
+pub fn sunhome_stalwart() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Sunhome Stalwart",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    SelectionRequirement::IsAttacking
+                        .and(SelectionRequirement::PowerLessThanSource)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        ..Default::default()
+    }
+}
+
 /// Clone — {3}{U}, 0/0 Shapeshifter. "You may have Clone enter the
 /// battlefield as a copy of any creature on the battlefield." Wired via
 /// the `enters_as_copy` CR-707 hook; with no creature to copy the 0/0

@@ -384,7 +384,9 @@ impl GameState {
 
                 if card.definition.is_permanent() {
                     // Collect ETB triggers before moving card into battlefield.
-                    let etb_triggers: Vec<Effect> = card
+                    // `mut` so the enters-as-copy path can swap in the
+                    // copied object's ETB triggers (CR 707.5).
+                    let mut etb_triggers: Vec<Effect> = card
                         .definition
                         .triggered_abilities
                         .iter()
@@ -480,7 +482,25 @@ impl GameState {
                     // CR 707 — "enters as a copy of [filter]" replacement.
                     // Applied here, before the first SBA sweep, so a 0/0
                     // copier (Clone, Phantasmal Image) never dies as a 0/0.
-                    self.apply_enters_as_copy(card_id, caster, &mut events);
+                    if self.apply_enters_as_copy(card_id, caster, &mut events) {
+                        // CR 707.5 — the copy's own ETB triggers fire. The
+                        // list collected above was the copier's (usually
+                        // empty); re-read it from the post-copy definition.
+                        etb_triggers = self
+                            .battlefield
+                            .iter()
+                            .find(|c| c.id == card_id)
+                            .map(|c| {
+                                c.definition
+                                    .triggered_abilities
+                                    .iter()
+                                    .filter(|t| t.event.kind == EventKind::EntersBattlefield
+                                        && matches!(t.event.scope, EventScope::SelfSource))
+                                    .map(|t| t.effect.clone())
+                                    .collect()
+                            })
+                            .unwrap_or_default();
+                    }
 
                     events.push(GameEvent::PermanentEntered { card_id });
 

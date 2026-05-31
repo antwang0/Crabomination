@@ -336,6 +336,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         mirror_image,
         stunt_double,
         cackling_counterpart,
+        sunhome_stalwart,
         // Proliferate (CR 701.27) suite — grows the controller's counters
         // + poisons opponents via `Effect::Proliferate`.
         steady_progress,

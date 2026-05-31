@@ -16904,6 +16904,52 @@ fn karns_bastion_has_a_proliferate_ability() {
 }
 
 #[test]
+fn cr_702_135_mentor_counters_lesser_power_attacker() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let stalwart = g.add_card_to_battlefield(0, catalog::sunhome_stalwart()); // 2/1 Mentor
+    let small = g.add_card_to_battlefield(0, catalog::elvish_visionary()); // 1/1
+    g.clear_sickness(stalwart);
+    g.clear_sickness(small);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: stalwart, target: AttackTarget::Player(1) },
+        Attack { attacker: small, target: AttackTarget::Player(1) },
+    ])).unwrap();
+    drain_stack(&mut g);
+    let n = g.battlefield.iter().find(|c| c.id == small).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!(n, 1, "Mentor put a +1/+1 counter on the lesser-power attacker");
+    // The mentor itself isn't a legal target (OtherThanSource + not lesser).
+    assert_eq!(g.battlefield.iter().find(|c| c.id == stalwart).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 0);
+}
+
+#[test]
+fn cr_707_5_clone_fires_copied_etb_trigger() {
+    // Clone copying Elvish Visionary (ETB: draw a card) should itself draw.
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::elvish_visionary()); // 1/1, ETB draw 1
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::clone_card());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Clone left hand (-1) and the copied ETB drew a card (+1): net even,
+    // and the copy is a Visionary on the battlefield.
+    assert_eq!(g.players[0].hand.len(), hand_before,
+        "copied Elvish Visionary ETB drew a card (CR 707.5)");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap().definition.name,
+        "Elvish Visionary");
+}
+
+#[test]
 fn cr_707_2_clone_copies_printed_pt_not_counters() {
     use crate::card::CounterType;
     let mut g = two_player_game();

@@ -274,13 +274,13 @@ impl GameState {
         card_id: CardId,
         controller: usize,
         events: &mut Vec<GameEvent>,
-    ) {
+    ) -> bool {
         let spec = self
             .battlefield
             .iter()
             .find(|c| c.id == card_id)
             .and_then(|c| c.definition.enters_as_copy.clone());
-        let Some(spec) = spec else { return };
+        let Some(spec) = spec else { return false };
         // Best legal copy source: highest power among matching permanents,
         // never the copier itself.
         let source = self
@@ -297,7 +297,7 @@ impl GameState {
             })
             .max_by_key(|c| c.definition.power)
             .map(|c| c.id);
-        let Some(source) = source else { return };
+        let Some(source) = source else { return false };
         let ctx = EffectContext::for_trigger(
             card_id,
             controller,
@@ -328,6 +328,7 @@ impl GameState {
                 }
             }
         }
+        true
     }
 
     // ── Entry points ─────────────────────────────────────────────────────────
