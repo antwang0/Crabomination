@@ -380,6 +380,11 @@ pub enum PendingEffectState {
     ScryPeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
     SearchPending { player: usize, to: crate::effect::ZoneDest },
+    /// Suspended on a `LookPickToHand` decision (Impulse / Strategic
+    /// Planning / Flow State). `revealed` is the peeked top-of-library set;
+    /// the chosen card goes to hand and the rest to the bottom of the
+    /// library (or graveyard if `rest_to_graveyard`).
+    ImpulsePending { player: usize, revealed: Vec<CardId>, rest_to_graveyard: bool },
     PutOnLibraryPending { player: usize, count: usize },
     /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks

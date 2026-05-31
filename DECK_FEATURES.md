@@ -64,7 +64,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Pentad Prism | {2} | 🟡 | ETB with 2 charge counters; remove a charge counter to add one mana of any color. Sunburst's "one counter per color of mana spent" collapses to a flat 2. Tests: `pentad_prism_etb_with_two_charge_counters`, `pentad_prism_removes_counter_to_add_one_mana_of_any_color`. |
 | Crumble to Dust | {2}{R}{R} | 🟡 | Sorcery. Exile target nonbasic land. The "exile every card with the same name" rider collapses. Tests: `crumble_to_dust_exiles_nonbasic_land`, `crumble_to_dust_rejects_basic_land_target`. |
 | Drown in the Loch | {U}{B} | 🟡 | Instant. ChooseMode([CounterSpell, Destroy(Creature ∨ Planeswalker)]). The "snow mana only" + "X = cards in opp's graveyard" gates collapse. Tests: `drown_in_the_loch_mode_zero_counters_a_spell`, `drown_in_the_loch_mode_one_destroys_creature`. |
-| Strategic Planning | {1}{U} | 🟡 | Sorcery. Mill 3 + Draw 1. Approximation of "look at top 3, take 1, mill the rest" — gameplay-relevant graveyard-fill axis preserved. Test: `strategic_planning_mills_three_and_draws_one`. |
 
 ## Engine features
 

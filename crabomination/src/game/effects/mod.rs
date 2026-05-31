@@ -2286,6 +2286,36 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::LookPickToHand { who, count, rest_to_graveyard } => {
+                use crate::decision::Decision;
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                let revealed: Vec<(crate::card::CardId, String)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(n)
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                if revealed.is_empty() {
+                    return Ok(());
+                }
+                let ids: Vec<crate::card::CardId> = revealed.iter().map(|(id, _)| *id).collect();
+                let decision = Decision::SearchLibrary { player: p, candidates: revealed };
+                let pending = PendingEffectState::ImpulsePending {
+                    player: p,
+                    revealed: ids,
+                    rest_to_graveyard: *rest_to_graveyard,
+                };
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((decision, pending, Effect::Noop));
+                    return Ok(());
+                }
+                let answer = self.decider.decide(&decision);
+                let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                events.append(&mut applied);
+                Ok(())
+            }
+
             Effect::ShuffleGraveyardIntoLibrary { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let cards = std::mem::take(&mut self.players[p].graveyard);

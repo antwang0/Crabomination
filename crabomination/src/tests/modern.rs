@@ -10221,7 +10221,7 @@ fn plummet_rejects_non_flying_target() {
 }
 
 #[test]
-fn strategic_planning_mills_three_and_draws_one() {
+fn strategic_planning_takes_one_of_top_three_rest_to_graveyard() {
     let mut g = two_player_game();
     for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
     let lib_before = g.players[0].library.len();
@@ -10236,15 +10236,37 @@ fn strategic_planning_mills_three_and_draws_one() {
     }).expect("Strategic Planning castable for {1}{U}");
     drain_stack(&mut g);
 
-    // Mill 3, then Draw 1 => library down by 4, graveyard up by 3 milled
-    // cards + 1 (the resolved Strategic Planning sorcery itself) = 4.
-    assert_eq!(g.players[0].library.len(), lib_before - 4,
-        "Library lost 3 to mill + 1 to draw = 4");
-    assert_eq!(g.players[0].graveyard.len(), grave_before + 4,
-        "Graveyard gained 3 milled cards + the resolved sorcery itself");
-    // Hand: -1 cast + 1 draw = 0.
-    assert_eq!(g.players[0].hand.len(), hand_before,
-        "Strategic Planning is a 2-mana cantrip");
+    // Look at top 3: one to hand, two to graveyard. Library loses 3.
+    assert_eq!(g.players[0].library.len(), lib_before - 3,
+        "top three cards leave the library (1 to hand + 2 to graveyard)");
+    // Graveyard: +2 rest + the resolved sorcery itself = +3.
+    assert_eq!(g.players[0].graveyard.len(), grave_before + 3,
+        "two unpicked cards + the resolved sorcery");
+    // Hand: -1 cast + 1 picked = net 0 (a 2-mana cantrip).
+    assert_eq!(g.players[0].hand.len(), hand_before);
+}
+
+#[test]
+fn strategic_planning_picks_the_chosen_card_to_hand() {
+    // A ScriptedDecider picks a specific one of the top three; it lands in
+    // hand and the other two go to the graveyard.
+    let mut g = two_player_game();
+    let want = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::strategic_planning());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(want))]));
+
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).unwrap();
+    drain_stack(&mut g);
+
+    assert!(g.players[0].hand.iter().any(|c| c.id == want), "chosen Bolt went to hand");
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count(), 2,
+        "the two unpicked Islands went to the graveyard");
 }
 
 #[test]

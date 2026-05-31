@@ -1118,6 +1118,12 @@ pub enum Effect {
     Scry    { who: PlayerRef, amount: Value },
     Surveil { who: PlayerRef, amount: Value },
     LookAtTop { who: PlayerRef, amount: Value },
+    /// "Look at the top `count` cards of your library, put one of them into
+    /// your hand, and the rest on the bottom of your library (or into your
+    /// graveyard if `rest_to_graveyard`)." Impulse / Strategic Planning /
+    /// Flow State. The controller picks via the `SearchLibrary` decision
+    /// (auto-decider keeps the top card).
+    LookPickToHand { who: PlayerRef, count: Value, #[serde(default)] rest_to_graveyard: bool },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
     /// Move every entity the selector resolves to into `to`.
@@ -1819,6 +1825,9 @@ impl Effect {
             | Effect::Surveil { who, amount }
             | Effect::LookAtTop { who, amount } => {
                 player_has_target(who) || value_has_target(amount)
+            }
+            Effect::LookPickToHand { who, count, .. } => {
+                player_has_target(who) || value_has_target(count)
             }
             Effect::Move { what, to } => sel_has_target(what) || zonedest_has_target(to),
             Effect::Search { who, to, .. } => player_has_target(who) || zonedest_has_target(to),

@@ -3184,6 +3184,40 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::ImpulsePending { player, revealed, rest_to_graveyard } => {
+                let DecisionAnswer::Search(chosen_id) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                // Default (AutoDecider returns None / out-of-set): keep the
+                // top revealed card rather than whiff your own selection.
+                let pick = chosen_id
+                    .filter(|id| revealed.contains(id))
+                    .or_else(|| revealed.first().copied());
+                let mut events = vec![];
+                if let Some(pick) = pick
+                    && let Some(pos) = self.players[player].library.iter().position(|c| c.id == pick) {
+                    let card = self.players[player].library.remove(pos);
+                    self.players[player].hand.push(card);
+                    events.push(GameEvent::CardDrawn { player, card_id: pick });
+                }
+                // Move the rest of the revealed set to the bottom of the
+                // library (or graveyard). They're still at the top of the
+                // library after the pick was removed.
+                for rid in &revealed {
+                    if Some(*rid) == pick {
+                        continue;
+                    }
+                    if let Some(pos) = self.players[player].library.iter().position(|c| c.id == *rid) {
+                        let card = self.players[player].library.remove(pos);
+                        if rest_to_graveyard {
+                            self.players[player].graveyard.push(card);
+                        } else {
+                            self.players[player].library.push(card);
+                        }
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::PutOnLibraryPending { player, .. } => {
                 let DecisionAnswer::PutOnLibrary(chosen) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

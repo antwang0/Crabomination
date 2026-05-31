@@ -6940,22 +6940,17 @@ pub fn plummet() -> CardDefinition {
 
 /// Strategic Planning — {1}{U} Sorcery. Look at the top three cards of
 /// your library. Put one of them into your hand and the rest into your
-/// graveyard.
-///
-/// Approximated as `Mill 3 + Draw 1` — the gameplay-relevant outcome
-/// (graveyard fills with two cards, you grab a card) is preserved; the
-/// "look at three, take one to hand" choice collapses to a top-card
-/// draw. Pairs especially well with reanimator/dredge shells where the
-/// graveyard fill is the reason to cast.
+/// graveyard (`LookPickToHand` with `rest_to_graveyard`).
 pub fn strategic_planning() -> CardDefinition {
     CardDefinition {
         name: "Strategic Planning",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::Mill { who: Selector::You, amount: Value::Const(3) },
-            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
-        ]),
+        effect: Effect::LookPickToHand {
+            who: PlayerRef::You,
+            count: Value::Const(3),
+            rest_to_graveyard: true,
+        },
         ..Default::default()
     }
 }

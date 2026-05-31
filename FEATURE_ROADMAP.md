@@ -53,9 +53,10 @@ not how Magic works" moments.
    draw/skip replacement, counter-doubling (Doubling Season, Hardened
    Scales), and "if it would die, exile instead."
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
-   wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). Remaining nicety:
-   a dedicated "pick from revealed cards" decision (Dig Through Time-style
-   reveal-and-sort still routes through flat Draw-N).
+   wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
+   revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /
+   Strategic Planning / Flow State) presents the peeked top-of-library set
+   through the `SearchLibrary` decision; auto-decider keeps the top card.
 3. ✅ **Player-chosen combat damage assignment order.**
    `Decision::CombatDamageOrder { attacker, blockers }` prompts the attacker
    (`combat.rs`, CR 510.1c) instead of sorting by CardId. (Trample-over-
