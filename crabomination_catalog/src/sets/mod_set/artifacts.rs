@@ -679,3 +679,45 @@ pub fn monument_to_endurance() -> CardDefinition {
         additional_cast_cost: vec![],
     }
 }
+
+/// Contagion Clasp — {4} Artifact. ETB: put a -1/-1 counter on target
+/// creature. `{4}, {T}: Proliferate.`
+pub fn contagion_clasp() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Contagion Clasp",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4)]),
+            effect: Effect::Proliferate,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Throne of Geth — {1} Artifact. `{T}, Sacrifice this artifact: Proliferate.`
+pub fn throne_of_geth() -> CardDefinition {
+    CardDefinition {
+        name: "Throne of Geth",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::Proliferate,
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}

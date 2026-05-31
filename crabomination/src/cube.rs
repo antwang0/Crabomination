@@ -342,6 +342,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         steady_progress,
         volt_charge,
         karns_bastion,
+        contagion_clasp,
+        throne_of_geth,
+        inexorable_tide,
+        thrummingbird,
+        spike_feeder,
+        grim_affliction,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,

@@ -1042,6 +1042,29 @@ pub fn intervention_pact() -> CardDefinition {
     }
 }
 
+/// Grim Affliction — {2}{B} Instant. "Put a -1/-1 counter on target
+/// creature. At the beginning of the next end step, proliferate."
+pub fn grim_affliction() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Grim Affliction",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::AddCounter {
+                what: target_filtered(SelectionRequirement::Creature),
+                kind: CounterType::MinusOneMinusOne,
+                amount: Value::Const(1),
+            },
+            Effect::DelayUntil {
+                kind: DelayedTriggerKind::NextEndStep,
+                body: Box::new(Effect::Proliferate),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Steady Progress — {2}{U} Instant. "Proliferate. Draw a card."
 pub fn steady_progress() -> CardDefinition {
     CardDefinition {

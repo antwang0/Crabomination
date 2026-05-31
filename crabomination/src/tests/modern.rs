@@ -16895,6 +16895,117 @@ fn volt_charge_burns_then_proliferates() {
 }
 
 #[test]
+fn contagion_clasp_etb_shrinks_a_creature() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::contagion_clasp());
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable for {4}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counter_count(CounterType::MinusOneMinusOne), 1, "ETB -1/-1 counter");
+}
+
+#[test]
+fn inexorable_tide_proliferates_on_your_spell() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::inexorable_tide());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    // Cast any cheap spell; the cast trigger proliferates.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2, "Inexorable Tide proliferated on cast");
+}
+
+#[test]
+fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::spike_feeder());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {2}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2, "enters with two +1/+1 counters");
+    let life_before = g.players[0].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life_before + 2, "gained 2 life");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1, "spent a counter");
+}
+
+#[test]
+fn grim_affliction_puts_a_minus_counter() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::grim_affliction());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable for {2}{B}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counter_count(CounterType::MinusOneMinusOne), 1);
+}
+
+#[test]
+fn throne_of_geth_sacrifices_to_proliferate() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let throne = g.add_card_to_battlefield(0, catalog::throne_of_geth());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: throne, ability_index: 0, target: None, x_value: None,
+    }).expect("activates");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == throne), "Throne sacrificed itself");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2, "proliferated the +1/+1 counter");
+}
+
+#[test]
+fn thrummingbird_proliferates_on_combat_damage() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let bird = g.add_card_to_battlefield(0, catalog::thrummingbird());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == bear).unwrap()
+        .add_counters(CounterType::PlusOnePlusOne, 1);
+    // Fire the combat-damage trigger directly (full combat resolution is
+    // covered by the combat suite); we exercise the proliferate payload.
+    let trig = catalog::thrummingbird().triggered_abilities[0].effect.clone();
+    let ctx = crate::game::effects::EffectContext::for_trigger(bird, 0, None, 0);
+    let _ = g.resolve_effect(&trig, &ctx);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2,
+        "combat damage to player proliferated your +1/+1 counter");
+}
+
+#[test]
 fn karns_bastion_has_a_proliferate_ability() {
     let d = catalog::karns_bastion();
     assert!(d.card_types.contains(&CardType::Land));

@@ -889,6 +889,80 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Inexorable Tide — {3}{U} Enchantment. "Whenever you cast a spell,
+/// proliferate."
+pub fn inexorable_tide() -> CardDefinition {
+    CardDefinition {
+        name: "Inexorable Tide",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Thrummingbird — {1}{U}, 1/1 Bird with Flying. "Whenever Thrummingbird
+/// deals combat damage to a player, proliferate."
+pub fn thrummingbird() -> CardDefinition {
+    CardDefinition {
+        name: "Thrummingbird",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+            effect: Effect::Proliferate,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Spike Feeder — {2}{G}, 0/0 Spike that enters with two +1/+1 counters.
+/// "Remove a +1/+1 counter from this: you gain 2 life."
+pub fn spike_feeder() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Spike Feeder",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Spike],
+            ..Default::default()
+        },
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            // "Remove a +1/+1 counter" is the cost — gate on having one so
+            // the lifegain can't fire off an empty creature.
+            condition: Some(crate::effect::Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                Value::Const(1),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Sunhome Stalwart — {1}{W}, 2/1 Human Soldier with First strike + Mentor.
 /// Mentor (CR 702.135): when it attacks, put a +1/+1 counter on target
 /// attacking creature with lesser power (wired via `PowerLessThanSource`).

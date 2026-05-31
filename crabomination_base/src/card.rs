@@ -82,6 +82,8 @@ pub enum CreatureType {
     Glimmer,
     // Ninjutsu creature subtype (Fallen Shinobi, etc.).
     Ninja,
+    // +1/+1-counter "Spike" cycle (Spike Feeder).
+    Spike,
 }
 
 /// Land subtypes (basic land types + others).
