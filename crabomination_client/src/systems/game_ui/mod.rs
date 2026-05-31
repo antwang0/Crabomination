@@ -3020,17 +3020,26 @@ pub fn handle_game_input(
                         .map(|(d, nt)| (d.clone(), *nt))
                         .collect();
                 } else if card.needs_target {
-                    targeting.active = true;
-                    targeting.pending_card_id = Some(card.id);
-                    targeting.back_face_pending = false;
-                    if let Some(legal) =
-                        crate::systems::legal_target_filter::enumerate_for_cast(
-                            cv,
-                            &card.name,
-                            None,
-                        )
-                    {
-                        *legal_targets = legal;
+                    let legal = crate::systems::legal_target_filter::enumerate_for_cast(
+                        cv,
+                        &card.name,
+                        None,
+                    );
+                    // If we enumerated the filter and nothing is legal (e.g.
+                    // Beaming Defiance with no creatures you control), don't
+                    // arm the targeting cursor — just tell the player.
+                    let no_targets = legal
+                        .as_ref()
+                        .is_some_and(|l| l.permanents.is_empty() && l.players.is_empty());
+                    if no_targets {
+                        log.push(format!("No legal targets for {}.", card.name));
+                    } else {
+                        targeting.active = true;
+                        targeting.pending_card_id = Some(card.id);
+                        targeting.back_face_pending = false;
+                        if let Some(l) = legal {
+                            *legal_targets = l;
+                        }
                     }
                 } else {
                     outbox.submit(GameAction::CastSpell { card_id: card.id, target: None, additional_targets: vec![], mode: None, x_value: None });

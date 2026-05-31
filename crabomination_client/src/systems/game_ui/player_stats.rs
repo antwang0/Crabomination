@@ -261,8 +261,12 @@ pub fn update_player_chip_target_outline(
     // evaluator) restricts the pulse to seats actually listed. Spell /
     // ability targets we couldn't enumerate fall through to the "any
     // seat is clickable" behaviour.
-    let have_legal_set = targeting_active
-        && (!legal_targets.players.is_empty() || !legal_targets.permanents.is_empty());
+    // A computed legal set (even an empty one) is authoritative: restrict
+    // the pulse to the listed seats. Only a *non-enumerated* pick (unknown
+    // filter) falls through to the "any seat is clickable" behaviour, so an
+    // enumerated-but-empty set (Beaming Defiance with no creatures you
+    // control) correctly highlights no players.
+    let have_legal_set = targeting_active && legal_targets.enumerated;
     let legal_player_set = if have_legal_set {
         Some(&legal_targets.players)
     } else {

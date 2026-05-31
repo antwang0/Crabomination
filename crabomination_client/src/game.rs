@@ -90,6 +90,13 @@ pub struct TargetingState {
 pub struct LegalTargets {
     pub permanents: std::collections::HashSet<CardId>,
     pub players: std::collections::HashSet<usize>,
+    /// True once a legal set has actually been computed for the current
+    /// pick (server `Decision::ChooseTarget` or cast-time enumeration). This
+    /// distinguishes an *enumerated-but-empty* set (e.g. Beaming Defiance
+    /// with no creatures you control → highlight nothing) from "not
+    /// enumerated" (unknown filter → fall back to highlight-everything). Set
+    /// when populated; reset when the targeting flow clears.
+    pub enumerated: bool,
     /// Printed source-card name (e.g. "Ascendant Dustspeaker") shown in
     /// the hint banner.
     pub source_name: String,

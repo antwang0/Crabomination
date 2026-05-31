@@ -48,6 +48,10 @@ pub fn enumerate_for_cast(
     let mut out = LegalTargets {
         permanents: HashSet::new(),
         players: HashSet::new(),
+        // The set is now authoritative for this card — even if it ends up
+        // empty (no legal target), the highlight must not fall back to
+        // "highlight everything".
+        enumerated: true,
         // Source name + description are surfaced separately for engine-
         // driven `Decision::ChooseTarget`; cast-time targeting drives
         // the prompt off the hand card's KnownCard.name + the picked

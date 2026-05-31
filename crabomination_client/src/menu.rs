@@ -721,6 +721,12 @@ fn handle_action_buttons(
 /// back to a local Modern bot match if no choice was queued (e.g. tests
 /// bypass the menu).
 pub fn start_net_session_from_menu(world: &mut World) {
+    // Clear the play-by-play log so a new session (including an audit run)
+    // doesn't show scrollback from the previous game.
+    if let Some(mut log) = world.get_resource_mut::<crate::game::GameLog>() {
+        log.entries.clear();
+    }
+
     let (mode, format) = world
         .get_resource_mut::<PendingNetMode>()
         .and_then(|mut r| r.0.take())

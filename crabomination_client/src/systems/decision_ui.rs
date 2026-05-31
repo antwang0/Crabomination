@@ -172,6 +172,7 @@ pub fn spawn_decision_ui(
         }
         legal_targets.permanents.clear();
         legal_targets.players.clear();
+        legal_targets.enumerated = false;
         legal_targets.source_name.clear();
         legal_targets.description.clear();
         return;
@@ -283,6 +284,8 @@ pub fn spawn_decision_ui(
             targeting.pending_decision_target = true;
             legal_targets.permanents.clear();
             legal_targets.players.clear();
+            // The server handed us the authoritative legal list.
+            legal_targets.enumerated = true;
             for t in legal {
                 match t {
                     Target::Permanent(id) => {
