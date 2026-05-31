@@ -889,6 +889,214 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Soul Warden — {W}, 1/1 Human Cleric. "Whenever another creature enters,
+/// you gain 1 life."
+pub fn soul_warden() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Soul Warden",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Essence Warden — {G}, 1/1 Elf Shaman. "Whenever another creature enters,
+/// you gain 1 life." (Soul Warden in green.)
+pub fn essence_warden() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Essence Warden",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Shaman],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnyPlayer)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource),
+                }),
+            effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Llanowar Visionary — {2}{G}, 2/2 Elf Druid. ETB: draw a card. "{T}: Add
+/// {G}."
+pub fn llanowar_visionary() -> CardDefinition {
+    CardDefinition {
+        name: "Llanowar Visionary",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elf, CreatureType::Druid],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana {
+                who: PlayerRef::You,
+                pool: ManaPayload::Colors(vec![crate::mana::Color::Green]),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Augur of Bolas — {1}{U}, 1/3 Merfolk Wizard. ETB: look at the top three
+/// cards; put an instant or sorcery from among them into your hand (rest to
+/// the bottom — approximated by leaving them on top).
+pub fn augur_of_bolas() -> CardDefinition {
+    CardDefinition {
+        name: "Augur of Bolas",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Merfolk, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(3),
+                rest_to_graveyard: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Pestermite — {2}{U}, 2/1 Faerie with Flash and Flying. ETB: tap target
+/// permanent. (The "it doesn't untap" rider is omitted.)
+pub fn pestermite() -> CardDefinition {
+    CardDefinition {
+        name: "Pestermite",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Faerie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        keywords: vec![Keyword::Flash, Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::Tap { what: target_filtered(SelectionRequirement::Permanent) },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Suture Priest — {1}{W}, 1/1 Cleric. "Whenever another creature you
+/// control enters, you gain 1 life." "Whenever a creature an opponent
+/// controls enters, that player loses 1 life."
+pub fn suture_priest() -> CardDefinition {
+    use crate::card::Predicate;
+    CardDefinition {
+        name: "Suture Priest",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::OtherThanSource),
+                    }),
+                effect: Effect::GainLife { who: Selector::You, amount: Value::Const(1) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::OpponentControl)
+                    .with_filter(Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::Creature,
+                    }),
+                effect: Effect::LoseLife {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    amount: Value::Const(1),
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Knight of Autumn — {1}{G}{W}, 2/1 Dryad Knight. ETB — choose one: gain
+/// 4 life; destroy target artifact or enchantment; or put two +1/+1
+/// counters on this.
+pub fn knight_of_autumn() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Knight of Autumn",
+        cost: cost(&[generic(1), g(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Dryad, CreatureType::Knight],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 1,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ChooseMode(vec![
+                Effect::GainLife { who: Selector::You, amount: Value::Const(4) },
+                Effect::Destroy {
+                    what: target_filtered(
+                        SelectionRequirement::Artifact
+                            .or(SelectionRequirement::Enchantment),
+                    ),
+                },
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
 /// Spark Double — {3}{U}, 0/0 Shapeshifter. "You may have Spark Double
 /// enter as a copy of a creature you control, except it enters with an
 /// additional +1/+1 counter on it." (The planeswalker-copy half is

@@ -363,6 +363,13 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         arc_trail,
         prey_upon,
         hedron_archive,
+        soul_warden,
+        essence_warden,
+        llanowar_visionary,
+        augur_of_bolas,
+        pestermite,
+        suture_priest,
+        knight_of_autumn,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,

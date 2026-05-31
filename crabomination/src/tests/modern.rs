@@ -16954,6 +16954,110 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
 }
 
 #[test]
+fn soul_warden_gains_life_when_another_creature_enters() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::soul_warden());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 1, "Soul Warden gained 1 when the bear entered");
+}
+
+#[test]
+fn essence_warden_is_a_green_soul_warden() {
+    let d = catalog::essence_warden();
+    assert_eq!(d.cost.cmc(), 1);
+    assert!(d.triggered_abilities.iter().any(|t|
+        t.event.kind == crate::card::EventKind::EntersBattlefield));
+}
+
+#[test]
+fn suture_priest_drains_opponent_on_their_creature_etb() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::suture_priest());
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bear castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "opponent lost 1 from their creature entering");
+}
+
+#[test]
+fn llanowar_visionary_draws_and_taps_for_green() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::llanowar_visionary());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "ETB drew a card (cast -1, draw +1)");
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability");
+    assert!(g.players[0].mana_pool.amount(Color::Green) >= 1, "tapped for green");
+}
+
+#[test]
+fn augur_of_bolas_digs_into_hand() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::lightning_bolt()); }
+    let id = g.add_card_to_hand(0, catalog::augur_of_bolas());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "ETB pulled a card (cast -1, dig +1)");
+}
+
+#[test]
+fn pestermite_taps_a_permanent_on_etb() {
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(1, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::pestermite());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(land)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().tapped, "Pestermite tapped it");
+}
+
+#[test]
+fn knight_of_autumn_mode_zero_gains_four_life() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::knight_of_autumn());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, life + 4, "default mode gains 4 life");
+}
+
+#[test]
 fn flame_javelin_deals_four_to_a_player() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::flame_javelin());
