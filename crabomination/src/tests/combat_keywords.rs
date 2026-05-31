@@ -89,6 +89,44 @@ fn cr_702_131_afflict_drains_defender_on_becoming_blocked() {
     assert_eq!(g.players[1].life, life_before - 2, "afflict 2 drains the defending player");
 }
 
+// ── Combat math preview (ClientView.combat_preview) ──────────────────────────
+
+#[test]
+fn combat_preview_reports_unblocked_damage() {
+    let mut g = two_player_game();
+    let atk = g.add_card_to_battlefield(0, body("Brute", 3, 3, vec![]));
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let view = crate::server::view::project(&g, 0);
+    let prev = view.combat_preview.expect("preview during combat");
+    assert_eq!(prev.damage_to_players, vec![(1, 3)], "unblocked 3-power swing → 3 to P1");
+    assert!(prev.dying_creatures.is_empty(), "no blocks, nothing dies");
+}
+
+#[test]
+fn combat_preview_flags_a_losing_trade() {
+    let mut g = two_player_game();
+    // 3/3 attacker into a 2/2 blocker: blocker dies, attacker lives.
+    let atk = g.add_card_to_battlefield(0, body("Brute", 3, 3, vec![]));
+    let blk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(atk);
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: atk, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.perform_action(GameAction::DeclareBlockers(vec![(blk, atk)])).expect("block");
+    drain_stack(&mut g);
+    let prev = crate::server::view::project(&g, 0).combat_preview.expect("preview");
+    assert_eq!(prev.dying_creatures, vec![blk], "the 2/2 blocker is projected to die");
+    assert!(prev.damage_to_players.is_empty(), "no trample, no player damage");
+}
+
 // ── CR 702.135 Afterlife ─────────────────────────────────────────────────────
 
 #[test]

@@ -720,7 +720,29 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             if !b_dt && queued >= *a_tough {
                 continue;
             }
-            let kills_attacker = b_dt || b_pow >= (a_tough - queued);
+            // First-strike awareness (CR 702.7): if the attacker strikes
+            // first (and the blocker doesn't strike back first) and its
+            // first-strike damage is already lethal to the blocker, the
+            // blocker dies *before* dealing any damage — so it never trades
+            // up. Such a "kill" is illusory; downgrade it to a chump.
+            let atk_first_strike = state
+                .battlefield
+                .iter()
+                .find(|c| c.id == *a_id)
+                .is_some_and(|a| {
+                    a.has_keyword(&Keyword::FirstStrike) || a.has_keyword(&Keyword::DoubleStrike)
+                });
+            let blk_first_strike = {
+                let blk = state.battlefield.iter().find(|c| c.id == b_id);
+                blk.is_some_and(|c| {
+                    c.has_keyword(&Keyword::FirstStrike) || c.has_keyword(&Keyword::DoubleStrike)
+                })
+            };
+            let dies_before_striking = atk_first_strike
+                && !blk_first_strike
+                && (*a_pow >= b_tough || (*a_dt && *a_pow >= 1));
+            let kills_attacker =
+                !dies_before_striking && (b_dt || b_pow >= (a_tough - queued));
             // A deathtouch attacker kills the blocker on any damage.
             let dies_to_attacker = *a_pow >= b_tough || (*a_dt && *a_pow >= 1);
             // Scoring: clean trade (kill, don't die) > kill-and-die >

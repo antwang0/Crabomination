@@ -3098,3 +3098,59 @@ fn prismari_sparkmage_ii_b158_magecraft_mints_treasure() {
         .count();
     assert_eq!(treasures, 1);
 }
+
+#[test]
+fn bot_declines_bad_block_into_first_strike() {
+    // Push (claude/modern_decks): first-strike-aware blocking. A 2/2
+    // first-strike attacker kills a 2/2 vanilla blocker before it can
+    // strike back, so the "trade" is illusory. With full life the bot
+    // must NOT make that block.
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    let attacker = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "First Striker";
+        d.keywords = vec![Keyword::FirstStrike];
+        g.add_card_to_battlefield(1, d)
+    };
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let blocker = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2 vanilla
+    g.clear_sickness(blocker);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert!(blocks.is_empty(),
+        "bot should not chump-trade a 2/2 into a 2/2 first-striker at full life");
+}
+
+#[test]
+fn bot_blocks_first_striker_it_outsizes() {
+    // The same attacker, but our 3/3 blocker survives the first-strike
+    // damage and kills it on the regular step — a real clean trade.
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareBlockers;
+    let attacker = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "First Striker";
+        d.keywords = vec![Keyword::FirstStrike];
+        g.add_card_to_battlefield(1, d)
+    };
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let blocker = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Wall Bear";
+        d.power = 3;
+        d.toughness = 3;
+        g.add_card_to_battlefield(0, d)
+    };
+    g.clear_sickness(blocker);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert_eq!(blocks, vec![(blocker, attacker)],
+        "a 3/3 survives the first-strike 2 and kills the 2/2 first-striker");
+}

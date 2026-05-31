@@ -94,6 +94,35 @@ pub struct ClientView {
     /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
+    /// Projected combat outcome for the current attacker/blocker
+    /// assignment (Tier-7 #3 "combat math preview"). `None` outside of
+    /// combat or when no attackers are declared. `#[serde(default)]` for
+    /// snapshot back-compat.
+    #[serde(default)]
+    pub combat_preview: Option<CombatPreview>,
+}
+
+/// A projected combat-damage summary, computed from the currently
+/// declared attackers and blocks *before* damage is actually dealt.
+/// Drives the client's "life swing / who dies" combat math display.
+///
+/// The projection is a single regular-damage step (first/double strike
+/// is treated as a single hit) and assumes blockers deal their full
+/// power back to their attacker. It mirrors `resolve_combat`'s outcome
+/// for the common cases (unblocked swings, 1-for-1 trades, trample
+/// overflow, deathtouch, lifelink) without mutating state or firing
+/// triggers.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CombatPreview {
+    /// `(seat, damage)` — combat damage each player would take (unblocked
+    /// attackers + trample overflow).
+    pub damage_to_players: Vec<(usize, i32)>,
+    /// `(seat, life)` — lifelink life each player would gain from their
+    /// creatures' projected combat damage.
+    pub lifegain_to_players: Vec<(usize, i32)>,
+    /// CardIds of creatures (attackers and blockers) projected to die from
+    /// this combat's damage.
+    pub dying_creatures: Vec<CardId>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

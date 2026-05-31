@@ -71,7 +71,108 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         exile: state.exile.iter().map(exile_entry).collect(),
         game_over: state.game_over,
         damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
+        combat_preview: combat_preview(state),
     }
+}
+
+/// Compute a [`CombatPreview`] from the current attacker/blocker
+/// assignment. Returns `None` when no attackers are declared. See the
+/// struct doc for the modeling caveats.
+fn combat_preview(state: &GameState) -> Option<crate::net::CombatPreview> {
+    use crate::card::Keyword;
+    use crate::game::types::AttackTarget;
+    let attackers = state.attacking();
+    if attackers.is_empty() {
+        return None;
+    }
+    let block_map = state.block_map_snapshot(); // (blocker, attacker)
+    let mut dmg: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
+    let mut lifegain: std::collections::HashMap<usize, i32> = std::collections::HashMap::new();
+    let mut dying: Vec<CardId> = Vec::new();
+
+    let lethal_from = |attacker: &crate::card::CardInstance, defender: &crate::card::CardInstance| -> bool {
+        let p = attacker.power();
+        p > 0
+            && !defender.has_keyword(&Keyword::Indestructible)
+            && (p >= defender.toughness() || attacker.has_keyword(&Keyword::Deathtouch))
+    };
+
+    for atk in attackers {
+        let Some(a) = state.battlefield_find(atk.attacker) else { continue };
+        let blockers: Vec<&crate::card::CardInstance> = block_map
+            .iter()
+            .filter(|(_, aid)| *aid == atk.attacker)
+            .filter_map(|(bid, _)| state.battlefield_find(*bid))
+            .collect();
+        let a_power = a.power().max(0);
+        let lifelink = a.has_keyword(&Keyword::Lifelink);
+        if blockers.is_empty() {
+            // Unblocked: full damage to the defending player (planeswalker
+            // targets don't hit a player's life).
+            if let AttackTarget::Player(p) = atk.target {
+                *dmg.entry(p).or_insert(0) += a_power;
+                if lifelink {
+                    *lifegain.entry(a.controller).or_insert(0) += a_power;
+                }
+            }
+        } else {
+            // Blocked: attacker assigns lethal to blockers in id order;
+            // trample overflows to the defending player.
+            let total_blocker_power: i32 = blockers.iter().map(|b| b.power().max(0)).sum();
+            // Attacker dies if blockers' combined power (or any deathtouch
+            // blocker dealing ≥1) is lethal.
+            let dt_blocker = blockers.iter().any(|b| b.power() > 0 && b.has_keyword(&Keyword::Deathtouch));
+            if (total_blocker_power > 0 || dt_blocker)
+                && !a.has_keyword(&Keyword::Indestructible)
+                && (total_blocker_power >= a.toughness() || dt_blocker)
+            {
+                dying.push(a.id);
+            }
+            // Blockers that take lethal from the attacker. With deathtouch
+            // the first blocker eats all of it; otherwise damage is spread
+            // lethal-first across the assignment order.
+            let mut remaining = a_power;
+            for b in &blockers {
+                let needed = b.toughness().max(1);
+                if lethal_from(a, b) && (a.has_keyword(&Keyword::Deathtouch) || remaining >= needed) {
+                    dying.push(b.id);
+                    remaining -= if a.has_keyword(&Keyword::Deathtouch) { 1 } else { needed };
+                }
+            }
+            // Trample overflow (CR 510.1c): leftover after lethal to all
+            // blockers spills to the defending player.
+            if a.has_keyword(&Keyword::Trample) {
+                let assign_to_block: i32 = blockers
+                    .iter()
+                    .map(|b| if a.has_keyword(&Keyword::Deathtouch) { 1 } else { b.toughness().max(0) })
+                    .sum();
+                let overflow = (a_power - assign_to_block).max(0);
+                if overflow > 0
+                    && let AttackTarget::Player(p) = atk.target
+                {
+                    *dmg.entry(p).or_insert(0) += overflow;
+                }
+            }
+            if lifelink {
+                *lifegain.entry(a.controller).or_insert(0) += a_power;
+            }
+            // Blockers with lifelink gain their controller life for the
+            // damage they deal to the attacker.
+            for b in &blockers {
+                if b.has_keyword(&Keyword::Lifelink) {
+                    *lifegain.entry(b.controller).or_insert(0) += b.power().max(0);
+                }
+            }
+        }
+    }
+
+    dying.sort();
+    dying.dedup();
+    let mut damage_to_players: Vec<(usize, i32)> = dmg.into_iter().filter(|(_, d)| *d != 0).collect();
+    damage_to_players.sort();
+    let mut lifegain_to_players: Vec<(usize, i32)> = lifegain.into_iter().filter(|(_, d)| *d != 0).collect();
+    lifegain_to_players.sort();
+    Some(crate::net::CombatPreview { damage_to_players, lifegain_to_players, dying_creatures: dying })
 }
 
 fn exile_entry(card: &CardInstance) -> ExileCardView {
