@@ -473,7 +473,7 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         spell_pierce,
         negate,
         dispel,
-        // daze           — 🟡 "return an Island" alt-cost omitted
+        daze,
         // swan_song 🟡 — Bird token currently goes to caster instead of
         // the countered spell's controller in multiplayer; gameplay-
         // equivalent in 2-player (the only matters-case is who owns the
