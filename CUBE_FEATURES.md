@@ -90,7 +90,6 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Basking Rootwalla | 🟡 | 1/1 Lizard; once-per-turn `{1}{G}`: +2/+2 EOT. Madness {0} omitted. |
 | Elvish Reclaimer | 🟡 | {1}{G} 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider (3/4 with 7+ in graveyard) is omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
@@ -210,7 +209,6 @@ are listed in `DECK_FEATURES.md`.
 | Feature | Status | Cards depending on it |
 |---|---|---|
 | Equipment + equip-cost activated ability | 🟡 | `GameAction::Equip` + `equipped_bonus` ship Shuko, Lavaspur Boots (✅). Lion Sash (counter-scaled bonus), Nettlecyst, Sword of Body and Mind, Helm of the Host still need dynamic/triggered equip bonuses. |
-| Madness | ⏳ | Anje's Ravager, Blazing Rootwalla, Basking Rootwalla. |
 | Cycling | ✅ | Engine support complete: `Keyword::Cycling(cost)` + `GameAction::Cycle` (`cycle_card`) pay the cost, discard, draw, and fire `CardCycled`. Catalog cards already use it. The listed cube cards (Aether Spellbomb, Sundering Eruption-adjacent) just aren't added yet. |
 | Adventure (cost-mode duality) | ⏳ | Virtue of Loyalty. |
 | Mutate | ⏳ | Mutated Cultist, Mutable Explorer. |

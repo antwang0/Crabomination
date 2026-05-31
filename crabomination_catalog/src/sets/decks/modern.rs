@@ -400,10 +400,9 @@ pub fn burning_tree_emissary() -> CardDefinition {
     }
 }
 
-/// Putrid Imp — {B} Creature — Imp 1/1. Flying. Discard a card: target
-/// creature you control gains threshold-bonus tricks (we model the engine-
-/// supported half — Putrid Imp's main role in reanimator decks is as a
-/// turn-1 discard outlet for Griselbrand / Atraxa).
+/// Putrid Imp — {B} 1/1 Imp. Flying. "Discard a card: This creature gains
+/// menace until end of turn." A turn-1 discard outlet (the Madness/
+/// reanimator enabler) plus a menace trick.
 pub fn putrid_imp() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

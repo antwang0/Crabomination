@@ -131,7 +131,9 @@ not how Magic works" moments.
 Grouped roughly by how many cards each unlocks. Each is a small, targeted
 feature; sweep card-batch by card-batch.
 
-- **High frequency / modern staples:** ⏳ Madness, ⏳ Escape, ⏳ Adventure,
+- **High frequency / modern staples:** ✅ Madness (`Keyword::Madness`,
+  discard→exile→offer-cast in `discard_card`/`offer_madness_cast`, CR
+  702.35), ⏳ Escape, ⏳ Adventure,
   ⏳ Soulbond, ⏳ Mutate, ⏳ Companion, ⏳ Foretell, ⏳ Disturb,
   ⏳ Daybound/Nightbound, ⏳ Blitz, 🟡 Casualty, ⏳ Connive, ⏳ Backup,
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
