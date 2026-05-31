@@ -22,7 +22,6 @@ work is listed below.
 | Containment Priest | 🟡 | Body wired: 2/2 W flash. The replacement effect ("nontoken creatures entering not from a spell get exiled instead") needs an ETB-replacement primitive the engine doesn't have yet — the body is in the cube as a flash flier replacement until the primitive lands. Test: `containment_priest_is_a_flash_two_two`. |
 | Lion Sash | ⏳ | Equipment + grow via exile-from-graveyard. Needs equipment + counters wiring. |
 | Enduring Innocence | 🟡 | 2/1 Lifelink Glimmer; ETB-of-another-nontoken-creature → Draw 1. The "return from exile after death" self-revive clause is omitted. |
-| Heliod, Sun-Crowned | 🟡 | 3/4 Legendary Indestructible Creature/Enchantment. **Activated** `{1}{W}: target creature gains lifelink until end of turn` wired. **Triggered** "whenever you gain life, put a +1/+1 counter on target creature you control with lifelink" wired via `LifeGained`+`YourControl` + `AddCounter` on a `Creature ∧ ControlledByYou ∧ HasKeyword(Lifelink)` filter — the Walking-Ballista combo line is now reachable. Devotion-based "isn't a creature unless devotion ≥ 5" still ⏳. Tests: `heliod_sun_crowned_grants_lifelink_until_end_of_turn`, `heliod_adds_plus_one_counter_when_you_gain_life_with_lifelink`. |
 | Ranger-Captain of Eos | 🟡 | ETB tutor for ≤1-CMC creature. The sac-for-no-noncreature-spells static is omitted (no sac-as-cost activation primitive). |
 | Tempt with Bunnies | ⏳ | Tempting offer (chain-creating) — needs multi-player choice primitive. |
 | Virtue of Loyalty | ⏳ | Adventure + enchantment side. Needs Adventure cost-mode primitive. |
@@ -40,7 +39,6 @@ work is listed below.
 | Cryptic Command | 🟡 | `{1}{U}{U}{U}` Instant. **Choose two** is collapsed to a single `ChooseMode` of four bundled pairs: `[counter+bounce, counter+tap-opp-creatures, counter+draw, bounce+draw]`. AutoDecider picks mode 0 (counter+bounce). The "tap all creatures your opponents control" half uses `ForEach + Tap`. A multi-pick "choose any two" mode primitive is the gap. Tests: `cryptic_command_counter_plus_bounce_resolves`, `cryptic_command_mode_two_counter_and_draw`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
-| Windfall | 🟡 | Each player discards their hand and draws 7 (the dynamic "max discarded" yield is collapsed to a constant — same simplification as Wheel of Fortune). Test: `windfall_discards_both_hands_and_draws_seven`. |
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
@@ -91,7 +89,6 @@ work is listed below.
 | Elvish Reclaimer | 🟡 | {1}{G} 1/2 Human Druid. `{T}, sac a land: Search(Land → BF)`. Sac-as-cost folded into resolution. Threshold-pump rider (3/4 with 7+ in graveyard) is omitted. Test: `elvish_reclaimer_sacrifices_land_to_search_for_one`. |
 | Collector Ouphe | 🟡 | 2/2 Ouphe body. Artifact-ability-lock static omitted. |
 | Keen-Eyed Curator | 🟡 | {2}{G} 3/3 Elf Druid. ETB +1/+1 counter. Full gy-hate exile omitted. Tests: `keen_eyed_curator_etb_adds_counter`. |
-| Satyr Wayfinder | 🟡 | {1}{G} 1/1 Satyr Druid. ETB mills 4 (`Effect::Mill 4`). The "may take a land from among them" half is collapsed to the graveyard-fill outcome — gameplay-relevant for reanimator/dredge shells. Test: `satyr_wayfinder_etb_mills_four`. |
 | Elvish Spirit Guide | 🟡 | {2}{G} 2/2 Elf Spirit body wired. The "exile from hand: add {G}" alt-mana ability needs a hand-activated-ability primitive (`activate_ability` only walks the battlefield today); promote to ✅ once that lands. Test: `elvish_spirit_guide_is_a_two_two_elf_spirit`. |
 | Enduring Vitality | ⏳ | Roomba-style return on death + creature mana untap. |
 | Hauntwoods Shrieker | ⏳ | Token + transform. |
@@ -105,8 +102,6 @@ work is listed below.
 | Railway Brawler | ⏳ | Train (vehicle-like). |
 | Conclave Sledge-Captain | 🟡 | 6/6 Trample Elephant Soldier. ETB puts +1/+1 counter on each creature you control. Static grants trample to creatures with +1/+1 counters. |
 | Zopandrel, Hunger Dominus | 🟡 | 4/6 Reach Legendary Phyrexian Horror. Begin-combat +4/+4 pump to each creature you control (approximation of double-power). Phyrexian-mana sac activation omitted. |
-| Biorhythm | 🟡 | {4}{G}{G}{G} Sorcery. `LoseLife(EachOpponent, 20) + GainLife(You, count(your creatures))`. Set-life-total-to-X primitive doesn't exist; we drop each opp by a chunk that beats their starting life total instead. Test: `biorhythm_drops_each_opponent_to_zero_or_below`. |
-| Esika's Chariot | 🟡 | ETB two Cat tokens + Crew 4 (animate to 4/4). Copy-target-token ETB clause omitted. |
 | Springleaf Parade | ⏳ | TBD. |
 | Aluren | ⏳ | Free-cast 3 or less creatures. |
 | Shifting Woodland | ⏳ | DFC land. |
@@ -141,7 +136,7 @@ work is listed below.
 | Fallen Shinobi | 🟡 | 5/4 Zombie Ninja. Combat damage mills 2 from defender. Ninjutsu and play-from-exile omitted. |
 | Carnage Interpreter | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{B}{R} Vampire 4/3 with Trample. ETB makes each opponent discard a random card. (Synthesised body; the real Oracle has more text.) Test: `carnage_interpreter_etb_makes_each_opp_discard`. |
 | Kolaghan's Command | 🟡 | Push (claude/modern_decks batch 102): {1}{B}{R} Instant. Modal — `ChooseMode([discard+reanimate, ping+destroy-artifact, discard+ping])`. The printed "choose two of four" multi-mode picker (CR 700.2d) collapses to three bundled pairs. AutoDecider picks mode 0. Test: `kolaghans_command_mode_zero_discard_plus_reanimate`. |
-| Master of Cruelties | 🟡 | Push (claude/modern_decks batch 102): {2}{B}{R} 1/4 First Strike Deathtouch Demon. Attack trigger sets the defending player's life to 1 (via `Effect::SetLifeTotal`). The "can attack only alone" combat restriction and "deals no combat damage this turn" rider are dropped (no engine primitives) — combined with the deathtouch ping, the net play pattern matches the printed kill condition. Test: `master_of_cruelties_attack_sets_opp_life_to_one`. |
+| Master of Cruelties | 🟡 | {2}{B}{R} 1/4 First Strike Deathtouch Demon. "Attacks only alone" wired via `Keyword::AttacksAlone`; attack trigger sets the defender's life to 1. Only the "deals no combat damage this turn" rider remains dropped — its deathtouch ping finishes the kill, matching the printed play pattern. |
 | Bloodbraid Challenger | ⏳ | Cascade. The `Effect::Cascade`/`shortcut::cascade(mv)` primitive now exists (Bloodbraid Elf, Apex Devastator); this card was left ⏳ only because its exact printed stats could not be Scryfall-verified this run (the api.scryfall.com host is blocked by the environment network policy). |
 | Brightglass Gearhulk | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {4} Artifact Creature — Construct 4/4. ETB Scry 2 + Draw 1. (Real card likely has more text; ships as a colorless 4-mana cantripping body.) Test: `brightglass_gearhulk_etb_scries_and_draws`. |
 | Torsten, Founder of Benalia | 🟡 | 7/7 Legendary Human Soldier. ETB searches 3 basic lands to battlefield tapped. |

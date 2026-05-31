@@ -6,37 +6,7 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 `STRIXHAVEN2.md` (Secrets-of-Strixhaven status), and `FEATURE_ROADMAP.md`
 (prioritized engine functionality).
 
-## Recent additions (Push XLIII — claude/modern_decks: combat-requirement + same-name + Mentor primitives)
-
-New engine primitives, 16 partial cards completed/promoted with tests, 3 CR
-sections, and one improvement each in engine / UI / server.
-
-- **CR 509.1c — Must be blocked if able** ✅ — `Keyword::MustBeBlocked`
-  enforced in `declare_blockers` (reject leaving it unblocked while an idle
-  able blocker exists) + a bot `pick_blocks` post-pass so bot games can't
-  deadlock. Wires **Academic Dispute**.
-- **CR 702.114 — Mentor** ✅ — `SelectionRequirement::PowerLessThanSource`
-  (source-relative "lesser power"). Made **Combat Professor** + **Lorehold
-  Mentor** dynamic (were hard-coded `PowerAtMost`).
-- **CR 702.4 — Double strike** (lock-in test) via `GrantKeywordToAttackers`
-  static → **Blade Historian** ("attacking creatures you control have double
-  strike"); fixed its wrong P/T/subtype too.
-- **`Selector::SharingNameWith`** — "all permanents with the same name":
-  **Maelstrom Pulse**, **Echoing Truth**.
-- **`Value::PermanentsDestroyedThisResolution` + `ManaPayload::OfColors`** —
-  **Culling Ritual**'s "add {B} or {G} per permanent destroyed".
-- **Searing Blood** death-burn rider (Lava-Coil-style `If(toughness≤2)`),
-  **Elemental Expressionist** real flicker (`DelayUntil(NextEndStep)`),
-  **Symmetry Sage** merged to one magecraft `Seq`.
-- **Stale-doc promotions** (already wired in prior runs): Mica, Silverquill
-  the Disputant, Zaffai, Velomachus, Sacred Fire, Divine Gambit, Mentor's
-  Guidance; corrected Quandrix/Applied Geometry comments.
-- **UI** — `keyword_label` now prints friendly text for combat/evasion
-  keywords (Must be blocked, Can't block, Skulk, Fear, Intimidate, …) instead
-  of raw `{:?}`.
-- **Server** — `MatchOutcome.final_board_sizes` (per-seat battlefield count).
-
-### Follow-ups noticed this run (not yet done)
+## Follow-ups noticed (not yet done)
 
 - **"Becomes a copy" continuous layer-1 effects** — the one-shot copiers
   (Clone, Phantasmal Image, Mirror Image, Stunt Double, Spark Double) ship via
@@ -68,9 +38,16 @@ sections, and one improvement each in engine / UI / server.
 - **Echoing Truth same-name bounce** routes every copy to `OwnerOf(Target0)`;
   mixed-ownership same-named permanents would all go to the target's owner.
   Needs a per-moved-card owner destination to be fully correct.
-- **Client can't be built/clippy'd in the web sandbox** — `wayland-sys` needs
-  the `wayland-client` system lib. Engine + server clippy are clean. Re-run
-  `cargo clippy --workspace` locally to cover the client.
+- **Nykthos UI** — the `DevotionOfChosenColor` payload suspends on a
+  `ChooseColor` for wants_ui players; a devotion preview on the chip would
+  help (the count is shown in the HUD already).
+- **Theros gods left to add** — Heliod (God of the Sun), Purphoros, Pharika,
+  and the two-color Theros: Beyond Death gods all reuse
+  `StaticEffect::NotCreatureWhileDevotionBelow`; not added this run pending
+  Scryfall-verified ability text (api.scryfall.com is blocked here).
+- **Client build deps** — building the client in the web sandbox needs
+  `libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev` (install via
+  apt). Once present `cargo build/clippy -p crabomination_client` works.
 
 ## MagicCompRules coverage audit
 
@@ -80,6 +57,19 @@ Periodic spot-check of the rules document
 wired, 🟡 partial, ⏳ todo) plus a short note.
 
 - ✅ **CR 702.130 — Enrage**
+
+- ✅ **CR 700.5 — Devotion** (claude/modern_decks). `Value::DevotionTo(colors)`
+  counts colored mana symbols among your permanents (hybrid/Phyrexian count
+  per half). `StaticEffect::NotCreatureWhileDevotionBelow` gates the Nyx
+  gods' creature-ness via a layer-4 `RemoveCardType(Creature)`, resolved
+  against live devotion in `gather_continuous_effects`. `ManaPayload::
+  DevotionOfChosenColor` powers Nykthos. Surfaced in `PlayerView.devotion`.
+  Cards: Gray Merchant of Asphodel, Nylea, Thassa, Erebos, Nykthos.
+
+- ✅ **CR 508.0 — "Attacks only alone"** (claude/modern_decks).
+  `Keyword::AttacksAlone` — `declare_attackers` rejects a multi-attacker
+  batch containing it. Master of Cruelties. Test:
+  `master_of_cruelties_cannot_attack_alongside_another_creature`.
 
 - ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
   `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp
