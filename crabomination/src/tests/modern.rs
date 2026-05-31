@@ -18565,3 +18565,38 @@ fn theros_artifact_bodies() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].mana_pool.total(), 1, "Opaline Unicorn made one mana");
 }
+
+#[test]
+fn returned_centaur_etb_mills_four() {
+    let mut g = two_player_game();
+    for _ in 0..6 { g.add_card_to_library(0, catalog::island()); }
+    let yard = g.players[0].graveyard.len();
+    let id = g.add_card_to_hand(0, catalog::returned_centaur());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Returned Centaur castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), yard + 4, "ETB self-mills four");
+}
+
+#[test]
+fn baleful_eidolon_is_an_enchantment_creature_with_deathtouch() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::baleful_eidolon());
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.definition.card_types.contains(&CardType::Enchantment));
+    assert!(c.has_keyword(&crate::card::Keyword::Deathtouch));
+}
+
+#[test]
+fn theros_minotaur_bodies() {
+    let mut g = two_player_game();
+    let bm = g.add_card_to_battlefield(0, catalog::borderland_minotaur());
+    let dr = g.add_card_to_battlefield(0, catalog::deathbellow_raider());
+    let aw = g.add_card_to_battlefield(0, catalog::asphodel_wanderer());
+    assert_eq!((g.battlefield_find(bm).unwrap().power(), g.battlefield_find(bm).unwrap().toughness()), (3, 3));
+    assert_eq!((g.battlefield_find(dr).unwrap().power(), g.battlefield_find(dr).unwrap().toughness()), (3, 1));
+    assert_eq!((g.battlefield_find(aw).unwrap().power(), g.battlefield_find(aw).unwrap().toughness()), (1, 1));
+}

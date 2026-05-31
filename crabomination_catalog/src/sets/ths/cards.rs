@@ -378,3 +378,81 @@ pub fn opaline_unicorn() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Borderland Minotaur — {3}{R} Creature — Minotaur Warrior 3/3.
+pub fn borderland_minotaur() -> CardDefinition {
+    CardDefinition {
+        name: "Borderland Minotaur",
+        cost: cost(&[generic(3), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        ..Default::default()
+    }
+}
+
+/// Deathbellow Raider — {1}{R} Creature — Minotaur Berserker 3/1.
+pub fn deathbellow_raider() -> CardDefinition {
+    CardDefinition {
+        name: "Deathbellow Raider",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Minotaur, CreatureType::Berserker],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Asphodel Wanderer — {1}{B} Creature — Zombie 1/1.
+pub fn asphodel_wanderer() -> CardDefinition {
+    CardDefinition {
+        name: "Asphodel Wanderer",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Returned Centaur — {3}{B} Creature — Zombie Centaur 3/3. ETB: put the
+/// top four cards of your library into your graveyard.
+pub fn returned_centaur() -> CardDefinition {
+    CardDefinition {
+        name: "Returned Centaur",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Centaur],
+            ..Default::default()
+        },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![etb(Effect::Mill { who: Selector::You, amount: Value::Const(4) })],
+        ..Default::default()
+    }
+}
+
+/// Baleful Eidolon — {2}{B} Enchantment Creature — Zombie 1/1. Deathtouch.
+/// (Bestow is omitted — ships as the enchantment-creature body.)
+pub fn baleful_eidolon() -> CardDefinition {
+    CardDefinition {
+        name: "Baleful Eidolon",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Enchantment, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Zombie], ..Default::default() },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Deathtouch],
+        ..Default::default()
+    }
+}
