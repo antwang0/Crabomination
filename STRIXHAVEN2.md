@@ -48,9 +48,12 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   four canonical ones plus the Lessons that themselves Learn and Professor
   of Symbology). `cube::build_cube_state` gives every seat the standard
   Lessons sideboard via `cube::lessons_sideboard()`, so Learn fetches in
-  real cube games. Remaining: populate sideboards in the other deck-build
-  paths (formats / draft), and add the client UI suspend flow for the Learn
-  decision.
+  real cube games. The client UI suspend flow is wired too: a `wants_ui`
+  player's Learn suspends on `Decision::Learn` (`PendingEffectState::LearnPending`)
+  and the client renders a modal (reveal-a-Lesson / discard-to-draw /
+  decline) that submits `DecisionAnswer::Learn(LearnChoice)`. The only
+  remaining Learn work is populating sideboards in the other deck-build
+  paths (formats / draft).
 - **Multi-target prompts on instants/sorceries** — "choose one or both"
   with a target per chosen mode now works via `Effect::ChooseN`'s per-mode
   target slots (Steal the Show). The remaining gap is *divided* targeting
@@ -59,6 +62,6 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   slots), distinct from the bag-of-targets primitives.
 
 All printed SOS cards are now ✅, and the Learn / Lessons-sideboard mechanic
-is wired end-to-end (engine + every Learn card + cube sideboards). The only
-remaining Learn work is the other deck-build paths (formats / draft) and the
-client UI suspend flow — see "Known engine gaps" above.
+is wired end-to-end (engine + every Learn card + cube sideboards + client UI
+modal). The only remaining Learn work is populating sideboards in the other
+deck-build paths (formats / draft) — see "Known engine gaps" above.

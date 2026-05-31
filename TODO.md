@@ -2965,8 +2965,14 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   `tests::game::{learn_fetches_a_lesson_from_the_sideboard,
   learn_rummage_discards_then_draws, learn_decline_does_nothing}` and
   `cube::tests::build_cube_state_gives_each_seat_a_lessons_sideboard`.
+  The client UI suspend flow is wired: a `wants_ui` player's Learn suspends
+  on `Decision::Learn` (`PendingEffectState::LearnPending`) and the client's
+  `decision_ui::spawn_learn_modal` / `handle_learn_buttons` render the
+  reveal-a-Lesson / discard-to-draw / decline modal, submitting
+  `DecisionAnswer::Learn(LearnChoice)`. Covered by
+  `tests::game::learn_ui_player_suspends_and_resumes_via_submit_decision`.
   Remaining: populate sideboards in the other deck-build paths (formats /
-  draft) and add the client UI suspend flow for `Decision::Learn`.
+  draft).
 - ⏳ **Counter-multiplier primitive** — Already used by Tanazir
   (via the ForEach idiom). Future cards (Vorinclex, Doubling
   Season) want a true multiplier on counter accrual; tracked

@@ -878,32 +878,23 @@ impl GameState {
                     .iter()
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
-                let answer = self
-                    .decider
-                    .decide(&Decision::Learn { player: p, lessons, hand });
-                let choice = match answer {
+                let decision = Decision::Learn { player: p, lessons, hand };
+                // UI players answer asynchronously: suspend resolution and
+                // surface the decision; `apply_pending_effect_answer` resumes
+                // via `PendingEffectState::LearnPending`.
+                if self.players[p].wants_ui {
+                    self.suspend_signal = Some((
+                        decision,
+                        crate::game::types::PendingEffectState::LearnPending { player: p },
+                        Effect::Noop,
+                    ));
+                    return Ok(());
+                }
+                let choice = match self.decider.decide(&decision) {
                     DecisionAnswer::Learn(c) => c,
                     _ => LearnChoice::Decline,
                 };
-                match choice {
-                    LearnChoice::FetchLesson(cid) => {
-                        if let Some(pos) =
-                            self.players[p].sideboard.iter().position(|c| c.id == cid)
-                        {
-                            let card = self.players[p].sideboard.remove(pos);
-                            self.players[p].hand.push(card);
-                        }
-                    }
-                    LearnChoice::Rummage { discard } => {
-                        if self.players[p].hand.iter().any(|c| c.id == discard) {
-                            self.discard_card(p, discard, events);
-                            if !self.draw_one(p, events) {
-                                self.players[p].eliminated = true;
-                            }
-                        }
-                    }
-                    LearnChoice::Decline => {}
-                }
+                self.apply_learn_choice(p, choice, events);
                 Ok(())
             }
 
@@ -4092,6 +4083,36 @@ impl GameState {
                 .filter(|i| self.players[*i].is_alive())
                 .collect(),
             _ => self.resolve_player(pref, ctx).into_iter().collect(),
+        }
+    }
+
+    /// Apply a resolved `LearnChoice` (CR 701.45): reveal a Lesson from the
+    /// sideboard into hand, rummage (discard then draw), or decline. Shared
+    /// by the synchronous `Effect::Learn` path and the UI resume in
+    /// `apply_pending_effect_answer`.
+    pub(crate) fn apply_learn_choice(
+        &mut self,
+        p: usize,
+        choice: crate::decision::LearnChoice,
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::decision::LearnChoice;
+        match choice {
+            LearnChoice::FetchLesson(cid) => {
+                if let Some(pos) = self.players[p].sideboard.iter().position(|c| c.id == cid) {
+                    let card = self.players[p].sideboard.remove(pos);
+                    self.players[p].hand.push(card);
+                }
+            }
+            LearnChoice::Rummage { discard } => {
+                if self.players[p].hand.iter().any(|c| c.id == discard) {
+                    self.discard_card(p, discard, events);
+                    if !self.draw_one(p, events) {
+                        self.players[p].eliminated = true;
+                    }
+                }
+            }
+            LearnChoice::Decline => {}
         }
     }
 

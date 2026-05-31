@@ -3241,6 +3241,14 @@ impl GameState {
                     graveyarded,
                 }])
             }
+            PendingEffectState::LearnPending { player } => {
+                let DecisionAnswer::Learn(choice) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = vec![];
+                self.apply_learn_choice(player, choice.clone(), &mut events);
+                Ok(events)
+            }
             PendingEffectState::SearchPending { player, to } => {
                 let DecisionAnswer::Search(chosen_id) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

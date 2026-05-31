@@ -4327,6 +4327,35 @@ fn learn_decline_does_nothing() {
 }
 
 #[test]
+fn learn_ui_player_suspends_and_resumes_via_submit_decision() {
+    // A `wants_ui` player's Learn suspends on a `Decision::Learn` instead of
+    // auto-resolving; submitting the answer reveals the Lesson into hand.
+    use crate::card::CardInstance;
+    use crate::decision::{Decision, LearnChoice};
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    let lesson = g.next_id();
+    g.players[0]
+        .sideboard
+        .push(CardInstance::new(lesson, catalog::pest_summoning(), 0));
+    let twitch = g.add_card_to_battlefield(0, catalog::eyetwitch());
+
+    g.remove_to_graveyard_with_triggers(twitch); // Eyetwitch dies → Learn
+    drain_stack(&mut g);
+
+    let pd = g.pending_decision.as_ref().expect("Learn should suspend for a UI player");
+    assert!(matches!(pd.decision, Decision::Learn { .. }), "a Learn decision is pending");
+
+    g.submit_decision(DecisionAnswer::Learn(LearnChoice::FetchLesson(lesson)))
+        .expect("Learn answer accepted");
+    assert!(g.pending_decision.is_none(), "decision resolved");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == lesson),
+        "the Lesson was fetched into hand after the UI answer"
+    );
+}
+
+#[test]
 fn closing_statement_exiles_target_and_gains_x_life() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());

@@ -97,6 +97,8 @@ pub enum DecisionKey {
     /// re-spawned decision with a different legal set is treated as
     /// new (the old highlight-set needs to clear).
     ChooseTarget(CardId, Vec<Target>),
+    /// `Decision::Learn` — keyed by the offered Lesson ids.
+    Learn(Vec<CardId>),
 }
 
 fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
@@ -119,6 +121,9 @@ fn decision_key(decision: &DecisionWire) -> Option<DecisionKey> {
             *mulligans_taken,
         )),
         DecisionWire::ChooseColor { source, .. } => Some(DecisionKey::ChooseColor(*source)),
+        DecisionWire::Learn { lessons, .. } => {
+            Some(DecisionKey::Learn(lessons.iter().map(|(id, _)| *id).collect()))
+        }
         DecisionWire::ChooseTarget { source, legal, .. } => {
             Some(DecisionKey::ChooseTarget(*source, legal.clone()))
         }
@@ -254,6 +259,10 @@ pub fn spawn_decision_ui(
         DecisionWire::ChooseColor { legal, .. } => {
             state.spawned_for = Some(key);
             spawn_choose_color_modal(&mut commands, &ui_fonts, legal);
+        }
+        DecisionWire::Learn { lessons, hand, .. } => {
+            state.spawned_for = Some(key);
+            spawn_learn_modal(&mut commands, &ui_fonts, lessons, hand);
         }
         DecisionWire::Discard { count, hand, .. } => {
             state.discard_selected.clear();
@@ -1368,6 +1377,180 @@ fn spawn_choose_color_modal(
             }
         });
     });
+}
+
+// ── Learn modal (Lessons sideboard) ─────────────────────────────────────────
+
+#[derive(Component)]
+pub struct LearnFetchButton(pub CardId);
+#[derive(Component)]
+pub struct LearnRummageButton(pub CardId);
+#[derive(Component)]
+pub struct LearnDeclineButton;
+
+fn spawn_learn_modal(
+    commands: &mut Commands,
+    ui_fonts: &UiFonts,
+    lessons: &[(CardId, String)],
+    hand: &[(CardId, String)],
+) {
+    let root = commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                left: Val::Px(0.0),
+                top: Val::Px(0.0),
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            bevy::picking::Pickable::IGNORE,
+            DecisionModal,
+        ))
+        .id();
+    let panel = commands
+        .spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                padding: UiRect::all(Val::Px(20.0)),
+                row_gap: Val::Px(10.0),
+                align_items: AlignItems::Stretch,
+                min_width: Val::Px(280.0),
+                border_radius: BorderRadius::all(theme::RADIUS_PANEL),
+                ..default()
+            },
+            BackgroundColor(theme::PANEL_BG),
+        ))
+        .id();
+    commands.entity(root).add_child(panel);
+
+    // A labelled, full-width pick button. Returns it so the caller tags it
+    // with the right marker component.
+    commands.entity(panel).with_children(|p| {
+        p.spawn((
+            Text::new("Learn — reveal a Lesson, or discard a card to draw"),
+            ui_fonts.tf(16.0),
+            TextColor(theme::TEXT_PRIMARY),
+        ));
+
+        p.spawn((
+            Text::new("Reveal a Lesson into your hand:"),
+            ui_fonts.tf(13.0),
+            TextColor(theme::TEXT_SECONDARY),
+        ));
+        for (id, name) in lessons {
+            p.spawn((
+                Button,
+                Node {
+                    padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                    border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                    ..default()
+                },
+                BackgroundColor(Color::srgb(0.25, 0.45, 0.30)),
+                LearnFetchButton(*id),
+            ))
+            .with_children(|b| {
+                b.spawn((
+                    Text::new(name.clone()),
+                    ui_fonts.tf(14.0),
+                    TextColor(Color::WHITE),
+                    bevy::picking::Pickable::IGNORE,
+                ));
+            });
+        }
+
+        if !hand.is_empty() {
+            p.spawn((
+                Text::new("Or discard a card to draw:"),
+                ui_fonts.tf(13.0),
+                TextColor(theme::TEXT_SECONDARY),
+            ));
+            for (id, name) in hand {
+                p.spawn((
+                    Button,
+                    Node {
+                        padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                        border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                        ..default()
+                    },
+                    BackgroundColor(Color::srgb(0.40, 0.30, 0.20)),
+                    LearnRummageButton(*id),
+                ))
+                .with_children(|b| {
+                    b.spawn((
+                        Text::new(format!("Discard {name}")),
+                        ui_fonts.tf(13.0),
+                        TextColor(Color::WHITE),
+                        bevy::picking::Pickable::IGNORE,
+                    ));
+                });
+            }
+        }
+
+        p.spawn((
+            Button,
+            Node {
+                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(0.30, 0.30, 0.34)),
+            LearnDeclineButton,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("Decline"),
+                ui_fonts.tf(14.0),
+                TextColor(Color::WHITE),
+                bevy::picking::Pickable::IGNORE,
+            ));
+        });
+    });
+}
+
+/// Click handler for the Learn modal's three action types. Submits the
+/// chosen `LearnChoice` as the pending decision's answer.
+pub fn handle_learn_buttons(
+    view: Res<CurrentView>,
+    outbox: Option<Res<NetOutbox>>,
+    mut state: ResMut<DecisionUiState>,
+    fetch: Query<(&Interaction, &LearnFetchButton), Changed<Interaction>>,
+    rummage: Query<(&Interaction, &LearnRummageButton), Changed<Interaction>>,
+    decline: Query<&Interaction, (Changed<Interaction>, With<LearnDeclineButton>)>,
+) {
+    use crabomination::decision::LearnChoice;
+    let Some(cv) = &view.0 else { return };
+    if !matches!(
+        cv.pending_decision.as_ref().and_then(|p| p.decision.as_ref()),
+        Some(DecisionWire::Learn { .. })
+    ) {
+        return;
+    }
+    let Some(outbox) = outbox else { return };
+    let mut submit = |choice: LearnChoice, state: &mut DecisionUiState| {
+        outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Learn(choice)));
+        state.spawned_for = None;
+    };
+    for (interaction, btn) in &fetch {
+        if *interaction == Interaction::Pressed {
+            submit(LearnChoice::FetchLesson(btn.0), &mut state);
+            return;
+        }
+    }
+    for (interaction, btn) in &rummage {
+        if *interaction == Interaction::Pressed {
+            submit(LearnChoice::Rummage { discard: btn.0 }, &mut state);
+            return;
+        }
+    }
+    for interaction in &decline {
+        if *interaction == Interaction::Pressed {
+            submit(LearnChoice::Decline, &mut state);
+            return;
+        }
+    }
 }
 
 // ── Mode pick (modal "Choose one —" spells) ───────────────────────────────

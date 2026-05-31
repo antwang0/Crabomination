@@ -380,6 +380,10 @@ pub enum PendingEffectState {
     ScryPeeked { count: usize, player: usize },
     SurveilPeeked { count: usize, player: usize },
     SearchPending { player: usize, to: crate::effect::ZoneDest },
+    /// CR 701.45 — suspended on a `Decision::Learn`. The resume step reads
+    /// `DecisionAnswer::Learn(choice)` and reveals a Lesson into `player`'s
+    /// hand, rummages (discard-then-draw), or declines.
+    LearnPending { player: usize },
     /// Suspended on a `LookPickToHand` decision (Impulse / Strategic
     /// Planning / Flow State). `revealed` is the peeked top-of-library set;
     /// the chosen card goes to hand and the rest to the bottom of the
