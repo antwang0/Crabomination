@@ -20,11 +20,11 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
   so brand-new cards can only be added for staples whose exact stats/text are
   known cold. This run added 24 classic core-set bodies (`lea`); further bulk
   card work needs a Scryfall-equivalent data source in the sandbox.
-- **Multi-target "choose two" (`Effect::ChooseN`)** — modes still share a
-  single target slot, so cards that pick two modes with *distinct* targets
-  collapse to bundled pairs (Cryptic Command, Steal the Show's "one or both",
-  Collective Brutality escalate). Needs per-picked-mode target-slot allocation
-  at cast time (CR 601.2b→601.2c ordering).
+- **Multi-target "choose two"** — `Effect::ChooseN` now allocates a target
+  slot per chosen mode (Steal the Show's "one or both" ships). Remaining:
+  bundled multi-mode cards still wired as a single `ChooseMode` of pairs
+  (Cryptic Command), and *divided* targeting within one mode/effect (Vibrant
+  Outburst, Snow Day, Crackle with Power — split-N / divided-damage slots).
 - **Dynamic P/T CDA generalization** — characteristic-defining `*/*` P/T
   (Nightmare = Swamps you control, Master of Etherium) is hand-wired per card in
   `compute_battlefield` (Tarmogoyf pattern). A `StaticEffect::SetPtFromValue`
