@@ -38,11 +38,14 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
-- **Enters-as-a-copy of a permanent (CR 707.5)** — Phantasmal Image,
-  Mockingbird, Clone. `Effect::CreateTokenCopyOf` covers token copies;
-  the gap is a *nontoken* permanent that becomes a copy of a chosen target
-  as it resolves off the stack. Needs a resolution-time `Decision::ChooseTarget`
-  to pick the copy target plus a definition-swap before the battlefield push.
+- **Enters-as-a-copy of a permanent (CR 707.x)** ✅ — `Effect::BecomeCopyOf`
+  (definition rewrite) + the `CardDefinition.enters_as_copy` ETB hook (applied
+  before the first SBA so a 0/0 copier never dies first) ship Clone, Phantasmal
+  Image, Mirror Image, Stunt Double, Spark Double; copied ETB triggers re-fire
+  (707.5). Token copies use `CreateTokenCopyOf` (Cackling Counterpart). Still
+  open: "becomes a copy" *continuous* layer-1 effects (Helm of the Host loop,
+  Mirrorform), copied enters-with-counters, Mockingbird's name-retention
+  exception, and a real copy-target picker (auto-picks highest power today).
 - **Overload (CR 702.96)** — Cyclonic Rift's `{6}{U}` mode. Needs an
   alt-cost that rewrites "target X" → "each X" at cast time (the alt-cost
   model can't yet swap a selector's target into an each-selector).
