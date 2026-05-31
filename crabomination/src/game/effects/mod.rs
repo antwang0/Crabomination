@@ -3159,6 +3159,38 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventNextDamage { target, amount } => {
+                // CR 615.7 — push a "prevent the next N damage to target"
+                // shield consumed by `apply_prevention_shields`.
+                let n = self.evaluate_value(amount, ctx).max(0) as u32;
+                if n > 0 {
+                    for s in self.prevention_targets(target, ctx) {
+                        self.prevention_shields.push(crate::game::types::PreventionShield {
+                            target: s,
+                            remaining: Some(n),
+                        });
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::PreventAllDamageThisTurn { target } => {
+                // CR 615 — a fog scoped to one player/permanent.
+                for s in self.prevention_targets(target, ctx) {
+                    self.prevention_shields.push(crate::game::types::PreventionShield {
+                        target: s,
+                        remaining: None,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::DamageCantBePreventedThisTurn => {
+                // CR 615.12 — suppress every prevention shield for the turn.
+                self.damage_cant_be_prevented_this_turn = true;
+                Ok(())
+            }
+
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 // Crippling Fear-style "Choose a creature type. Creatures
                 // other than creatures of the chosen type get -P/-T EOT."
@@ -3564,6 +3596,24 @@ impl GameState {
     }
 
     // ── Selector / Value / Predicate resolution ─────────────────────────────
+
+    /// Map a selector to the `PreventionTarget`s it designates (players and
+    /// permanents only). Used by the prevention-shield effects.
+    fn prevention_targets(
+        &self,
+        sel: &Selector,
+        ctx: &EffectContext,
+    ) -> Vec<crate::game::types::PreventionTarget> {
+        use crate::game::types::PreventionTarget;
+        self.resolve_selector(sel, ctx)
+            .into_iter()
+            .filter_map(|e| match e {
+                EntityRef::Player(p) => Some(PreventionTarget::Player(p)),
+                EntityRef::Permanent(c) => Some(PreventionTarget::Permanent(c)),
+                EntityRef::Card(_) => None,
+            })
+            .collect()
+    }
 
     pub(crate) fn resolve_selector(&self, sel: &Selector, ctx: &EffectContext) -> Vec<EntityRef> {
         match sel {

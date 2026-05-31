@@ -49,9 +49,14 @@ not how Magic works" moments.
    but only models zone-change replacements (Commander "→ command zone
    instead", CR 903.9b); the rest is stubbed per-card. Still to generalize:
    ETB replacement (enters tapped / with counters / as a copy / under your
-   control), damage prevention & redirection (Fog family, Maze of Ith),
-   draw/skip replacement, counter-doubling (Doubling Season, Hardened
-   Scales), and "if it would die, exile instead."
+   control), damage *redirection* (Maze of Ith), draw/skip replacement,
+   counter-doubling (Doubling Season, Hardened Scales), and "if it would
+   die, exile instead." Damage **prevention** is now modeled as shields
+   (`prevention_shields` + `Effect::PreventNextDamage` /
+   `PreventAllDamageThisTurn` / `DamageCantBePreventedThisTurn`, CR
+   615.1/615.7/615.12) for the non-combat damage path, plus the existing
+   `prevent_combat_damage_this_turn` flag for combat fogs; remaining:
+   per-source combat shields and redirection.
 2. ✅ **Multi-pick / "choose N" decisions.** `Decision::ChooseModes` is
    wired (`game/effects/mod.rs`, `DecisionAnswer::Modes`). "Pick from
    revealed cards" is also wired: `Effect::LookPickToHand` (Impulse /

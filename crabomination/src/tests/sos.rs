@@ -661,6 +661,77 @@ fn impractical_joke_deals_three_to_creature() {
         "2/2 should die to 3 damage from Impractical Joke");
 }
 
+/// Impractical Joke's "damage can't be prevented this turn" rider (CR
+/// 615.12): a prevent-all shield on the target is ignored, so the bear
+/// still dies.
+#[test]
+fn impractical_joke_damage_cant_be_prevented() {
+    use crate::game::types::{PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    // Shield the bear against all damage this turn.
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Permanent(bear),
+        remaining: None,
+    });
+    let id = g.add_card_to_hand(0, catalog::impractical_joke());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Impractical Joke castable for {R}");
+    drain_stack(&mut g);
+    assert!(g.damage_cant_be_prevented_this_turn, "rider sets the global flag");
+    assert!(!g.battlefield.iter().any(|c| c.id == bear),
+        "prevention shield ignored — bear dies through it");
+}
+
+/// A prevent-all shield (without a can't-be-prevented rider) stops a
+/// Lightning Bolt aimed at the protected creature (CR 615.1).
+#[test]
+fn prevention_shield_stops_noncombat_damage() {
+    use crate::game::types::{PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Permanent(bear),
+        remaining: None,
+    });
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "all damage prevented — bear lives");
+}
+
+/// Prismari, the Inspiration grants storm to your instants/sorceries: the
+/// second damage spell cast with one prior spell this turn copies once.
+#[test]
+fn prismari_grants_storm_to_instants_and_sorceries() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::prismari_the_inspiration());
+    // First spell of the turn: storm count 0, no copy.
+    let bolt1 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt1, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("first bolt castable");
+    drain_stack(&mut g);
+    // Second spell: storm count 1 → one copy. 3 (original) + 3 (copy) = 6.
+    let foe_life = g.players[1].life;
+    let bolt2 = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt2, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, foe_life - 6, "storm copied the second spell once");
+}
+
 // ── Green ───────────────────────────────────────────────────────────────────
 
 #[test]

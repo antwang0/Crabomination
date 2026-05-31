@@ -903,6 +903,10 @@ impl GameState {
         // (Owlin Shieldmage's ETB, Holy Day-style fogs) expires at
         // cleanup along with the other until-end-of-turn flags.
         self.prevent_combat_damage_this_turn = false;
+        // CR 615 — prevention shields and the "can't be prevented" rider
+        // are "this turn" effects; they expire at cleanup too.
+        self.prevention_shields.clear();
+        self.damage_cant_be_prevented_this_turn = false;
         // Empty mana pools
         for player in &mut self.players {
             player.mana_pool.empty();

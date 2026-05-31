@@ -27,7 +27,6 @@ remaining **🟡 partial** and **⏳ todo** work. For full per-card history see
 
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
-| Impractical Joke | {R} | Sorcery |  | Damage can't be prevented this turn. Impractical Joke deals 3 damage to up to one target creature or planeswalker. | 🟡 | 3-to-creature/PW wired; "damage can't be prevented" rider is a no-op (engine has no damage-prevention layer). |
 | Steal the Show | {2}{R} | Sorcery |  | Choose one or both — / • Target player discards any number of cards, then draws that many cards. / • Steal the Show deals damage equal to the number of instant and sorcery cards in your graveyard to target creature or planeswalker. | 🟡 | Per-mode behavior is faithful (mode 0 = `DiscardAnyNumber` then draw-that-many via `Value::CardsDiscardedThisEffect`; mode 1 = damage = IS-cards in your gy). Only the "choose one **or both**" rider collapses to a single mode pick (no multi-mode-pick that fills two target slots). |
 | Tablet of Discovery | {2}{R} | Artifact |  | When this artifact enters, mill a card. You may play that card this turn. (To mill a card, put the top card of your library into your graveyard.) / {T}: Add {R}. / {T}: Add {R}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::artifacts` — ETB Mill 1 + two `{T}: Add {R}` mana abilities. The "may play that card this turn" mill-rider is omitted (no per-card may-play primitive yet). The spend-restriction on the {T}: Add {R}{R} ability is omitted (no spend-restricted mana primitive). |
 
@@ -35,15 +34,7 @@ remaining **🟡 partial** and **⏳ todo** work. For full per-card history see
 
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
 |---|---|---|---|---|---|---|
-| Abstract Paintmage | {U}{U/R}{R} | Creature — Djinn Sorcerer | 2/2 | At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired in `catalog::sets::sos::creatures` with a `StepBegins(PreCombatMain)/ActivePlayer` trigger that adds {U}{R} via `ManaPayload::Colors`. The spend restriction is omitted (no per-pip mana metadata). The hybrid `{U/R}` pip is approximated as `{U}`. |
-| Prismari, the Inspiration | {5}{U}{R} | Legendary Creature — Elder Dragon | 7/7 | Flying / Ward—Pay 5 life. / Instant and sorcery spells you cast have storm. | 🟡 | Flying + Ward(5) approximated as generic mana. Storm grant omitted. |
-
-## Silverquill (White-Black)
-
-| Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
-|---|---|---|---|---|---|---|
-| Conciliator's Duelist | {W}{W}{B}{B} | Creature — Kor Warlock | 4/3 | When this creature enters, draw a card. Each player loses 1 life. / Repartee — Whenever you cast an instant or sorcery spell that targets a creature, exile up to one target creature. Return that card to the battlefield under its owner's control at the beginning of the next end step. | 🟡 | ETB body wired (draw 1 + each player loses 1). Repartee exile half wired via the new `Selector::CastSpellTarget(0)` primitive. The "return at next end step" rider is still omitted (no capture-as-target-from-selector primitive yet). |
-| Fix What's Broken | {2}{W}{B} | Sorcery |  | As an additional cost to cast this spell, pay X life. / Return each artifact and creature card with mana value X from your graveyard to the battlefield. | 🟡 | Wired in `catalog::sets::sos::sorceries` (push XVII): Lose 2 life + return artifact/creature cards with MV ≤ 2 from gy → bf. X collapsed to 2 (no X-life-as-cost primitive). |
+| Abstract Paintmage | {U}{U/R}{R} | Creature — Djinn Sorcerer | 2/2 | At the beginning of your first main phase, add {U}{R}. Spend this mana only to cast instant and sorcery spells. | 🟡 | Wired with a `StepBegins(PreCombatMain)/ActivePlayer` trigger adding {U}{R} via `ManaPayload::Colors`; the hybrid `{U/R}` pip is modeled. Only the spend restriction is omitted (no per-pip mana metadata). |
 
 ## Lorehold (Red-White)
 

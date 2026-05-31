@@ -1745,17 +1745,20 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   enters, prevent all combat damage that would be dealt this turn"
   ETB. Tests: `tests::stx::owlin_shieldmage_etb_prevents_combat_damage_this_turn`,
   `tests::stx::prevent_combat_damage_flag_clears_in_cleanup`.
-  Gaps still tracked: (a) per-source prevention shields (CR 615.7
-  "next N damage from source") need a list of pending shields per
-  player/creature; (b) "Damage can't be prevented" rider (CR 615.12)
-  on cards like Heated Debate / Skullcrack is currently a no-op
-  because there's no general prevention layer beyond the
-  combat-damage flag; (c) non-combat damage prevention (Holy Day-
-  style fogs hit combat damage only, but Reverse Damage-style cards
-  also intercept ability/spell damage); (d) CR 615.13 "triggered
-  abilities that fire when damage is prevented" need a
-  `DamagePrevented` event emission. The combat-damage flag handles
-  the headline play pattern for fog effects.
+  **Non-combat prevention is now wired** as per-target shields:
+  `GameState.prevention_shields: Vec<PreventionShield>` created by
+  `Effect::PreventNextDamage` (CR 615.7) / `PreventAllDamageThisTurn`,
+  consumed in `deal_damage_to_from::apply_prevention_shields` (emits
+  `GameEvent::DamagePrevented`, CR 615.13). `DamageCantBePreventedThisTurn`
+  (CR 615.12) suppresses all shields for the turn. Wires Impractical
+  Joke's rider + Healing Salve's prevention mode. Tests:
+  `impractical_joke_damage_cant_be_prevented`,
+  `prevention_shield_stops_noncombat_damage`,
+  `healing_salve_mode_one_prevents_next_three_damage`. Gaps still
+  tracked: (a) the combat path still uses the global flag, not the
+  per-target shields (a creature-scoped fog won't stop combat damage);
+  (b) damage **redirection** (Maze of Ith); (c) per-source "next N
+  from source X" shields.
 
 - ✅ **CR 120.6 — Marked damage persists until cleanup; lethal damage
 

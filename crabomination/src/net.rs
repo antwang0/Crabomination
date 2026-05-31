@@ -801,6 +801,8 @@ pub enum GameEventWire {
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
     DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
+    /// Wire mirror of `GameEvent::DamagePrevented` (CR 615.13).
+    DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },
@@ -899,6 +901,13 @@ impl From<&GameEvent> for GameEventWire {
                 to_player: *to_player,
                 to_card: *to_card,
             },
+            GameEvent::DamagePrevented { amount, to_player, to_card } => {
+                GameEventWire::DamagePrevented {
+                    amount: *amount,
+                    to_player: *to_player,
+                    to_card: *to_card,
+                }
+            }
             GameEvent::LifeLost { player, amount } => GameEventWire::LifeLost {
                 player: *player,
                 amount: *amount,
@@ -1061,6 +1070,15 @@ impl GameEventWire {
                 (Some(p), _) => format!("{amount} damage → P{p}"),
                 (_, Some(cid)) => format!("{amount} damage → {}", name(*cid)),
                 _ => format!("{amount} damage"),
+            },
+            E::DamagePrevented {
+                amount,
+                to_player,
+                to_card,
+            } => match (to_player, to_card) {
+                (Some(p), _) => format!("prevented {amount} damage → P{p}"),
+                (_, Some(cid)) => format!("prevented {amount} damage → {}", name(*cid)),
+                _ => format!("prevented {amount} damage"),
             },
             E::LifeLost { player, amount } => format!("P{player} loses {amount} life"),
             E::LifeGained { player, amount } => format!("P{player} gains {amount} life"),

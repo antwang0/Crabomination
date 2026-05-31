@@ -13,6 +13,55 @@ impl GameState {
         self.deal_damage_to_from(ent, amount, None, events);
     }
 
+    /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
+    /// damage event aimed at `ent`. "Prevent all" shields zero the event;
+    /// "prevent next N" shields soak up to N and then expire. The whole
+    /// step is bypassed while `damage_cant_be_prevented_this_turn` is set.
+    /// Emits `GameEvent::DamagePrevented` for the prevented portion
+    /// (CR 615.13) and returns the unprevented remainder.
+    pub(super) fn apply_prevention_shields(
+        &mut self,
+        ent: EntityRef,
+        amount: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> u32 {
+        use crate::game::types::PreventionTarget;
+        if self.damage_cant_be_prevented_this_turn || self.prevention_shields.is_empty() {
+            return amount;
+        }
+        let (to_player, to_card, key) = match ent {
+            EntityRef::Player(p) => (Some(p), None, PreventionTarget::Player(p)),
+            EntityRef::Permanent(c) => (None, Some(c), PreventionTarget::Permanent(c)),
+            EntityRef::Card(_) => return amount,
+        };
+        let mut remaining = amount;
+        let mut prevented = 0u32;
+        for shield in self.prevention_shields.iter_mut().filter(|s| s.target == key) {
+            if remaining == 0 {
+                break;
+            }
+            match shield.remaining {
+                None => {
+                    // Prevent-all: soak everything, shield stays for the turn.
+                    prevented += remaining;
+                    remaining = 0;
+                }
+                Some(ref mut n) => {
+                    let soak = remaining.min(*n);
+                    prevented += soak;
+                    remaining -= soak;
+                    *n -= soak;
+                }
+            }
+        }
+        // Drop spent "next N" shields (those reduced to 0).
+        self.prevention_shields.retain(|s| s.remaining != Some(0));
+        if prevented > 0 {
+            events.push(GameEvent::DamagePrevented { amount: prevented, to_player, to_card });
+        }
+        remaining
+    }
+
     /// Damage delivery with the source's identity threaded through, so
     /// CR 702.90b (Infect) can convert player damage into poison
     /// counters when the source has the Infect keyword. `source` is
@@ -37,6 +86,14 @@ impl GameState {
         // `LifeLost`, `PoisonAdded`, or `LoyaltyChanged` event is
         // emitted. Damage-watching triggered abilities won't fire on
         // 0-damage events.
+        if amount == 0 {
+            return;
+        }
+        // CR 615.1 — prevention shields. Before applying the damage, let
+        // any shield around the target soak it (unless a "damage can't be
+        // prevented this turn" effect is active, CR 615.12). Returns the
+        // unprevented remainder; 0 means the whole event is prevented.
+        let amount = self.apply_prevention_shields(ent, amount, events);
         if amount == 0 {
             return;
         }

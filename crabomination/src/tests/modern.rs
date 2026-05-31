@@ -6128,6 +6128,32 @@ fn healing_salve_gives_three_life() {
     assert_eq!(g.players[0].life, 13, "+3 life");
 }
 
+/// Healing Salve mode 1: prevent the next 3 damage to a creature (CR 615.7).
+/// A 2/2 bear with the shield survives a Lightning Bolt.
+#[test]
+fn healing_salve_mode_one_prevents_next_three_damage() {
+    let mut g = two_player_game();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Mode(1)]));
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let salve = g.add_card_to_hand(0, catalog::healing_salve());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: salve, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: Some(1), x_value: None,
+    }).expect("Healing Salve castable for {W}");
+    drain_stack(&mut g);
+    // Bolt the bear: 3 prevented by the shield → bear lives, shield spent.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lightning Bolt castable for {R}");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "bear survives a prevented bolt");
+    assert!(g.prevention_shields.is_empty(), "next-3 shield consumed");
+}
+
 /// Raise the Alarm creates two 1/1 Soldier tokens.
 #[test]
 fn raise_the_alarm_creates_two_soldier_tokens() {

@@ -562,16 +562,11 @@ pub fn masterful_flourish() -> CardDefinition {
 /// turn. Impractical Joke deals 3 damage to up to one target creature
 /// or planeswalker."
 ///
-/// ✅ The damage-prevention clause is a true no-op in this engine —
-/// there is no damage-prevention layer to gate, so every damage event
-/// already resolves at face value. Same documentation treatment as
-/// Heated Debate / Skullcrack. The card collapses to "3 damage to a
-/// creature or planeswalker," matching the printed Oracle's
-/// gameplay-relevant payoff. The "up to one" rider is approximated as
-/// required-target (single Creature ∨ Planeswalker filter) — the
-/// engine has no "up to one" optional-target prompt yet, but Impractical
-/// Joke at minimum cost ({R}) almost always has a legal target, so
-/// the practical loss is negligible.
+/// The "damage can't be prevented this turn" rider is now wired via
+/// `Effect::DamageCantBePreventedThisTurn` (CR 615.12), which suppresses
+/// the engine's prevention shields for the turn. "Up to one target" rides
+/// the engine's optional-target model (a targeted spell resolves with no
+/// target if none is chosen).
 pub fn impractical_joke() -> CardDefinition {
     use crate::mana::r;
     CardDefinition {
@@ -582,12 +577,19 @@ pub fn impractical_joke() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::DealDamage {
-            to: target_filtered(
-                SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
-            ),
-            amount: Value::Const(3),
-        },
+        effect: Effect::Seq(vec![
+            // "Damage can't be prevented this turn." (CR 615.12)
+            Effect::DamageCantBePreventedThisTurn,
+            // "...deals 3 damage to up to one target creature or
+            // planeswalker." Targets are optional in this engine, so the
+            // "up to one" reading falls out for free.
+            Effect::DealDamage {
+                to: target_filtered(
+                    SelectionRequirement::Creature.or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
         triggered_abilities: vec![],
         ..Default::default()
     }

@@ -2621,9 +2621,9 @@ pub fn raise_dead() -> CardDefinition {
 /// Healing Salve — {W} Instant. Choose one — Target player gains 3 life;
 /// or prevent the next 3 damage that would be dealt to any target this turn.
 ///
-/// Damage-prevention isn't modeled (the engine has no damage-prevention
-/// shield primitive). Collapsed to the gain-3-life mode. Targeting the
-/// caster auto-resolves on AutoDecider.
+/// Both modes are wired: mode 0 gains 3 life, mode 1 pushes a
+/// `PreventNextDamage(3)` shield (CR 615.7) on the target. AutoDecider
+/// picks mode 0; ScriptedDecider can select the prevention mode.
 pub fn healing_salve() -> CardDefinition {
     CardDefinition {
         name: "Healing Salve",
@@ -2633,10 +2633,20 @@ pub fn healing_salve() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        effect: Effect::GainLife {
-            who: Selector::Target(0),
-            amount: Value::Const(3),
-        },
+        effect: Effect::ChooseMode(vec![
+            Effect::GainLife {
+                who: Selector::Target(0),
+                amount: Value::Const(3),
+            },
+            Effect::PreventNextDamage {
+                target: target_filtered(
+                    SelectionRequirement::Player
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(3),
+            },
+        ]),
         triggered_abilities: vec![],
         ..Default::default()
     }

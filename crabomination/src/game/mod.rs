@@ -312,6 +312,17 @@ pub struct GameState {
     /// number itself is set to 0 per CR 615.1).
     #[serde(default)]
     pub(crate) prevent_combat_damage_this_turn: bool,
+    /// Active prevention shields (CR 615.1) around players/permanents.
+    /// Created by `Effect::PreventNextDamage` / `PreventAllDamageThisTurn`;
+    /// consulted by the non-combat damage path (`deal_damage_to_from`) and
+    /// cleared at cleanup. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) prevention_shields: Vec<crate::game::types::PreventionShield>,
+    /// CR 615.12 — "Damage can't be prevented this turn" (Skullcrack,
+    /// Impractical Joke). While set, every prevention shield is ignored.
+    /// Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) damage_cant_be_prevented_this_turn: bool,
     /// Registered replacement effects (Phase H — Commander prerequisite).
     /// Walked by zone-change paths (`place_card_in_dest`,
     /// `remove_from_battlefield_to_*`) at placement time; a matching
@@ -428,6 +439,8 @@ impl Clone for GameState {
             pending_decision: self.pending_decision.clone(),
             suspend_signal: self.suspend_signal.clone(),
             prevent_combat_damage_this_turn: self.prevent_combat_damage_this_turn,
+            prevention_shields: self.prevention_shields.clone(),
+            damage_cant_be_prevented_this_turn: self.damage_cant_be_prevented_this_turn,
             replacement_effects: self.replacement_effects.clone(),
             next_replacement_id: self.next_replacement_id,
             commander_cast_count: self.commander_cast_count.clone(),
@@ -492,6 +505,8 @@ impl GameState {
             pending_decision: None,
             suspend_signal: None,
             prevent_combat_damage_this_turn: false,
+            prevention_shields: Vec::new(),
+            damage_cant_be_prevented_this_turn: false,
             replacement_effects: Vec::new(),
             next_replacement_id: 1,
             commander_cast_count: HashMap::new(),

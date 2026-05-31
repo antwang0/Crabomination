@@ -428,6 +428,26 @@ pub enum CastFace {
     Flashback,
 }
 
+/// What a [`PreventionShield`] protects (CR 615). A shield watches for a
+/// damage event aimed at this object and prevents some or all of it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PreventionTarget {
+    Player(usize),
+    Permanent(CardId),
+}
+
+/// A continuous prevention effect (CR 615.1) modelled as a "shield" around
+/// a player or permanent. Created by `Effect::PreventNextDamage` /
+/// `PreventAllDamageThisTurn`; consumed by the non-combat damage path and
+/// cleared at cleanup (the "this turn" window, CR 514.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PreventionShield {
+    pub target: PreventionTarget,
+    /// `None` = prevent all damage to the target this turn; `Some(n)` =
+    /// prevent the next `n` damage, then the shield expires (CR 615.7).
+    pub remaining: Option<u32>,
+}
+
 #[derive(Debug, Clone)]
 pub enum GameEvent {
     StepChanged(TurnStep),
@@ -446,6 +466,9 @@ pub enum GameEvent {
     PermanentEntered { card_id: CardId },
     PermanentExiled { card_id: CardId },
     DamageDealt { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
+    /// Some or all of a damage event was prevented by a shield (CR 615.13).
+    /// `amount` is the prevented portion.
+    DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
     CreatureDied { card_id: CardId },

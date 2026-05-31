@@ -1659,6 +1659,22 @@ pub enum Effect {
     /// family of effects.
     PreventAllCombatDamageThisTurn,
 
+    /// "Prevent the next N damage that would be dealt to `target` this
+    /// turn." (CR 615.7) Pushes a per-target prevention shield consumed
+    /// by the non-combat damage path; the shield expires at cleanup.
+    /// Samite Healer, Healing Salve, Awe Strike-style effects.
+    PreventNextDamage { target: Selector, amount: Value },
+
+    /// "Prevent all damage that would be dealt to `target` this turn."
+    /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
+    /// "you don't lose / prevent all damage to you". Non-combat path.
+    PreventAllDamageThisTurn { target: Selector },
+
+    /// "Damage can't be prevented this turn." (CR 615.12) Sets a global
+    /// flag that suppresses every prevention shield for the rest of the
+    /// turn. Skullcrack, Heated Debate, Impractical Joke's rider.
+    DamageCantBePreventedThisTurn,
+
     /// "Choose a creature type. Creatures other than creatures of the
     /// chosen type get -P/-T until end of turn." Crippling Fear-style
     /// choose-and-sweep primitive. Synchronously surfaces a
@@ -1966,6 +1982,11 @@ impl Effect {
             }
             Effect::GrantTriggeredAbility { what, .. } => sel_has_target(what),
             Effect::PreventAllCombatDamageThisTurn => false,
+            Effect::PreventNextDamage { target, amount } => {
+                sel_has_target(target) || value_has_target(amount)
+            }
+            Effect::PreventAllDamageThisTurn { target } => sel_has_target(target),
+            Effect::DamageCantBePreventedThisTurn => false,
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
                 value_has_target(power) || value_has_target(toughness)
             }
@@ -2465,6 +2486,8 @@ impl Effect {
                     .iter()
                     .find_map(|(_, _, e)| eff_find(e, slot, mode)),
                 Effect::DealDamage { to, .. } => sel_find(to, slot),
+                Effect::PreventNextDamage { target, .. }
+                | Effect::PreventAllDamageThisTurn { target } => sel_find(target, slot),
                 Effect::Fight { attacker, defender } => {
                     sel_find(attacker, slot).or_else(|| sel_find(defender, slot))
                 }
