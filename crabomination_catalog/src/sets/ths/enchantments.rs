@@ -5,7 +5,7 @@ use crate::card::{
 };
 use crate::game::types::TurnStep;
 use crate::effect::{Duration, PlayerRef, PlayerStaticTarget, shortcut::etb, shortcut::target_filtered};
-use crate::mana::{Color, b, cost, g, generic, u, w};
+use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
 /// Hopeful Eidolon — {W} Enchantment Creature — Spirit 1/1 Lifelink
 pub fn hopeful_eidolon() -> CardDefinition {
@@ -169,4 +169,63 @@ pub fn erebos_god_of_the_dead() -> CardDefinition {
         }],
         ..god("Erebos, God of the Dead", cost(&[generic(3), b()]), vec![Color::Black], 5, 7)
     }
+}
+
+/// Your-creatures static-anthem helper for the Theros "god weapon"
+/// Legendary Enchantments: one `StaticAbility` over `Creature ∧
+/// ControlledByYou`.
+fn god_weapon(
+    name: &'static str,
+    cost_: crate::mana::ManaCost,
+    description: &'static str,
+    effect: StaticEffect,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost_,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility { description, effect }],
+        ..Default::default()
+    }
+}
+
+fn your_creatures() -> Selector {
+    Selector::EachPermanent(
+        SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+    )
+}
+
+/// Spear of Heliod — {1}{W}{W} Legendary Enchantment. Creatures you control
+/// get +1/+1. (The "destroy a creature that damaged you" activated ability
+/// is omitted — no per-turn "damaged you" tracking primitive.)
+pub fn spear_of_heliod() -> CardDefinition {
+    god_weapon(
+        "Spear of Heliod",
+        cost(&[generic(1), w(), w()]),
+        "Creatures you control get +1/+1.",
+        StaticEffect::PumpPT { applies_to: your_creatures(), power: 1, toughness: 1 },
+    )
+}
+
+/// Whip of Erebos — {2}{B}{B} Legendary Enchantment. Creatures you control
+/// have lifelink. (The reanimate activated ability is omitted.)
+pub fn whip_of_erebos() -> CardDefinition {
+    god_weapon(
+        "Whip of Erebos",
+        cost(&[generic(2), b(), b()]),
+        "Creatures you control have lifelink.",
+        StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Lifelink },
+    )
+}
+
+/// Hammer of Purphoros — {2}{R} Legendary Enchantment. Creatures you control
+/// have haste. (The land-sacrifice Golem-token ability is omitted.)
+pub fn hammer_of_purphoros() -> CardDefinition {
+    god_weapon(
+        "Hammer of Purphoros",
+        cost(&[generic(2), r()]),
+        "Creatures you control have haste.",
+        StaticEffect::GrantKeyword { applies_to: your_creatures(), keyword: Keyword::Haste },
+    )
 }

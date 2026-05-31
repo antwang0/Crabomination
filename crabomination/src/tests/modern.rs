@@ -18282,3 +18282,51 @@ fn esikas_chariot_attack_copies_a_token() {
         .filter(|c| c.is_token && c.definition.name == "Cat").count();
     assert_eq!(cats_after, 3, "attack trigger copied a Cat token");
 }
+
+// ── Theros god-weapon anthem enchantments ─────────────────────────────────────
+
+#[test]
+fn spear_of_heliod_pumps_your_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
+    let opp = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::spear_of_heliod());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "your creature gets +1/+1");
+    let ocp = g.computed_permanent(opp).unwrap();
+    assert_eq!((ocp.power, ocp.toughness), (2, 2), "opponent's creature unaffected");
+}
+
+#[test]
+fn whip_of_erebos_grants_lifelink_to_your_creatures() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::whip_of_erebos());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Lifelink));
+}
+
+#[test]
+fn hammer_of_purphoros_grants_haste() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::hammer_of_purphoros());
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Haste));
+}
+
+#[test]
+fn thassa_grants_unblockable_to_your_creature() {
+    let mut g = two_player_game();
+    let thassa = g.add_card_to_battlefield(0, catalog::thassa_god_of_the_sea());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(thassa);
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: thassa, ability_index: 0, target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Thassa's unblockable ability");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords.contains(&crate::card::Keyword::Unblockable));
+}

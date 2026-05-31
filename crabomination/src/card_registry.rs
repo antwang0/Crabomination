@@ -46,12 +46,15 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     all.extend_from_slice(&xtra);
     // Theros devotion payoffs / gods (sets::ths) — registered so mid-game
     // snapshots involving them round-trip through the name→factory lookup.
-    let ths: [CardFactory; 5] = [
+    let ths: [CardFactory; 8] = [
         sets::ths::gray_merchant_of_asphodel,
         sets::ths::nylea_god_of_the_hunt,
         sets::ths::thassa_god_of_the_sea,
         sets::ths::erebos_god_of_the_dead,
         sets::ths::nykthos_shrine_to_nyx,
+        sets::ths::spear_of_heliod,
+        sets::ths::whip_of_erebos,
+        sets::ths::hammer_of_purphoros,
     ];
     all.extend_from_slice(&ths);
     // Dedupe by function-pointer address so repeated copies of the same
