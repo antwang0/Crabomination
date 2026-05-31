@@ -3216,6 +3216,32 @@ impl GameState {
                 }
                 Ok(events)
             }
+            PendingEffectState::ExileChosenUntilSourceLeavesPending {
+                target_player,
+                source,
+                return_to,
+            } => {
+                let DecisionAnswer::Discard(card_ids) = answer else {
+                    return Err(GameError::DecisionAnswerMismatch);
+                };
+                let mut events = Vec::with_capacity(card_ids.len());
+                for cid in card_ids {
+                    // Move the chosen card from hand to exile and link it to
+                    // the source permanent.
+                    if let Some(pos) =
+                        self.players[target_player].hand.iter().position(|c| c.id == *cid)
+                    {
+                        let mut card = self.players[target_player].hand.remove(pos);
+                        card.exiled_by = Some(crate::card::ExileLink {
+                            source,
+                            return_to,
+                        });
+                        self.exile.push(card);
+                        events.push(GameEvent::PermanentExiled { card_id: *cid });
+                    }
+                }
+                Ok(events)
+            }
             PendingEffectState::ChooseCreatureTypePending { target_id } => {
                 let DecisionAnswer::CreatureType(ct) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);

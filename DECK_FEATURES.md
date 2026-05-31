@@ -69,7 +69,6 @@ via `#[path = "../tests/modern.rs"] mod tests_modern` in `game::mod`).
 | Crumble to Dust | {2}{R}{R} | 🟡 | Sorcery. Exile target nonbasic land. The "exile every card with the same name" rider collapses. Tests: `crumble_to_dust_exiles_nonbasic_land`, `crumble_to_dust_rejects_basic_land_target`. |
 | Drown in the Loch | {U}{B} | 🟡 | Instant. ChooseMode([CounterSpell, Destroy(Creature ∨ Planeswalker)]). The "snow mana only" + "X = cards in opp's graveyard" gates collapse. Tests: `drown_in_the_loch_mode_zero_counters_a_spell`, `drown_in_the_loch_mode_one_destroys_creature`. |
 | Strategic Planning | {1}{U} | 🟡 | Sorcery. Mill 3 + Draw 1. Approximation of "look at top 3, take 1, mill the rest" — gameplay-relevant graveyard-fill axis preserved. Test: `strategic_planning_mills_three_and_draws_one`. |
-| Brain Maggot | {1}{B} | 🟡 | 1/1 Spirit Insect. ETB strips a nonland card from each opponent's hand (Tidehollow Sculler approximation; "exile until LTB" still ⏳). Test: `brain_maggot_etb_strips_a_nonland_card`. |
 
 ## Engine features
 

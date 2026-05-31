@@ -159,6 +159,7 @@ impl GameState {
             // consistent for downstream selectors and trigger dispatchers.
             self.remove_from_combat(cid);
             self.place_card_in_dest(card, ctx.controller, &resolved_dest, events);
+            self.return_linked_exiles(cid, events);
             return;
         }
         // Then graveyards. Emit `CardLeftGraveyard` so Strixhaven
@@ -425,6 +426,44 @@ impl GameState {
                 // way casting does.
                 self.fire_self_etb_triggers(cid, p);
             }
+        }
+    }
+
+    /// CR 603.6e — when a permanent that exiled card(s) via
+    /// `Effect::ExileUntilSourceLeaves` leaves the battlefield, return the
+    /// linked card(s) to the zone the linking ability specified
+    /// (battlefield for Banisher Priest / Oblivion Ring, hand for Brain
+    /// Maggot / Tidehollow Sculler). Called from every battlefield-removal
+    /// path. The return is resolved directly rather than as a stack
+    /// trigger — a deliberate simplification; the observable result (the
+    /// card comes back) matches the printed linked ability.
+    pub(crate) fn return_linked_exiles(
+        &mut self,
+        source: CardId,
+        events: &mut Vec<GameEvent>,
+    ) {
+        use crate::card::ExileReturnZone;
+        let linked: Vec<CardId> = self
+            .exile
+            .iter()
+            .filter(|c| c.exiled_by.map(|l| l.source) == Some(source))
+            .map(|c| c.id)
+            .collect();
+        for cid in linked {
+            let Some(pos) = self.exile.iter().position(|c| c.id == cid) else {
+                continue;
+            };
+            let mut card = self.exile.remove(pos);
+            let return_to = card.exiled_by.take().map(|l| l.return_to);
+            let owner = card.owner;
+            let dest = match return_to {
+                Some(ExileReturnZone::Hand) => ZoneDest::Hand(PlayerRef::Seat(owner)),
+                _ => ZoneDest::Battlefield {
+                    controller: PlayerRef::Seat(owner),
+                    tapped: false,
+                },
+            };
+            self.place_card_in_dest(card, owner, &dest, events);
         }
     }
 }

@@ -388,6 +388,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         guardian_scalelord,
         descendant_of_storms,
         elite_spellbinder,
+        // ── Linked exile (CR 603.6e) ──
+        banisher_priest,
+        oblivion_ring,
+        fiend_hunter,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -675,7 +679,7 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         silversmote_ghoul,
         bitterbloom_bearer,
         // dread_return      — 🟡 flashback sac-3-creatures additional cost omitted
-        // tidehollow_sculler — 🟡 exile-until-LTB replaced by permanent discard
+        tidehollow_sculler,
         phyrexian_arena,
         // bloodchiefs_thirst — 🟡 kicker mode (mana value ≤ 6) omitted
         collective_brutality,

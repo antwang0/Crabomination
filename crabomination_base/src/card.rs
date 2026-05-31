@@ -917,6 +917,29 @@ impl CardDefinition {
     }
 }
 
+/// CR 603.6e linked exile — where a card returns when the permanent that
+/// exiled it (Banisher Priest, Brain Maggot, Oblivion Ring, …) leaves the
+/// battlefield.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum ExileReturnZone {
+    /// Return to the battlefield under its owner's control (Banisher
+    /// Priest, Fiend Hunter, Oblivion Ring).
+    Battlefield,
+    /// Return to its owner's hand (Brain Maggot, Tidehollow Sculler,
+    /// Kitesail Freebooter).
+    Hand,
+}
+
+/// Records that a card sits in exile because of another permanent's
+/// "exile until ~ leaves the battlefield" ability. When the linking
+/// `source` permanent leaves play, the engine returns this card to
+/// `return_to`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ExileLink {
+    pub source: CardId,
+    pub return_to: ExileReturnZone,
+}
+
 // ── Runtime card instance ─────────────────────────────────────────────────────
 
 /// A card in play.  Tracks mutable game state layered on top of the static definition.
@@ -1018,6 +1041,11 @@ pub struct CardInstance {
     /// time; consumed (and the untap skipped) by `do_untap`. Transient —
     /// not serialized (defaults to false on snapshot reload).
     pub skip_next_untap: bool,
+    /// CR 603.6e — set on a card in exile that a permanent's "exile until
+    /// ~ leaves" ability put there. When that source leaves the
+    /// battlefield the engine returns this card to `ExileLink::return_to`.
+    /// `None` for ordinary (permanent) exile.
+    pub exiled_by: Option<ExileLink>,
 }
 
 impl CardInstance {
@@ -1057,6 +1085,7 @@ impl CardInstance {
             dealt_deathtouch_damage: false,
             regeneration_shields: 0,
             skip_next_untap: false,
+            exiled_by: None,
         }
     }
 

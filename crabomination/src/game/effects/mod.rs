@@ -1206,6 +1206,40 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ExileUntilSourceLeaves { what, return_to } => {
+                // CR 603.6e — exile the resolved card(s) and link each to
+                // the ability's source. When that source leaves the
+                // battlefield, `return_linked_exiles` brings them back.
+                let Some(source) = ctx.source else {
+                    return Ok(());
+                };
+                for ent in self.resolve_selector(what, ctx) {
+                    let cid = match ent {
+                        EntityRef::Permanent(cid) => {
+                            self.remove_from_battlefield_to_exile(cid);
+                            events.push(GameEvent::PermanentExiled { card_id: cid });
+                            cid
+                        }
+                        EntityRef::Card(cid) => {
+                            self.move_card_to(cid, &ZoneDest::Exile, ctx, events);
+                            cid
+                        }
+                        _ => continue,
+                    };
+                    if ctx.controller < self.players.len() {
+                        self.players[ctx.controller].cards_exiled_this_turn =
+                            self.players[ctx.controller].cards_exiled_this_turn.saturating_add(1);
+                    }
+                    if let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) {
+                        c.exiled_by = Some(crate::card::ExileLink {
+                            source,
+                            return_to: *return_to,
+                        });
+                    }
+                }
+                Ok(())
+            }
+
             Effect::Tap { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     if let Some(cid) = ent.as_permanent_id()
@@ -2381,6 +2415,46 @@ impl GameState {
                     };
                     let pending = PendingEffectState::DiscardChosenPending { target_player };
 
+                    if self.players[picker].wants_ui {
+                        self.suspend_signal = Some((decision, pending, Effect::Noop));
+                        return Ok(());
+                    }
+                    let answer = self.decider.decide(&decision);
+                    let mut applied = self.apply_pending_effect_answer(pending, &answer)?;
+                    events.append(&mut applied);
+                }
+                Ok(())
+            }
+
+            Effect::ExileChosenUntilSourceLeaves { from, count, filter, return_to } => {
+                // CR 603.6e — same caster-picks-from-hand shape as
+                // DiscardChosen, but the chosen card is exiled and linked to
+                // the ability's source instead of discarded.
+                use crate::decision::Decision;
+                let Some(source) = ctx.source else { return Ok(()); };
+                let n = self.evaluate_value(count, ctx).max(0) as usize;
+                if n == 0 { return Ok(()); }
+                let picker = ctx.controller;
+                for ent in self.resolve_selector(from, ctx) {
+                    let EntityRef::Player(target_player) = ent else { continue };
+                    let candidates: Vec<(crate::card::CardId, String)> = self
+                        .players[target_player]
+                        .hand
+                        .iter()
+                        .filter(|c| self.evaluate_requirement_on_card(filter, c, picker))
+                        .map(|c| (c.id, c.definition.name.to_string()))
+                        .collect();
+                    if candidates.is_empty() { continue; }
+                    let decision = Decision::Discard {
+                        player: picker,
+                        count: n as u32,
+                        hand: candidates,
+                    };
+                    let pending = PendingEffectState::ExileChosenUntilSourceLeavesPending {
+                        target_player,
+                        source,
+                        return_to: *return_to,
+                    };
                     if self.players[picker].wants_ui {
                         self.suspend_signal = Some((decision, pending, Effect::Noop));
                         return Ok(());

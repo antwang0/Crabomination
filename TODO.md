@@ -2939,8 +2939,9 @@ Cascade resolution).  Currently each is handled ad-hoc or omitted.  A shared
 
 ### Triggered-Ability Event Gaps
 `EventKind` is missing several commonly-needed triggers:
-- `PermanentLeftBattlefield(CardId)` — needed for "LTB" abilities and
-  exile-until-LTB patterns (Tidehollow Sculler, Fiend Hunter)
+- `PermanentLeftBattlefield(CardId)` — needed for general "LTB" abilities.
+  (Linked exile-until-LTB now handled directly via `return_linked_exiles`
+  / `CardInstance.exiled_by`, not via an event.)
 - `DamageDealtToCreature` — needed for enrage, lifelink gain on creature damage
 - `TokenCreated` — needed for populate, alliance triggers
 - `CounterAdded / CounterRemoved` — needed for proliferate payoffs, Heliod combo
@@ -3191,9 +3192,11 @@ target). Need either:
 - An `Effect::ExileWithDelayedReturn { what, kind, controller }`
   combinator that pre-resolves the selector at registration time.
 
-The latter is more general (also unblocks Tidehollow Sculler,
-Banisher Priest, Fiend Hunter). The former is smaller surface but
-introduces effect-side mutation of ctx.
+The latter is more general. (Tidehollow Sculler / Banisher Priest /
+Fiend Hunter are now handled by the dedicated
+`Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves`
+primitives — see FEATURE_ROADMAP Tier-1 #4.) The former is smaller
+surface but introduces effect-side mutation of ctx.
 
 ### Spend-Restricted Mana
 Strixhaven's "Spend this mana only to cast an instant or sorcery
@@ -3860,7 +3863,7 @@ no new engine features required:
 | Balefire Dragon | Dynamic "that much damage" (use creature's power) | Medium | ⏳ |
 | Dark Confidant | CMC-dependent life loss | High (needs card-CMC Value) | ✅ (done — push modern_decks batch 111, `LoseLife(ManaValueOf(TopOfLibrary))`) |
 | Rofellos | Forest-count mana scaling | Medium | ✅ (done — `Times(Const(2), CountOf(Forest))`) |
-| Tidehollow Sculler | Exile-until-LTB primitive | High | ⏳ |
+| Tidehollow Sculler | Exile-until-LTB primitive | High | ✅ (done — `Effect::ExileChosenUntilSourceLeaves` + `return_linked_exiles`) |
 | Ichorid | Graveyard-color trigger filter | Medium | ✅ (done — push modern_decks batch 112, opp-GY black-creature `SelectorExists` gate) |
 | Coalition Relic | Charge-counter burst | Medium | ✅ (done — push modern_decks batch 110, Remove-3-charge-counters WUBRG burst wired) |
 | Tezzeret, Cruel Captain | Artifact-creature static pump | Low | ✅ (done — `crabomination/src/catalog/sets/decks/modern.rs:6365`) |

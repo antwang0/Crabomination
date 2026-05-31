@@ -1429,6 +1429,8 @@ impl GameState {
                 initial_to,
             );
             self.place_card_at_resolved_zone(card, resolved);
+            let mut events = Vec::new();
+            self.return_linked_exiles(id, &mut events);
         }
     }
 
@@ -1443,6 +1445,8 @@ impl GameState {
                 crate::card::Zone::Exile,
             );
             self.place_card_at_resolved_zone(card, resolved);
+            let mut events = Vec::new();
+            self.return_linked_exiles(id, &mut events);
         }
     }
 

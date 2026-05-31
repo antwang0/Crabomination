@@ -5374,9 +5374,13 @@ fn tidehollow_sculler_etb_takes_an_opponent_card() {
     assert!(g.battlefield.iter().any(|c| c.id == sculler),
         "Sculler should resolve onto the battlefield");
     assert!(!g.players[1].hand.iter().any(|c| c.id == bolt),
-        "ETB DiscardChosen should remove the Bolt from P1's hand");
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt),
-        "Bolt should land in P1's graveyard (approximation of exile-until-LTB)");
+        "ETB should exile the Bolt from P1's hand");
+    assert!(g.exile.iter().any(|c| c.id == bolt),
+        "Bolt exiled until the Sculler leaves");
+    // Sculler dies → Bolt returns to its owner's hand.
+    g.remove_from_battlefield_to_graveyard(sculler);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt),
+        "Bolt returns to owner's hand when the Sculler leaves");
 }
 
 // ── Talisman cycle (RW / UR / GU) ────────────────────────────────────────────
@@ -10207,7 +10211,7 @@ fn ravenous_rats_etb_makes_each_opponent_discard() {
 }
 
 #[test]
-fn brain_maggot_etb_strips_a_nonland_card() {
+fn brain_maggot_etb_exiles_until_it_leaves_then_returns_to_hand() {
     let mut g = two_player_game();
     let target_card = g.add_card_to_hand(1, catalog::lightning_bolt());
     g.add_card_to_hand(1, catalog::forest()); // land — should be skipped by filter
@@ -10220,11 +10224,73 @@ fn brain_maggot_etb_strips_a_nonland_card() {
     }).expect("Brain Maggot castable for {1}{B}");
     drain_stack(&mut g);
 
-    assert!(g.players[1].graveyard.iter().any(|c| c.id == target_card),
-        "Lightning Bolt (the only nonland in P1's hand) is stripped");
-    // Forest stays in P1's hand (it's a land).
+    // The bolt is exiled (not graveyarded), linked to Brain Maggot.
+    assert!(g.exile.iter().any(|c| c.id == target_card),
+        "Lightning Bolt (the only nonland) is exiled until Brain Maggot leaves");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == target_card),
+        "exiled, not discarded");
     assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Forest"),
-        "Land remains in opponent's hand (filter is Nonland)");
+        "Land stays in opponent's hand (Nonland filter)");
+
+    // Brain Maggot dies → the exiled card returns to its owner's hand.
+    g.remove_from_battlefield_to_graveyard(id);
+    assert!(g.players[1].hand.iter().any(|c| c.id == target_card),
+        "exiled card returns to owner's hand when Brain Maggot leaves");
+    assert!(!g.exile.iter().any(|c| c.id == target_card), "no longer in exile");
+}
+
+#[test]
+fn banisher_priest_exiles_creature_until_it_leaves() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::banisher_priest());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Banisher Priest castable for {1}{W}{W}");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "opp creature exiled");
+    assert!(g.battlefield_find(bear).is_none(), "bear off battlefield");
+
+    // Priest dies → the bear returns to the battlefield under its owner.
+    g.remove_from_battlefield_to_graveyard(id);
+    let returned = g.battlefield_find(bear).expect("bear back on battlefield");
+    assert_eq!(returned.controller, 1, "returns under its owner's control");
+    assert!(!g.exile.iter().any(|c| c.id == bear), "no longer exiled");
+}
+
+#[test]
+fn oblivion_ring_cannot_target_itself() {
+    // The "another" clause: with only O-Ring on the battlefield its ETB
+    // has no legal target, so nothing is exiled.
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::oblivion_ring());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Oblivion Ring castable for {2}{W}");
+    drain_stack(&mut g);
+    assert!(g.exile.is_empty(), "O-Ring can't exile itself (OtherThanSource)");
+    assert!(g.battlefield_find(id).is_some(), "O-Ring resolved onto battlefield");
+}
+
+#[test]
+fn oblivion_ring_exiles_nonland_permanent_and_returns_it() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::oblivion_ring());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Oblivion Ring castable");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bear), "opp permanent exiled");
+    // O-Ring leaves → exiled permanent returns to battlefield.
+    g.remove_from_battlefield_to_graveyard(id);
+    assert!(g.battlefield_find(bear).is_some(), "exiled permanent returns");
 }
 
 #[test]
@@ -14011,6 +14077,10 @@ fn fiend_hunter_exiles_opponent_creature() {
     }).expect("castable");
     drain_stack(&mut g);
     assert!(g.battlefield.iter().find(|c| c.id == bear).is_none(), "bear should be exiled");
+    assert!(g.exile.iter().any(|c| c.id == bear), "bear in exile linked to Fiend Hunter");
+    // Fiend Hunter leaves → the exiled creature returns to the battlefield.
+    g.remove_from_battlefield_to_graveyard(id);
+    assert!(g.battlefield_find(bear).is_some(), "bear returns when Fiend Hunter leaves");
 }
 
 #[test]

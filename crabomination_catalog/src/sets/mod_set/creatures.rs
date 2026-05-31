@@ -1279,14 +1279,11 @@ pub fn dandan() -> CardDefinition {
 /// When this creature leaves the battlefield, return the exiled card
 /// to its owner's hand."
 ///
-/// Approximation (no exile-until-LTB primitive yet): wired as an ETB
-/// `DiscardChosen` against the opponent's hand with `Nonland` filter —
-/// the card moves straight to the graveyard rather than returning when
-/// Sculler dies. Gameplay-equivalent for the disruption half; the
-/// "give it back when this dies" clause is the only piece omitted.
-/// Reuses the same `DiscardChosen` primitive Inquisition of Kozilek and
-/// Thoughtseize ride on.
+/// Wired via `Effect::ExileChosenUntilSourceLeaves` (CR 603.6e): the
+/// chosen nonland card is exiled linked to the Sculler and returns to
+/// its owner's hand when the Sculler leaves play.
 pub fn tidehollow_sculler() -> CardDefinition {
+    use crate::card::ExileReturnZone;
     CardDefinition {
         name: "Tidehollow Sculler",
         cost: cost(&[w(), b()]),
@@ -1299,10 +1296,11 @@ pub fn tidehollow_sculler() -> CardDefinition {
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
+            effect: Effect::ExileChosenUntilSourceLeaves {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
+                return_to: ExileReturnZone::Hand,
             },
         }],
         ..Default::default()

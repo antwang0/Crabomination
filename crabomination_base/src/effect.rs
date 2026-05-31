@@ -1144,6 +1144,16 @@ pub enum Effect {
     /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
     Regenerate { what: Selector },
     Exile   { what: Selector },
+    /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
+    /// Moves the resolved card(s) to exile, linking each to the source
+    /// permanent (the ability's source). When that source leaves play the
+    /// engine returns the exiled card(s) to `return_to`. Powers Banisher
+    /// Priest / Fiend Hunter / Oblivion Ring (return to battlefield) and
+    /// Brain Maggot / Tidehollow Sculler (return to hand).
+    ExileUntilSourceLeaves {
+        what: Selector,
+        return_to: crate::card::ExileReturnZone,
+    },
     Tap     { what: Selector },
     /// Untap every permanent the selector resolves to. The optional
     /// `up_to` cap limits the count to "up to N" — used by Frantic
@@ -1464,6 +1474,18 @@ pub enum Effect {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
+    },
+    /// CR 603.6e — "Target player reveals their hand; you choose [count]
+    /// card(s) matching [filter]. Exile [them] until [this] leaves the
+    /// battlefield." The caster picks from `from`'s hand; the chosen
+    /// card(s) are exiled and linked to the ability's source. Powers Brain
+    /// Maggot / Tidehollow Sculler / Kitesail Freebooter (`return_to`
+    /// = Hand).
+    ExileChosenUntilSourceLeaves {
+        from: Selector,
+        count: Value,
+        filter: SelectionRequirement,
+        return_to: crate::card::ExileReturnZone,
     },
 
     // ── Delayed triggers and pact costs ──────────────────────────────────────
@@ -1803,6 +1825,7 @@ impl Effect {
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::Exile { what }
+            | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::CounterSpell { what }
@@ -1874,7 +1897,8 @@ impl Effect {
                     || zonedest_has_target(to)
                     || value_has_target(cap)
             }
-            Effect::DiscardChosen { from, count, .. } => {
+            Effect::DiscardChosen { from, count, .. }
+            | Effect::ExileChosenUntilSourceLeaves { from, count, .. } => {
                 sel_has_target(from) || value_has_target(count)
             }
             Effect::NameCreatureType { what } => sel_has_target(what),
@@ -1925,6 +1949,7 @@ impl Effect {
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
             | Effect::Exile { what }
+            | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
             | Effect::Untap { what, .. }
             | Effect::CounterSpell { what }
@@ -2108,6 +2133,9 @@ impl Effect {
                 "destroy target (can't be regenerated)".into()
             }
             Effect::Exile { .. } => "exile target".into(),
+            Effect::ExileUntilSourceLeaves { .. } => {
+                "exile target until this leaves the battlefield".into()
+            }
             Effect::DealDamage { amount, .. } => match amount {
                 Value::Const(n) => format!("deal {n} damage to target"),
                 _ => "deal damage to target".into(),

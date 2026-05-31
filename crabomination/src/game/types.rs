@@ -389,6 +389,15 @@ pub enum PendingEffectState {
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.
     DiscardChosenPending { target_player: usize },
+    /// Suspended on an `ExileChosenUntilSourceLeaves` decision (Brain
+    /// Maggot, Tidehollow Sculler, Kitesail Freebooter). The caster picks
+    /// cards from `target_player`'s hand; the apply step exiles them linked
+    /// to `source`, returning them to `return_to` when `source` leaves.
+    ExileChosenUntilSourceLeavesPending {
+        target_player: usize,
+        source: CardId,
+        return_to: crate::card::ExileReturnZone,
+    },
     /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
     /// (Cavern of Souls). The chooser picks a creature type and the engine
     /// stamps it onto `target_id.chosen_creature_type`.

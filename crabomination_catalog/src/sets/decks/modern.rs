@@ -6997,12 +6997,12 @@ pub fn ravenous_rats() -> CardDefinition {
 /// card from it. Exile that card until this creature leaves the
 /// battlefield.
 ///
-/// Approximation of "exile until LTB" — uses `DiscardChosen` to send the
-/// chosen nonland card to the graveyard (same simplification as
-/// Tidehollow Sculler's ETB). The "return on LTB" half is omitted (no
-/// exile-until-LTB primitive yet). Caster picks; bots auto-pick the
-/// first matching card.
+/// Wired via `Effect::ExileChosenUntilSourceLeaves` (CR 603.6e): the
+/// chosen nonland card is exiled linked to Brain Maggot and returns to
+/// its owner's hand when Brain Maggot leaves play. Caster picks; bots
+/// auto-pick the first matching card.
 pub fn brain_maggot() -> CardDefinition {
+    use crate::card::ExileReturnZone;
     CardDefinition {
         name: "Brain Maggot",
         cost: cost(&[generic(1), b()]),
@@ -7015,10 +7015,11 @@ pub fn brain_maggot() -> CardDefinition {
         toughness: 1,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::DiscardChosen {
+            effect: Effect::ExileChosenUntilSourceLeaves {
                 from: Selector::Player(PlayerRef::EachOpponent),
                 count: Value::Const(1),
                 filter: SelectionRequirement::Nonland,
+                return_to: ExileReturnZone::Hand,
             },
         }],
         ..Default::default()
@@ -12139,10 +12140,15 @@ pub fn zopandrel_hunger_dominus() -> CardDefinition {
 // ── Push XVII continued: ETB creatures ─────────────────────────────────────
 
 /// Fiend Hunter — {1}{W}{W} Creature — Human Cleric 1/3.
-/// ETB: exile target creature an opponent controls. When Fiend Hunter
-/// leaves the battlefield, return the exiled card.
-/// (Approximation: ETB exile only; return-on-leave omitted.)
+/// "When Fiend Hunter enters, exile target creature. When Fiend Hunter
+/// leaves the battlefield, return the exiled card to the battlefield
+/// under its owner's control."
+///
+/// Wired via `Effect::ExileUntilSourceLeaves` (CR 603.6e, return to
+/// battlefield). Targets an opponent's creature (the printed "you may"
+/// optionality is dropped for the auto-decider's benefit).
 pub fn fiend_hunter() -> CardDefinition {
+    use crate::card::ExileReturnZone;
     CardDefinition {
         name: "Fiend Hunter",
         cost: cost(&[generic(1), w(), w()]),
@@ -12155,10 +12161,67 @@ pub fn fiend_hunter() -> CardDefinition {
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::Exile {
+            effect: Effect::ExileUntilSourceLeaves {
                 what: target_filtered(
                     SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
                 ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Banisher Priest — {1}{W}{W} Creature — Human Cleric 2/2.
+/// "When Banisher Priest enters, exile target creature an opponent
+/// controls until Banisher Priest leaves the battlefield."
+/// Wired via `Effect::ExileUntilSourceLeaves` (CR 603.6e, return to
+/// battlefield).
+pub fn banisher_priest() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Banisher Priest",
+        cost: cost(&[generic(1), w(), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Creature.and(SelectionRequirement::ControlledByOpponent),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Oblivion Ring — {2}{W} Enchantment.
+/// "When Oblivion Ring enters, exile another target nonland permanent
+/// until Oblivion Ring leaves the battlefield."
+/// Wired via `Effect::ExileUntilSourceLeaves` (CR 603.6e, return to
+/// battlefield). `OtherThanSource` enforces the "another" clause.
+pub fn oblivion_ring() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Oblivion Ring",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
             },
         }],
         ..Default::default()

@@ -133,6 +133,12 @@ pub struct CardSnapshot {
     /// `#[serde(default)]` for back-compat.
     #[serde(default)]
     pub granted_keywords_eot: Vec<Keyword>,
+    /// CR 603.6e linked-exile link — preserved so a save/restore of a game
+    /// with a Banisher Priest / Brain Maggot in play still returns the
+    /// exiled card when the source leaves. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    pub exiled_by: Option<crate::card::ExileLink>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -263,6 +269,7 @@ fn card_snap(c: &CardInstance) -> CardSnapshot {
             .map(|(k, v)| (k.clone(), *v))
             .collect(),
         granted_keywords_eot: c.granted_keywords_eot.clone(),
+        exiled_by: c.exiled_by,
     }
 }
 
@@ -426,6 +433,7 @@ fn restore_card(cs: CardSnapshot) -> Result<CardInstance, LoadError> {
     c.may_play_until = cs.may_play_until;
     c.keyword_counters = cs.keyword_counters.into_iter().collect();
     c.granted_keywords_eot = cs.granted_keywords_eot;
+    c.exiled_by = cs.exiled_by;
     Ok(c)
 }
 
@@ -738,6 +746,7 @@ mod tests {
             may_play_until: None,
             keyword_counters: vec![],
             granted_keywords_eot: vec![],
+            exiled_by: None,
         };
         match restore_card(cs) {
             Err(LoadError::UnknownCard(name)) => {

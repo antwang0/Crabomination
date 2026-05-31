@@ -60,8 +60,13 @@ not how Magic works" moments.
    `Decision::CombatDamageOrder { attacker, blockers }` prompts the attacker
    (`combat.rs`, CR 510.1c) instead of sorting by CardId. (Trample-over-
    lethal / deathtouch spread math rides on top — see Tier 6.)
-4. ⏳ **Linked "until this leaves play" exile.** Tidehollow Sculler, Brain
-   Maggot, Banisher Priest, Oblivion Ring, Fiend Hunter — exile-and-return.
+4. ✅ **Linked "until this leaves play" exile** (CR 603.6e).
+   `Effect::ExileUntilSourceLeaves` (target a permanent) and
+   `Effect::ExileChosenUntilSourceLeaves` (pick from a hand) stamp
+   `CardInstance.exiled_by`; `return_linked_exiles` (called from every
+   battlefield-removal path) returns the card to battlefield or hand when
+   the source leaves. Wired Banisher Priest, Fiend Hunter, Oblivion Ring,
+   Brain Maggot, Tidehollow Sculler.
 5. ⏳ **Token-copy of a permanent (clone).** Phantasmal Image, Helm of the
    Host, Mockingbird, Saheeli/Esika copy clauses, Spark Double, populate.
 6. 🟡 **Copy-a-spell-on-the-stack.** `Effect::CopySpell` /
