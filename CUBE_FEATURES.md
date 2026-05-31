@@ -42,9 +42,7 @@ work is listed below.
 | Mind's Desire | ⏳ | Storm + cast-from-top. Needs Storm count + cast-from-top primitive. |
 | The Everflowing Well | ⏳ | Saga land flip; needs Saga lore counters + DFC. |
 | Proft's Eidetic Memory | ⏳ | Investigate + scaling +1/+1. Needs investigate (Clue). |
-| Opposition | 🟡 | Enchantment body only. Tap-creature-to-tap-permanent ability omitted. |
 | Parallax Tide | ⏳ | Fading + exile lands. Needs fade counters. |
-| Omniscience | 🟡 | Enchantment body only. Free-cast static omitted. |
 | Shelldock Isle | ⏳ | Hideaway land (DFC-like setup). |
 | Sink into Stupor | ⏳ | Counter + DFC into Lair land. |
 | Concealing Curtains | ⏳ | DFC into Revealing Eye creature. |

@@ -8,6 +8,30 @@ See `CUBE_FEATURES.md` (cube-card implementation status),
 
 ## Follow-ups noticed (not yet done)
 
+- **Tracker staleness** — CUBE_FEATURES.md / DECK_FEATURES.md carry many 🟡/⏳
+  rows that are already fully implemented + tested in code (verified this run:
+  Opposition, Omniscience, Horizon Canopy / Sunbaked Canyon / Waterlogged
+  Grove, Dismember, Spectral Procession, the shock/fast/surveil/bridge/pathway
+  land families). A reconciliation pass (verify factory + cube registration +
+  test, then elide the row) would shrink both trackers substantially. Started
+  here; not exhaustive.
+- **Card sourcing is data-blocked** — api.scryfall.com is outside the network
+  allowlist and `scripts/cards_dump.json` (319-card pool) is fully implemented,
+  so brand-new cards can only be added for staples whose exact stats/text are
+  known cold. This run added 24 classic core-set bodies (`lea`); further bulk
+  card work needs a Scryfall-equivalent data source in the sandbox.
+- **Multi-target "choose two" (`Effect::ChooseN`)** — modes still share a
+  single target slot, so cards that pick two modes with *distinct* targets
+  collapse to bundled pairs (Cryptic Command, Steal the Show's "one or both",
+  Collective Brutality escalate). Needs per-picked-mode target-slot allocation
+  at cast time (CR 601.2b→601.2c ordering).
+- **Dynamic P/T CDA generalization** — characteristic-defining `*/*` P/T
+  (Nightmare = Swamps you control, Master of Etherium) is hand-wired per card in
+  `compute_battlefield` (Tarmogoyf pattern). A `StaticEffect::SetPtFromValue`
+  layer-7b primitive would let Nightmare-class cards drop in.
+- **More combat keywords** — Frenzy/Afflict/Afterlife shipped this run as
+  trigger shortcuts; Melee (CR 702.121, needs an "opponents attacked this
+  combat" Value), Provoke, Dash, Boast remain ⏳.
 - **"Becomes a copy" continuous layer-1 effects** — the one-shot copiers
   (Clone, Phantasmal Image, Mirror Image, Stunt Double, Spark Double) ship via
   `Effect::BecomeCopyOf`. Still open: continuous layer-1 "becomes a copy"
