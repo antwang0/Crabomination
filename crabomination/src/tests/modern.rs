@@ -18330,3 +18330,65 @@ fn thassa_grants_unblockable_to_your_creature() {
     let cp = g.computed_permanent(bear).unwrap();
     assert!(cp.keywords.contains(&crate::card::Keyword::Unblockable));
 }
+
+// ── Theros filler commons (devotion-shell bodies) ─────────────────────────────
+
+#[test]
+fn sedge_scorpion_and_pharikas_chosen_have_deathtouch() {
+    let mut g = two_player_game();
+    let s = g.add_card_to_battlefield(0, catalog::sedge_scorpion());
+    let p = g.add_card_to_battlefield(0, catalog::pharikas_chosen());
+    assert!(g.battlefield_find(s).unwrap().has_keyword(&crate::card::Keyword::Deathtouch));
+    assert!(g.battlefield_find(p).unwrap().has_keyword(&crate::card::Keyword::Deathtouch));
+}
+
+#[test]
+fn two_headed_cerberus_has_double_strike() {
+    let mut g = two_player_game();
+    let c = g.add_card_to_battlefield(0, catalog::two_headed_cerberus());
+    assert!(g.battlefield_find(c).unwrap().has_keyword(&crate::card::Keyword::DoubleStrike));
+}
+
+#[test]
+fn voyaging_satyr_untaps_a_land() {
+    let mut g = two_player_game();
+    let satyr = g.add_card_to_battlefield(0, catalog::voyaging_satyr());
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.clear_sickness(satyr);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: satyr, ability_index: 0, target: Some(Target::Permanent(land)), x_value: None,
+    }).expect("untap land");
+    drain_stack(&mut g);
+    assert!(!g.battlefield_find(land).unwrap().tapped, "land untapped");
+}
+
+#[test]
+fn leonin_snarecaster_etb_taps_a_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::leonin_snarecaster());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Leonin Snarecaster castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).unwrap().tapped, "ETB taps the target creature");
+}
+
+#[test]
+fn voyages_end_bounces_and_scrys() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::voyages_end());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Voyage's End castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature bounced");
+    assert!(g.players[1].hand.iter().any(|c| c.definition.name == "Grizzly Bears"), "to owner's hand");
+}
