@@ -3051,6 +3051,25 @@ pub mod shortcut {
         }
     }
 
+    /// Battle Cry shortcut (CR 702.92): "Whenever this creature attacks,
+    /// each *other* attacking creature gets +`amount`/+0 until end of turn."
+    /// An `Attacks / SelfSource` trigger that pumps every attacking
+    /// permanent except the source (`IsAttacking ∧ OtherThanSource`).
+    pub fn battle_cry(amount: i32) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::PumpPT {
+                what: Selector::EachPermanent(
+                    SelectionRequirement::IsAttacking
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                power: Value::Const(amount),
+                toughness: Value::Const(0),
+                duration: Duration::EndOfTurn,
+            },
+        }
+    }
+
     /// ETB-Drain shortcut: "When this creature enters, each opponent loses
     /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
     /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /

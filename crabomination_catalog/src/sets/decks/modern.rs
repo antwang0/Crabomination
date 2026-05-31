@@ -12228,6 +12228,69 @@ pub fn oblivion_ring() -> CardDefinition {
     }
 }
 
+/// Akrasan Squire — {W} 1/1 Human Soldier Warrior with Exalted.
+/// "Exalted (Whenever a creature you control attacks alone, that
+/// creature gets +1/+1 until end of turn.)"
+pub fn akrasan_squire() -> CardDefinition {
+    use crate::effect::shortcut::exalted;
+    CardDefinition {
+        name: "Akrasan Squire",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![
+                CreatureType::Human,
+                CreatureType::Soldier,
+                CreatureType::Warrior,
+            ],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![exalted()],
+        ..Default::default()
+    }
+}
+
+/// Aven Squire — {1}{W} 1/1 Bird Soldier with Flying and Exalted.
+pub fn aven_squire() -> CardDefinition {
+    use crate::effect::shortcut::exalted;
+    CardDefinition {
+        name: "Aven Squire",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![exalted()],
+        ..Default::default()
+    }
+}
+
+/// Goblin Wardriver — {1}{R} 2/2 Goblin Warrior with Battle Cry.
+/// "Battle cry (Whenever this creature attacks, each other attacking
+/// creature gets +1/+0 until end of turn.)"
+pub fn goblin_wardriver() -> CardDefinition {
+    use crate::effect::shortcut::battle_cry;
+    CardDefinition {
+        name: "Goblin Wardriver",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Warrior],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![battle_cry(1)],
+        ..Default::default()
+    }
+}
+
 /// Dakkon, Shadow Slayer — {W}{U}{B} Legendary Planeswalker — Dakkon.
 /// "+1: Surveil 2. / -3: Exile target creature. / -6: You get an
 ///  emblem with 'At the beginning of your upkeep, draw a card.'"

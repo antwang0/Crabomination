@@ -588,6 +588,53 @@ fn cr_702_83b_exalted_silent_when_not_alone() {
         "CR 702.83b: no Exalted pump when not attacking alone");
 }
 
+/// CR 702.83b: multiple Exalted abilities each trigger on a single lone
+/// attacker. Two Akrasan Squires pump an attacking bear +1/+1 each → +2/+2.
+#[test]
+fn cr_702_83b_multiple_exalted_stack_on_lone_attacker() {
+    let mut g = two_player_game();
+    let _s1 = g.add_card_to_battlefield(0, catalog::akrasan_squire());
+    let _s2 = g.add_card_to_battlefield(0, catalog::aven_squire());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    // The bear attacks alone (the squires hold back) → both Exalteds fire.
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(bear).unwrap();
+    assert_eq!((c.power(), c.toughness()), (4, 4),
+        "two Exalted sources each add +1/+1 to the lone attacker");
+}
+
+/// CR 702.92 (Battle cry): when the source attacks, each *other* attacking
+/// creature gets +1/+0 — but the source itself does not.
+#[test]
+fn cr_702_92_battle_cry_pumps_other_attackers_only() {
+    let mut g = two_player_game();
+    let driver = g.add_card_to_battlefield(0, catalog::goblin_wardriver());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(driver);
+    g.clear_sickness(bear);
+    while g.step != crate::game::types::TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass priority");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: driver, target: AttackTarget::Player(1) },
+        Attack { attacker: bear, target: AttackTarget::Player(1) },
+    ])).expect("attack");
+    drain_stack(&mut g);
+    let other = g.battlefield_find(bear).unwrap();
+    assert_eq!((other.power(), other.toughness()), (3, 2),
+        "battle cry pumps the other attacker +1/+0");
+    let src = g.battlefield_find(driver).unwrap();
+    assert_eq!((src.power(), src.toughness()), (2, 2),
+        "battle cry does NOT pump its own source");
+}
+
 /// CR 702.15 (Lifelink): combat damage dealt by a creature with lifelink
 /// causes its controller to gain that much life.
 #[test]

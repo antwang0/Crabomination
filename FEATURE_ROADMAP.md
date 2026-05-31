@@ -142,7 +142,9 @@ feature; sweep card-batch by card-batch.
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.
 - **Combat-flavor:** ⏳ Bushido, ⏳ Flanking, ⏳ Rampage, ⏳ Provoke,
-  ⏳ Battle Cry, ⏳ Melee, ⏳ Dash, ⏳ Boast, ⏳ Afflict, ⏳ Enlist,
+  ✅ Battle Cry (`shortcut::battle_cry` — Goblin Wardriver),
+  ✅ Exalted (`shortcut::exalted` — Akrasan/Aven Squire, Silverquill
+  Duelmaster), ⏳ Melee, ⏳ Dash, ⏳ Boast, ⏳ Afflict, ⏳ Enlist,
   ⏳ Mobilize, ⏳ Myriad.
 - **Value/ETB:** ⏳ Investigate (verb) + sac-Clue payoff (🟡 Clue tokens
   exist), ⏳ Fabricate, ⏳ Riot, ⏳ Afterlife, ⏳ Squad, ⏳ Forage,

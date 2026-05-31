@@ -79,6 +79,21 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 - ✅ **CR 702.130 — Enrage**
 
+- ✅ **CR 603.6e — Linked "exile until ~ leaves"** (claude/modern_decks).
+  `Effect::ExileUntilSourceLeaves` / `ExileChosenUntilSourceLeaves` stamp
+  `CardInstance.exiled_by`; `return_linked_exiles` (called from every
+  battlefield-removal path) returns the card to battlefield/hand when the
+  source leaves. Banisher Priest, Fiend Hunter, Oblivion Ring, Brain
+  Maggot, Tidehollow Sculler. Snapshot round-trips the link.
+
+- ✅ **CR 702.92 — Battle cry** (claude/modern_decks). `shortcut::battle_cry`
+  — `Attacks/SelfSource` trigger pumping `IsAttacking ∧ OtherThanSource`
+  +N/+0. Goblin Wardriver. Tests: `cr_702_92_battle_cry_pumps_other_attackers_only`.
+
+- ✅ **CR 702.83 — Exalted** — `shortcut::exalted` (already engine-wired);
+  added card users Akrasan Squire / Aven Squire + a multi-source stacking
+  test (`cr_702_83b_multiple_exalted_stack_on_lone_attacker`).
+
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
   2922–2939). The "change a word on a card" primitive — Mind Bend,

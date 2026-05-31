@@ -392,6 +392,9 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         banisher_priest,
         oblivion_ring,
         fiend_hunter,
+        // ── Exalted (CR 702.83) ──
+        akrasan_squire,
+        aven_squire,
     ];
     if pair_contains(pair, Color::Green) {
         v.push(watchwolf);
@@ -885,6 +888,8 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         lightning_bolt,
         shock,
+        // Battle cry (CR 702.92)
+        goblin_wardriver,
         blazing_rootwalla,
         cunning_sparkmage,
         hill_giant,
