@@ -35,6 +35,26 @@ pub fn anger_of_the_gods() -> CardDefinition {
     }
 }
 
+/// Sweltering Suns — {1}{R}{R} Sorcery. Deals 3 damage to each creature.
+/// Cycling {3}. Damage to each creature via `ForEach + DealDamage`; the
+/// Cycling keyword rides the engine's existing cycling path.
+pub fn sweltering_suns() -> CardDefinition {
+    CardDefinition {
+        name: "Sweltering Suns",
+        cost: cost(&[generic(1), r(), r()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Cycling(cost(&[generic(3)]))],
+        effect: Effect::ForEach {
+            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            body: Box::new(Effect::DealDamage {
+                to: Selector::TriggerSource,
+                amount: Value::Const(3),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
 /// Disentomb — {B} Sorcery. Return target creature card from your graveyard
 /// to your hand.
 ///

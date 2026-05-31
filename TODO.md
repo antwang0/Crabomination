@@ -38,6 +38,18 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
+- **Enters-as-a-copy of a permanent (CR 707.5)** — Phantasmal Image,
+  Mockingbird, Clone. `Effect::CreateTokenCopyOf` covers token copies;
+  the gap is a *nontoken* permanent that becomes a copy of a chosen target
+  as it resolves off the stack. Needs a resolution-time `Decision::ChooseTarget`
+  to pick the copy target plus a definition-swap before the battlefield push.
+- **Overload (CR 702.96)** — Cyclonic Rift's `{6}{U}` mode. Needs an
+  alt-cost that rewrites "target X" → "each X" at cast time (the alt-cost
+  model can't yet swap a selector's target into an each-selector).
+- **Linked-exile return as a stack trigger** — `return_linked_exiles`
+  returns the card directly rather than via a stack-based "when ~ leaves"
+  trigger. Fine for observable behavior; only matters for response windows
+  on the return (e.g. a board-wipe race).
 - **Emblem zone (CR 114)** ✅ — `Player.emblems` / `Effect::CreateEmblem`,
   dispatched event-keyed (`emblem_event_matches`) and step-keyed
   (`fire_step_triggers`). Wired Dellian Fel -6, Dakkon -6, Saheeli -7;

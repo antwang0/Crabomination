@@ -1033,6 +1033,25 @@ fn anger_of_the_gods_burns_each_creature() {
 }
 
 #[test]
+fn sweltering_suns_burns_each_creature_and_has_cycling() {
+    use crate::card::Keyword;
+    let mut g = two_player_game();
+    let b0 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let suns = g.add_card_to_hand(0, catalog::sweltering_suns());
+    assert!(catalog::sweltering_suns().keywords.iter()
+        .any(|k| matches!(k, Keyword::Cycling(_))), "has Cycling");
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: suns, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Sweltering Suns castable for {1}{R}{R}");
+    drain_stack(&mut g);
+    // Both 2/2 bears take 3 and die.
+    assert!(!g.battlefield.iter().any(|c| c.id == b0 || c.id == b1));
+}
+
+#[test]
 fn blasphemous_act_kills_each_creature() {
     let mut g = two_player_game();
     let dragon = g.add_card_to_battlefield(0, catalog::shivan_dragon());
