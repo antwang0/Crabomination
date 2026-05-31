@@ -10126,11 +10126,13 @@ pub fn cam_and_farrik() -> CardDefinition {
 }
 
 /// Magda, Brazen Outlaw — {1}{R}, 2/1 Legendary Dwarf Berserker.
-/// Other Dwarves you control get +1/+0.
-/// Treasure-on-tap trigger omitted.
+/// Other Dwarves you control get +1/+0. Whenever a Dwarf you control
+/// becomes tapped, create a Treasure token. (The five-Treasure sacrifice
+/// tutor is omitted.)
 pub fn magda_brazen_outlaw() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;
+    use crate::game::effects::treasure_token;
     CardDefinition {
         name: "Magda, Brazen Outlaw",
         cost: cost(&[generic(1), r()]),
@@ -10151,6 +10153,19 @@ pub fn magda_brazen_outlaw() -> CardDefinition {
                 ),
                 power: 1,
                 toughness: 0,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Dwarf),
+                },
+            ),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: treasure_token(),
             },
         }],
         ..Default::default()

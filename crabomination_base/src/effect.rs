@@ -835,6 +835,9 @@ pub enum EventKind {
     /// permanent that flips tapped→untapped during the untap step. The
     /// triggering permanent is the event subject.
     BecomesUntapped,
+    /// A permanent became tapped (Magda, Brazen Outlaw). The tapped
+    /// permanent is the event subject; matched to `GameEvent::PermanentTapped`.
+    Tapped,
 }
 
 /// Whose events does this trigger listen for?

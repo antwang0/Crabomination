@@ -18405,3 +18405,20 @@ fn theros_vanilla_bodies_have_expected_stats() {
     assert!(g.battlefield_find(goliath).unwrap().has_keyword(&crate::card::Keyword::Trample));
     assert_eq!((g.battlefield_find(minotaur).unwrap().power(), g.battlefield_find(minotaur).unwrap().toughness()), (3, 2));
 }
+
+#[test]
+fn magda_makes_a_treasure_when_a_dwarf_taps() {
+    let mut g = two_player_game();
+    let magda = g.add_card_to_battlefield(0, catalog::magda_brazen_outlaw());
+    g.clear_sickness(magda);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    // Magda is a Dwarf; attacking taps her → "becomes tapped" → Treasure.
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: magda, target: AttackTarget::Player(1) },
+    ])).expect("Magda attacks");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
+        "tapping a Dwarf you control makes a Treasure");
+}

@@ -71,7 +71,7 @@ work is listed below.
 | Card | Status | Notes |
 |---|---|---|
 | Amped Raptor | 🟡 | 2/1 Dinosaur; ETB gains 2 life as a placeholder. The energy ({E}{E}) + cast-from-exile clause is omitted (no energy system). |
-| Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves. Treasure-on-tap omitted. Tests: `magda_brazen_outlaw_is_legendary_dwarf`. |
+| Magda, Brazen Outlaw | 🟡 | {1}{R} 2/1 Legendary Dwarf Berserker. Static +1/+0 to Dwarves + "whenever a Dwarf you control becomes tapped, create a Treasure" (via the new `EventKind::Tapped` + CR 508.1f attack-tap event). Only the five-Treasure-sacrifice Dragon/artifact tutor is omitted. |
 | Robber of the Rich | 🟡 | 2/2 Reach + Haste body. The attack-trigger exile + cast-from-opponent's-library clause is omitted. |
 | Detective's Phoenix | 🟡 (was ⏳) | Push (claude/modern_decks batch 103): {2}{R} 2/2 Phoenix with Flying + Haste. Dies trigger schedules a `DelayUntil(NextEndStep)` body that returns Self to its owner's hand. Approximation of the printed "return from gy at end step if you control a Detective" — the conditional gate is collapsed (always returns). Test: `detectives_phoenix_dies_schedules_delayed_return`. |
 | Simian Spirit Guide | 🟡 | `{2}{R}` 2/2 Ape Spirit. Body wired; the alt-cost "exile from hand to add {R}" half is still ⏳ — the existing `AlternativeCost` path replaces the entire spell's resolution, so an alt-cost mana ability would need a new "alt cast = mana ability" mode. Available in any red pool. |

@@ -48,6 +48,7 @@ pub(crate) fn event_matches_spec(
         (EventKind::BecameTarget, GameEvent::BecameTarget { .. }) => true,
         (EventKind::CardCycled, GameEvent::CardCycled { .. }) => true,
         (EventKind::BecomesUntapped, GameEvent::PermanentUntapped { .. }) => true,
+        (EventKind::Tapped, GameEvent::PermanentTapped { .. }) => true,
         _ => false,
     };
     if !kind_ok {
