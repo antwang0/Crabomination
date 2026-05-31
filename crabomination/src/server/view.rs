@@ -30,7 +30,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
             .players
             .iter()
             .enumerate()
-            .map(|(i, p)| project_player(p, i, seat))
+            .map(|(i, p)| project_player(p, i, seat, &state.prevention_shields))
             .collect(),
         battlefield: {
             let attacker_ids = state.attacking_ids();
@@ -38,7 +38,15 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
             state
                 .battlefield
                 .iter()
-                .map(|c| project_permanent(c, &computed, &attacker_ids, &block_map))
+                .map(|c| {
+                    project_permanent(
+                        c,
+                        &computed,
+                        &attacker_ids,
+                        &block_map,
+                        &state.prevention_shields,
+                    )
+                })
                 .collect()
         },
         stack: state
@@ -57,6 +65,7 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
         }),
         exile: state.exile.iter().map(exile_entry).collect(),
         game_over: state.game_over,
+        damage_cant_be_prevented_this_turn: state.damage_cant_be_prevented_this_turn,
     }
 }
 
@@ -72,7 +81,16 @@ fn exile_entry(card: &CardInstance) -> ExileCardView {
     }
 }
 
-fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> PlayerView {
+fn project_player(
+    player: &Player,
+    player_seat: usize,
+    viewer_seat: usize,
+    prevention_shields: &[crate::game::types::PreventionShield],
+) -> PlayerView {
+    use crate::game::types::PreventionTarget;
+    let has_prevention_shield = prevention_shields
+        .iter()
+        .any(|s| s.target == PreventionTarget::Player(player_seat));
     PlayerView {
         seat: player_seat,
         name: player.name.clone(),
@@ -112,6 +130,7 @@ fn project_player(player: &Player, player_seat: usize, viewer_seat: usize) -> Pl
         commanders: player.commanders.clone(),
         eliminated: player.eliminated,
         emblems: player.emblems.iter().map(|e| e.name.clone()).collect(),
+        has_prevention_shield,
     }
 }
 
@@ -195,8 +214,13 @@ fn project_permanent(
     computed: &[crate::game::layers::ComputedPermanent],
     attacking: &[CardId],
     block_map: &[(CardId, CardId)],
+    prevention_shields: &[crate::game::types::PreventionShield],
 ) -> PermanentView {
+    use crate::game::types::PreventionTarget;
     let cp = computed.iter().find(|c| c.id == card.id);
+    let has_prevention_shield = prevention_shields
+        .iter()
+        .any(|s| s.target == PreventionTarget::Permanent(card.id));
     PermanentView {
         id: card.id,
         name: card.definition.name.to_string(),
@@ -229,6 +253,7 @@ fn project_permanent(
         has_stun_counters: card.counter_count(crate::card::CounterType::Stun) > 0,
         has_finality_counters: card.counter_count(crate::card::CounterType::Finality) > 0,
         has_shield_counters: card.counter_count(crate::card::CounterType::Shield) > 0,
+        has_prevention_shield,
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
@@ -827,6 +852,27 @@ mod tests {
         assert_eq!(format_mana_cost(&cost(&[generic(2), w(), b()])), "{2}{W}{B}");
         // Empty cost stays the empty string (not "{0}").
         assert_eq!(format_mana_cost(&ManaCost::new(vec![])), "");
+    }
+
+    #[test]
+    fn prevention_shields_surface_in_the_view() {
+        use crate::game::types::{PreventionShield, PreventionTarget};
+        let mut state = two_player_game();
+        let bear = state.add_card_to_battlefield(1, catalog::grizzly_bears());
+        state.prevention_shields.push(PreventionShield {
+            target: PreventionTarget::Player(0),
+            remaining: None,
+        });
+        state.prevention_shields.push(PreventionShield {
+            target: PreventionTarget::Permanent(bear),
+            remaining: Some(2),
+        });
+        state.damage_cant_be_prevented_this_turn = true;
+        let v = project(&state, 0);
+        assert!(v.players[0].has_prevention_shield, "P0 is shielded");
+        assert!(!v.players[1].has_prevention_shield, "P1 is not");
+        assert!(v.battlefield.iter().find(|p| p.id == bear).unwrap().has_prevention_shield);
+        assert!(v.damage_cant_be_prevented_this_turn);
     }
 
     #[test]

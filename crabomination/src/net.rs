@@ -89,6 +89,11 @@ pub struct ClientView {
     pub exile: Vec<ExileCardView>,
     /// `None` while the game is ongoing; `Some(None)` = draw; `Some(Some(i))` = seat `i` won.
     pub game_over: Option<Option<usize>>,
+    /// CR 615.12 — true while "damage can't be prevented this turn" is in
+    /// effect. Surfaced so UIs can warn that prevention shields are off.
+    /// `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub damage_cant_be_prevented_this_turn: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +193,11 @@ pub struct PlayerView {
     /// emblems. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub emblems: Vec<String>,
+    /// True when an active prevention shield (CR 615) protects this player
+    /// from some/all damage this turn. Surfaced so UIs can flag a shielded
+    /// player. `#[serde(default)]` for snapshot back-compat.
+    #[serde(default)]
+    pub has_prevention_shield: bool,
 }
 
 /// A single hand-slot entry. `Hidden` for cards the viewer isn't entitled to
@@ -438,6 +448,11 @@ pub struct PermanentView {
     /// pops a counter on each trigger. Populated by `project_permanent`.
     #[serde(default)]
     pub has_shield_counters: bool,
+    /// True when an active prevention shield (CR 615, distinct from a
+    /// shield *counter*) protects this permanent from some/all damage
+    /// this turn. Populated by `project_permanent`.
+    #[serde(default)]
+    pub has_prevention_shield: bool,
     /// True when the permanent's computed power or toughness differs
     /// from its base (printed) values — a UI hint for rendering
     /// modified P/T in a distinct color. Always false for non-creatures.

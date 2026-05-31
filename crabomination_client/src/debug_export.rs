@@ -188,12 +188,14 @@ mod tests {
                 commanders: vec![],
                 emblems: vec![],
                 eliminated: false,
+                has_prevention_shield: false,
             }],
             battlefield: vec![],
             stack: vec![],
             pending_decision: None,
             exile: vec![],
             game_over: None,
+            damage_cant_be_prevented_this_turn: false,
         }
     }
 

@@ -126,7 +126,9 @@ fn event_color(ev: &crabomination::net::GameEventWire) -> Color {
         | E::CreatureDied { .. }
         | E::PlaneswalkerDied { .. } => theme::TEXT_DANGER,
 
-        E::LifeGained { .. } => theme::TEXT_GOOD,
+        // Prevented damage is a protective/beneficial outcome — colour it
+        // like life-gain rather than the red damage events.
+        E::LifeGained { .. } | E::DamagePrevented { .. } => theme::TEXT_GOOD,
 
         E::StepChanged(_) | E::TurnStarted { .. } => theme::TEXT_SECONDARY,
 
