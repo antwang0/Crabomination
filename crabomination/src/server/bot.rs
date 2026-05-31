@@ -811,6 +811,38 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
             assignments.push((idle.id, *a_id));
         }
     }
+
+    // CR 509.1b — a Menace attacker can't be blocked except by two or more
+    // creatures. The greedy passes above assign one blocker at a time, so a
+    // lone block on a Menace attacker is illegal and the engine would reject
+    // the whole declaration. For each Menace attacker with exactly one
+    // assigned blocker, pull in a second legal idle blocker; if none is
+    // available, drop the lone block (better unblocked than illegal).
+    for (a_id, _a_pow, _a_tough, a_flying) in &attacker_info {
+        let is_menace = state
+            .battlefield
+            .iter()
+            .find(|c| c.id == *a_id)
+            .is_some_and(|a| a.has_keyword(&Keyword::Menace));
+        if !is_menace {
+            continue;
+        }
+        if assignments.iter().filter(|(_, aid)| aid == a_id).count() != 1 {
+            continue;
+        }
+        let second = state.battlefield.iter().find(|c| {
+            c.controller == seat
+                && c.can_block()
+                && !assignments.iter().any(|(bid, _)| *bid == c.id)
+                && (!a_flying
+                    || c.has_keyword(&Keyword::Flying)
+                    || c.has_keyword(&Keyword::Reach))
+        });
+        match second {
+            Some(c) => assignments.push((c.id, *a_id)),
+            None => assignments.retain(|(_, aid)| aid != a_id),
+        }
+    }
     assignments
 }
 

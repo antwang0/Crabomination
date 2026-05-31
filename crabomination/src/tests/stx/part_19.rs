@@ -1903,6 +1903,69 @@ fn bot_gang_blocks_to_kill_when_life_threatened() {
     assert!(blockers.contains(&b1) && blockers.contains(&b2));
 }
 
+#[test]
+fn bot_assigns_two_blockers_to_a_menace_attacker() {
+    // CR 509.1b — a Menace 4/4 must be blocked by two creatures. With two
+    // idle 2/3 blockers the bot must commit both (a lone block is illegal).
+    use crate::card::Keyword;
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.players[0].life = 4; // lethal pressure so the bot wants to block
+    let menace = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Menace Bear";
+        d.power = 4;
+        d.toughness = 4;
+        d.keywords = vec![Keyword::Menace];
+        d
+    };
+    let attacker = g.add_card_to_battlefield(1, menace);
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let mk = |g: &mut crate::game::GameState| {
+        let mut d = catalog::grizzly_bears();
+        d.power = 2;
+        d.toughness = 3;
+        let id = g.add_card_to_battlefield(0, d);
+        g.clear_sickness(id);
+        id
+    };
+    mk(&mut g);
+    mk(&mut g);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    let on_menace = blocks.iter().filter(|(_, a)| *a == attacker).count();
+    assert!(on_menace == 0 || on_menace >= 2,
+        "Menace attacker gets 0 or ≥2 blockers, never a lone (illegal) block; got {on_menace}");
+    assert_eq!(on_menace, 2, "two idle blockers available → commit both");
+}
+
+#[test]
+fn bot_drops_lone_block_on_menace_when_no_second_blocker() {
+    // With only one creature available, a Menace attacker can't be legally
+    // blocked — the bot must leave it unblocked rather than emit an illegal
+    // single block.
+    use crate::card::Keyword;
+    use crate::server::bot;
+    let mut g = two_player_game();
+    g.players[0].life = 3;
+    let menace = {
+        let mut d = catalog::grizzly_bears();
+        d.name = "Menace Bear";
+        d.power = 3;
+        d.toughness = 3;
+        d.keywords = vec![Keyword::Menace];
+        d
+    };
+    let attacker = g.add_card_to_battlefield(1, menace);
+    g.clear_sickness(attacker);
+    g.attacking.push(Attack { attacker, target: AttackTarget::Player(0) });
+    let lone = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(lone);
+    let blocks = bot::pick_blocks_for_test(&g, 0);
+    assert!(blocks.iter().all(|(_, a)| *a != attacker),
+        "no legal block on the Menace attacker → leave it unblocked");
+}
+
 // ── CR 603.4 — intervening 'if' clause re-check at resolve time ────────────
 
 #[test]
