@@ -1529,7 +1529,7 @@ pub fn handle_learn_buttons(
         return;
     }
     let Some(outbox) = outbox else { return };
-    let mut submit = |choice: LearnChoice, state: &mut DecisionUiState| {
+    let submit = |choice: LearnChoice, state: &mut DecisionUiState| {
         outbox.submit(GameAction::SubmitDecision(DecisionAnswer::Learn(choice)));
         state.spawned_for = None;
     };
