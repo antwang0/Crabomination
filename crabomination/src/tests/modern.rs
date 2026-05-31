@@ -1797,6 +1797,34 @@ fn daze_counters_when_unpaid() {
 }
 
 #[test]
+fn daze_alt_cost_returns_island_to_counter_for_free() {
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable");
+    // Seat 0 has no mana but an Island to bounce as Daze's alt cost.
+    let daze = g.add_card_to_hand(0, catalog::daze());
+    let isl = g.add_card_to_battlefield(0, catalog::island());
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: daze, pitch_card: None, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Daze castable via return-an-Island alt cost");
+    drain_stack(&mut g);
+
+    assert!(!g.battlefield.iter().any(|c| c.id == isl), "Island bounced as the alt cost");
+    assert!(g.players[0].hand.iter().any(|c| c.id == isl), "Island back in hand");
+    // Seat 1 can't pay {1} (no mana left) → Bolt countered.
+    assert_eq!(g.players[0].life, 20);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
+}
+
+#[test]
 fn swan_song_counters_enchantment_and_makes_a_bird() {
     let mut g = two_player_game();
     // Seat 1 casts a creature *enchantment* — use Hopeful Eidolon (an
@@ -12216,6 +12244,43 @@ fn gush_draws_two_cards() {
     drain_stack(&mut g);
     // Cast -1 (Gush) from hand + draw 2 = net +1
     assert_eq!(g.players[0].hand.len(), hand_before + 1);
+}
+
+#[test]
+fn gush_alt_cost_returns_two_islands_and_draws() {
+    // Free Gush: pay no mana, return two Islands you control to hand.
+    let mut g = two_player_game();
+    for _ in 0..5 { g.add_card_to_library(0, catalog::island()); }
+    let i1 = g.add_card_to_battlefield(0, catalog::island());
+    let i2 = g.add_card_to_battlefield(0, catalog::island());
+    let _plains = g.add_card_to_battlefield(0, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::gush());
+    // No mana in pool — only the alt cost can pay.
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Gush castable via return-two-Islands alt cost");
+    drain_stack(&mut g);
+
+    // Both Islands bounced to hand; Plains stayed.
+    assert!(!g.battlefield.iter().any(|c| c.id == i1 || c.id == i2),
+        "two Islands returned to hand");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Plains").count(), 1);
+    // Drew two cards (Gush itself left hand to the stack/graveyard).
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Gush"));
+}
+
+#[test]
+fn gush_alt_cost_rejected_without_two_islands() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::island()); // only one Island
+    let id = g.add_card_to_hand(0, catalog::gush());
+    let err = g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    });
+    assert!(err.is_err(), "can't pay Gush's alt cost with only one Island");
+    assert!(g.players[0].hand.iter().any(|c| c.id == id), "Gush stays in hand on failure");
 }
 
 // ── Cube expansion cards ──────────────────────────────────────────────────────

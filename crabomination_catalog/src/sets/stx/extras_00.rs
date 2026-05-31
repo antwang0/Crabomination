@@ -226,6 +226,7 @@ pub fn baleful_mastery() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::Seq(vec![
                 Effect::Draw {
                     who: Selector::Player(PlayerRef::EachOpponent),

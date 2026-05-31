@@ -37,9 +37,7 @@ work is listed below.
 | Thundertrap Trainer | 🟡 | 2/2 Flash; ETB taps target creature an opponent controls. Body fully wired; the trap/discount text is dropped. |
 | Deadeye Navigator | ⏳ | Soulbond + activated flicker. Reuses Flicker primitive; needs Soulbond. |
 | Consult the Star Charts | ⏳ | Look-at-top-N + draw — needs Foretell-adjacent decision. |
-| Daze | 🟡 | Counter target spell unless its controller pays {1}. The "return an Island" alt cost is omitted (alt-cost model only supports exile-from-hand). |
 | Cryptic Command | 🟡 | `{1}{U}{U}{U}` Instant. **Choose two** is collapsed to a single `ChooseMode` of four bundled pairs: `[counter+bounce, counter+tap-opp-creatures, counter+draw, bounce+draw]`. AutoDecider picks mode 0 (counter+bounce). The "tap all creatures your opponents control" half uses `ForEach + Tap`. A multi-pick "choose any two" mode primitive is the gap. Tests: `cryptic_command_counter_plus_bounce_resolves`, `cryptic_command_mode_two_counter_and_draw`. |
-| Gush | 🟡 | {4}{U} Instant. Draw 2 cards at full cost. Alt cost (return two Islands) omitted. Tests: `gush_draws_two_cards`. |
 | Gather Specimens | ⏳ | Replace creature ETB control-shift. Replacement effect primitive. |
 | Mirrorform | ⏳ | Aura + clone target. |
 | Windfall | 🟡 | Each player discards their hand and draws 7 (the dynamic "max discarded" yield is collapsed to a constant — same simplification as Wheel of Fortune). Test: `windfall_discards_both_hands_and_draws_seven`. |

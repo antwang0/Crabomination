@@ -364,14 +364,10 @@ pub fn spell_snare() -> CardDefinition {
 }
 
 /// Daze — {1}{U} Instant. Counter target spell unless its controller pays
-/// {1}.
-///
-/// Approximation: the Force-spike alternative cost ("you may return an
-/// Island you control to its owner's hand rather than pay this spell's
-/// mana cost") is omitted — the alt-cost model only supports
-/// exile-from-hand, not return-from-battlefield. Fixed-cost path is wired
-/// faithfully.
+/// {1}. Alternative cost: return an Island you control to its owner's
+/// hand (the classic free-counter line) via `return_to_hand`.
 pub fn daze() -> CardDefinition {
+    use crate::card::{AlternativeCost, LandType};
     CardDefinition {
         name: "Daze",
         cost: cost(&[generic(1), u()]),
@@ -384,6 +380,10 @@ pub fn daze() -> CardDefinition {
             what: target_filtered(SelectionRequirement::IsSpellOnStack),
             mana_cost: cost(&[generic(1)]),
         },
+        alternative_cost: Some(AlternativeCost {
+            return_to_hand: Some((SelectionRequirement::HasLandType(LandType::Island), 1)),
+            ..Default::default()
+        }),
         triggered_abilities: vec![],
         ..Default::default()
     }
@@ -555,6 +555,7 @@ pub fn pyrokinesis() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -636,6 +637,7 @@ pub fn bloodchiefs_thirst() -> CardDefinition {
             ),
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::Destroy {
                 what: target_filtered(
                     SelectionRequirement::Creature
@@ -985,14 +987,11 @@ pub fn turnabout() -> CardDefinition {
     }
 }
 
-/// Gush — {4}{U} Instant. Draw two cards.
-///
-/// Approximation: wired at its full mana cost. The "you may return two
-/// Islands you control to their owner's hand rather than pay this spell's
-/// mana cost" alternative cost is omitted (the engine's `AlternativeCost`
-/// path only supports exile-from-hand, not bounce-lands-as-cost). The
-/// base effect — {4}{U}: draw 2 — is fully functional.
+/// Gush — {4}{U} Instant. Draw two cards. Alternative cost: return two
+/// Islands you control to their owner's hand (the free-draw line) via
+/// `return_to_hand`.
 pub fn gush() -> CardDefinition {
+    use crate::card::{AlternativeCost, LandType};
     CardDefinition {
         name: "Gush",
         cost: cost(&[generic(4), u()]),
@@ -1001,6 +1000,10 @@ pub fn gush() -> CardDefinition {
             who: Selector::You,
             amount: Value::Const(2),
         },
+        alternative_cost: Some(AlternativeCost {
+            return_to_hand: Some((SelectionRequirement::HasLandType(LandType::Island), 2)),
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

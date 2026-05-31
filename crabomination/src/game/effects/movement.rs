@@ -133,7 +133,7 @@ impl GameState {
         }
     }
 
-    pub(super) fn move_card_to(
+    pub(crate) fn move_card_to(
         &mut self,
         cid: CardId,
         dest: &ZoneDest,

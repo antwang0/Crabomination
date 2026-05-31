@@ -256,6 +256,7 @@ pub fn mizzium_mortars() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature
@@ -445,6 +446,7 @@ pub fn past_in_flames() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         back_face: None,
@@ -565,6 +567,7 @@ pub fn resurgent_belief() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         back_face: None,

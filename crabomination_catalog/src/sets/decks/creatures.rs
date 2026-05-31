@@ -389,6 +389,7 @@ pub fn solitude() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         ..Default::default()

@@ -423,6 +423,7 @@ pub fn force_of_negation() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -652,6 +653,7 @@ pub fn mystical_dispute() -> CardDefinition {
             target_filter: Some(SelectionRequirement::HasColor(Color::Blue)),
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         ..Default::default()

@@ -1743,6 +1743,7 @@ pub fn blustersquall() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature
@@ -1801,6 +1802,7 @@ pub fn electrickery() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature
@@ -1870,6 +1872,7 @@ pub fn teleportal() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature
@@ -1940,6 +1943,7 @@ pub fn street_spasm() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Creature

@@ -1354,6 +1354,7 @@ pub fn snuff_out() -> CardDefinition {
             target_filter: None,
             condition: None,
                     exile_from_graveyard_count: 0,
+                    return_to_hand: None,
             effect_override: None,
         }),
         ..Default::default()
@@ -2836,6 +2837,7 @@ pub fn cyclonic_rift() -> CardDefinition {
             target_filter: None,
             condition: None,
             exile_from_graveyard_count: 0,
+            return_to_hand: None,
             effect_override: Some(Effect::ForEach {
                 selector: Selector::EachPermanent(
                     SelectionRequirement::Nonland

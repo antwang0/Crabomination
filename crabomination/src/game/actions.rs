@@ -2158,6 +2158,35 @@ impl GameState {
             Vec::new()
         };
 
+        // Return-N-permanents-to-hand additional cost (Gush / Daze). Pick
+        // the matches up front so a shortfall rejects before any mana is
+        // paid; commit the moves after payment succeeds. Auto-picker
+        // prefers untapped permanents (lower tempo loss).
+        let return_picks: Vec<CardId> = if let Some((filter, count)) = &alt.return_to_hand {
+            let n = *count as usize;
+            let mut matches: Vec<(CardId, bool)> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.controller == p
+                        && self.evaluate_requirement_static(
+                            filter,
+                            &Target::Permanent(c.id),
+                            p,
+                            None,
+                        )
+                })
+                .map(|c| (c.id, c.tapped))
+                .collect();
+            matches.sort_by_key(|(_, tapped)| *tapped);
+            if matches.len() < n {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            matches.into_iter().take(n).map(|(cid, _)| cid).collect()
+        } else {
+            Vec::new()
+        };
+
         // Validate that the pitch card matches the filter (if any).
         if let Some(filter) = &alt.exile_filter {
             let pitch_id = pitch_card.ok_or(GameError::NoAlternativeCost)?;
@@ -2303,6 +2332,23 @@ impl GameState {
                 });
                 self.players[p].cards_left_graveyard_this_turn =
                     self.players[p].cards_left_graveyard_this_turn.saturating_add(1);
+            }
+        }
+
+        // Return-to-hand additional cost: bounce the picked permanents to
+        // their owners' hands now that mana/life are paid. Reuses the full
+        // `move_card_to` battlefield-exit path (combat removal, continuous-
+        // effect cleanup, linked-exile return).
+        for ret_cid in &return_picks {
+            let owner = self.battlefield_find(*ret_cid).map(|c| c.owner);
+            if let Some(owner) = owner {
+                let ret_ctx = EffectContext::for_spell(owner, None, 0, 0);
+                self.move_card_to(
+                    *ret_cid,
+                    &crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::You),
+                    &ret_ctx,
+                    &mut auto_events,
+                );
             }
         }
 

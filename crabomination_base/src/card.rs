@@ -812,6 +812,15 @@ pub struct AlternativeCost {
     /// alt cost.
     #[serde(default)]
     pub exile_from_graveyard_count: u32,
+    /// Optional additional cost: return N permanents the caster controls
+    /// matching the filter to their owner's hand. Powers "free" spells
+    /// whose alt cost is a bounce-your-own-lands tempo hit — Gush
+    /// ("return two Islands"), Daze ("return an Island"), Foil, etc. The
+    /// auto-picker returns the lowest-impact matching permanents (untapped
+    /// basics first). Rejected with `SelectionRequirementViolated` if the
+    /// caster controls fewer than N matches.
+    #[serde(default)]
+    pub return_to_hand: Option<(SelectionRequirement, u32)>,
     /// Optional effect override when casting via the alternative cost.
     /// When `Some`, the spell uses this effect instead of its normal
     /// `definition.effect` on resolution. Powers Overload ("change each
