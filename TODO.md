@@ -1875,6 +1875,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 - ✅ **CR 120.8 — 0-damage event suppression**
 - ✅ **CR 702.90b — Infect damage to a player adds poison counters**
+- ✅ **CR 702.180c — Toxic N**. `Keyword::Toxic(N)` gives the defending
+  player N poison counters when the creature deals combat damage to them,
+  stacking with normal damage and Infect. Wired in combat (`AttackerInfo`
+  + the player-damage path); 10-poison loss SBA already present.
+- ✅ **CR 305.6/.7 + 613 — basic-land type changes**.
+  `Effect::BecomeBasicLand` swaps the type line and intrinsic mana
+  (`intrinsic_land_mana_abilities` derives `{T}: Add <color>` from computed
+  basic land types); `Effect::ResetCreature` sets a creature's P/T + types
+  and strips abilities via the layer system (Oko, Turn to Frog).
 
 - 🟡 **CR 702.15 — Lifelink**. The
   lifelink keyword: a source with lifelink causes its controller to
@@ -6191,3 +6200,27 @@ listed here so the next pass can pick them up.
   control` is wired via `ManaPayload::OfColor(Green,
   CountOf(EachPermanent(HasLandType(Forest) ∧ ControlledByYou)))`. Test:
   `tests::modern::rofellos_taps_for_green_per_forest`.
+
+## New suggestions (modern_decks: layer/keyword + alt-cost run)
+
+- **Fire `EventKind::Tapped`** — the variant exists but is never
+  dispatched. Wire it through the tap paths (combat declare, ability/cost
+  tap, `Effect::Tap`, manual tap) behind a single `tap_permanent` helper so
+  "becomes tapped" triggers fire (Magda Brazen Outlaw's Treasure-on-Dwarf-
+  tap, Inspired-mirror effects). Guard against trigger loops.
+- **Blank-permanent stubs** — Pithing Needle (name-a-card +
+  activated-ability lockout) and Possibility Storm (cast replacement) are
+  the only two `audit_stubs` flags; both need new primitives.
+- **Self target-aware cost reduction** — Brush Off ("costs {1}{U} less if
+  it targets an instant or sorcery") needs a per-card cost reduction keyed
+  on the spell's own chosen target (distinct from the existing
+  `StaticEffect::CostReductionTargetingFilter`, which is a permanent-static).
+- **Multi-zone same-name exile** — `Selector::SharingNameWith` only spans
+  the battlefield; Crumble to Dust / Runo-style "exile every card with the
+  same name from library/hand/graveyard" needs a zone-spanning variant.
+- **Cryptic Command true "choose two"** — convert the bundled `ChooseMode`
+  pairs to `ChooseN { picks:[2], … }` once per-mode independent targeting
+  lands (the blocker is multi-target-per-chosen-mode at cast time).
+- **Plunge into Darkness mode 1** — now that `LookPickToHand` exists, the
+  "pay X life, look at top X, take one" half can use it with an X-driven
+  count instead of the flat tutor approximation.
