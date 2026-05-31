@@ -100,9 +100,11 @@ not how Magic works" moments.
 - ⏳ **Continuous-effect breadth:** characteristic-defining abilities,
   type/color/text-changing effects (CR 613 layers 1–6 corner cases),
   "becomes a copy of" layer interaction, set-P/T vs +N/+N ordering.
-- ⏳ **Static ability framework:** cost-reduction statics, "you may play"
+- 🟡 **Static ability framework:** cost-reduction statics, "you may play"
   permissions from permanents, "creatures you control have X", anthem
-  stacking, devotion-gated states (Heliod, Nyx gods).
+  stacking — wired. Devotion-gated creature states (Nyx gods) ship via
+  `StaticEffect::NotCreatureWhileDevotionBelow` (CR 700.5). Remaining:
+  broader "you may play" permissions and devotion-gated *non-type* states.
 - 🟡 **Replacement of life/draw/damage events** (ties to Tier-1 #1).
 - ⏳ **Regeneration shields & "the next time" prevention** as proper shields
   rather than instantaneous.
@@ -170,7 +172,11 @@ feature; sweep card-batch by card-batch.
   ⏳ Surge, ⏳ Spectacle, ⏳ Addendum, ⏳ Conspire, ⏳ Demonstrate.
 - **Resource systems:** ⏳ Energy ({E}), ⏳ Experience counters,
   ✅ Poison/Toxic (`Keyword::Toxic(N)` adds N poison on combat damage,
-  CR 702.180c; 10-poison loss SBA wired), ⏳ Ascend / city's blessing,
+  CR 702.180c; 10-poison loss SBA wired),
+  ✅ Devotion (CR 700.5 — `Value::DevotionTo`,
+  `StaticEffect::NotCreatureWhileDevotionBelow` god gate,
+  `ManaPayload::DevotionOfChosenColor`; surfaced in `PlayerView.devotion`
+  + HUD chip), ⏳ Ascend / city's blessing,
   ⏳ Initiative / monarch, ⏳ Day/Night, ⏳ Ring-bearer (the Ring tempts you).
 - **Fading family:** ⏳ Fading, ⏳ Vanishing (Parallax cards in cube).
 - **Older mechanics:** ⏳ Soulshift, ⏳ Offering, ⏳ Epic, ⏳ Absorb,
@@ -197,10 +203,11 @@ feature; sweep card-batch by card-batch.
 - ⏳ **Banding** combat rules (keyword exists; rules not wired).
 - ⏳ **Multiple combat phases / extra attack steps** (Aggravated Assault).
 - 🟡 **"Must attack/block", "can't attack alone", "attacks each combat"**
-  restrictions and requirements (Master of Cruelties currently drops these).
-  `Keyword::CantAttack` / `CantBlock` are wired (enforced from computed
-  keywords in `declare_attackers`/`declare_blockers`) — Pacifism. Still
-  open: must-attack/must-block requirements, "attacks each combat".
+  restrictions and requirements. `Keyword::CantAttack` / `CantBlock`
+  (Pacifism) and `Keyword::AttacksAlone` (CR 508.0 — Master of Cruelties,
+  rejects a multi-attacker batch) are wired from computed keywords in
+  `declare_attackers`/`declare_blockers`. Still open: must-attack/must-block
+  requirements, "attacks each combat".
 - ⏳ **Planeswalker / Battle as attack targets** UI + redirection.
 - ⏳ **Ninjutsu attacking-creature swap**, **Goad**, **Lure**, **provoke**.
 
