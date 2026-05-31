@@ -115,10 +115,14 @@ fn main() {
             visit(&card.definition);
         }
     }
-    for factory in crabomination::cube::all_cube_cards() {
-        visit(&factory());
-    }
-    for factory in crabomination::sos_mode::all_sos_cards() {
+    // Every card the registry knows about — cube, SoS, the *full* STX
+    // catalog, plus the xtra / Theros sets. This is a superset of every
+    // deck *and* the audit catalog (and the Lessons sideboard), so
+    // audit-mode cards and Learn-fetched Lessons (Academic Dispute, Anger,
+    // …) get their art prefetched instead of rendering with the
+    // missing-asset placeholder. Earlier this walked only cube + SoS, so
+    // the many STX cards outside those pools had no image.
+    for factory in crabomination::catalog::all_known_factories() {
         visit(&factory());
     }
     // Token names: created mid-game by `Effect::CreateToken` factories,

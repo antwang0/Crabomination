@@ -16,6 +16,7 @@ use bevy::prelude::*;
 
 use crate::MainCamera;
 use crate::card::{BattlefieldCard, CardHovered};
+use crate::systems::kb_cursor::KeyboardSelected;
 
 /// Fixed "home" camera position (matches the spawn in `main::setup`).
 const CAM_HOME_POS: Vec3 = Vec3::new(0.0, 32.0, 14.0);
@@ -45,6 +46,13 @@ pub fn camera_zoom(
     windows: Query<&Window>,
     mut zoom: ResMut<CameraZoom>,
     hovered_bf: Query<&GlobalTransform, (With<BattlefieldCard>, With<CardHovered>)>,
+    // The keyboard-selected card (WASD/arrow navigation). Preferred over the
+    // mouse hover so the two don't fight: `sync_kb_hover_marker` mirrors
+    // `KeyboardSelected` into `CardHovered`, so while navigating with the
+    // keyboard *two* cards can carry `CardHovered` (the kb card + whatever
+    // the mouse happens to be over). Picking the kb card deterministically
+    // keeps the zoom focus from stuttering between them.
+    kb_selected_bf: Query<&GlobalTransform, (With<BattlefieldCard>, With<KeyboardSelected>)>,
     mut camera: Query<(&mut Transform, &Camera), With<MainCamera>>,
 ) {
     let Ok((mut cam_xform, camera)) = camera.single_mut() else { return };
@@ -55,9 +63,12 @@ pub fn camera_zoom(
         keyboard.pressed(KeyCode::ControlLeft) || keyboard.pressed(KeyCode::ControlRight);
 
     let target = if ctrl_held {
-        // Prefer a highlighted battlefield card; otherwise raycast the
-        // cursor onto the table plane through the *home* camera pose.
-        if let Some(card) = hovered_bf.iter().next() {
+        // Focus priority: the keyboard-selected card (stable while using
+        // WASD) → the mouse-hovered card → the cursor raycast onto the
+        // table plane through the *home* camera pose.
+        if let Some(card) = kb_selected_bf.iter().next() {
+            zoom.focus = card.translation();
+        } else if let Some(card) = hovered_bf.iter().next() {
             zoom.focus = card.translation();
         } else if let Some(point) = cursor_on_table(&windows, camera, &home) {
             zoom.focus = point;
