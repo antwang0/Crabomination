@@ -2563,13 +2563,13 @@ impl Effect {
                 Effect::ChooseN { picks, modes } => {
                     let mut s = 0u8;
                     for &i in picks {
-                        if let Some(m) = modes.get(i as usize) {
-                            if m.requires_target() {
-                                if s == slot {
-                                    return eff_find(m, 0, None);
-                                }
-                                s += 1;
+                        if let Some(m) = modes.get(i as usize)
+                            && m.requires_target()
+                        {
+                            if s == slot {
+                                return eff_find(m, 0, None);
                             }
+                            s += 1;
                         }
                     }
                     None
