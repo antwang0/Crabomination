@@ -4173,109 +4173,75 @@ pub fn evolving_wilds() -> CardDefinition {
     }
 }
 
-/// Build a "bridge"-cycle land: enters tapped, has both basic land types
-/// (so fetchlands and other land-type-matters effects see it), and taps
-/// for {C}.
-///
-/// In the real Oracle ("X is every basic land type") bridges register all
-/// five basic types. We collapse to the two relevant types — that's
-/// enough to power fetchland targeting and Nature's-Lore-style searches
-/// for a Forest/etc., without overstating the card by giving it Plains
-/// production from a Reflecting Pool, etc.
+/// Build a "bridge"-cycle artifact land (March of the Machine): an
+/// indestructible Artifact Land that enters tapped and taps for one of
+/// two colours. No basic land types (the printed cards have none).
 fn bridge_land(
     name: &'static str,
-    type_a: crate::card::LandType,
-    type_b: crate::card::LandType,
+    color_a: crate::mana::Color,
+    color_b: crate::mana::Color,
 ) -> CardDefinition {
-    use crate::card::ActivatedAbility;
     CardDefinition {
         name,
         card_types: vec![CardType::Artifact, CardType::Land],
         keywords: vec![Keyword::Indestructible],
-        subtypes: Subtypes {
-            land_types: vec![type_a, type_b],
-            ..Default::default()
-        },
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            mana_cost: ManaCost::default(),
-            effect: Effect::AddMana {
-                who: PlayerRef::You,
-                pool: ManaPayload::Colorless(Value::Const(1)),
-            },
-            once_per_turn: false,
-            sorcery_speed: false,
-            sac_cost: false,
-            condition: None,
-            life_cost: 0,
-            from_graveyard: false,
-            exile_self_cost: false, exile_other_filter: None,
-            self_counter_cost_reduction: None, sac_other_filter: None,
-            tap_other_filter: None,
-        }],
+        activated_abilities: vec![
+            crate::catalog::sets::tap_add(color_a),
+            crate::catalog::sets::tap_add(color_b),
+        ],
         triggered_abilities: vec![modern_etb_tap()],
         ..Default::default()
     }
 }
 
-/// Mistvault Bridge — Land. Enters tapped. Is Island and Swamp. {T}: Add {C}.
+/// Mistvault Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {U} or {B}.
 pub fn mistvault_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Mistvault Bridge", LandType::Island, LandType::Swamp)
+    bridge_land("Mistvault Bridge", Color::Blue, Color::Black)
 }
 
-/// Drossforge Bridge — Land. Enters tapped. Is Swamp and Mountain. {T}: Add {C}.
+/// Drossforge Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {B} or {R}.
 pub fn drossforge_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Drossforge Bridge", LandType::Swamp, LandType::Mountain)
+    bridge_land("Drossforge Bridge", Color::Black, Color::Red)
 }
 
-/// Razortide Bridge — Land. Enters tapped. Is Plains and Island. {T}: Add {C}.
+/// Razortide Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {W} or {U}.
 pub fn razortide_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Razortide Bridge", LandType::Plains, LandType::Island)
+    bridge_land("Razortide Bridge", Color::White, Color::Blue)
 }
 
-/// Goldmire Bridge — Land. Enters tapped. Is Plains and Swamp. {T}: Add {C}.
+/// Goldmire Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {W} or {B}.
 pub fn goldmire_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Goldmire Bridge", LandType::Plains, LandType::Swamp)
+    bridge_land("Goldmire Bridge", Color::White, Color::Black)
 }
 
-/// Silverbluff Bridge — Land. Enters tapped. Is Island and Mountain. {T}: Add {C}.
+/// Silverbluff Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {U} or {R}.
 pub fn silverbluff_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Silverbluff Bridge", LandType::Island, LandType::Mountain)
+    bridge_land("Silverbluff Bridge", Color::Blue, Color::Red)
 }
 
-/// Tanglepool Bridge — Land. Enters tapped. Is Island and Forest. {T}: Add {C}.
+/// Tanglepool Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {G} or {U}.
 pub fn tanglepool_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Tanglepool Bridge", LandType::Island, LandType::Forest)
+    bridge_land("Tanglepool Bridge", Color::Green, Color::Blue)
 }
 
-/// Slagwoods Bridge — Land. Enters tapped. Is Mountain and Forest. {T}: Add {C}.
+/// Slagwoods Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {R} or {G}.
 pub fn slagwoods_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Slagwoods Bridge", LandType::Mountain, LandType::Forest)
+    bridge_land("Slagwoods Bridge", Color::Red, Color::Green)
 }
 
-/// Thornglint Bridge — Land. Enters tapped. Is Plains and Forest. {T}: Add {C}.
+/// Thornglint Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {G} or {W}.
 pub fn thornglint_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Thornglint Bridge", LandType::Plains, LandType::Forest)
+    bridge_land("Thornglint Bridge", Color::Green, Color::White)
 }
 
-/// Darkmoss Bridge — Land. Enters tapped. Is Swamp and Forest. {T}: Add {C}.
+/// Darkmoss Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {B} or {G}.
 pub fn darkmoss_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Darkmoss Bridge", LandType::Swamp, LandType::Forest)
+    bridge_land("Darkmoss Bridge", Color::Black, Color::Green)
 }
 
-/// Rustvale Bridge — Land. Enters tapped. Is Plains and Mountain. {T}: Add {C}.
+/// Rustvale Bridge — Indestructible Artifact Land. Enters tapped. {T}: Add {R} or {W}.
 pub fn rustvale_bridge() -> CardDefinition {
-    use crate::card::LandType;
-    bridge_land("Rustvale Bridge", LandType::Plains, LandType::Mountain)
+    bridge_land("Rustvale Bridge", Color::Red, Color::White)
 }
 
 // ── Utility artifacts ────────────────────────────────────────────────────────

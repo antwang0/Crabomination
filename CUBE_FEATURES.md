@@ -184,21 +184,11 @@ work is listed below.
 
 | Card | Status | Notes |
 |---|---|---|
-| Razortide Bridge | 🟡 | UW Bridge artifact-land. ETB tapped, typed as Plains + Island, `{T}: Add {C}`. Each bridge tracked in CUBE_FEATURES.md is its own factory; the helper `bridge_land()` reduces duplication. The "every basic land type" half is collapsed to the two relevant types (enough for fetchland + Nature's-Lore-style searches). Tests: `mistvault_bridge_etbs_tapped_with_dual_basic_typing`, `drossforge_bridge_taps_for_colorless`, `all_bridges_etb_tapped_and_carry_two_basic_land_types`. |
-| Mistvault Bridge | 🟡 | UB Bridge — see Razortide Bridge row. |
 | Blazemire Verge | ⏳ | BR DFC verge. |
-| Drossforge Bridge | 🟡 | BR Bridge — see Razortide Bridge row. |
-| Slagwoods Bridge | 🟡 | RG Bridge — see Razortide Bridge row. |
 | Thornspire Verge | ⏳ | RG verge. |
-| Thornglint Bridge | 🟡 | GW Bridge — see Razortide Bridge row. |
 | Bleachbone Verge | ⏳ | WB verge. |
-| Goldmire Bridge | 🟡 | WB Bridge — see Razortide Bridge row. |
 | Riverpyre Verge | ⏳ | UR verge. |
-| Silverbluff Bridge | 🟡 | UR Bridge — see Razortide Bridge row. |
-| Darkmoss Bridge | 🟡 | BG Bridge — see Razortide Bridge row. |
 | Wastewood Verge | ⏳ | BG verge. |
-| Rustvale Bridge | 🟡 | RW Bridge — see Razortide Bridge row. |
-| Tanglepool Bridge | 🟡 | UG Bridge — see Razortide Bridge row. |
 | Twisted Landscape | ⏳ | Tri-color landcycle. |
 | Sheltering Landscape | ⏳ | Tri-color landcycle. |
 | Bountiful Landscape | ⏳ | Tri-color landcycle. |
@@ -233,7 +223,6 @@ are listed in `DECK_FEATURES.md`.
 | Hideaway lands | ⏳ | Shelldock Isle. |
 | Horizon-canopy "pay 1 + life to draw" lands | ⏳ | Horizon Canopy, Sunbaked Canyon, Waterlogged Grove. |
 | Verge / surveil land family expansion | ⏳ | Each color pair's `*verge` and surveil-land entry. |
-| Bridge dual-typed lands | 🟡 | All 10 bridges (Mistvault / Drossforge / Razortide / Goldmire / Silverbluff / Tanglepool / Slagwoods / Thornglint / Darkmoss / Rustvale) ship as ETB-tapped `{T}: Add {C}` lands typed by their two relevant basic land types via the shared `bridge_land()` helper. The "every basic land type" half is collapsed to the two types most relevant to the bridge's color pair. |
 | Locus mana scaling | 🟡 | Cloudpost / Glimmerpost present as ETB-tapped colorless lands; the per-Locus mana scaling rider is dropped (no per-source-count mana payload). Glimmerpost's lifegain is wired (flat 1 life). |
 | ETB-replacement effects (suppress entirely) | ⏳ | Containment Priest, Static Prison-adjacent, Gather Specimens. |
 | Spell-tax statics ("costs {1} more", "costs at least {3}") | 🟡 | Damping Sphere wired (`AdditionalCostAfterFirstSpell`); Trinisphere needs a "minimum cost" flavor. Elite Spellbinder reuses the existing tax static. |

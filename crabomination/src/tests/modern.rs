@@ -7648,7 +7648,7 @@ fn evolving_wilds_sacrifices_to_search_basic() {
 }
 
 #[test]
-fn mistvault_bridge_etbs_tapped_with_dual_basic_typing() {
+fn mistvault_bridge_etbs_tapped_indestructible_artifact_land() {
     let mut g = two_player_game();
     let id = g.add_card_to_hand(0, catalog::mistvault_bridge());
     g.perform_action(GameAction::PlayLand(id)).unwrap();
@@ -7656,20 +7656,22 @@ fn mistvault_bridge_etbs_tapped_with_dual_basic_typing() {
 
     let card = g.battlefield_find(id).unwrap();
     assert!(card.tapped, "Bridge ETB-tapped");
-    // Bridge is typed as both Island and Swamp.
-    let lts = &card.definition.subtypes.land_types;
-    assert!(lts.contains(&crate::card::LandType::Island));
-    assert!(lts.contains(&crate::card::LandType::Swamp));
+    assert!(card.definition.card_types.contains(&CardType::Artifact));
+    assert!(card.definition.card_types.contains(&CardType::Land));
+    assert!(card.definition.keywords.contains(&Keyword::Indestructible));
+    // No basic land types (the printed bridges have none).
+    assert!(card.definition.subtypes.land_types.is_empty());
 }
 
 #[test]
-fn drossforge_bridge_taps_for_colorless() {
+fn drossforge_bridge_taps_for_black_or_red() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::drossforge_bridge());
     g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    // Ability 0 = {T}: Add {B}.
     g.perform_action(GameAction::ActivateAbility {
         card_id: id, ability_index: 0, target: None, x_value: None }).unwrap();
-    assert_eq!(g.players[0].mana_pool.total(), 1, "Bridge taps for {{C}}");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1, "first ability adds black");
 }
 
 #[test]
@@ -7791,34 +7793,23 @@ fn ghost_vacuum_exiles_target_card_from_graveyard() {
 }
 
 #[test]
-fn all_bridges_etb_tapped_and_carry_two_basic_land_types() {
-    use crate::card::{CardDefinition, LandType};
-    type BridgeCase = (fn() -> CardDefinition, LandType, LandType);
-    // Each bridge factory paired with the two basic land types it should
-    // expose. If the lookup ever changes (e.g., we promote bridges to
-    // "every basic land type"), tighten this in one place.
-    let cases: &[BridgeCase] = &[
-        (catalog::mistvault_bridge,  LandType::Island,    LandType::Swamp),
-        (catalog::drossforge_bridge, LandType::Swamp,     LandType::Mountain),
-        (catalog::razortide_bridge,  LandType::Plains,    LandType::Island),
-        (catalog::goldmire_bridge,   LandType::Plains,    LandType::Swamp),
-        (catalog::silverbluff_bridge,LandType::Island,    LandType::Mountain),
-        (catalog::tanglepool_bridge, LandType::Island,    LandType::Forest),
-        (catalog::slagwoods_bridge,  LandType::Mountain,  LandType::Forest),
-        (catalog::thornglint_bridge, LandType::Plains,    LandType::Forest),
-        (catalog::darkmoss_bridge,   LandType::Swamp,     LandType::Forest),
-        (catalog::rustvale_bridge,   LandType::Plains,    LandType::Mountain),
+fn all_bridges_are_indestructible_artifact_lands_with_two_color_taps() {
+    use crate::card::CardDefinition;
+    let factories: &[fn() -> CardDefinition] = &[
+        catalog::mistvault_bridge, catalog::drossforge_bridge, catalog::razortide_bridge,
+        catalog::goldmire_bridge, catalog::silverbluff_bridge, catalog::tanglepool_bridge,
+        catalog::slagwoods_bridge, catalog::thornglint_bridge, catalog::darkmoss_bridge,
+        catalog::rustvale_bridge,
     ];
-    for &(factory, ta, tb) in cases {
+    for &factory in factories {
         let def = factory();
-        let lts = &def.subtypes.land_types;
-        assert!(lts.contains(&ta), "{}: missing {:?}", def.name, ta);
-        assert!(lts.contains(&tb), "{}: missing {:?}", def.name, tb);
-        // Each bridge has exactly the etb-tap trigger + a {T}: Add {C} ability.
-        assert_eq!(def.activated_abilities.len(), 1,
-            "{}: should have one mana ability", def.name);
-        assert!(!def.triggered_abilities.is_empty(),
-            "{}: should have an etb-tap trigger", def.name);
+        assert!(def.card_types.contains(&CardType::Artifact), "{}: artifact", def.name);
+        assert!(def.card_types.contains(&CardType::Land), "{}: land", def.name);
+        assert!(def.keywords.contains(&Keyword::Indestructible), "{}: indestructible", def.name);
+        assert!(def.subtypes.land_types.is_empty(), "{}: no basic types", def.name);
+        // Two mana abilities (one per colour) + the etb-tap trigger.
+        assert_eq!(def.activated_abilities.len(), 2, "{}: two mana abilities", def.name);
+        assert!(!def.triggered_abilities.is_empty(), "{}: etb-tap trigger", def.name);
     }
 }
 
