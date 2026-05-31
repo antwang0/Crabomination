@@ -10086,6 +10086,43 @@ fn deluge_virtuoso_opus_pumps_one_one_or_two_two() {
 }
 
 #[test]
+fn molten_core_maestro_opus_big_body_adds_red_equal_to_power() {
+    // Big body (≥5 mana): +1/+1 counter, then add {R} equal to power.
+    // Maestro is 2/2 → counter makes it 3/3 → adds 3 red mana.
+    let mut g = two_player_game();
+    let mcm = place_creature(&mut g, 0, catalog::molten_core_maestro());
+    let big = g.add_card_to_hand(0, catalog::divergent_equation());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    g.perform_action(GameAction::CastSpell {
+        card_id: big, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    })
+    .expect("Divergent Equation castable with X=2 (5 mana)");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(mcm).expect("Maestro alive");
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 1, "Big body lands one +1/+1");
+    assert_eq!(c.power(), 3, "2/2 + counter = 3/3");
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 3, "adds red equal to power (3)");
+}
+
+#[test]
+fn exhibition_tidecaller_opus_mills_three_small_ten_big() {
+    // Small body (<5 mana): target player mills 3. Auto-target picks an opponent.
+    let mut g = two_player_game();
+    for _ in 0..15 { g.add_card_to_library(1, catalog::island()); }
+    let _et = place_creature(&mut g, 0, catalog::exhibition_tidecaller());
+    let gy_before = g.players[1].graveyard.len();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt castable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].graveyard.len(), gy_before + 3, "small body mills 3 from target");
+}
+
+#[test]
 fn increment_trigger_re_checks_intervening_if_on_resolution() {
     // MTG comp rule 603.4 ("intervening 'if' clause"): a triggered
     // ability of the form "Whenever X, if Y, do Z" re-checks the

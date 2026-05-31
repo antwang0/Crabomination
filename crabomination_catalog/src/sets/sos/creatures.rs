@@ -1840,16 +1840,13 @@ pub fn charging_strifeknight() -> CardDefinition {
 }
 
 
-// ── Body-only batch: Increment / Opus / mana-spent rider creatures ─────────
+// ── Increment / Opus / mana-spent rider creatures ──────────────────────────
 //
-// All twelve creatures below ship with their printed cost / type line / P/T /
-// keywords correct, but their main ability — Increment, Opus, or a "mana
-// spent to cast" pump — is omitted. Each rider needs an engine primitive
-// (mana-paid introspection on cast, plus per-card "compare-spent-to-PT"
-// gate) tracked in TODO.md. The vanilla bodies fill out the cube color
-// pools, take combat correctly, and can be promoted to full effect once
-// the engine grows the right hooks. See STRIXHAVEN2.md rows tagged
-// "Standard primitives — should be straightforward to wire".
+// The creatures below carry an Increment, Opus, or "mana spent to cast" rider,
+// all driven off mana-paid introspection on cast: `Predicate::IncrementSatisfied`
+// (mana-spent > P or T), `shortcut::opus_trigger` (≥5-mana branch via
+// `Predicate::CastSpellManaSpentAtLeast`), and `Value::CastSpellManaSpent` /
+// `Value::ConvergedValue` for the pump amounts.
 
 /// Cuboid Colony — {G}{U}, 1/1 Insect with Flash, Flying, and Trample.
 /// "Increment (Whenever you cast a spell, if the amount of mana you
@@ -3490,14 +3487,10 @@ pub fn soaring_stoneglider() -> CardDefinition {
 
 // ── 2026-05-01 push VII: Multicolored predicate, MDFC bodies, Lorehold capstone
 
-/// Spectacular Skywhale — {2}{U}{R} Creature — Elemental Whale.
-/// 1/4 Flying. Opus rider omitted.
-///
-/// Body wired in `catalog::sets::sos::creatures` as a 1/4 flying U/R
-/// Elemental Whale. The "Opus — Whenever you cast an instant or sorcery
-/// spell, this creature gets +3/+0 EOT (or 3 +1/+1 counters at 5+ mana
-/// spent)" rider is omitted (mana-spent introspection on cast — same gap
-/// as Aberrant Manawurm, Tackle Artist, Expressive Firedancer).
+/// Spectacular Skywhale — {2}{U}{R} 1/4 Flying Elemental Whale.
+/// "Opus — Whenever you cast an instant or sorcery spell, this creature
+/// gets +3/+0 EOT. If five or more mana was spent, put three +1/+1
+/// counters on it instead." Fully wired via `shortcut::opus_trigger`.
 pub fn spectacular_skywhale() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::Duration;
@@ -4041,9 +4034,8 @@ pub fn forum_necroscribe() -> CardDefinition {
 ///   `Value::XFromCost` keyed off the activation's mana payment.
 ///
 /// The Increment rider (whenever you cast a spell, if mana spent > P
-/// or T, +1/+1 counter on Berta) is omitted pending the SOS Increment
-/// engine primitive (mana-spent-on-cast introspection — tracked in
-/// TODO.md).
+/// or T, +1/+1 counter on Berta) is wired via
+/// `shortcut::increment_self_plus_one()`.
 pub fn berta_wise_extrapolator() -> CardDefinition {
     use crate::card::{ActivatedAbility, CounterType, Supertype};
     use crate::effect::ManaPayload;
@@ -4175,15 +4167,11 @@ pub fn paradox_surveyor() -> CardDefinition {
 ///
 /// The `{2/R}` pips are real `ManaSymbol::MonoHybrid(2, Red)` — each pip
 /// is payable with either {2} generic or one red, and the mana value is
-/// 6 (CR 202.3f). Trample + reach + Converge ETB counter are wired
-/// exactly like Rancorous Archaic. The spell-cast pump uses
-/// `Value::ConvergedValue` for the iterated cast — but the engine
-/// re-uses the *current cast's* converge value, not the just-cast
-/// spell's. We approximate by reading the trigger source's
-/// converge-from-stack via the `StackItem::Trigger.converged_value`
-/// inheritance set up in push III. For the typical 2-color cube spell
-/// this lands +2/+0 EOT on each friendly creature, which matches the
-/// printed effect on a 2-color cast.
+/// 6 (CR 202.3f). Trample + reach + Converge ETB counter are wired.
+/// The magecraft pump reads `Value::ConvergedValue`, which is threaded
+/// onto the spell-cast trigger (`StackItem::Trigger.converged_value`)
+/// so each iterated cast's color count is observed — a 2-color cast
+/// lands +2/+0 EOT on each friendly creature.
 pub fn magmablood_archaic() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::shortcut::magecraft;
@@ -4240,17 +4228,14 @@ pub fn magmablood_archaic() -> CardDefinition {
 /// +1/+1 counters on it, where X is the number of colors of mana spent
 /// to cast it."
 ///
-/// Body + Converge ETB wired (same pattern as Rancorous Archaic /
-/// Magmablood Archaic). The `{2/G}` pips are real
+/// Fully wired. The `{2/G}` pips are real
 /// `ManaSymbol::MonoHybrid(2, Green)` (CMC 4, payable with {2} or {G}
-/// per pip). The printed 0/0 means
-/// the creature dies to SBA without enough Converge counters; mono-G
-/// or off-color casts will die immediately, while a 2-color cast lands
-/// it as a 2/2. The "creature spells you cast enter with X extra
-/// counters" rider is omitted pending an `EventKind::SpellCast` filter
-/// that captures the just-cast spell's converged value at trigger time
-/// (today the trigger fires but the body pump runs against the source's
-/// own converged value, not the cast spell's).
+/// per pip). The printed 0/0 means the creature dies to SBA without
+/// enough Converge counters; mono-G / off-color casts die immediately,
+/// a 2-color cast lands it as a 2/2. The "creature spells you cast
+/// enter with X extra +1/+1 counters" rider ships via
+/// `StaticEffect::ExtraEtbCountersForCreatureCasts` keyed on the
+/// just-cast spell's `Value::ConvergedValue`.
 pub fn wildgrowth_archaic() -> CardDefinition {
     use crate::card::CounterType;
     use crate::effect::{StaticAbility, StaticEffect};
