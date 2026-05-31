@@ -30,11 +30,6 @@ remaining **🟡 partial** and **⏳ todo** work. For full per-card history see
 | Brush Off | {2}{U}{U} | Instant |  | This spell costs {1}{U} less to cast if it targets an instant or sorcery spell. / Counter target spell. | 🟡 | Wired in `catalog::sets::sos::instants` as a 4-mana hard counter. The conditional cost-reduction-when-targeting-IS rider is omitted (no target-aware cost reduction primitive). |
 | Divergent Equation | {X}{X}{U} | Instant |  | Return up to X target instant and/or sorcery cards from your graveyard to your hand. / Exile Divergent Equation. | 🟡 | Wired in `catalog::sets::sos::instants` as a single-target return. The "up to X" multi-target prompt is collapsed to one target (no `Selector::OneOf` / count-bounded pick primitive yet — TODO.md). The "exile this" rider is omitted (no replay-prevention payoff). |
 
-## Black
-
-| Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
-|---|---|---|---|---|---|---|
-
 ## Red
 
 | Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
