@@ -49,11 +49,8 @@ These primitives closed a batch of SOS 🟡/⏳ riders (all green in
   Cover-Up, Crackle with Power, Magma Opus — divided-damage / split-N
   slots), distinct from the bag-of-targets primitives.
 
-## Lorehold (Red-White)
-
-| Card | Mana Cost | Type | P/T | Oracle Text | Status | Notes |
-|---|---|---|---|---|---|---|
-| Molten Note | {X}{R}{W} | Sorcery |  | Molten Note deals damage to target creature equal to the amount of mana spent to cast this spell. Untap all creatures you control. / Flashback {6}{R}{W} | 🟡 | X+2 damage to creature + untap all your creatures + Flashback. Only edge left: a flashback cast reads X=0, so its damage is undercounted (the "mana spent" model only tracks the {X} pip). |
+All printed SOS cards are now ✅ — the only remaining SOS/STX item is the
+shared Learn / Lessons-sideboard mechanic below.
 
 ### Engine pieces driven by STX
 

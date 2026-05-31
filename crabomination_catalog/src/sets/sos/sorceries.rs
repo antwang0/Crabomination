@@ -2112,9 +2112,11 @@ pub fn flow_state() -> CardDefinition {
 /// spent to cast this spell. Untap all creatures you control.
 /// Flashback {6}{R}{W}."
 ///
-/// The "mana spent" is approximated as X + 2 (the {R}{W} pips). The printed
-/// Oracle says "amount of mana spent", which includes all pips; we use
-/// `Value::Sum(XFromCost, Const(2))` to account for the fixed part.
+/// Damage is the actual "amount of mana spent to cast this spell" via
+/// `Value::CastSpellManaSpent` (read from `ctx.mana_spent`). This is exact
+/// for both cast paths: a normal {X}{R}{W} cast spends X + 2, and a
+/// Flashback {6}{R}{W} cast spends 8 — the earlier `Sum(XFromCost, Const(2))`
+/// model read X=0 on the flashback (no {X} pip) and undercounted to 2.
 /// Flashback wired via `Keyword::Flashback`.
 pub fn molten_note() -> CardDefinition {
     use crate::mana::{r, w, x};
@@ -2129,7 +2131,7 @@ pub fn molten_note() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::DealDamage {
                 to: target_filtered(SelectionRequirement::Creature),
-                amount: Value::Sum(vec![Value::XFromCost, Value::Const(2)]),
+                amount: Value::CastSpellManaSpent,
             },
             Effect::Untap {
                 what: Selector::EachPermanent(

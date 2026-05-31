@@ -9994,6 +9994,38 @@ fn molten_note_damage_equals_total_mana_spent_not_just_x() {
         "Serra Angel (4 toughness) should die to 4 damage from Molten Note at X=2 (full mana spent)"
     );
 }
+
+#[test]
+fn molten_note_flashback_damage_uses_full_mana_spent() {
+    // Flashback {6}{R}{W} carries no {X} pip, so the old
+    // `Sum(XFromCost, Const(2))` model read X=0 and dealt only 2.
+    // `CastSpellManaSpent` reads the actual 8 mana paid, so a 6-toughness
+    // creature dies to the flashback cast.
+    use crate::game::types::{Target, TurnStep as TS};
+    let mut g = two_player_game();
+    g.step = TS::PreCombatMain;
+    let beledros = g.add_card_to_battlefield(1, catalog::beledros_witherbloom()); // 6/6
+    let note = g.add_card_to_graveyard(0, catalog::molten_note());
+    // Pay the flashback cost {6}{R}{W} = 8 mana exactly.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(6);
+
+    g.perform_action(GameAction::CastFlashback {
+        card_id: note,
+        target: Some(Target::Permanent(beledros)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Molten Note flashbackable for {6}{R}{W}");
+    drain_stack(&mut g);
+
+    assert!(
+        !g.battlefield.iter().any(|c| c.id == beledros),
+        "Beledros (6 toughness) dies to 8 damage = the full flashback mana spent"
+    );
+}
 // ── Increment / Opus tests ──────────────────────────────────────────────────
 
 /// Helper: drop a creature on the battlefield with summoning sickness cleared
