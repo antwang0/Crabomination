@@ -189,6 +189,7 @@ mod tests {
                 emblems: vec![],
                 eliminated: false,
                 has_prevention_shield: false,
+                devotion: [0; 5],
             }],
             battlefield: vec![],
             stack: vec![],

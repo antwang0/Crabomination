@@ -567,6 +567,7 @@ mod tests {
             regeneration_shields: 0,
             equippable: false,
             crew_value: 0,
+            marked_lethal: false,
         }
     }
 
