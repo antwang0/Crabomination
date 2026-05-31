@@ -1042,6 +1042,22 @@ pub fn intervention_pact() -> CardDefinition {
     }
 }
 
+/// Dissolve — {1}{U}{U} Instant. "Counter target spell. Scry 1."
+pub fn dissolve() -> CardDefinition {
+    CardDefinition {
+        name: "Dissolve",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::CounterSpell {
+                what: target_filtered(SelectionRequirement::IsSpellOnStack),
+            },
+            Effect::Scry { who: PlayerRef::You, amount: Value::Const(1) },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Flame Javelin — {2/R}{2/R}{2/R} Instant. "Flame Javelin deals 4 damage
 /// to any target." Mono-hybrid pips wired as `{2/R}` each.
 pub fn flame_javelin() -> CardDefinition {

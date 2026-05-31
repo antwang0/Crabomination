@@ -370,6 +370,10 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pestermite,
         suture_priest,
         knight_of_autumn,
+        journey_to_nowhere,
+        banishing_light,
+        seal_of_cleansing,
+        dissolve,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,

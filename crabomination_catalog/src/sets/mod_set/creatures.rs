@@ -889,6 +889,68 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Journey to Nowhere — {1}{W} Enchantment. ETB: exile target creature.
+/// When Journey to Nowhere leaves the battlefield, return that card.
+pub fn journey_to_nowhere() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Journey to Nowhere",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(SelectionRequirement::Creature),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Banishing Light — {2}{W} Enchantment. ETB: exile target nonland
+/// permanent an opponent controls until Banishing Light leaves.
+pub fn banishing_light() -> CardDefinition {
+    use crate::card::ExileReturnZone;
+    CardDefinition {
+        name: "Banishing Light",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::ExileUntilSourceLeaves {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::Nonland)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                return_to: ExileReturnZone::Battlefield,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Seal of Cleansing — {1}{W} Enchantment. "Sacrifice this: Destroy target
+/// artifact or enchantment."
+pub fn seal_of_cleansing() -> CardDefinition {
+    CardDefinition {
+        name: "Seal of Cleansing",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Enchantment],
+        activated_abilities: vec![ActivatedAbility {
+            sac_cost: true,
+            effect: Effect::Destroy {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Enchantment),
+                ),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Soul Warden — {W}, 1/1 Human Cleric. "Whenever another creature enters,
 /// you gain 1 life."
 pub fn soul_warden() -> CardDefinition {

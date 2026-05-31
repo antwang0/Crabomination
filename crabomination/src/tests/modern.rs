@@ -16954,6 +16954,81 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
 }
 
 #[test]
+fn journey_to_nowhere_exiles_and_returns_on_leave() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let jtn = g.add_card_to_hand(0, catalog::journey_to_nowhere());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: jtn, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature exiled");
+    // Journey leaving returns the creature.
+    g.remove_to_graveyard_with_triggers(jtn);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "creature returned when Journey left");
+}
+
+#[test]
+fn banishing_light_exiles_a_nonland_permanent() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bl = g.add_card_to_hand(0, catalog::banishing_light());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bl, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "permanent exiled");
+}
+
+#[test]
+fn seal_of_cleansing_sacrifices_to_destroy_an_artifact() {
+    let mut g = two_player_game();
+    let seal = g.add_card_to_battlefield(0, catalog::seal_of_cleansing());
+    let rock = g.add_card_to_battlefield(1, catalog::mind_stone());
+    g.players[0].mana_pool.add_colorless(0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: seal, ability_index: 0, target: Some(Target::Permanent(rock)), x_value: None,
+    }).expect("sac ability");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == seal), "Seal sacrificed");
+    assert!(!g.battlefield.iter().any(|c| c.id == rock), "artifact destroyed");
+}
+
+#[test]
+fn dissolve_counters_a_spell_and_scrys() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
+    // Opponent casts a creature; we counter it.
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    g.players[1].mana_pool.add(Color::Green, 1);
+    g.players[1].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 1;
+    g.active_player_idx = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bear cast");
+    let dissolve = g.add_card_to_hand(0, catalog::dissolve());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    // Player 0 gets priority to respond to the bear on the stack.
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: dissolve, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Dissolve cast");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "the bear spell was countered");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == bear), "countered spell to graveyard");
+}
+
+#[test]
 fn soul_warden_gains_life_when_another_creature_enters() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::soul_warden());
