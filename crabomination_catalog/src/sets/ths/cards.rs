@@ -307,3 +307,74 @@ pub fn mnemonic_wall() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Horizon Scholar — {4}{U} Creature — Sphinx 4/4. Flying. ETB: scry 2.
+pub fn horizon_scholar() -> CardDefinition {
+    CardDefinition {
+        name: "Horizon Scholar",
+        cost: cost(&[generic(4), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Sphinx], ..Default::default() },
+        power: 4,
+        toughness: 4,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) })],
+        ..Default::default()
+    }
+}
+
+/// Anvilwrought Raptor — {4} Artifact Creature — Bird 2/2. Flying, first strike.
+pub fn anvilwrought_raptor() -> CardDefinition {
+    CardDefinition {
+        name: "Anvilwrought Raptor",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Bird], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying, Keyword::FirstStrike],
+        ..Default::default()
+    }
+}
+
+/// Bronze Sable — {2} Artifact Creature — Construct 2/1.
+pub fn bronze_sable() -> CardDefinition {
+    CardDefinition {
+        name: "Bronze Sable",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Construct], ..Default::default() },
+        power: 2,
+        toughness: 1,
+        ..Default::default()
+    }
+}
+
+/// Guardians of Meletis — {3} Artifact Creature — Golem 0/6. Defender.
+pub fn guardians_of_meletis() -> CardDefinition {
+    CardDefinition {
+        name: "Guardians of Meletis",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Golem], ..Default::default() },
+        power: 0,
+        toughness: 6,
+        keywords: vec![Keyword::Defender],
+        ..Default::default()
+    }
+}
+
+/// Opaline Unicorn — {3} Artifact Creature — Unicorn 2/2. {T}: Add one mana
+/// of any color.
+pub fn opaline_unicorn() -> CardDefinition {
+    CardDefinition {
+        name: "Opaline Unicorn",
+        cost: cost(&[generic(3)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Unicorn], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        activated_abilities: vec![crate::sets::tap_add_any_color()],
+        ..Default::default()
+    }
+}

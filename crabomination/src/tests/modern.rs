@@ -18529,3 +18529,39 @@ fn cavalry_pegasus_and_traveling_philosopher_bodies() {
     assert!(g.battlefield_find(peg).unwrap().has_keyword(&crate::card::Keyword::Flying));
     assert_eq!((g.battlefield_find(phil).unwrap().power(), g.battlefield_find(phil).unwrap().toughness()), (1, 4));
 }
+
+#[test]
+fn horizon_scholar_etb_scrys_two() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::horizon_scholar());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Horizon Scholar castable");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(id).unwrap();
+    assert!(c.has_keyword(&crate::card::Keyword::Flying));
+    assert_eq!((c.power(), c.toughness()), (4, 4));
+}
+
+#[test]
+fn theros_artifact_bodies() {
+    let mut g = two_player_game();
+    let raptor = g.add_card_to_battlefield(0, catalog::anvilwrought_raptor());
+    let sable = g.add_card_to_battlefield(0, catalog::bronze_sable());
+    let guard = g.add_card_to_battlefield(0, catalog::guardians_of_meletis());
+    let uni = g.add_card_to_battlefield(0, catalog::opaline_unicorn());
+    let rc = g.battlefield_find(raptor).unwrap();
+    assert!(rc.has_keyword(&crate::card::Keyword::Flying) && rc.has_keyword(&crate::card::Keyword::FirstStrike));
+    assert!(g.battlefield_find(guard).unwrap().has_keyword(&crate::card::Keyword::Defender));
+    assert!(g.battlefield_find(sable).unwrap().definition.card_types.contains(&CardType::Artifact));
+    // Opaline Unicorn taps for any color.
+    g.clear_sickness(uni);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: uni, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].mana_pool.total(), 1, "Opaline Unicorn made one mana");
+}
