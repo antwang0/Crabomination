@@ -120,3 +120,27 @@ pub fn giant_growth() -> CardDefinition {
     }
 }
 
+/// Fog — {G} Instant. "Prevent all combat damage that would be dealt this
+/// turn." (CR 615.1)
+pub fn fog() -> CardDefinition {
+    CardDefinition {
+        name: "Fog",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
+/// Holy Day — {W} Instant. "Prevent all combat damage that would be dealt
+/// this turn." (White Fog.)
+pub fn holy_day() -> CardDefinition {
+    CardDefinition {
+        name: "Holy Day",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+

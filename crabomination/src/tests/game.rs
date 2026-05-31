@@ -536,6 +536,71 @@ fn prevention_shield_stops_combat_damage_to_player() {
         .any(|e| matches!(e, GameEvent::DamagePrevented { to_player: Some(1), amount: 2, .. })));
 }
 
+/// Fog prevents all combat damage for the turn (CR 615.1).
+#[test]
+fn fog_prevents_all_combat_damage() {
+    let mut g = two_player_game();
+    let bear_id = setup_attacker(&mut g, 0, catalog::grizzly_bears);
+    let fog = g.add_card_to_hand(0, catalog::fog());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, fog);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::CombatDamage;
+    g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, 20, "Fog prevented combat damage");
+}
+
+/// Holy Day is a white Fog.
+#[test]
+fn holy_day_is_a_white_fog() {
+    let d = catalog::holy_day();
+    assert_eq!(d.cost.cmc(), 1);
+    assert!(matches!(d.effect, Effect::PreventAllCombatDamageThisTurn));
+}
+
+/// Samite Healer taps to prevent the next 1 damage to a creature.
+#[test]
+fn samite_healer_prevents_one_damage() {
+    let mut g = two_player_game();
+    let healer = g.add_card_to_battlefield(0, catalog::samite_healer());
+    g.clear_sickness(healer);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: healer, ability_index: 0,
+        target: Some(Target::Permanent(bear)), x_value: None,
+    }).expect("Samite Healer ability activatable");
+    drain_stack(&mut g);
+    // Shock the bear for 2: 1 prevented, 1 marked → 2/2 survives (1 damage).
+    let shock = g.add_card_to_hand(0, catalog::shock());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast_at(&mut g, shock, Target::Permanent(bear));
+    assert!(g.battlefield.iter().any(|c| c.id == bear),
+        "1 of 2 damage prevented → 2/2 survives 1 marked damage");
+}
+
+/// Skullcrack's "damage can't be prevented this turn" overrides a shield
+/// on the targeted player.
+#[test]
+fn skullcrack_damage_cant_be_prevented() {
+    use crate::game::types::{PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    g.players[1].life = 5;
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Player(1),
+        remaining: None,
+    });
+    let sk = g.add_card_to_hand(0, catalog::skullcrack());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    cast_at(&mut g, sk, Target::Player(1));
+    assert_eq!(g.players[1].life, 2, "shield ignored — 3 damage went through");
+}
+
 #[test]
 fn blocked_combat_both_die() {
     let mut g = two_player_game();

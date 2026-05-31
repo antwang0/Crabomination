@@ -3,7 +3,8 @@ use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
     EventSpec, Keyword, Subtypes, TriggeredAbility,
 };
-use crate::effect::shortcut::{deal, target};
+use crate::card::SelectionRequirement;
+use crate::effect::shortcut::{deal, target, target_filtered};
 use crate::effect::{ManaPayload, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -317,6 +318,47 @@ pub fn craw_wurm() -> CardDefinition {
         keywords: vec![],
         effect: Effect::Noop,
         triggered_abilities: vec![],
+        ..Default::default()
+    }
+}
+
+/// Samite Healer — {2}{W} 1/1 Human Cleric. "{T}: Prevent the next 1
+/// damage that would be dealt to any target this turn." (CR 615.7)
+pub fn samite_healer() -> CardDefinition {
+    CardDefinition {
+        name: "Samite Healer",
+        cost: cost(&[generic(2), w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Cleric],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        effect: Effect::Noop,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: Effect::PreventNextDamage {
+                target: target_filtered(
+                    SelectionRequirement::Player
+                        .or(SelectionRequirement::Creature)
+                        .or(SelectionRequirement::Planeswalker),
+                ),
+                amount: Value::Const(1),
+            },
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+        }],
         ..Default::default()
     }
 }

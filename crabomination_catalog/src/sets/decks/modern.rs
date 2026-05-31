@@ -5906,22 +5906,21 @@ pub fn drown_in_the_loch() -> CardDefinition {
     }
 }
 
-/// Skullcrack — {1}{R} Instant. Target player can't gain life this turn.
-/// Skullcrack deals 3 damage to that player.
+/// Skullcrack — {1}{R} Instant. "Damage can't be prevented this turn.
+/// Skullcrack deals 3 damage to target player or planeswalker. Players
+/// can't gain life this turn."
 ///
-/// Push (claude/modern_decks): the "can't gain life this turn" rider
-/// is now wired via the new `Effect::LifeGainLockThisTurn` primitive,
-/// backed by `Player.cannot_gain_life_this_turn` (reset in `do_untap`
-/// across all players). The lock fires *before* the 3-damage Bolt so
-/// any drain-back-to-life interaction (Skullcrack into Lifelink)
-/// blocks the lifegain side. The "damage can't be prevented" rider is
-/// still omitted (no general damage-prevention layer).
+/// Fully wired: `DamageCantBePreventedThisTurn` (CR 615.12) suppresses
+/// prevention shields, `LifeGainLockThisTurn` (backed by
+/// `Player.cannot_gain_life_this_turn`, reset in `do_untap`) blocks
+/// lifegain before the 3-damage Bolt resolves.
 pub fn skullcrack() -> CardDefinition {
     CardDefinition {
         name: "Skullcrack",
         cost: cost(&[generic(1), r()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
+            Effect::DamageCantBePreventedThisTurn,
             Effect::LifeGainLockThisTurn {
                 who: target_filtered(SelectionRequirement::Player),
             },
