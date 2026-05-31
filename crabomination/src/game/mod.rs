@@ -41,6 +41,9 @@ mod tests_multiplayer;
 #[cfg(test)]
 #[path = "../tests/xtra.rs"]
 mod tests_xtra;
+#[cfg(test)]
+#[path = "../tests/combat_keywords.rs"]
+mod tests_combat_keywords;
 pub mod types;
 
 #[cfg(test)]

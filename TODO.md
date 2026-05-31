@@ -58,6 +58,18 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
 
 - ✅ **CR 702.130 — Enrage**
 
+- ✅ **CR 702.46 — Bushido** (claude/modern_decks). `shortcut::bushido(n)`
+  returns two `SelfSource` triggers — `Blocks` and `BecomesBlocked` — each
+  pumping `This` +n/+n EOT. Tests in `tests/combat_keywords.rs`.
+
+- ✅ **CR 702.68 — Frenzy** (claude/modern_decks). `shortcut::frenzy(n)` —
+  `AttacksAndIsntBlocked / SelfSource` pump of `This` +n/+0 EOT (built on
+  the existing `on_unblocked` helper). Silent when blocked.
+
+- ✅ **CR 702.131 — Afflict** (claude/modern_decks). `shortcut::afflict(n)` —
+  `BecomesBlocked / SelfSource` trigger that makes `PlayerRef::DefendingPlayer`
+  lose n life (resolved while the source is still attacking).
+
 - ✅ **CR 700.5 — Devotion** (claude/modern_decks). `Value::DevotionTo(colors)`
   counts colored mana symbols among your permanents (hybrid/Phyrexian count
   per half). `StaticEffect::NotCreatureWhileDevotionBelow` gates the Nyx

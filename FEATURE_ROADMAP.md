@@ -160,11 +160,14 @@ feature; sweep card-batch by card-batch.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,
   ⏳ Hideaway, ⏳ Aftermath.
-- **Combat-flavor:** ⏳ Bushido, ⏳ Flanking, ⏳ Rampage, ⏳ Provoke,
+- **Combat-flavor:** ✅ Bushido (`shortcut::bushido` — CR 702.46),
+  ⏳ Flanking, ⏳ Rampage, ⏳ Provoke,
   ✅ Battle Cry (`shortcut::battle_cry` — Goblin Wardriver),
   ✅ Exalted (`shortcut::exalted` — Akrasan/Aven Squire, Silverquill
-  Duelmaster), ⏳ Melee, ⏳ Dash, ⏳ Boast, ⏳ Afflict, ⏳ Enlist,
-  ⏳ Mobilize, ⏳ Myriad.
+  Duelmaster), ✅ Frenzy (`shortcut::frenzy` — CR 702.68),
+  ⏳ Melee, ⏳ Dash, ⏳ Boast,
+  ✅ Afflict (`shortcut::afflict` — CR 702.131, drains DefendingPlayer),
+  ⏳ Enlist, ⏳ Mobilize, ⏳ Myriad.
 - **Value/ETB:** ⏳ Investigate (verb) + sac-Clue payoff (🟡 Clue tokens
   exist), ⏳ Fabricate, ⏳ Riot, ⏳ Afterlife, ⏳ Squad, ⏳ Forage,
   ⏳ Exploit, ⏳ Extort, ⏳ Cohort, ⏳ Support.

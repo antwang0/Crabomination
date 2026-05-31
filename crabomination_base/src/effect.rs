@@ -4433,6 +4433,56 @@ pub mod shortcut {
         }
     }
 
+    /// Bushido N (CR 702.46): "Whenever this creature blocks or becomes
+    /// blocked, it gets +N/+N until end of turn." Two `SelfSource`
+    /// triggers — `Blocks` (this is the blocker) and `BecomesBlocked`
+    /// (this is the attacker) — each pumping `This`. Returned as a Vec so
+    /// a card spreads both into its `triggered_abilities`.
+    pub fn bushido(n: i32) -> Vec<TriggeredAbility> {
+        let pump = || Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(n),
+            toughness: Value::Const(n),
+            duration: Duration::EndOfTurn,
+        };
+        vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
+                effect: pump(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+                effect: pump(),
+            },
+        ]
+    }
+
+    /// Frenzy N (CR 702.68): "Whenever this creature attacks and isn't
+    /// blocked, it gets +N/+0 until end of turn." An
+    /// `AttacksAndIsntBlocked / SelfSource` pump of `This`.
+    pub fn frenzy(n: i32) -> TriggeredAbility {
+        on_unblocked(Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(n),
+            toughness: Value::Const(0),
+            duration: Duration::EndOfTurn,
+        })
+    }
+
+    /// Afflict N (CR 702.131): "Whenever this creature becomes blocked,
+    /// defending player loses N life." A `BecomesBlocked / SelfSource`
+    /// trigger draining the `DefendingPlayer` (resolved while the source
+    /// is still attacking).
+    pub fn afflict(n: i32) -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
+            effect: Effect::LoseLife {
+                who: Selector::Player(PlayerRef::DefendingPlayer),
+                amount: Value::Const(n),
+            },
+        }
+    }
+
     /// ETB-Mint-Token-With-Counters shortcut: "When this creature
     /// enters, create `count` copies of `definition`, then put
     /// `counter_amount` +1/+1 counters on each." Wraps [`etb`] with
