@@ -3571,3 +3571,225 @@ pub fn fathom_mage() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── ETB / death-value creatures ────────────────────────────────────────────────
+
+/// Phyrexian Rager — {2}{B}, 2/2. "When this creature enters, you draw a
+/// card and you lose 1 life."
+pub fn phyrexian_rager() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Phyrexian Rager",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Horror],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            Effect::LoseLife { who: Selector::You, amount: Value::Const(1) },
+        ]))],
+        ..Default::default()
+    }
+}
+
+/// Carven Caryatid — {1}{G}{G}, 0/5 Defender. "When this creature enters,
+/// draw a card."
+pub fn carven_caryatid() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Carven Caryatid",
+        cost: cost(&[generic(1), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Wall],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 5,
+        keywords: vec![Keyword::Defender],
+        triggered_abilities: vec![etb(Effect::Draw {
+            who: Selector::You,
+            amount: Value::Const(1),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Doomed Traveler — {W}, 1/1. "When this creature dies, create a 1/1 white
+/// Spirit creature token with flying."
+pub fn doomed_traveler() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Doomed Traveler",
+        cost: cost(&[w()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(1),
+            definition: TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![CardType::Creature],
+                colors: vec![crate::mana::Color::White],
+                supertypes: vec![],
+                subtypes: Subtypes {
+                    creature_types: vec![CreatureType::Spirit],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })],
+        ..Default::default()
+    }
+}
+
+/// Festering Goblin — {B}, 1/1. "When this creature dies, target creature
+/// gets -1/-1 until end of turn."
+pub fn festering_goblin() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Festering Goblin",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie, CreatureType::Goblin],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-1),
+            toughness: Value::Const(-1),
+            duration: Duration::EndOfTurn,
+        })],
+        ..Default::default()
+    }
+}
+
+/// Aven Fisher — {3}{U}, 2/2 Flying. "When this creature dies, you may
+/// draw a card."
+pub fn aven_fisher() -> CardDefinition {
+    use crate::effect::shortcut::on_dies;
+    CardDefinition {
+        name: "Aven Fisher",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird, CreatureType::Soldier],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_dies(Effect::MayDo {
+            description: "Aven Fisher: draw a card?".into(),
+            body: Box::new(Effect::Draw { who: Selector::You, amount: Value::Const(1) }),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Prodigal Pyromancer — {2}{R}, 1/1. "{T}: This creature deals 1 damage
+/// to any target." (Red "Tim".)
+pub fn prodigal_pyromancer() -> CardDefinition {
+    use crate::effect::shortcut::{deal, target_any};
+    CardDefinition {
+        name: "Prodigal Pyromancer",
+        cost: cost(&[generic(2), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: ManaCost::default(),
+            effect: deal(1, target_any()),
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: false,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Gravedigger — {3}{B}, 2/2. "When this creature enters, you may return
+/// target creature card from your graveyard to your hand."
+pub fn gravedigger() -> CardDefinition {
+    use crate::effect::shortcut::etb;
+    CardDefinition {
+        name: "Gravedigger",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Zombie],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..Default::default()
+    }
+}
+
+/// Spore Frog — {G}, 1/1. "Sacrifice this creature: Prevent all combat
+/// damage that would be dealt this turn." (CR 615.1)
+pub fn spore_frog() -> CardDefinition {
+    CardDefinition {
+        name: "Spore Frog",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Frog],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: false,
+            mana_cost: ManaCost::default(),
+            effect: Effect::PreventAllCombatDamageThisTurn,
+            once_per_turn: false,
+            sorcery_speed: false,
+            sac_cost: true,
+            condition: None,
+            life_cost: 0,
+            from_graveyard: false,
+            exile_self_cost: false,
+            exile_other_filter: None,
+            self_counter_cost_reduction: None,
+            sac_other_filter: None,
+            tap_other_filter: None,
+        }],
+        ..Default::default()
+    }
+}

@@ -555,12 +555,13 @@ fn fog_prevents_all_combat_damage() {
     assert_eq!(g.players[1].life, 20, "Fog prevented combat damage");
 }
 
-/// Holy Day is a white Fog.
+/// Holy Day and Darkness are white/black Fogs.
 #[test]
-fn holy_day_is_a_white_fog() {
-    let d = catalog::holy_day();
-    assert_eq!(d.cost.cmc(), 1);
-    assert!(matches!(d.effect, Effect::PreventAllCombatDamageThisTurn));
+fn holy_day_and_darkness_are_fogs() {
+    for d in [catalog::holy_day(), catalog::darkness()] {
+        assert_eq!(d.cost.cmc(), 1);
+        assert!(matches!(d.effect, Effect::PreventAllCombatDamageThisTurn));
+    }
 }
 
 /// Samite Healer taps to prevent the next 1 damage to a creature.

@@ -17122,6 +17122,125 @@ fn fathom_mage_draws_when_it_evolves() {
     assert_eq!(g.players[0].hand.len(), hand_before, "evolve counter drew a card");
 }
 
+/// Phyrexian Rager ETB: draw a card and lose 1 life.
+#[test]
+fn phyrexian_rager_etb_draws_and_loses_one() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::phyrexian_rager());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[0].life;
+    let hand = g.players[0].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[0].life, life - 1, "lost 1 life");
+    // Rager left hand (-1), drew a card (+1) → net even.
+    assert_eq!(g.players[0].hand.len(), hand);
+}
+
+/// Carven Caryatid is a 0/5 Defender that draws on ETB.
+#[test]
+fn carven_caryatid_etb_draws() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let id = g.add_card_to_hand(0, catalog::carven_caryatid());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, id);
+    assert_eq!(g.players[0].hand.len(), hand, "ETB draw refilled the cast");
+    let c = g.battlefield.iter().find(|c| c.definition.name == "Carven Caryatid").unwrap();
+    assert!(c.has_keyword(&crate::card::Keyword::Defender));
+}
+
+/// Doomed Traveler leaves a 1/1 flying Spirit when it dies.
+#[test]
+fn doomed_traveler_dies_into_a_spirit() {
+    let mut g = two_player_game();
+    let trav = g.add_card_to_battlefield(0, catalog::doomed_traveler());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    cast_at(&mut g, bolt, Target::Permanent(trav));
+    assert!(!g.battlefield.iter().any(|c| c.id == trav), "traveler died");
+    let spirit = g.battlefield.iter().find(|c| c.definition.name == "Spirit").unwrap();
+    assert!(spirit.definition.keywords.contains(&crate::card::Keyword::Flying));
+}
+
+/// Festering Goblin shrinks a creature when it dies.
+#[test]
+fn festering_goblin_dies_gives_minus_one() {
+    let mut g = two_player_game();
+    let gob = g.add_card_to_battlefield(0, catalog::festering_goblin());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    cast_at(&mut g, bolt, Target::Permanent(gob));
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let b = view.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!((b.power, b.toughness), (1, 1), "bear got -1/-1 from the death trigger");
+}
+
+/// Spore Frog sacrifices itself to fog the turn.
+#[test]
+fn spore_frog_sacrifices_to_fog() {
+    let mut g = two_player_game();
+    let frog = g.add_card_to_battlefield(0, catalog::spore_frog());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: frog, ability_index: 0, target: None, x_value: None,
+    }).expect("Spore Frog sac ability activatable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == frog), "frog sacrificed");
+    assert!(g.prevent_combat_damage_this_turn, "combat damage prevented this turn");
+}
+
+/// Aven Fisher draws a card when it dies (opting in to the may-draw).
+#[test]
+fn aven_fisher_dies_draws_a_card() {
+    let mut g = two_player_game();
+    // Opt into the optional death-draw.
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let fisher = g.add_card_to_battlefield(0, catalog::aven_fisher());
+    g.add_card_to_library(0, catalog::island());
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    cast_at(&mut g, bolt, Target::Permanent(fisher));
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == fisher), "fisher died");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card on death");
+}
+
+/// Prodigal Pyromancer taps to ping any target for 1.
+#[test]
+fn prodigal_pyromancer_pings_for_one() {
+    let mut g = two_player_game();
+    let tim = g.add_card_to_battlefield(0, catalog::prodigal_pyromancer());
+    g.clear_sickness(tim);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tim, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("Tim ability activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "pinged for 1");
+}
+
+/// Gravedigger returns a creature card from your graveyard on ETB.
+#[test]
+fn gravedigger_returns_creature_from_graveyard() {
+    let mut g = two_player_game();
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::gravedigger());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead),
+        "the dead bear returned to hand");
+}
+
 #[test]
 fn essence_warden_is_a_green_soul_warden() {
     let d = catalog::essence_warden();

@@ -144,3 +144,15 @@ pub fn holy_day() -> CardDefinition {
     }
 }
 
+/// Darkness — {B} Instant. "Prevent all combat damage that would be dealt
+/// this turn." (Black Fog.)
+pub fn darkness() -> CardDefinition {
+    CardDefinition {
+        name: "Darkness",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PreventAllCombatDamageThisTurn,
+        ..Default::default()
+    }
+}
+
