@@ -4433,30 +4433,6 @@ pub mod shortcut {
         }
     }
 
-    /// Bushido N (CR 702.46): "Whenever this creature blocks or becomes
-    /// blocked, it gets +N/+N until end of turn." Two `SelfSource`
-    /// triggers — `Blocks` (this is the blocker) and `BecomesBlocked`
-    /// (this is the attacker) — each pumping `This`. Returned as a Vec so
-    /// a card spreads both into its `triggered_abilities`.
-    pub fn bushido(n: i32) -> Vec<TriggeredAbility> {
-        let pump = || Effect::PumpPT {
-            what: Selector::This,
-            power: Value::Const(n),
-            toughness: Value::Const(n),
-            duration: Duration::EndOfTurn,
-        };
-        vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),
-                effect: pump(),
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-                effect: pump(),
-            },
-        ]
-    }
-
     /// Frenzy N (CR 702.68): "Whenever this creature attacks and isn't
     /// blocked, it gets +N/+0 until end of turn." An
     /// `AttacksAndIsntBlocked / SelfSource` pump of `This`.
@@ -4481,6 +4457,32 @@ pub mod shortcut {
                 amount: Value::Const(n),
             },
         }
+    }
+
+    /// Afterlife N (CR 702.135): "When this creature dies, create N 1/1
+    /// white and black Spirit creature tokens with flying." A
+    /// `CreatureDied / SelfSource` trigger minting the standard Afterlife
+    /// Spirit body.
+    pub fn afterlife(n: i32) -> TriggeredAbility {
+        on_dies(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::Const(n),
+            definition: crate::card::TokenDefinition {
+                name: "Spirit".into(),
+                power: 1,
+                toughness: 1,
+                keywords: vec![Keyword::Flying],
+                card_types: vec![crate::card::CardType::Creature],
+                colors: vec![crate::mana::Color::White, crate::mana::Color::Black],
+                supertypes: vec![],
+                subtypes: crate::card::Subtypes {
+                    creature_types: vec![crate::card::CreatureType::Spirit],
+                    ..Default::default()
+                },
+                activated_abilities: vec![],
+                triggered_abilities: vec![],
+            },
+        })
     }
 
     /// ETB-Mint-Token-With-Counters shortcut: "When this creature
