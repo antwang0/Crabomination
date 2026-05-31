@@ -84,6 +84,8 @@ pub enum CreatureType {
     Ninja,
     // +1/+1-counter "Spike" cycle (Spike Feeder).
     Spike,
+    // Artifact-creature token subtype (Hangarback Walker's Thopters).
+    Thopter,
 }
 
 /// Land subtypes (basic land types + others).

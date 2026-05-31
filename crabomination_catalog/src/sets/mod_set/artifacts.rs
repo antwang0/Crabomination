@@ -721,3 +721,135 @@ pub fn throne_of_geth() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Walking Ballista — {X}{X} Artifact Creature 0/0. Enters with X +1/+1
+/// counters. "Remove a +1/+1 counter from this: it deals 1 damage to any
+/// target." "{4}: Put a +1/+1 counter on this."
+pub fn walking_ballista() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Predicate;
+    use crate::mana::x;
+    CardDefinition {
+        name: "Walking Ballista",
+        cost: cost(&[x(), x()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        activated_abilities: vec![
+            ActivatedAbility {
+                condition: Some(Predicate::ValueAtLeast(
+                    Value::CountersOn {
+                        what: Box::new(Selector::This),
+                        kind: CounterType::PlusOnePlusOne,
+                    },
+                    Value::Const(1),
+                )),
+                effect: Effect::Seq(vec![
+                    Effect::RemoveCounter {
+                        what: Selector::This,
+                        kind: CounterType::PlusOnePlusOne,
+                        amount: Value::Const(1),
+                    },
+                    Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+                ]),
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(4)]),
+                effect: Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Triskelion — {6} Artifact Creature 1/1 that enters with three +1/+1
+/// counters. "Remove a +1/+1 counter from this: it deals 1 damage to any
+/// target."
+pub fn triskelion() -> CardDefinition {
+    use crate::card::CounterType;
+    use crate::effect::Predicate;
+    CardDefinition {
+        name: "Triskelion",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(3))),
+        activated_abilities: vec![ActivatedAbility {
+            condition: Some(Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                Value::Const(1),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hangarback Walker — {X}{X} Artifact Creature 0/0. Enters with X +1/+1
+/// counters. "{1}, {T}: Put a +1/+1 counter on this." "When this dies,
+/// create a 1/1 colorless Thopter artifact creature token with flying for
+/// each +1/+1 counter on it."
+pub fn hangarback_walker() -> CardDefinition {
+    use crate::card::{CounterType, CreatureType, TokenDefinition};
+    use crate::mana::x;
+    let thopter = TokenDefinition {
+        name: "Thopter".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        colors: vec![],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Thopter],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Hangarback Walker",
+        cost: cost(&[x(), x()]),
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1)]),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+            ..Default::default()
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
+            effect: Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                definition: thopter,
+            },
+        }],
+        ..Default::default()
+    }
+}

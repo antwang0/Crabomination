@@ -889,6 +889,75 @@ pub fn containment_priest() -> CardDefinition {
     }
 }
 
+/// Sea Gate Oracle — {2}{U}, 1/3 Human Wizard. ETB: look at the top two
+/// cards, put one into your hand. (The "other on the bottom" half is
+/// approximated by leaving it on top.)
+pub fn sea_gate_oracle() -> CardDefinition {
+    CardDefinition {
+        name: "Sea Gate Oracle",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+            effect: Effect::LookPickToHand {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                rest_to_graveyard: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fertilid — {2}{G}, 1/1 Elemental that enters with two +1/+1 counters.
+/// "{1}{G}, Remove a +1/+1 counter from this: Search your library for a
+/// basic land card, put it onto the battlefield tapped, then shuffle."
+pub fn fertilid() -> CardDefinition {
+    use crate::card::CounterType;
+    CardDefinition {
+        name: "Fertilid",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Elemental],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::Const(2))),
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), g()]),
+            condition: Some(crate::effect::Predicate::ValueAtLeast(
+                Value::CountersOn {
+                    what: Box::new(Selector::This),
+                    kind: CounterType::PlusOnePlusOne,
+                },
+                Value::Const(1),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::RemoveCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                },
+                Effect::Search {
+                    who: PlayerRef::You,
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Inexorable Tide — {3}{U} Enchantment. "Whenever you cast a spell,
 /// proliferate."
 pub fn inexorable_tide() -> CardDefinition {

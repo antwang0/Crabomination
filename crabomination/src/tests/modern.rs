@@ -16954,6 +16954,107 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
 }
 
 #[test]
+fn walking_ballista_enters_with_x_counters_and_pings() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::walking_ballista());
+    g.players[0].mana_pool.add_colorless(4); // X=2 → {X}{X} = 4 generic
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("castable for X=2");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2, "enters with X=2 counters");
+    // Remove a counter to ping the opponent.
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("ping ability");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 1, "ping dealt 1 damage");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1, "spent a counter");
+}
+
+#[test]
+fn triskelion_enters_with_three_counters() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::triskelion());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable for {6}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 3);
+}
+
+#[test]
+fn hangarback_walker_makes_thopters_when_it_dies() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::hangarback_walker());
+    g.players[0].mana_pool.add_colorless(4); // X=2
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(2),
+    }).expect("castable");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2);
+    // Kill it; the dies trigger makes one Thopter per +1/+1 counter.
+    g.remove_to_graveyard_with_triggers(id);
+    drain_stack(&mut g);
+    let thopters = g.battlefield.iter().filter(|c| c.definition.name == "Thopter").count();
+    assert_eq!(thopters, 2, "two +1/+1 counters → two Thopters on death");
+}
+
+#[test]
+fn sea_gate_oracle_etb_draws_into_hand() {
+    let mut g = two_player_game();
+    for _ in 0..3 { g.add_card_to_library(0, catalog::island()); }
+    let id = g.add_card_to_hand(0, catalog::sea_gate_oracle());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("castable");
+    drain_stack(&mut g);
+    // Cast removed the card from hand (-1) but ETB put one of top two into hand (+1).
+    assert_eq!(g.players[0].hand.len(), hand_before, "ETB pulled a card into hand");
+}
+
+#[test]
+fn fertilid_trades_a_counter_to_fetch_a_basic() {
+    use crate::card::CounterType;
+    let mut g = two_player_game();
+    let forest_in_lib = g.add_card_to_library(0, catalog::forest());
+    let id = g.add_card_to_hand(0, catalog::fertilid());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fertilid castable for {2}{G}");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Search(Some(forest_in_lib)),
+    ]));
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("ability activates");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(forest_in_lib).is_some(),
+        "fetched a basic onto the battlefield");
+    assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
+        .counter_count(CounterType::PlusOnePlusOne), 1, "spent a +1/+1 counter");
+}
+
+#[test]
 fn grim_affliction_puts_a_minus_counter() {
     use crate::card::CounterType;
     let mut g = two_player_game();

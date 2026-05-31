@@ -348,6 +348,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         thrummingbird,
         spike_feeder,
         grim_affliction,
+        // Counter-synergy creatures (combo with proliferate / Heliod).
+        walking_ballista,
+        triskelion,
+        hangarback_walker,
+        sea_gate_oracle,
+        fertilid,
         // static_prison       — 🟡 "while it has stun counters don't untap" suppression omitted
         day_of_judgment,
         enlightened_tutor,
