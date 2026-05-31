@@ -164,3 +164,69 @@ pub fn felhide_minotaur() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Griptide — {2}{U} Instant. Put target creature on top of its owner's
+/// library.
+pub fn griptide() -> CardDefinition {
+    use crate::effect::LibraryPosition;
+    CardDefinition {
+        name: "Griptide",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Move {
+            what: target_filtered(SelectionRequirement::Creature),
+            to: ZoneDest::Library {
+                who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                pos: LibraryPosition::Top,
+            },
+        },
+        ..Default::default()
+    }
+}
+
+/// Lash of the Whip — {4}{B} Instant. Target creature gets -4/-4 until end
+/// of turn.
+pub fn lash_of_the_whip() -> CardDefinition {
+    use crate::effect::Duration;
+    CardDefinition {
+        name: "Lash of the Whip",
+        cost: cost(&[generic(4), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::PumpPT {
+            what: target_filtered(SelectionRequirement::Creature),
+            power: Value::Const(-4),
+            toughness: Value::Const(-4),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+/// Pharika's Cure — {1}{B} Instant. Deal 2 damage to target creature and
+/// you gain 2 life.
+pub fn pharikas_cure() -> CardDefinition {
+    CardDefinition {
+        name: "Pharika's Cure",
+        cost: cost(&[generic(1), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Creature),
+                amount: Value::Const(2),
+            },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(2) },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Fade into Antiquity — {2}{G} Sorcery. Exile target enchantment.
+pub fn fade_into_antiquity() -> CardDefinition {
+    CardDefinition {
+        name: "Fade into Antiquity",
+        cost: cost(&[generic(2), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Exile { what: target_filtered(SelectionRequirement::Enchantment) },
+        ..Default::default()
+    }
+}

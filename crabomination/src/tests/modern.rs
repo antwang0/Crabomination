@@ -18422,3 +18422,66 @@ fn magda_makes_a_treasure_when_a_dwarf_taps() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure"),
         "tapping a Dwarf you control makes a Treasure");
 }
+
+// ── More Theros instants/removal ──────────────────────────────────────────────
+
+#[test]
+fn griptide_puts_creature_on_top_of_library() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::griptide());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Griptide castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature left the battlefield");
+    assert_eq!(g.players[1].library.first().map(|c| c.definition.name), Some("Grizzly Bears"),
+        "creature is on top of its owner's library");
+}
+
+#[test]
+fn lash_of_the_whip_shrinks_and_kills_a_small_creature() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::lash_of_the_whip());
+    g.players[0].mana_pool.add_colorless(4);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Lash castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "-4/-4 kills the 2/2");
+}
+
+#[test]
+fn pharikas_cure_pings_and_gains_life() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pharikas_cure());
+    g.players[0].mana_pool.add_colorless(1);
+    g.players[0].mana_pool.add(Color::Black, 1);
+    let life = g.players[0].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Pharika's Cure castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "2 damage kills the 2/2");
+    assert_eq!(g.players[0].life, life + 2, "gain 2 life");
+}
+
+#[test]
+fn fade_into_antiquity_exiles_an_enchantment() {
+    let mut g = two_player_game();
+    let ench = g.add_card_to_battlefield(1, catalog::spear_of_heliod());
+    let id = g.add_card_to_hand(0, catalog::fade_into_antiquity());
+    g.players[0].mana_pool.add_colorless(2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(ench)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Fade into Antiquity castable");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == ench), "enchantment exiled");
+    assert!(g.exile.iter().any(|c| c.id == ench), "to exile zone");
+}
