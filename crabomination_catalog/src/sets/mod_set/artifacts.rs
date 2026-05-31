@@ -853,3 +853,30 @@ pub fn hangarback_walker() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Hedron Archive — {4} Artifact. "{T}: Add {C}{C}." "{T}, Sacrifice this
+/// artifact: Draw two cards."
+pub fn hedron_archive() -> CardDefinition {
+    CardDefinition {
+        name: "Hedron Archive",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![
+            ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: PlayerRef::You,
+                    pool: ManaPayload::Colorless(Value::Const(2)),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                tap_cost: true,
+                sac_cost: true,
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                ..Default::default()
+            },
+        ],
+        ..Default::default()
+    }
+}

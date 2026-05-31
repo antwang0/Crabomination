@@ -16954,6 +16954,94 @@ fn spike_feeder_enters_with_two_counters_and_trades_one_for_life() {
 }
 
 #[test]
+fn flame_javelin_deals_four_to_a_player() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_hand(0, catalog::flame_javelin());
+    g.players[0].mana_pool.add(Color::Red, 3); // pay the {2/R} pips with red
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable with three red");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 4);
+}
+
+#[test]
+fn pongify_destroys_and_gives_owner_an_ape() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::pongify());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("castable for {U}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == bear), "creature destroyed");
+    let ape = g.battlefield.iter().find(|c| c.definition.name == "Ape").expect("Ape made");
+    assert_eq!(ape.controller, 1, "the Ape goes to the destroyed creature's controller");
+}
+
+#[test]
+fn arc_trail_splits_two_and_one_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::arc_trail());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)),
+        additional_targets: vec![Target::Permanent(bear)], mode: None, x_value: None,
+    }).expect("castable for {1}{R}");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2, "2 damage to the player");
+    // 1 damage marked on the 2-toughness bear (survives).
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bear).unwrap().damage, 1);
+}
+
+#[test]
+fn prey_upon_makes_two_creatures_fight() {
+    let mut g = two_player_game();
+    let mine = g.add_card_to_battlefield(0, catalog::serra_angel()); // 4/4
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears()); // 2/2
+    let id = g.add_card_to_hand(0, catalog::prey_upon());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(mine)),
+        additional_targets: vec![Target::Permanent(theirs)], mode: None, x_value: None,
+    }).expect("castable for {G}");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == theirs), "the 2/2 died to the 4/4");
+    // The 4/4 took 2 and survives.
+    assert_eq!(g.battlefield.iter().find(|c| c.id == mine).unwrap().damage, 2);
+}
+
+#[test]
+fn hedron_archive_taps_for_two_and_sacs_to_draw() {
+    let mut g = two_player_game();
+    let id = g.add_card_to_battlefield(0, catalog::hedron_archive());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    // Mana ability.
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: None, x_value: None,
+    }).expect("mana ability");
+    assert_eq!(g.players[0].mana_pool.total(), 2, "added two colorless");
+    // Untap so the sac-to-draw ability (also a tap cost) is legal.
+    g.battlefield.iter_mut().find(|c| c.id == id).unwrap().tapped = false;
+    // Sac-to-draw.
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 1, target: None, x_value: None,
+    }).expect("sac-draw ability");
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.id == id), "sacrificed");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "drew two");
+}
+
+#[test]
 fn spark_double_copies_with_an_extra_counter() {
     use crate::card::CounterType;
     let mut g = two_player_game();

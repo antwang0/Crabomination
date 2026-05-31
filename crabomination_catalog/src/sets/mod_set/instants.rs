@@ -1042,6 +1042,62 @@ pub fn intervention_pact() -> CardDefinition {
     }
 }
 
+/// Flame Javelin — {2/R}{2/R}{2/R} Instant. "Flame Javelin deals 4 damage
+/// to any target." Mono-hybrid pips wired as `{2/R}` each.
+pub fn flame_javelin() -> CardDefinition {
+    use crate::mana::mono_hybrid;
+    CardDefinition {
+        name: "Flame Javelin",
+        cost: ManaCost::new(vec![
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::Red),
+            mono_hybrid(2, Color::Red),
+        ]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(4) },
+        ..Default::default()
+    }
+}
+
+/// Pongify — {U} Instant. "Destroy target creature. It can't be
+/// regenerated. Its controller creates a 3/3 green Ape creature token."
+pub fn pongify() -> CardDefinition {
+    use crate::card::TokenDefinition;
+    let ape = TokenDefinition {
+        name: "Ape".into(),
+        power: 3,
+        toughness: 3,
+        keywords: vec![],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Green],
+        supertypes: vec![],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Ape],
+            ..Default::default()
+        },
+        activated_abilities: vec![],
+        triggered_abilities: vec![],
+    };
+    CardDefinition {
+        name: "Pongify",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            // Mint the Ape for the target's controller first, while the
+            // creature is still on the battlefield.
+            Effect::CreateToken {
+                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                count: Value::Const(1),
+                definition: ape,
+            },
+            Effect::DestroyNoRegen {
+                what: target_filtered(SelectionRequirement::Creature),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
 /// Grim Affliction — {2}{B} Instant. "Put a -1/-1 counter on target
 /// creature. At the beginning of the next end step, proliferate."
 pub fn grim_affliction() -> CardDefinition {

@@ -685,3 +685,47 @@ pub fn explore() -> CardDefinition {
     }
 }
 
+
+/// Arc Trail — {1}{R} Sorcery. "Arc Trail deals 2 damage to any target and
+/// 1 damage to another target." Two target slots: slot 0 takes 2, slot 1
+/// takes 1.
+pub fn arc_trail() -> CardDefinition {
+    CardDefinition {
+        name: "Arc Trail",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::DealDamage {
+                to: target_filtered(SelectionRequirement::Any),
+                amount: Value::Const(2),
+            },
+            Effect::DealDamage {
+                to: Selector::TargetFiltered { slot: 1, filter: SelectionRequirement::Any },
+                amount: Value::Const(1),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Prey Upon — {G} Sorcery. "Target creature you control fights target
+/// creature you don't control." Both slots fight via `Effect::Fight`.
+pub fn prey_upon() -> CardDefinition {
+    CardDefinition {
+        name: "Prey Upon",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Fight {
+            attacker: Selector::TargetFiltered {
+                slot: 0,
+                filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
+            },
+            defender: Selector::TargetFiltered {
+                slot: 1,
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByOpponent),
+            },
+        },
+        ..Default::default()
+    }
+}
