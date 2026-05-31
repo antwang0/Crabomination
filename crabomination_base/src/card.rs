@@ -430,6 +430,12 @@ pub enum SelectionRequirement {
     /// instead of a hard-coded threshold. Battlefield-only; false when the
     /// source is missing or either side isn't a creature.
     PowerLessThanSource,
+    /// True when the candidate creature has greater power *or* greater
+    /// toughness than the source permanent (both read at evaluation
+    /// time). Powers Evolve (CR 702.100 — "if that creature has greater
+    /// power or toughness than this creature"). Battlefield-only; false
+    /// when the source is missing or either side isn't a creature.
+    GreaterPowerOrToughnessThanSource,
     IsToken,
     NotToken,
     IsBasicLand,

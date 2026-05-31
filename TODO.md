@@ -114,6 +114,16 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   PowerLessThanSource ∧ OtherThanSource` creature. Sunhome Stalwart.
   Test: `cr_702_135_mentor_counters_lesser_power_attacker`.
 
+- ✅ **CR 702.100 — Evolve** (claude/modern_decks). `shortcut::evolve` —
+  `EntersBattlefield/YourControl` trigger gated on the entering creature
+  (`TriggerSource`) being another creature with the new
+  `SelectionRequirement::GreaterPowerOrToughnessThanSource`, adding a
+  +1/+1 counter to `This`. Cloudfin Raptor, Experiment One, Fathom Mage
+  (Fathom Mage chains a `CounterAdded(+1/+1)/SelfSource` → Draw). Tests:
+  `cloudfin_raptor_evolves_when_bigger_creature_enters`,
+  `experiment_one_does_not_evolve_for_equal_creature`,
+  `fathom_mage_draws_when_it_evolves`.
+
 - ⏳ **CR 612 — Text-Changing Effects** (push claude/modern_decks
   batch 142 — audit against `MagicCompRules_20260417.txt` lines
   2922–2939). The "change a word on a card" primitive — Mind Bend,
@@ -1754,11 +1764,15 @@ wired, 🟡 partial, ⏳ todo) plus a short note.
   Joke's rider + Healing Salve's prevention mode. Tests:
   `impractical_joke_damage_cant_be_prevented`,
   `prevention_shield_stops_noncombat_damage`,
-  `healing_salve_mode_one_prevents_next_three_damage`. Gaps still
-  tracked: (a) the combat path still uses the global flag, not the
-  per-target shields (a creature-scoped fog won't stop combat damage);
-  (b) damage **redirection** (Maze of Ith); (c) per-source "next N
-  from source X" shields.
+  `healing_salve_mode_one_prevents_next_three_damage`. The combat path
+  now routes attacker→player and trample→player/PW damage through the
+  shields too (`combat.rs::prevent_combat_to_target`, lifelink scales off
+  the post-prevention amount per CR 702.15a); test
+  `prevention_shield_stops_combat_damage_to_player`. Gaps still tracked:
+  (a) **creature-vs-creature** combat damage isn't routed through shields
+  (a creature-scoped fog won't stop block damage to/from a blocker);
+  (b) damage **redirection** (Maze of Ith); (c) per-source "next N from
+  source X" shields.
 
 - ✅ **CR 120.6 — Marked damage persists until cleanup; lethal damage
 

@@ -150,7 +150,10 @@ feature; sweep card-batch by card-batch.
   ⏳ Bargain, ⏳ Craft, ⏳ Disguise/Cloak, ⏳ Plot, ⏳ Saddle, ⏳ Gift,
   ⏳ Offspring, ⏳ Impending, ⏳ Ninjutsu, ⏳ Embalm/Eternalize.
 - **Counter / +1+1 matters:** ⏳ Proliferate (effect), ⏳ Bolster,
-  ⏳ Adapt, ⏳ Evolve, ⏳ Mentor, ⏳ Training, ⏳ Modular, ⏳ Graft,
+  ⏳ Adapt, ✅ Evolve (`shortcut::evolve` +
+  `SelectionRequirement::GreaterPowerOrToughnessThanSource` — Cloudfin
+  Raptor, Experiment One, Fathom Mage), ✅ Mentor (`shortcut` — Sunhome
+  Stalwart, CR 702.135), ⏳ Training, ⏳ Modular, ⏳ Graft,
   ⏳ Outlast, ⏳ Monstrosity, ⏳ Devour, ⏳ Bloodthirst, ⏳ Amass.
 - **Cast-from-elsewhere:** ⏳ cast-from-top (Mind's Desire / Amped Raptor /
   Robber of the Rich), ⏳ Suspend (+ time counters), ⏳ Forecast,

@@ -17069,6 +17069,59 @@ fn soul_warden_gains_life_when_another_creature_enters() {
     assert_eq!(g.players[0].life, life + 1, "Soul Warden gained 1 when the bear entered");
 }
 
+/// Cloudfin Raptor evolves (CR 702.100) when a creature with greater
+/// power or toughness enters under your control.
+#[test]
+fn cloudfin_raptor_evolves_when_bigger_creature_enters() {
+    let mut g = two_player_game();
+    let raptor = g.add_card_to_battlefield(0, catalog::cloudfin_raptor());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // 2/2 > 0/1
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let r = view.iter().find(|c| c.id == raptor).unwrap();
+    assert_eq!((r.power, r.toughness), (1, 2), "evolve added a +1/+1 counter");
+}
+
+/// Evolve does not trigger for a creature that isn't bigger (CR 702.100b).
+#[test]
+fn experiment_one_does_not_evolve_for_equal_creature() {
+    let mut g = two_player_game();
+    let exp = g.add_card_to_battlefield(0, catalog::experiment_one()); // 1/1
+    // A second 1/1 is not greater in power or toughness → no evolve.
+    let other = g.add_card_to_hand(0, catalog::experiment_one());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: other, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("second Experiment One castable");
+    drain_stack(&mut g);
+    let view = g.compute_battlefield();
+    let e = view.iter().find(|c| c.id == exp).unwrap();
+    assert_eq!((e.power, e.toughness), (1, 1), "no evolve trigger for an equal creature");
+}
+
+/// Fathom Mage draws a card when it evolves (its CounterAdded trigger).
+#[test]
+fn fathom_mage_draws_when_it_evolves() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::fathom_mage()); // 1/1
+    g.add_card_to_library(0, catalog::island());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears()); // 2/2 > 1/1
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("bear castable");
+    drain_stack(&mut g);
+    // Bear left hand (-1); evolve→counter→draw refilled it (+1) → net even.
+    assert_eq!(g.players[0].hand.len(), hand_before, "evolve counter drew a card");
+}
+
 #[test]
 fn essence_warden_is_a_green_soul_warden() {
     let d = catalog::essence_warden();

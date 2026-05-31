@@ -3149,6 +3149,29 @@ pub mod shortcut {
         }
     }
 
+    /// Evolve shortcut (CR 702.100): "Whenever a creature enters the
+    /// battlefield under your control, if that creature has greater power
+    /// or toughness than this creature, put a +1/+1 counter on this
+    /// creature." An `EntersBattlefield / YourControl` trigger gated on
+    /// the entering creature (`TriggerSource`) being another creature with
+    /// `GreaterPowerOrToughnessThanSource`; the counter lands on `This`.
+    pub fn evolve() -> TriggeredAbility {
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches {
+                    what: Selector::TriggerSource,
+                    filter: SelectionRequirement::Creature
+                        .and(SelectionRequirement::OtherThanSource)
+                        .and(SelectionRequirement::GreaterPowerOrToughnessThanSource),
+                }),
+            effect: Effect::AddCounter {
+                what: Selector::This,
+                kind: crate::card::CounterType::PlusOnePlusOne,
+                amount: Value::Const(1),
+            },
+        }
+    }
+
     /// ETB-Drain shortcut: "When this creature enters, each opponent loses
     /// `amount` life and you gain `amount` life." Wraps [`etb`] with the
     /// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /

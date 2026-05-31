@@ -609,16 +609,20 @@ impl GameState {
             }
 
             if blocker_ids.is_empty() {
-                let amount = if prevent_combat_damage {
+                let raw = if prevent_combat_damage {
                     0
                 } else {
                     atk.power.max(0) as u32
                 };
+                // CR 615 — per-target prevention shields on the defending
+                // player/planeswalker also reduce unblocked combat damage.
+                // Lifelink scales off the post-prevention amount (702.15a).
+                let amount = self.prevent_combat_to_target(atk.target, raw, &mut events);
                 if amount > 0 {
                     self.deal_combat_damage_to_target(atk, amount, &mut events);
                     if atk.has_lifelink {
                         let a = self.active_player_idx;
-                        self.adjust_life(a, atk.power);
+                        self.adjust_life(a, amount as i32);
                         events.push(GameEvent::LifeGained { player: a, amount });
                     }
                 }
@@ -670,9 +674,18 @@ impl GameState {
                 }
 
                 if atk.has_trample && remaining_atk_damage > 0 {
-                    let amount = remaining_atk_damage as u32;
-                    lifelink_dealt += remaining_atk_damage;
-                    self.deal_combat_damage_to_target(atk, amount, &mut events);
+                    // Trample-over damage to the defending player/PW is also
+                    // subject to prevention shields; lifelink follows the
+                    // post-prevention amount.
+                    let amount = self.prevent_combat_to_target(
+                        atk.target,
+                        remaining_atk_damage as u32,
+                        &mut events,
+                    );
+                    lifelink_dealt += amount as i32;
+                    if amount > 0 {
+                        self.deal_combat_damage_to_target(atk, amount, &mut events);
+                    }
                 }
 
                 if atk.has_lifelink && lifelink_dealt > 0 {
@@ -787,6 +800,27 @@ impl GameState {
     /// player targets this is life loss (or poison if Infect); for
     /// planeswalker targets this is loyalty loss. Also fires
     /// `DealsCombatDamageToPlayer` triggers when a player is hit.
+    /// CR 615 — apply prevention shields to combat damage headed for an
+    /// attack target (player or planeswalker). Returns the unprevented
+    /// remainder. Creature-vs-creature combat damage is not yet routed
+    /// through shields (tracked in TODO.md).
+    fn prevent_combat_to_target(
+        &mut self,
+        target: AttackTarget,
+        amount: u32,
+        events: &mut Vec<GameEvent>,
+    ) -> u32 {
+        use crate::game::effects::EntityRef;
+        match target {
+            AttackTarget::Player(p) => {
+                self.apply_prevention_shields(EntityRef::Player(p), amount, events)
+            }
+            AttackTarget::Planeswalker(pw) => {
+                self.apply_prevention_shields(EntityRef::Permanent(pw), amount, events)
+            }
+        }
+    }
+
     fn deal_combat_damage_to_target(
         &mut self,
         atk: &AttackerInfo,

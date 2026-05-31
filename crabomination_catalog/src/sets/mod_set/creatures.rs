@@ -2,9 +2,9 @@
 //! engine primitives; promotions to fuller Oracle text are noted inline.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Selector, SelectionRequirement, StaticAbility, Subtypes, Supertype,
-    TriggeredAbility, Value,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, Effect, EventKind,
+    EventScope, EventSpec, Keyword, Selector, SelectionRequirement, StaticAbility, Subtypes,
+    Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::target_filtered;
 use crate::effect::{DelayedTriggerKind, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
@@ -3499,6 +3499,75 @@ pub fn elder_gargaroth() -> CardDefinition {
                 },
             ]),
         }],
+        ..Default::default()
+    }
+}
+
+// ── Evolve (CR 702.100) ───────────────────────────────────────────────────────
+
+/// Cloudfin Raptor — {U}, 0/1 Bird. "Evolve. Flying."
+pub fn cloudfin_raptor() -> CardDefinition {
+    use crate::effect::shortcut::evolve;
+    CardDefinition {
+        name: "Cloudfin Raptor",
+        cost: cost(&[u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Bird],
+            ..Default::default()
+        },
+        power: 0,
+        toughness: 1,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![evolve()],
+        ..Default::default()
+    }
+}
+
+/// Experiment One — {G}, 1/1 Human Ooze. "Evolve."
+/// (The "Remove two +1/+1 counters: Regenerate" ability needs a
+/// counter-removal activation cost the engine doesn't model yet.)
+pub fn experiment_one() -> CardDefinition {
+    use crate::effect::shortcut::evolve;
+    CardDefinition {
+        name: "Experiment One",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Ooze],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![evolve()],
+        ..Default::default()
+    }
+}
+
+/// Fathom Mage — {1}{G}{U}, 1/1 Human Wizard. "Evolve. Whenever a +1/+1
+/// counter is placed on Fathom Mage, draw a card."
+pub fn fathom_mage() -> CardDefinition {
+    use crate::effect::shortcut::evolve;
+    CardDefinition {
+        name: "Fathom Mage",
+        cost: cost(&[generic(1), g(), u()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        triggered_abilities: vec![
+            evolve(),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CounterAdded(CounterType::PlusOnePlusOne),
+                    EventScope::SelfSource,
+                ),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            },
+        ],
         ..Default::default()
     }
 }

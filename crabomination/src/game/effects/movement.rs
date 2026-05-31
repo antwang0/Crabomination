@@ -19,7 +19,7 @@ impl GameState {
     /// step is bypassed while `damage_cant_be_prevented_this_turn` is set.
     /// Emits `GameEvent::DamagePrevented` for the prevented portion
     /// (CR 615.13) and returns the unprevented remainder.
-    pub(super) fn apply_prevention_shields(
+    pub(crate) fn apply_prevention_shields(
         &mut self,
         ent: EntityRef,
         amount: u32,

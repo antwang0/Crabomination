@@ -511,6 +511,31 @@ fn unblocked_attacker_deals_damage_to_player() {
         .any(|e| matches!(e, GameEvent::DamageDealt { to_player: Some(1), amount: 2, .. })));
 }
 
+/// CR 615 — a prevent-all shield on the defending player stops unblocked
+/// combat damage; a DamagePrevented event is emitted.
+#[test]
+fn prevention_shield_stops_combat_damage_to_player() {
+    use crate::game::types::{PreventionShield, PreventionTarget};
+    let mut g = two_player_game();
+    let bear_id = setup_attacker(&mut g, 0, catalog::grizzly_bears);
+    g.prevention_shields.push(PreventionShield {
+        target: PreventionTarget::Player(1),
+        remaining: None,
+    });
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: bear_id,
+        target: AttackTarget::Player(1),
+    }]))
+    .unwrap();
+    g.step = TurnStep::CombatDamage;
+    let events = g.resolve_combat().unwrap();
+    assert_eq!(g.players[1].life, 20, "all combat damage prevented");
+    assert!(events
+        .iter()
+        .any(|e| matches!(e, GameEvent::DamagePrevented { to_player: Some(1), amount: 2, .. })));
+}
+
 #[test]
 fn blocked_combat_both_die() {
     let mut g = two_player_game();
