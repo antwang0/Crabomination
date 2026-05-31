@@ -12419,11 +12419,9 @@ pub fn bonecrusher_giant() -> CardDefinition {
 }
 
 /// Esika's Chariot — {3}{G} Legendary Artifact — Vehicle 4/4.
-/// When this enters, create two 2/2 green Cat creature tokens. Crew 4.
-///
-/// (The "copy target token you control" ETB clause is omitted — no
-/// copy-target-token primitive; the two-Cat ETB is the headline value.)
-/// Crew 4 is wired via `Keyword::Crew(4)` + `GameAction::Crew`.
+/// When this enters, create two 2/2 green Cat creature tokens. Whenever it
+/// attacks, create a token that's a copy of target token you control.
+/// Crew 4.
 pub fn esikas_chariot() -> CardDefinition {
     use crate::card::{Supertype, TokenDefinition};
     CardDefinition {
@@ -12438,28 +12436,45 @@ pub fn esikas_chariot() -> CardDefinition {
         keywords: vec![Keyword::Crew(4)],
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::CreateToken {
-                who: PlayerRef::You,
-                count: Value::Const(2),
-                definition: TokenDefinition {
-                    name: "Cat".into(),
-                    power: 2,
-                    toughness: 2,
-                    keywords: vec![],
-                    card_types: vec![CardType::Creature],
-                    colors: vec![Color::Green],
-                    supertypes: vec![],
-                    subtypes: Subtypes {
-                        creature_types: vec![CreatureType::Cat],
-                        ..Default::default()
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                effect: Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::Const(2),
+                    definition: TokenDefinition {
+                        name: "Cat".into(),
+                        power: 2,
+                        toughness: 2,
+                        keywords: vec![],
+                        card_types: vec![CardType::Creature],
+                        colors: vec![Color::Green],
+                        supertypes: vec![],
+                        subtypes: Subtypes {
+                            creature_types: vec![CreatureType::Cat],
+                            ..Default::default()
+                        },
+                        activated_abilities: vec![],
+                        triggered_abilities: vec![],
                     },
-                    activated_abilities: vec![],
-                    triggered_abilities: vec![],
                 },
             },
-        }],
+            // "Whenever Esika's Chariot attacks, create a token that's a copy
+            // of target token you control." (CR 707 token copy.)
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::Const(1),
+                    source: target_filtered(
+                        SelectionRequirement::IsToken
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    extra_creature_types: vec![],
+                    override_pt: None,
+                },
+            },
+        ],
         ..Default::default()
     }
 }

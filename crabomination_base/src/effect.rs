@@ -2086,6 +2086,9 @@ impl Effect {
             | Effect::RemoveCounter { what, .. }
             | Effect::AddKeywordCounter { what, .. }
             | Effect::RemoveKeywordCounter { what, .. } => sel_filter(what),
+            // CreateTokenCopyOf — the `source` is the targeted permanent to
+            // copy (Esika's Chariot "copy target token you control").
+            Effect::CreateTokenCopyOf { source, .. } => sel_filter(source),
             Effect::PumpPT { what, .. } => sel_filter(what),
             Effect::SetBasePT { what, .. } => sel_filter(what),
             Effect::BecomeCreature { what, .. } => sel_filter(what),
@@ -2181,6 +2184,8 @@ impl Effect {
             Effect::SetBasePT { .. } => false,
             // Animating your own land into a creature is a friendly self-buff.
             Effect::BecomeCreature { .. } => true,
+            // Copying "target token you control" is friendly (Esika's Chariot).
+            Effect::CreateTokenCopyOf { .. } => true,
             Effect::GrantKeyword { keyword, .. } => Self::keyword_is_friendly(keyword),
             Effect::AddCounter { kind, .. } => matches!(kind, CounterType::PlusOnePlusOne),
             Effect::Seq(v) => v.iter().any(|e| e.prefers_friendly_target()),

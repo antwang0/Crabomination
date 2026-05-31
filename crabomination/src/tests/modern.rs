@@ -18232,3 +18232,36 @@ fn nykthos_taps_for_devotion_of_chosen_color() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 3,
         "adds black mana equal to devotion to black");
 }
+
+/// Esika's Chariot's attack trigger copies a token you control (CR 707).
+#[test]
+fn esikas_chariot_attack_copies_a_token() {
+    let mut g = two_player_game();
+    // Cast the Chariot so its ETB mints the two Cat tokens to copy.
+    let id = g.add_card_to_hand(0, catalog::esikas_chariot());
+    g.players[0].mana_pool.add_colorless(3);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Esika's Chariot castable");
+    drain_stack(&mut g);
+    let cats_before = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Cat").count();
+    assert_eq!(cats_before, 2, "ETB made two Cats");
+    // Crew it and send it in.
+    g.clear_sickness(id);
+    let b1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.perform_action(GameAction::Crew { vehicle: id, crew_creatures: vec![b1, b2] })
+        .expect("crew 4");
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: id, target: AttackTarget::Player(1) },
+    ])).expect("crewed chariot attacks");
+    drain_stack(&mut g);
+    let cats_after = g.battlefield.iter()
+        .filter(|c| c.is_token && c.definition.name == "Cat").count();
+    assert_eq!(cats_after, 3, "attack trigger copied a Cat token");
+}
