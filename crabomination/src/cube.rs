@@ -298,6 +298,12 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── classic core-set bodies (claude/modern_decks) ──
         eager_cadet,
+        youthful_knight,
+        standing_troops,
+        benalish_hero,
+        skyhunter_skirmisher,
+        knight_errant,
+        venerable_monk,
         elite_vanguard,
         devoted_hero,
         pearled_unicorn,
@@ -523,6 +529,12 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── classic core-set bodies (claude/modern_decks) ──
         air_elemental,
+        snapping_drake,
+        phantom_warrior,
+        merfolk_of_the_pearl_trident,
+        vodalian_soldiers,
+        sea_eagle,
+        wind_spirit,
         wall_of_air,
         essence_scatter,
         // ── modern_decks (auras) ──
@@ -706,6 +718,11 @@ fn black_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── classic core-set bodies (claude/modern_decks) ──
         royal_assassin,
+        scathe_zombies,
+        walking_corpse,
+        bog_imp,
+        severed_legion,
+        looming_shade,
         terror,
         doom_blade,
         ravenous_chupacabra,
@@ -951,6 +968,12 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── classic core-set bodies (claude/modern_decks) ──
         gray_ogre,
+        mons_goblin_raiders,
+        raging_goblin,
+        goblin_piker,
+        goblin_chariot,
+        mountain_goat,
+        dragon_hatchling,
         hurloon_minotaur,
         wall_of_stone,
         wall_of_fire,
@@ -1178,6 +1201,9 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
     let mut v: Vec<CardFactory> = vec![
         // ── classic core-set bodies (claude/modern_decks) ──
         spined_wurm,
+        panther_warriors,
+        redwood_treefolk,
+        gorilla_chieftain,
         trained_armodon,
         giant_spider,
         scryb_sprites,

@@ -1,10 +1,10 @@
 use super::tap_add;
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CreatureType, Effect, EventKind, EventScope,
-    EventSpec, Keyword, Subtypes, TriggeredAbility,
+    EventSpec, Keyword, LandType, Subtypes, TriggeredAbility,
 };
 use crate::card::SelectionRequirement;
-use crate::effect::shortcut::{deal, target, target_filtered};
+use crate::effect::shortcut::{deal, etb_gain_life, target, target_filtered};
 use crate::effect::{Duration, ManaPayload, PlayerRef, Selector, Value};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -711,4 +711,162 @@ fn pump_one_zero(cost_syms: &[crate::mana::ManaSymbol]) -> ActivatedAbility {
         },
         ..Default::default()
     }
+}
+
+// ── Classic core-set bodies, batch 2 (claude/modern_decks) ───────────────────
+
+/// "{cost}: This creature gets +n/+n until end of turn." (Shade-style pump.)
+fn pump_nn(cost_syms: &[crate::mana::ManaSymbol], n: i32) -> ActivatedAbility {
+    ActivatedAbility {
+        mana_cost: cost(cost_syms),
+        effect: Effect::PumpPT {
+            what: Selector::This,
+            power: Value::Const(n),
+            toughness: Value::Const(n),
+            duration: Duration::EndOfTurn,
+        },
+        ..Default::default()
+    }
+}
+
+fn body(
+    name: &'static str,
+    cost_syms: &[crate::mana::ManaSymbol],
+    types: Vec<CreatureType>,
+    power: i32,
+    toughness: i32,
+    keywords: Vec<Keyword>,
+) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: cost(cost_syms),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: types, ..Default::default() },
+        power,
+        toughness,
+        keywords,
+        ..Default::default()
+    }
+}
+
+// White
+/// Youthful Knight — {1}{W} 2/1 Knight with first strike.
+pub fn youthful_knight() -> CardDefinition {
+    body("Youthful Knight", &[generic(1), w()], vec![CreatureType::Human, CreatureType::Knight], 2, 1, vec![Keyword::FirstStrike])
+}
+/// Standing Troops — {2}{W} 1/4 Soldier with vigilance.
+pub fn standing_troops() -> CardDefinition {
+    body("Standing Troops", &[generic(2), w()], vec![CreatureType::Soldier], 1, 4, vec![Keyword::Vigilance])
+}
+/// Benalish Hero — {W} 1/1 Soldier with banding.
+pub fn benalish_hero() -> CardDefinition {
+    body("Benalish Hero", &[w()], vec![CreatureType::Human, CreatureType::Soldier], 1, 1, vec![Keyword::Banding])
+}
+/// Skyhunter Skirmisher — {1}{W} 1/1 Cat Knight with flying and double strike.
+pub fn skyhunter_skirmisher() -> CardDefinition {
+    body("Skyhunter Skirmisher", &[generic(1), w()], vec![CreatureType::Cat, CreatureType::Knight], 1, 1, vec![Keyword::Flying, Keyword::DoubleStrike])
+}
+/// Knight Errant — {1}{W} 2/2 Human Knight.
+pub fn knight_errant() -> CardDefinition {
+    body("Knight Errant", &[generic(1), w()], vec![CreatureType::Human, CreatureType::Knight], 2, 2, vec![])
+}
+/// Venerable Monk — {2}{W} 2/2 Monk Cleric. "When this enters, you gain 2 life."
+pub fn venerable_monk() -> CardDefinition {
+    let mut c = body("Venerable Monk", &[generic(2), w()], vec![CreatureType::Monk, CreatureType::Cleric], 2, 2, vec![]);
+    c.triggered_abilities = vec![etb_gain_life(2)];
+    c
+}
+
+// Blue
+/// Snapping Drake — {3}{U} 3/2 Drake with flying.
+pub fn snapping_drake() -> CardDefinition {
+    body("Snapping Drake", &[generic(3), u()], vec![CreatureType::Drake], 3, 2, vec![Keyword::Flying])
+}
+/// Phantom Warrior — {1}{U}{U} 2/2 Illusion Warrior that can't be blocked.
+pub fn phantom_warrior() -> CardDefinition {
+    body("Phantom Warrior", &[generic(1), u(), u()], vec![CreatureType::Illusion, CreatureType::Warrior], 2, 2, vec![Keyword::Unblockable])
+}
+/// Merfolk of the Pearl Trident — {U} 1/1 Merfolk.
+pub fn merfolk_of_the_pearl_trident() -> CardDefinition {
+    body("Merfolk of the Pearl Trident", &[u()], vec![CreatureType::Merfolk], 1, 1, vec![])
+}
+/// Vodalian Soldiers — {1}{U} 1/2 Merfolk Soldier.
+pub fn vodalian_soldiers() -> CardDefinition {
+    body("Vodalian Soldiers", &[generic(1), u()], vec![CreatureType::Merfolk, CreatureType::Soldier], 1, 2, vec![])
+}
+/// Sea Eagle — {1}{U} 1/1 Bird with flying.
+pub fn sea_eagle() -> CardDefinition {
+    body("Sea Eagle", &[generic(1), u()], vec![CreatureType::Bird], 1, 1, vec![Keyword::Flying])
+}
+/// Wind Spirit — {3}{U} 2/3 Spirit with flying.
+pub fn wind_spirit() -> CardDefinition {
+    body("Wind Spirit", &[generic(3), u()], vec![CreatureType::Spirit], 2, 3, vec![Keyword::Flying])
+}
+
+// Black
+/// Scathe Zombies — {2}{B} 2/2 Zombie.
+pub fn scathe_zombies() -> CardDefinition {
+    body("Scathe Zombies", &[generic(2), b()], vec![CreatureType::Zombie], 2, 2, vec![])
+}
+/// Walking Corpse — {1}{B} 2/2 Zombie.
+pub fn walking_corpse() -> CardDefinition {
+    body("Walking Corpse", &[generic(1), b()], vec![CreatureType::Zombie], 2, 2, vec![])
+}
+/// Bog Imp — {1}{B} 1/1 Imp with flying.
+pub fn bog_imp() -> CardDefinition {
+    body("Bog Imp", &[generic(1), b()], vec![CreatureType::Imp], 1, 1, vec![Keyword::Flying])
+}
+/// Looming Shade — {2}{B} 2/2 Shade. "{B}: +1/+1 until end of turn."
+pub fn looming_shade() -> CardDefinition {
+    let mut c = body("Looming Shade", &[generic(2), b()], vec![CreatureType::Shade], 2, 2, vec![]);
+    c.activated_abilities = vec![pump_nn(&[b()], 1)];
+    c
+}
+
+// Red
+/// Mons's Goblin Raiders — {R} 1/1 Goblin.
+pub fn mons_goblin_raiders() -> CardDefinition {
+    body("Mons's Goblin Raiders", &[r()], vec![CreatureType::Goblin], 1, 1, vec![])
+}
+/// Raging Goblin — {R} 1/1 Goblin with haste.
+pub fn raging_goblin() -> CardDefinition {
+    body("Raging Goblin", &[r()], vec![CreatureType::Goblin], 1, 1, vec![Keyword::Haste])
+}
+/// Goblin Piker — {1}{R} 2/1 Goblin.
+pub fn goblin_piker() -> CardDefinition {
+    body("Goblin Piker", &[generic(1), r()], vec![CreatureType::Goblin], 2, 1, vec![])
+}
+/// Goblin Chariot — {1}{R} 2/2 Goblin with haste.
+pub fn goblin_chariot() -> CardDefinition {
+    body("Goblin Chariot", &[generic(1), r()], vec![CreatureType::Goblin], 2, 2, vec![Keyword::Haste])
+}
+/// Mountain Goat — {R} 1/1 Goat with mountainwalk.
+pub fn mountain_goat() -> CardDefinition {
+    body("Mountain Goat", &[r()], vec![CreatureType::Goat], 1, 1, vec![Keyword::Landwalk(LandType::Mountain)])
+}
+/// Dragon Hatchling — {1}{R}{R} 0/1 Dragon with flying. "{R}: +1/+0 EOT."
+pub fn dragon_hatchling() -> CardDefinition {
+    let mut c = body("Dragon Hatchling", &[generic(1), r(), r()], vec![CreatureType::Dragon], 0, 1, vec![Keyword::Flying]);
+    c.activated_abilities = vec![pump_one_zero(&[r()])];
+    c
+}
+
+// Green
+/// Panther Warriors — {3}{G} 6/1 Cat Warrior.
+pub fn panther_warriors() -> CardDefinition {
+    body("Panther Warriors", &[generic(3), g()], vec![CreatureType::Cat, CreatureType::Warrior], 6, 1, vec![])
+}
+/// Redwood Treefolk — {4}{G} 3/6 Treefolk.
+pub fn redwood_treefolk() -> CardDefinition {
+    body("Redwood Treefolk", &[generic(4), g()], vec![CreatureType::Treefolk], 3, 6, vec![])
+}
+/// Gorilla Chieftain — {2}{G} 3/3 Ape. "{1}{G}: Regenerate this creature."
+pub fn gorilla_chieftain() -> CardDefinition {
+    let mut c = body("Gorilla Chieftain", &[generic(2), g()], vec![CreatureType::Ape], 3, 3, vec![]);
+    c.activated_abilities = vec![ActivatedAbility {
+        mana_cost: cost(&[generic(1), g()]),
+        effect: Effect::Regenerate { what: Selector::This },
+        ..Default::default()
+    }];
+    c
 }

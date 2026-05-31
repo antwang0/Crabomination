@@ -6,6 +6,7 @@ use crate::card::{CardType, Keyword};
 use crate::catalog;
 use crate::game::*;
 use crate::game::{drain_stack, two_player_game};
+use crate::game::types::TurnStep;
 use crate::mana::Color;
 
 /// Give a player a heap of every color + colorless so any spell is payable.
@@ -52,6 +53,28 @@ fn classic_vanilla_bodies_have_correct_stats() {
         (catalog::wall_of_wood, 0, 3, &[Keyword::Defender]),
         (catalog::wall_of_stone, 0, 8, &[Keyword::Defender]),
         (catalog::yotian_soldier, 1, 4, &[Keyword::Vigilance]),
+        // batch 2
+        (catalog::youthful_knight, 2, 1, &[Keyword::FirstStrike]),
+        (catalog::standing_troops, 1, 4, &[Keyword::Vigilance]),
+        (catalog::benalish_hero, 1, 1, &[Keyword::Banding]),
+        (catalog::skyhunter_skirmisher, 1, 1, &[Keyword::Flying, Keyword::DoubleStrike]),
+        (catalog::knight_errant, 2, 2, &[]),
+        (catalog::snapping_drake, 3, 2, &[Keyword::Flying]),
+        (catalog::phantom_warrior, 2, 2, &[Keyword::Unblockable]),
+        (catalog::merfolk_of_the_pearl_trident, 1, 1, &[]),
+        (catalog::vodalian_soldiers, 1, 2, &[]),
+        (catalog::sea_eagle, 1, 1, &[Keyword::Flying]),
+        (catalog::wind_spirit, 2, 3, &[Keyword::Flying]),
+        (catalog::scathe_zombies, 2, 2, &[]),
+        (catalog::walking_corpse, 2, 2, &[]),
+        (catalog::bog_imp, 1, 1, &[Keyword::Flying]),
+        (catalog::severed_legion, 2, 2, &[Keyword::Fear]),
+        (catalog::mons_goblin_raiders, 1, 1, &[]),
+        (catalog::raging_goblin, 1, 1, &[Keyword::Haste]),
+        (catalog::goblin_piker, 2, 1, &[]),
+        (catalog::goblin_chariot, 2, 2, &[Keyword::Haste]),
+        (catalog::panther_warriors, 6, 1, &[]),
+        (catalog::redwood_treefolk, 3, 6, &[]),
     ];
     for (factory, p, t, kws) in cases {
         let mut g = two_player_game();
@@ -128,6 +151,63 @@ fn goblin_balloon_brigade_gains_flying() {
     }).expect("gain flying");
     drain_stack(&mut g);
     assert!(g.battlefield_find(gob).unwrap().has_keyword(&Keyword::Flying), "now flying");
+}
+
+#[test]
+fn venerable_monk_gains_two_life_on_etb() {
+    let mut g = two_player_game();
+    let before = g.players[0].life;
+    let _ = cast_creature(&mut g, catalog::venerable_monk());
+    assert_eq!(g.players[0].life, before + 2, "ETB gains 2 life");
+}
+
+#[test]
+fn looming_shade_pumps_plus_one_plus_one() {
+    let mut g = two_player_game();
+    let shade = g.add_card_to_battlefield(0, catalog::looming_shade());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: shade, ability_index: 0, target: None, x_value: None,
+    }).expect("shade pump");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(shade).unwrap();
+    assert_eq!((c.power(), c.toughness()), (3, 3), "{{B}}: +1/+1 makes the 2/2 a 3/3");
+}
+
+#[test]
+fn gorilla_chieftain_stamps_a_regeneration_shield() {
+    let mut g = two_player_game();
+    let ape = g.add_card_to_battlefield(0, catalog::gorilla_chieftain());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ape, ability_index: 0, target: None, x_value: None,
+    }).expect("{1}{G}: Regenerate");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ape).unwrap().regeneration_shields, 1,
+        "regenerate stamps a shield");
+}
+
+#[test]
+fn mountain_goat_is_unblockable_when_defender_has_a_mountain() {
+    let mut g = two_player_game();
+    let goat = g.add_card_to_battlefield(0, catalog::mountain_goat());
+    g.clear_sickness(goat);
+    g.add_card_to_battlefield(1, catalog::mountain()); // defender controls a Mountain
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    while g.step != TurnStep::DeclareAttackers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: goat, target: AttackTarget::Player(1),
+    }])).expect("attack");
+    drain_stack(&mut g);
+    while g.step != TurnStep::DeclareBlockers {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    // The block must be rejected — mountainwalk makes the Goat unblockable.
+    let res = g.perform_action(GameAction::DeclareBlockers(vec![(blocker, goat)]));
+    assert!(res.is_err(), "mountainwalk: can't be blocked while defender has a Mountain");
 }
 
 #[test]
