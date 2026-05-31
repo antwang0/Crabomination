@@ -12271,6 +12271,31 @@ pub fn aven_squire() -> CardDefinition {
     }
 }
 
+/// Fanatical Firebrand — {R} 1/1 Goblin Pirate with Haste.
+/// "{T}, Sacrifice this creature: It deals 1 damage to any target."
+pub fn fanatical_firebrand() -> CardDefinition {
+    use crate::card::ActivatedAbility;
+    CardDefinition {
+        name: "Fanatical Firebrand",
+        cost: cost(&[r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Goblin, CreatureType::Pirate],
+            ..Default::default()
+        },
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Haste],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(1) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
 /// Goblin Wardriver — {1}{R} 2/2 Goblin Warrior with Battle Cry.
 /// "Battle cry (Whenever this creature attacks, each other attacking
 /// creature gets +1/+0 until end of turn.)"

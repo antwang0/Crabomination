@@ -1033,6 +1033,20 @@ fn anger_of_the_gods_burns_each_creature() {
 }
 
 #[test]
+fn fanatical_firebrand_taps_and_sacs_to_ping_any_target() {
+    let mut g = two_player_game();
+    let fb = g.add_card_to_battlefield(0, catalog::fanatical_firebrand());
+    g.clear_sickness(fb); // (has Haste anyway)
+    let life_before = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: fb, ability_index: 0, target: Some(Target::Player(1)), x_value: None,
+    }).expect("firebrand ability activatable");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life_before - 1, "deals 1 to target player");
+    assert!(g.battlefield_find(fb).is_none(), "sacrificed as part of the cost");
+}
+
+#[test]
 fn sweltering_suns_burns_each_creature_and_has_cycling() {
     use crate::card::Keyword;
     let mut g = two_player_game();

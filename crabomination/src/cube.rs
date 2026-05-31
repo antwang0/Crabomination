@@ -891,6 +891,7 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // Battle cry (CR 702.92)
         goblin_wardriver,
         sweltering_suns,
+        fanatical_firebrand,
         blazing_rootwalla,
         cunning_sparkmage,
         hill_giant,
