@@ -1274,8 +1274,20 @@ pub enum Effect {
     },
     /// Target becomes a basic land of `land_type` (losing other types/abilities).
     BecomeBasicLand { what: Selector, land_type: LandType, duration: Duration },
-    /// Target creature becomes a vanilla 1/1, loses all abilities.
-    ResetCreature  { what: Selector, duration: Duration },
+    /// Target becomes a creature with the given P/T and creature types,
+    /// losing all other card types, abilities, and creature subtypes
+    /// (CR 613 layers 4/6/7). Oko's "becomes a 3/3 Elk", Turn to Frog's
+    /// "0/1 blue Frog with no abilities", etc. Defaults to a vanilla 1/1.
+    ResetCreature {
+        what: Selector,
+        #[serde(default = "value_one")]
+        power: Value,
+        #[serde(default = "value_one")]
+        toughness: Value,
+        #[serde(default)]
+        creature_types: Vec<crate::card::CreatureType>,
+        duration: Duration,
+    },
     /// Attach `what` (Aura/Equipment) to `to`.
     Attach { what: Selector, to: Selector },
 
@@ -2473,6 +2485,11 @@ impl Effect {
 /// deserialize cleanly.
 pub fn zero_value() -> Value {
     Value::Const(0)
+}
+
+/// Serde default for `ResetCreature` P/T (vanilla 1/1).
+pub fn value_one() -> Value {
+    Value::Const(1)
 }
 
 fn zonedest_has_target(z: &ZoneDest) -> bool {

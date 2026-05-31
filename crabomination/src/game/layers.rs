@@ -87,6 +87,7 @@ pub enum Modification {
     AddCreatureType(CreatureType),
     SetCreatureTypes(Vec<CreatureType>),
     AddLandType(LandType),
+    SetLandTypes(Vec<LandType>),
 
     // ── Layer 5 ──────────────────────────────────────────────────────────────
     AddColor(Color),
@@ -312,6 +313,7 @@ fn compute_permanent(
                     subtypes.land_types.push(*lt);
                 }
             }
+            Modification::SetLandTypes(lts) => subtypes.land_types = lts.clone(),
 
             // Layer 5
             Modification::AddColor(c) => {

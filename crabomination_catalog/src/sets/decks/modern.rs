@@ -8433,12 +8433,10 @@ pub fn lord_xander_the_collector() -> CardDefinition {
 }
 
 /// Oko, Thief of Crowns — {1}{G}{U} Planeswalker. 4 loyalty.
-/// +2: Create a Food token.
-/// +1: Target artifact or creature becomes a 3/3 Elk (approximation:
-///   just set to 3/3 via ResetCreature).
+/// +2: Create a Food token (approximated as gain 3 life).
+/// +1: Target artifact or creature becomes a 3/3 Elk, losing all other
+///   types and abilities (`ResetCreature`).
 /// -5: Exchange control of target (collapsed to gain control).
-///
-/// Approximation: Food token approximated as gain 3 life. -5 collapsed.
 pub fn oko_thief_of_crowns() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype};
     CardDefinition {
@@ -8465,6 +8463,9 @@ pub fn oko_thief_of_crowns() -> CardDefinition {
                     what: target_filtered(
                         SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
                     ),
+                    power: Value::Const(3),
+                    toughness: Value::Const(3),
+                    creature_types: vec![CreatureType::Elk],
                     duration: Duration::Permanent,
                 },
             },

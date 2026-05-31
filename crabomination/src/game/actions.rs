@@ -2713,12 +2713,7 @@ impl GameState {
             if c.controller != player || c.tapped {
                 return false;
             }
-            let mana_abilities: Vec<_> = c
-                .definition
-                .activated_abilities
-                .iter()
-                .filter(|a| is_mana_ability(&a.effect))
-                .collect();
+            let mana_abilities = self.effective_mana_abilities(c.id);
             if mana_abilities.is_empty() {
                 return false;
             }
@@ -2729,7 +2724,7 @@ impl GameState {
             // Otherwise the source must make a color the cost needs.
             cost_colors
                 .iter()
-                .any(|col| mana_abilities.iter().any(|a| effect_produces_color(&a.effect, *col)))
+                .any(|col| mana_abilities.iter().any(|(_, a)| effect_produces_color(&a.effect, *col)))
         })
     }
 
@@ -2864,8 +2859,8 @@ impl GameState {
             .filter(|c| {
                 c.controller == player
                     && !c.tapped
-                    && c.definition.activated_abilities.iter().any(|a| {
-                        is_mana_ability(&a.effect) && effect_produces_color(&a.effect, color)
+                    && self.effective_mana_abilities(c.id).iter().any(|(_, a)| {
+                        effect_produces_color(&a.effect, color)
                     })
             })
             .count() as u32
@@ -2992,18 +2987,14 @@ impl GameState {
             // `controller` not `owner`: a permanent you've stolen
             // (Threaten / Mind Control) is a tap-for-mana source for
             // you, regardless of its original ownership.
-            let source = self.battlefield.iter().find(|c| {
-                c.controller == player
-                    && !c.tapped
-                    && c.definition.activated_abilities.iter().any(|a| {
-                        is_mana_ability(&a.effect) && effect_produces_color(&a.effect, color)
-                    })
-            }).map(|c| {
-                let idx = c.definition.activated_abilities.iter().position(|a| {
-                    is_mana_ability(&a.effect) && effect_produces_color(&a.effect, color)
-                }).unwrap_or(0);
-                (c.id, idx)
-            });
+            let source = self.battlefield.iter().filter_map(|c| {
+                if c.controller != player || c.tapped {
+                    return None;
+                }
+                self.effective_mana_abilities(c.id).into_iter()
+                    .find(|(_, a)| effect_produces_color(&a.effect, color))
+                    .map(|(idx, _)| (c.id, idx))
+            }).next();
             if let Some((id, idx)) = source {
                 let scripted = crate::decision::ScriptedDecider::new([
                     crate::decision::DecisionAnswer::Color(color),
@@ -3031,13 +3022,15 @@ impl GameState {
         // Tap any mana source for remaining generic pips.
         for _ in 0..generic_to_tap {
             // Same controller-vs-owner fix as the colored-pip loop.
-            let source = self.battlefield.iter().find(|c| {
-                c.controller == player
-                    && !c.tapped
-                    && c.definition.activated_abilities.iter().any(|a| is_mana_ability(&a.effect))
-            }).map(|c| c.id);
-            let Some(id) = source else { break };
-            if let Ok(mut evs) = self.activate_ability(id, 0, None, None) {
+            let source = self.battlefield.iter().filter_map(|c| {
+                if c.controller != player || c.tapped {
+                    return None;
+                }
+                self.effective_mana_abilities(c.id).into_iter().next()
+                    .map(|(idx, _)| (c.id, idx))
+            }).next();
+            let Some((id, idx)) = source else { break };
+            if let Ok(mut evs) = self.activate_ability(id, idx, None, None) {
                 events.append(&mut evs);
             } else {
                 break;
@@ -3057,6 +3050,84 @@ impl GameState {
     /// order so a permanent's granted-ability indices are stable within a
     /// recompute. Surfaced by `activate_ability` at indices ≥ the
     /// permanent's printed-ability count.
+    /// Intrinsic basic-land-type mana abilities for a battlefield
+    /// permanent, derived from its *computed* land types (CR 305.6): any
+    /// land with a basic land type has the intrinsic `{T}: Add <color>`.
+    /// We derive only for basic land types the permanent gained via a
+    /// continuous effect (computed but not printed), so printed basics —
+    /// which hard-code `tap_add` — aren't double-counted. Lets Blood Moon
+    /// / Spreading Seas / Urborg-style type changers tap for the right
+    /// colour. Surfaced at ability indices after printed + granted.
+    pub(crate) fn intrinsic_land_mana_abilities(
+        &self,
+        card_id: CardId,
+    ) -> Vec<crate::effect::ActivatedAbility> {
+        use crate::card::LandType;
+        let Some(card) = self.battlefield_find(card_id) else {
+            return vec![];
+        };
+        let printed: &[LandType] = &card.definition.subtypes.land_types;
+        let Some(computed) = self.computed_permanent(card_id) else {
+            return vec![];
+        };
+        let mut out = Vec::new();
+        for lt in &computed.subtypes.land_types {
+            if printed.contains(lt) {
+                continue;
+            }
+            let color = match lt {
+                LandType::Plains => ManaColor::White,
+                LandType::Island => ManaColor::Blue,
+                LandType::Swamp => ManaColor::Black,
+                LandType::Mountain => ManaColor::Red,
+                LandType::Forest => ManaColor::Green,
+                _ => continue,
+            };
+            out.push(crate::effect::ActivatedAbility {
+                tap_cost: true,
+                effect: Effect::AddMana {
+                    who: crate::effect::PlayerRef::You,
+                    pool: ManaPayload::Colors(vec![color]),
+                },
+                ..Default::default()
+            });
+        }
+        out
+    }
+
+    /// `(index, ability)` for every mana-producing activated ability a
+    /// battlefield permanent can currently use — printed, granted, and
+    /// intrinsic basic-land — in `activate_ability`'s index order. The
+    /// single source of truth for the auto-tap source finders so a land
+    /// whose type changed (Spreading Seas / Blood Moon / Urborg) taps for
+    /// its computed colours.
+    pub(crate) fn effective_mana_abilities(
+        &self,
+        card_id: CardId,
+    ) -> Vec<(usize, crate::effect::ActivatedAbility)> {
+        let Some(card) = self.battlefield_find(card_id) else {
+            return vec![];
+        };
+        let printed_count = card.definition.activated_abilities.len();
+        let mut out: Vec<(usize, crate::effect::ActivatedAbility)> = Vec::new();
+        for (i, a) in card.definition.activated_abilities.iter().enumerate() {
+            if is_mana_ability(&a.effect) {
+                out.push((i, a.clone()));
+            }
+        }
+        let granted = self.granted_abilities_for(card_id);
+        for (j, a) in granted.iter().enumerate() {
+            if is_mana_ability(&a.effect) {
+                out.push((printed_count + j, a.clone()));
+            }
+        }
+        let gc = granted.len();
+        for (k, a) in self.intrinsic_land_mana_abilities(card_id).into_iter().enumerate() {
+            out.push((printed_count + gc + k, a));
+        }
+        out
+    }
+
     pub(crate) fn granted_abilities_for(
         &self,
         card_id: CardId,
@@ -3140,27 +3211,29 @@ impl GameState {
             // (CR 113.10b) keep their granted mana abilities but lose
             // non-mana grants.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
-            let granted = if ability_index >= printed_count {
-                self.granted_abilities_for(card_id)
-                    .into_iter()
-                    .nth(ability_index - printed_count)
-                    .filter(|a| !stripped || is_mana_ability(&a.effect))
-            } else {
-                None
-            };
-            if let Some(g) = granted {
-                g
-            } else {
+            let granted = self.granted_abilities_for(card_id);
+            let intrinsic = self.intrinsic_land_mana_abilities(card_id);
+            if ability_index < printed_count {
                 let raw = self.battlefield[pos]
                     .definition
-                    .activated_abilities
-                    .get(ability_index)
-                    .cloned()
-                    .ok_or(GameError::AbilityIndexOutOfBounds)?;
+                    .activated_abilities[ability_index]
+                    .clone();
                 if stripped && !is_mana_ability(&raw.effect) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
                 raw
+            } else if ability_index < printed_count + granted.len() {
+                let g = granted[ability_index - printed_count].clone();
+                // Stripped permanents keep granted mana abilities only.
+                if stripped && !is_mana_ability(&g.effect) {
+                    return Err(GameError::AbilityIndexOutOfBounds);
+                }
+                g
+            } else if ability_index < printed_count + granted.len() + intrinsic.len() {
+                // Intrinsic basic-land mana abilities survive stripping.
+                intrinsic[ability_index - printed_count - granted.len()].clone()
+            } else {
+                return Err(GameError::AbilityIndexOutOfBounds);
             }
         };
 

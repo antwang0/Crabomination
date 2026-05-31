@@ -2688,9 +2688,101 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::BecomeBasicLand { .. }
-            | Effect::ResetCreature { .. } => {
-                // TODO: implement via layer/stack mechanics.
+            Effect::ResetCreature {
+                what,
+                power,
+                toughness,
+                creature_types,
+                duration,
+            } => {
+                // CR 613 — target becomes a creature with the given P/T and
+                // creature types, losing all other card types, abilities, and
+                // printed creature subtypes. Layer 4 sets the type line, layer
+                // 6 strips abilities, layer 7b sets base P/T. Oko's "3/3 Elk",
+                // Turn to Frog's "0/1 blue Frog with no abilities", etc.
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification, PtSublayer,
+                };
+                let p = self.evaluate_value(power, ctx);
+                let t = self.evaluate_value(toughness, ctx);
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let mut push = |layer, sublayer, modification| {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: affected.clone(),
+                            layer,
+                            sublayer,
+                            duration: duration_kind.clone(),
+                            modification,
+                        });
+                    };
+                    push(
+                        Layer::L4Type,
+                        None,
+                        Modification::SetCardTypes(vec![crate::card::CardType::Creature]),
+                    );
+                    push(
+                        Layer::L4Type,
+                        None,
+                        Modification::SetCreatureTypes(creature_types.clone()),
+                    );
+                    push(Layer::L6Ability, None, Modification::RemoveAllAbilities);
+                    push(
+                        Layer::L7PowerTough,
+                        Some(PtSublayer::SetValue),
+                        Modification::SetPowerToughness(p, t),
+                    );
+                    events.push(GameEvent::PumpApplied {
+                        card_id: cid,
+                        power: p,
+                        toughness: t,
+                    });
+                }
+                Ok(())
+            }
+
+            Effect::BecomeBasicLand { what, land_type, duration } => {
+                // CR 305.7 / 613 — target becomes a basic land of `land_type`:
+                // lose all other card/land types, abilities, and colors; gain
+                // the basic's intrinsic "{T}: Add {C}" mana ability. Spreading
+                // Seas / Blood Moon family. The intrinsic mana ability is
+                // derived from the land type at activation time (see
+                // `intrinsic_land_mana_ability`), so no ability grant is
+                // installed here.
+                use crate::game::layers::{
+                    AffectedPermanents, ContinuousEffect, Layer, Modification,
+                };
+                let duration_kind = map_effect_duration(*duration);
+                let source = ctx.source.unwrap_or(CardId(0));
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let affected = AffectedPermanents::Specific(vec![cid]);
+                    let mut push = |layer, modification| {
+                        let ts = self.next_timestamp();
+                        self.add_continuous_effect(ContinuousEffect {
+                            timestamp: ts,
+                            source,
+                            affected: affected.clone(),
+                            layer,
+                            sublayer: None,
+                            duration: duration_kind.clone(),
+                            modification,
+                        });
+                    };
+                    push(
+                        Layer::L4Type,
+                        Modification::SetCardTypes(vec![crate::card::CardType::Land]),
+                    );
+                    push(Layer::L4Type, Modification::SetLandTypes(vec![*land_type]));
+                    push(Layer::L5Color, Modification::LoseAllColors);
+                    push(Layer::L6Ability, Modification::RemoveAllAbilities);
+                }
                 Ok(())
             }
 

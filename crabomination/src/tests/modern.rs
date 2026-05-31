@@ -13561,6 +13561,57 @@ fn oko_plus_two_gains_three_life() {
 }
 
 #[test]
+fn oko_plus_one_turns_target_into_a_three_three_elk() {
+    use crate::card::{CreatureType, Keyword};
+    let mut g = two_player_game();
+    let oko = g.add_card_to_battlefield(0, catalog::oko_thief_of_crowns());
+    // A 2/2 with abilities (flying) — Oko strips it to a vanilla 3/3 Elk.
+    let target = g.add_card_to_battlefield(1, catalog::serra_angel()); // 4/4 flier
+
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: oko, ability_index: 1, target: Some(Target::Permanent(target)),
+    }).expect("+1 activation");
+    drain_stack(&mut g);
+
+    let cp = g.computed_permanent(target).expect("target still on battlefield");
+    assert_eq!((cp.power, cp.toughness), (3, 3), "becomes 3/3");
+    assert!(cp.subtypes.creature_types.contains(&CreatureType::Elk), "is an Elk");
+    assert!(cp.lost_all_abilities, "loses all abilities (no more flying)");
+    assert!(!cp.keywords.contains(&Keyword::Flying), "flying stripped");
+}
+
+#[test]
+fn become_basic_land_taps_for_the_new_color() {
+    use crate::effect::{Effect, Selector, Duration};
+    // A Forest converted to an Island via `BecomeBasicLand` taps for blue
+    // (intrinsic basic-land mana) and no longer makes green.
+    let mut g = two_player_game();
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+
+    let ctx = crate::game::effects::EffectContext::for_ability(
+        crate::card::CardId(0), 0, Some(Target::Permanent(land)),
+    );
+    g.resolve_effect(
+        &Effect::BecomeBasicLand {
+            what: Selector::Target(0),
+            land_type: crate::card::LandType::Island,
+            duration: Duration::Permanent,
+        },
+        &ctx,
+    ).unwrap();
+
+    let cp = g.computed_permanent(land).unwrap();
+    assert!(cp.subtypes.land_types.contains(&crate::card::LandType::Island));
+    assert!(!cp.subtypes.land_types.contains(&crate::card::LandType::Forest));
+
+    // Auto-tap for {U} should tap the now-Island and fill the blue pool.
+    let cost = crate::mana::cost(&[crate::mana::u()]);
+    g.auto_tap_for_cost(0, &cost);
+    assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1, "taps for blue");
+    assert!(g.battlefield.iter().find(|c| c.id == land).unwrap().tapped);
+}
+
+#[test]
 fn toxic_deluge_sweeps_small_creatures() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::grizzly_bears());
