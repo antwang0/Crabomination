@@ -18,7 +18,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::card::{CounterType, Keyword, LandType, SelectionRequirement, TokenDefinition, Zone};
-use crate::mana::Color;
+use crate::mana::{Color, SpendRestriction};
 
 // ── PlayerRef / ZoneRef ───────────────────────────────────────────────────────
 
@@ -700,6 +700,13 @@ pub enum ManaPayload {
     /// Fellwar Stone — `{T}: Add one mana of any color an opponent's
     /// land could produce.`
     AnyColorOpponentCouldProduce,
+    /// Resolve the inner payload normally, but tag every colored pip it
+    /// produces with `restriction` ("Spend this mana only to …"). Used by
+    /// the Strixhaven school mana sources (Abstract Paintmage, Tablet of
+    /// Discovery, Hydro-Channeler, Great Hall of the Biblioplex,
+    /// Resonating Lute). Colorless pips in a wrapped payload are added
+    /// unrestricted — no current card produces restricted colorless mana.
+    Restricted(Box<ManaPayload>, SpendRestriction),
 }
 
 // ── Event specification (triggers) ───────────────────────────────────────────
@@ -1149,6 +1156,27 @@ pub enum Effect {
     /// heal damage instead of dying). Powers "{cost}: Regenerate this
     /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
     Regenerate { what: Selector },
+    /// "If [each resolved permanent] would die this turn, exile it instead."
+    /// Installs an until-end-of-turn death replacement (CR 614, same shape
+    /// as a finality counter) on every permanent the selector resolves to.
+    /// Because the redirect lasts the whole turn, it catches deaths from
+    /// later combat / removal too, not just the spell's own damage. Used by
+    /// Wilt in the Heat (paired with a `DealDamage`).
+    ExileIfWouldDieThisTurn { what: Selector },
+    /// "Target instant/sorcery card in your graveyard gains flashback until
+    /// end of turn; its flashback cost equals its mana cost." Installs an
+    /// until-end-of-turn `granted_flashback_eot` (= the card's own mana
+    /// cost) on each resolved graveyard card, making it castable via the
+    /// normal flashback path (pay the cost, exile on resolve). Used by the
+    /// SOS "Flashback" instant.
+    GrantFlashbackThisTurn { what: Selector },
+    /// "[Each resolved card] gains miracle `cost` until end of turn." Stamps
+    /// an until-end-of-turn `may_play_until` permission **plus** a
+    /// `granted_alt_cast_cost_eot` of `cost`, so the controller may cast the
+    /// card this turn by paying `cost` (rather than its full mana cost or
+    /// for free). Used by Lorehold, the Historian's "instant and sorcery
+    /// cards in your hand have miracle {2}" grant.
+    GrantMiracle { what: Selector, cost: crate::mana::ManaCost },
     Exile   { what: Selector },
     /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
     /// Moves the resolved card(s) to exile, linking each to the source
@@ -1881,6 +1909,14 @@ impl Effect {
                     | ManaPayload::AnyOneColor(v)
                     | ManaPayload::AnyColors(v) => value_has_target(v),
                     ManaPayload::OfColor(_, v) | ManaPayload::OfColors(_, v) => value_has_target(v),
+                    ManaPayload::Restricted(inner, _) => match inner.as_ref() {
+                        ManaPayload::Colorless(v)
+                        | ManaPayload::AnyOneColor(v)
+                        | ManaPayload::AnyColors(v)
+                        | ManaPayload::OfColor(_, v)
+                        | ManaPayload::OfColors(_, v) => value_has_target(v),
+                        _ => false,
+                    },
                     ManaPayload::Colors(_)
                     | ManaPayload::AnyColorOpponentCouldProduce => false,
                 }
@@ -1888,6 +1924,9 @@ impl Effect {
             Effect::Destroy { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::ExileIfWouldDieThisTurn { what }
+            | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
@@ -2020,6 +2059,9 @@ impl Effect {
             Effect::Destroy { what }
             | Effect::DestroyNoRegen { what }
             | Effect::Regenerate { what }
+            | Effect::ExileIfWouldDieThisTurn { what }
+            | Effect::GrantFlashbackThisTurn { what }
+            | Effect::GrantMiracle { what, .. }
             | Effect::Exile { what }
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::Tap { what }
@@ -2501,6 +2543,9 @@ impl Effect {
                 Effect::Move { what, .. } => sel_find(what, slot),
                 Effect::Destroy { what }
                 | Effect::DestroyNoRegen { what }
+                | Effect::ExileIfWouldDieThisTurn { what }
+                | Effect::GrantFlashbackThisTurn { what }
+                | Effect::GrantMiracle { what, .. }
                 | Effect::Exile { what }
                 | Effect::Tap { what }
                 | Effect::Untap { what, .. }
@@ -3061,6 +3106,33 @@ pub mod shortcut {
                 ability: ActivatedAbility {
                     tap_cost: true,
                     effect: add_any_one_color(1),
+                    ..Default::default()
+                },
+            },
+        }
+    }
+
+    /// "[Permanents matching `filter`] have '{T}: Add `count` mana of any
+    /// one color. Spend this mana only to …'" — the spend-restricted
+    /// sibling of [`grant_tap_for_any_color`], used by Resonating Lute.
+    pub fn grant_tap_for_any_color_restricted(
+        filter: SelectionRequirement,
+        count: i32,
+        restriction: SpendRestriction,
+    ) -> StaticAbility {
+        StaticAbility {
+            description: "{T}: Add mana of any one color (instants/sorceries only).",
+            effect: StaticEffect::GrantActivatedAbility {
+                applies_to: Selector::EachPermanent(filter),
+                ability: ActivatedAbility {
+                    tap_cost: true,
+                    effect: Effect::AddMana {
+                        who: PlayerRef::You,
+                        pool: ManaPayload::Restricted(
+                            Box::new(ManaPayload::AnyOneColor(Value::Const(count))),
+                            restriction,
+                        ),
+                    },
                     ..Default::default()
                 },
             },

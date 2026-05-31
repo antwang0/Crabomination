@@ -1002,10 +1002,23 @@ impl GameState {
 
             Effect::AddMana { who, pool } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
+                // Unwrap a spend-restriction wrapper. The inner payload
+                // resolves exactly as normal; each colored pip it produces
+                // is tagged with `restriction` so `pay_for_spell` can gate
+                // its use. Colorless pips stay unrestricted (no card needs
+                // restricted colorless mana).
+                let (pool, restriction) = match pool {
+                    ManaPayload::Restricted(inner, r) => (inner.as_ref(), Some(*r)),
+                    other => (other, None),
+                };
+                let add_one = |state: &mut Self, p: usize, c: Color| match restriction {
+                    Some(r) => state.players[p].mana_pool.add_restricted(c, 1, r),
+                    None => state.players[p].mana_pool.add(c, 1),
+                };
                 match pool {
                     ManaPayload::Colors(colors) => {
                         for c in colors {
-                            self.players[p].mana_pool.add(*c, 1);
+                            add_one(self, p, *c);
                             events.push(GameEvent::ManaAdded { player: p, color: *c });
                         }
                     }
@@ -1023,7 +1036,7 @@ impl GameState {
                         // Rofellos when promoted to per-Forest scaling).
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
                         for _ in 0..n {
-                            self.players[p].mana_pool.add(*color, 1);
+                            add_one(self, p, *color);
                             events.push(GameEvent::ManaAdded { player: p, color: *color });
                         }
                     }
@@ -1045,7 +1058,7 @@ impl GameState {
                                     source,
                                     legal,
                                 },
-                                PendingEffectState::AnyOneColorPending { player: p, count: n },
+                                PendingEffectState::AnyOneColorPending { player: p, count: n, restriction },
                                 Effect::Noop,
                             ));
                             return Ok(());
@@ -1061,7 +1074,7 @@ impl GameState {
                             _ => Color::White,
                         };
                         for _ in 0..n {
-                            self.players[p].mana_pool.add(color, 1);
+                            add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
@@ -1110,7 +1123,7 @@ impl GameState {
                                     if legal.contains(&c) => c,
                                 _ => legal[0],
                             };
-                            self.players[p].mana_pool.add(color, 1);
+                            add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
@@ -1133,9 +1146,14 @@ impl GameState {
                                 crate::decision::DecisionAnswer::Color(c) => c,
                                 _ => Color::White,
                             };
-                            self.players[p].mana_pool.add(color, 1);
+                            add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
+                    }
+                    ManaPayload::Restricted(..) => {
+                        // One unwrap above already stripped the restriction;
+                        // no card nests wrappers, so a doubly-wrapped payload
+                        // is malformed — ignore it rather than panic.
                     }
                     ManaPayload::OfColors(colors, v) => {
                         // N pips, each chosen from the restricted palette
@@ -1153,7 +1171,7 @@ impl GameState {
                                     if colors.contains(&c) => c,
                                 _ => fallback,
                             };
-                            self.players[p].mana_pool.add(color, 1);
+                            add_one(self, p, color);
                             events.push(GameEvent::ManaAdded { player: p, color });
                         }
                     }
@@ -1238,6 +1256,58 @@ impl GameState {
                         && let Some(c) = self.battlefield_find_mut(cid)
                     {
                         c.regeneration_shields = c.regeneration_shields.saturating_add(1);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::ExileIfWouldDieThisTurn { what } => {
+                // Install an until-end-of-turn death replacement on each
+                // resolved permanent. `remove_from_battlefield_to_graveyard`
+                // consults `dies_to_exile_eot` and redirects to exile — the
+                // same path the finality counter uses; the set is cleared at
+                // cleanup.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let Some(cid) = ent.as_permanent_id() {
+                        self.dies_to_exile_eot.insert(cid);
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantMiracle { what, cost } => {
+                // Stamp an until-end-of-turn may-play permission plus the
+                // miracle alt-cost on each resolved card, so the controller
+                // may cast it this turn for `cost` (Lorehold, the Historian).
+                let granter = ctx.controller;
+                let granted_turn = self.turn_number;
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Card(cid) = ent
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        card.may_play_until = Some(crate::card::MayPlayPermission {
+                            player: granter,
+                            granted_turn,
+                            duration: crate::card::MayPlayDuration::EndOfThisTurn,
+                            exile_after: false,
+                        });
+                        card.granted_alt_cast_cost_eot = Some(cost.clone());
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::GrantFlashbackThisTurn { what } => {
+                // Grant until-end-of-turn flashback (cost = the card's own
+                // mana cost) to each resolved graveyard card, so it can be
+                // recast this turn via the normal flashback path (pay the
+                // cost, exile on resolve). Cleared at cleanup.
+                for ent in self.resolve_selector(what, ctx) {
+                    if let EntityRef::Card(cid) = ent
+                        && let Some(card) = self.find_card_anywhere_mut(cid)
+                    {
+                        let fb_cost = card.definition.cost.clone();
+                        card.granted_flashback_eot = Some(fb_cost);
                     }
                 }
                 Ok(())
@@ -2964,11 +3034,13 @@ impl GameState {
                             if card.id == cid)
                     });
                     let Some(idx) = stack_idx else { continue; };
-                    // Skip if the spell is flagged uncounterable AND we are
-                    // copying via an effect that says "this spell can't be
-                    // copied". Today we don't carry a per-spell "can't be
-                    // copied" flag; this branch is left for future
-                    // refinement.
+                    // CR 707 — a spell with `Keyword::CantBeCopied`
+                    // (Choreographed Sparks) is skipped as a copy target.
+                    if let crate::game::types::StackItem::Spell { card, .. } = &self.stack[idx]
+                        && card.definition.keywords.contains(&crate::card::Keyword::CantBeCopied)
+                    {
+                        continue;
+                    }
                     // Snapshot the spell, then push `n` copies above it.
                     let (orig_card_def, caster, target, additional_targets, mode, x_value, converged_value)
                         = if let crate::game::types::StackItem::Spell {

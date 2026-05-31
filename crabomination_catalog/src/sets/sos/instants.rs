@@ -1397,13 +1397,17 @@ pub fn burrog_barrage() -> CardDefinition {
 /// `AlternativeCost.condition: Some(Predicate)` field gated on
 /// `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)`. When the
 /// gate passes, the spell is castable for {R}{W} via the alt cost path;
-/// otherwise the regular {2}{R}{W} cost applies. The "if it would die,
-/// exile instead" damage-replacement rider is still ⏳ (no damage-
-/// replacement primitive on the engine yet); 5-toughness-and-under
-/// creatures die normally to graveyard.
+/// otherwise the regular {2}{R}{W} cost applies. The "if that creature
+/// would die this turn, exile it instead" rider **is now wired** via the
+/// `Effect::ExileIfWouldDieThisTurn` death-replacement primitive: the
+/// replacement is installed first, then the 5 damage is dealt, so the
+/// resulting SBA death is redirected to exile. Because the replacement
+/// lasts the whole turn, a creature that survives the 5 (e.g. toughness
+/// > 5) but dies later this turn is exiled too, and an indestructible
+/// creature — which never dies — is correctly left alone.
 pub fn wilt_in_the_heat() -> CardDefinition {
     use crate::card::AlternativeCost;
-    use crate::effect::{Predicate, ZoneDest};
+    use crate::effect::Predicate;
     use crate::mana::{r, w};
     CardDefinition {
         name: "Wilt in the Heat",
@@ -1413,31 +1417,17 @@ pub fn wilt_in_the_heat() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // 5 damage to the target creature; if its effective toughness
-        // is <= 5 (i.e. it would die from this damage), follow up with
-        // an exile move so the death is redirected out of the
-        // graveyard. The engine has no general damage-replacement
-        // primitive, but this synchronous toughness gate gives the
-        // observable printed-Oracle outcome for every creature with
-        // toughness <= 5 at resolution time. Move runs before SBA, so
-        // the creature is still on battlefield at exile-move time —
-        // moving it from battlefield -> exile bypasses the
-        // damage-driven graveyard route entirely.
+        // Install the "if it would die this turn, exile instead" death
+        // replacement on the target, then deal 5. The SBA that kills it
+        // routes through `remove_from_battlefield_to_graveyard`, which
+        // honors the replacement and sends it to exile.
         effect: Effect::Seq(vec![
+            Effect::ExileIfWouldDieThisTurn {
+                what: Selector::Target(0),
+            },
             Effect::DealDamage {
                 to: Selector::Target(0),
                 amount: Value::Const(5),
-            },
-            Effect::If {
-                cond: Predicate::ValueAtMost(
-                    Value::ToughnessOf(Box::new(Selector::Target(0))),
-                    Value::Const(5),
-                ),
-                then: Box::new(Effect::Move {
-                    what: Selector::Target(0),
-                    to: ZoneDest::Exile,
-                }),
-                else_: Box::new(Effect::Noop),
             },
         ]),
         triggered_abilities: vec![],
@@ -1939,12 +1929,14 @@ pub fn prismari_charm() -> CardDefinition {
 /// haste and sacrifice at end of step" rider is approximated by relying
 /// on the token-cleanup SBA (the token will leave the battlefield once
 /// it hits the graveyard, matching the spirit of the printed sacrifice
-/// rider). The "this spell can't be copied" rider is engine-wide ⏳
-/// (no `CantBeCopied` keyword tag yet) but the corner is rarely
-/// exercised. The "choose one or both" multi-mode rider collapses to
+/// rider). The "this spell can't be copied" rider is now wired via the
+/// `CardDefinition.cant_be_copied` flag, which `Effect::CopySpell` honors
+/// by skipping it as a copy target. The "choose one or both" multi-mode
+/// rider collapses to
 /// "pick one mode" since the engine lacks a generic multi-mode picker
 /// over per-mode targets — same gap as Moment of Reckoning.
 pub fn choreographed_sparks() -> CardDefinition {
+    use crate::card::Keyword;
     use crate::mana::r;
     let copy_is_spell = Effect::CopySpell {
         what: target_filtered(
@@ -1974,7 +1966,9 @@ pub fn choreographed_sparks() -> CardDefinition {
         subtypes: Subtypes::default(),
         power: 0,
         toughness: 0,
-        keywords: vec![],
+        // "This spell can't be copied." (CR 707) — an Effect::CopySpell
+        // targeting Choreographed Sparks is skipped by the resolver.
+        keywords: vec![Keyword::CantBeCopied],
         effect: Effect::ChooseMode(vec![copy_is_spell, copy_creature_spell]),
         triggered_abilities: vec![],
         ..Default::default()
@@ -1987,17 +1981,13 @@ pub fn choreographed_sparks() -> CardDefinition {
 /// "Target instant or sorcery card in your graveyard gains flashback
 /// until end of turn. The flashback cost is equal to its mana cost."
 ///
-/// 🟡 Body-only wire: applies a flat-cost `Keyword::Flashback` to a
-/// target IS card in your graveyard by recasting it as if its
-/// flashback cost were its own mana cost — implemented as
-/// `Move(target → Hand) → reset to hand` so it can be cast normally.
-/// This is a *strict* approximation since the "flashback cost = its
-/// mana cost" rider can't be expressed as a static keyword grant on a
-/// graveyard-resident card (the engine's `Keyword::Flashback` lives on
-/// `CardDefinition.keywords`, not on per-instance state). A true wiring
-/// would need a transient `CardInstance::granted_keywords` slot that
-/// applies only while the card is in graveyard until end of turn —
-/// tracked in TODO.md.
+/// Now wired faithfully via `Effect::GrantFlashbackThisTurn`: the target
+/// instant/sorcery card in your graveyard gains an until-end-of-turn
+/// flashback grant whose cost equals its own mana cost (stored in
+/// `CardInstance::granted_flashback_eot`). The controller recasts it this
+/// turn through the regular `GameAction::CastFlashback` path — paying the
+/// printed mana cost and exiling on resolve (CR 702.34d) — rather than the
+/// earlier free-cast approximation.
 pub fn sos_flashback_instant() -> CardDefinition {
     use crate::card::Zone;
     use crate::mana::r;
@@ -2009,32 +1999,17 @@ pub fn sos_flashback_instant() -> CardDefinition {
         power: 0,
         toughness: 0,
         keywords: vec![],
-        // Push (modern_decks, batch 99): Flashback (the spell) now
-        // grants `MayPlay { duration: EndOfThisTurn, exile_after: true }`
-        // on a target IS card in your graveyard — the card stays in
-        // graveyard but the controller may cast it this turn via the
-        // existing `CastFromZoneWithoutPaying` path, exiling on resolve
-        // (matching the printed Flashback CR 702.34d). Approximation:
-        // the cast is *free* rather than the printed "flashback cost
-        // equals its mana cost" — no `MayPlayPermission.alt_cost`
-        // primitive today. Same overpowered-but-captures-spirit
-        // approximation as Lorehold the Historian's miracle grant.
-        effect: Effect::Seq(vec![
-            Effect::GrantMayPlay {
-                what: Selector::take(
-                    Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: SelectionRequirement::HasCardType(CardType::Instant)
-                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
-                    },
-                    Value::Const(1),
-                ),
-                duration: crate::card::MayPlayDuration::EndOfThisTurn,
-                to_owner: false,
-                exile_after: true,
-            },
-        ]),
+        effect: Effect::GrantFlashbackThisTurn {
+            what: Selector::take(
+                Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: Zone::Graveyard,
+                    filter: SelectionRequirement::HasCardType(CardType::Instant)
+                        .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                },
+                Value::Const(1),
+            ),
+        },
         triggered_abilities: vec![],
         ..Default::default()
     }

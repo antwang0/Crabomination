@@ -2581,11 +2581,17 @@ pub fn witherbloom_the_balancer() -> CardDefinition {
 /// exiled cards on the bottom in a random order.) / Instant and
 /// sorcery spells you cast from your hand have cascade."
 ///
-/// 🟡: 6/6 Flying/Trample with its own Cascade wired (SpellCast trigger →
-/// RevealUntilFind a cheaper nonland → may-play). The "IS spells you cast
-/// have cascade" granting static is still omitted.
+/// 6/6 Flying/Trample with its own Cascade wired (SpellCast trigger →
+/// RevealUntilFind a cheaper nonland → may-play). The "instant and sorcery
+/// spells you cast from your hand have cascade" grant is now wired too, as
+/// a second SpellCast/YourControl trigger gated on
+/// `Predicate::CastFromHand` + an instant/sorcery filter, whose body is
+/// `Effect::Cascade { max_mv: ManaValueOf(TriggerSource) }` — cascading at
+/// the cast spell's own mana value. The `CastFromHand` gate keeps the grant
+/// from re-triggering on the spells it cascades into (those are cast from
+/// exile, not hand).
 pub fn quandrix_the_proof() -> CardDefinition {
-    use crate::card::{MayPlayDuration, Supertype};
+    use crate::card::{MayPlayDuration, Predicate, Supertype};
     use crate::effect::{RevealMissDest, ZoneDest};
     use crate::mana::{g, u};
     CardDefinition {
@@ -2635,6 +2641,21 @@ pub fn quandrix_the_proof() -> CardDefinition {
                     exile_after: false,
                 },
             ]),
+        },
+        // "Instant and sorcery spells you cast from your hand have cascade."
+        TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::CastFromHand,
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: SelectionRequirement::HasCardType(CardType::Instant)
+                            .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
+                    },
+                ])),
+            effect: Effect::Cascade {
+                max_mv: Value::ManaValueOf(Box::new(Selector::TriggerSource)),
+            },
         }],
         ..Default::default()
     }
@@ -2911,15 +2932,13 @@ pub fn poisoners_apprentice() -> CardDefinition {
 /// spell. / {1}, {T}: Add one mana of any color. Spend this mana only to
 /// cast an instant or sorcery spell."
 ///
-/// Approximation: the "spend only to cast an instant or sorcery"
-/// mana-spend restriction is omitted (engine has no spend-restricted mana
-/// primitive). Both abilities are wired as plain mana adders — `{T}: Add
-/// {U}` and `{1},{T}: Add one mana of any color`. This is over-flexible
-/// (the produced mana can be spent on creatures), but the typical play
-/// pattern (cast IS spells) is unaffected.
+/// Both abilities produce spend-restricted mana via
+/// `ManaPayload::Restricted(.., InstantSorceryOnly)` — `{T}: Add {U}` and
+/// `{1},{T}: Add one mana of any color`, each spendable only on instant
+/// and sorcery spells (enforced by `ManaPool::pay_for_spell`).
 pub fn hydro_channeler() -> CardDefinition {
     use crate::effect::ManaPayload;
-    use crate::mana::u;
+    use crate::mana::{u, SpendRestriction};
     CardDefinition {
         name: "Hydro-Channeler",
         cost: cost(&[generic(1), u()]),
@@ -2938,7 +2957,10 @@ pub fn hydro_channeler() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Blue]),
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Blue])),
+                        SpendRestriction::InstantSorceryOnly,
+                    ),
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
@@ -2955,7 +2977,10 @@ pub fn hydro_channeler() -> CardDefinition {
                 mana_cost: cost(&[generic(1)]),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                        SpendRestriction::InstantSorceryOnly,
+                    ),
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
@@ -3086,17 +3111,16 @@ pub fn emil_vastlands_roamer() -> CardDefinition {
 /// "At the beginning of your first main phase, add {U}{R}. Spend this
 /// mana only to cast instant and sorcery spells."
 ///
-/// Approximation: the spend restriction ("only to cast instant and
-/// sorcery spells") is omitted — the engine's `ManaPool` has no per-pip
-/// spend metadata yet (tracked as **Spend-Restricted Mana** in TODO.md),
-/// so the produced {U}{R} behaves like normal mana and can fund any
-/// spell. The trigger fires on the active player's PreCombatMain step
-/// (the controller's "first" main phase). The `{U/R}` pip is a real
+/// The produced {U}{R} is spend-restricted via
+/// `ManaPayload::Restricted(.., InstantSorceryOnly)`, so it can only fund
+/// instant and sorcery spells (enforced by `ManaPool::pay_for_spell`).
+/// The trigger fires on the active player's PreCombatMain step (the
+/// controller's "first" main phase). The `{U/R}` pip is a real
 /// `ManaSymbol::Hybrid(Blue, Red)`, payable with either blue or red.
 pub fn abstract_paintmage() -> CardDefinition {
     use crate::effect::ManaPayload;
     use crate::game::types::TurnStep;
-    use crate::mana::{r, u};
+    use crate::mana::{r, u, SpendRestriction};
     CardDefinition {
         name: "Abstract Paintmage",
         cost: cost(&[u(), crate::mana::hybrid(Color::Blue, Color::Red), r()]),
@@ -3116,7 +3140,10 @@ pub fn abstract_paintmage() -> CardDefinition {
             ),
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::Colors(vec![Color::Blue, Color::Red]),
+                pool: ManaPayload::Restricted(
+                    Box::new(ManaPayload::Colors(vec![Color::Blue, Color::Red])),
+                    SpendRestriction::InstantSorceryOnly,
+                ),
             },
         }],
         ..Default::default()
@@ -3718,27 +3745,18 @@ pub fn zaffai_and_the_tempests() -> CardDefinition {
 /// wording for non-active sources. Body is `MayDo(Seq(Discard 1, Draw
 /// 1))` so the controller opts into the loot.
 ///
-/// The "instant and sorcery cards in your hand have miracle {2}" static
-/// is still ⏳ (no Miracle keyword / alt-cost-on-draw primitive). The
-/// vanilla 5/5 Flying+Haste body is the headline play pattern; the
-/// per-opp-turn loot adds free card velocity.
+/// The "instant and sorcery cards in your hand have miracle {2}" grant is
+/// now wired faithfully: a CardDrawn/YourControl trigger gated on (a) the
+/// drawn card is an instant/sorcery and (b) it's the first card drawn this
+/// turn fires `Effect::GrantMiracle { cost: {2} }`. That stamps an
+/// until-end-of-turn `may_play_until` permission plus a
+/// `granted_alt_cast_cost_eot` of {2}, so the controller may cast the drawn
+/// card this turn by paying {2} (its miracle cost) rather than its full
+/// mana cost.
 pub fn lorehold_the_historian() -> CardDefinition {
-    use crate::card::{MayPlayDuration, Predicate, Supertype};
+    use crate::card::{Predicate, Supertype};
     use crate::game::types::TurnStep;
     use crate::mana::{r, w};
-    // Push (modern_decks, batch 93): the "Each instant and sorcery card
-    // in your hand has miracle {2}" grant is wired as a CardDrawn/
-    // YourControl trigger gated on (a) drawn card is IS and (b) it's
-    // the first card you drew this turn. Body grants `MayPlay {
-    // EndOfThisTurn, exile_after: false }` on the drawn card. The
-    // engine has no `Miracle {N}` alt-cost primitive (no separate
-    // miracle-cost path) so the {2} miracle-cost is approximated as
-    // *free* — overpowered relative to printed but functional. Future
-    // work: add a `MayPlayPermission.alt_cost: Option<ManaCost>` field
-    // so the may-cast path can require a non-zero payment. Engine
-    // tweak in this batch: `event_subject` for CardDrawn now uses
-    // `card_id` (not player) so `Selector::TriggerSource` resolves to
-    // the drawn card.
     let miracle_grant = TriggeredAbility {
         event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
             Predicate::All(vec![
@@ -3753,11 +3771,9 @@ pub fn lorehold_the_historian() -> CardDefinition {
                 ),
             ]),
         ),
-        effect: Effect::GrantMayPlay {
+        effect: Effect::GrantMiracle {
             what: Selector::TriggerSource,
-            duration: MayPlayDuration::EndOfThisTurn,
-            to_owner: false,
-            exile_after: false,
+            cost: cost(&[generic(2)]),
         },
     };
     CardDefinition {

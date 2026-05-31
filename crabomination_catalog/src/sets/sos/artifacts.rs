@@ -141,14 +141,14 @@ pub fn diary_of_dreams() -> CardDefinition {
 /// `GameAction::CastFromZoneWithoutPaying` during a later sorcery-speed
 /// window to recur the milled card for free.
 ///
-/// Both mana abilities are wired as plain `{T}: Add {R}` adders — the
-/// "spend only on instant/sorcery" restriction on the {T}: Add {R}{R}
-/// ability is omitted (engine has no spend-restricted mana primitive).
-/// In practice the produced mana flows through the same pool as the
-/// {R}-only ability, slightly more flexible than the printed card.
+/// Both mana abilities are wired: `{T}: Add {R}` is a plain adder, and
+/// `{T}: Add {R}{R}` produces spend-restricted mana via
+/// `ManaPayload::Restricted(.., InstantSorceryOnly)`, so that {R}{R} can
+/// only fund instant and sorcery spells (enforced by
+/// `ManaPool::pay_for_spell`).
 pub fn tablet_of_discovery() -> CardDefinition {
     use crate::effect::ManaPayload;
-    use crate::mana::r;
+    use crate::mana::{r, SpendRestriction};
     CardDefinition {
         name: "Tablet of Discovery",
         cost: cost(&[generic(2), r()]),
@@ -181,7 +181,10 @@ pub fn tablet_of_discovery() -> CardDefinition {
                 mana_cost: ManaCost::default(),
                 effect: Effect::AddMana {
                     who: PlayerRef::You,
-                    pool: ManaPayload::Colors(vec![Color::Red, Color::Red]),
+                    pool: ManaPayload::Restricted(
+                        Box::new(ManaPayload::Colors(vec![Color::Red, Color::Red])),
+                        SpendRestriction::InstantSorceryOnly,
+                    ),
                 },
                 once_per_turn: false,
                 sorcery_speed: false,
@@ -290,13 +293,13 @@ pub fn potioners_trove() -> CardDefinition {
 ///
 /// The `{T}: Draw a card` activation is gated by
 /// `condition: Predicate::ValueAtLeast(HandSizeOf(You), 7)`. The lands-grant
-/// is wired via `StaticEffect::GrantActivatedAbility` as one unrestricted
-/// any-color mana per land (the printed "two mana, spend only on
-/// instants/sorceries" spend-restriction is still engine-wide ⏳ — tracked
-/// as "Spend-Restricted Mana" in TODO.md).
+/// is wired via `grant_tap_for_any_color_restricted` — each land gains
+/// `{T}: Add two mana of any one color`, tagged
+/// `SpendRestriction::InstantSorceryOnly`, so that mana only funds instant
+/// and sorcery spells (enforced by `ManaPool::pay_for_spell`).
 pub fn resonating_lute() -> CardDefinition {
     use crate::card::Predicate;
-    use crate::mana::{r, u};
+    use crate::mana::{r, u, SpendRestriction};
     CardDefinition {
         name: "Resonating Lute",
         cost: cost(&[generic(2), u(), r()]),
@@ -327,10 +330,13 @@ pub fn resonating_lute() -> CardDefinition {
             tap_other_filter: None,
         }],
         triggered_abilities: vec![],
-        // "Lands you control have '{T}: Add one mana of any color.'"
-        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color(
+        // "Lands you control have '{T}: Add two mana of any one color.
+        // Spend this mana only to cast instant and sorcery spells.'"
+        static_abilities: vec![crate::effect::shortcut::grant_tap_for_any_color_restricted(
             crate::card::SelectionRequirement::Land
                 .and(crate::card::SelectionRequirement::ControlledByYou),
+            2,
+            SpendRestriction::InstantSorceryOnly,
         )],
         ..Default::default()
     }

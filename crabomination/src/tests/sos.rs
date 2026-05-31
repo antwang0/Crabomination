@@ -4517,10 +4517,51 @@ fn abstract_paintmage_adds_ur_at_first_main_phase() {
     g.fire_step_triggers(TurnStep::PreCombatMain);
     drain_stack(&mut g);
 
-    // Mana pool should now contain at least 1 U + 1 R.
+    // The {U}{R} enters spend-restricted ("instant and sorcery only"), so
+    // it sits in the restricted bucket — not the free color buckets.
     let pool = &g.players[0].mana_pool;
-    assert!(pool.amount(Color::Blue) >= 1, "U mana added: {pool:?}");
-    assert!(pool.amount(Color::Red) >= 1, "R mana added: {pool:?}");
+    assert_eq!(pool.restricted_total(), 2, "U + R added as restricted: {pool:?}");
+    assert_eq!(pool.amount(Color::Blue), 0, "not freely spendable: {pool:?}");
+    assert_eq!(pool.amount(Color::Red), 0, "not freely spendable: {pool:?}");
+    // And it pays a {U}{R} instant/sorcery cast.
+    use crate::mana::{cost, r, u, SpellKind};
+    let mut clone = pool.clone();
+    clone
+        .pay_for_spell(&cost(&[u(), r()]), SpellKind::InstantOrSorcery)
+        .expect("restricted {U}{R} funds an instant/sorcery");
+}
+
+#[test]
+fn tablet_restricted_mana_casts_instant_but_not_creature() {
+    // Tablet of Discovery's {T}: Add {R}{R} produces spend-restricted mana
+    // ("instant and sorcery only"): it funds Lightning Bolt but not a
+    // Goblin Guide ({R} creature). End-to-end through the cast path.
+    let mut g = two_player_game();
+    let tablet = g.add_card_to_battlefield(0, catalog::tablet_of_discovery());
+    drain_stack(&mut g); // resolve the ETB mill trigger
+    g.players[0].mana_pool = crate::mana::ManaPool::default();
+
+    // Index 1 is the restricted {R}{R} ability (index 0 is the plain {R}).
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tablet, ability_index: 1, target: None, x_value: None })
+        .expect("Tablet {T}: Add {R}{R}");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0, "restricted mana isn't freely spendable");
+
+    // A creature ({R}) can't be cast from instants-only mana.
+    let guide = g.add_card_to_hand(0, catalog::goblin_guide());
+    let creature_res = g.perform_action(GameAction::CastSpell {
+        card_id: guide, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(creature_res.is_err(), "instants-only mana can't cast a creature");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2, "failed cast spends nothing");
+
+    // A Lightning Bolt (instant, {R}) can.
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("instants-only mana funds Lightning Bolt");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1, "one restricted {{R}} spent");
 }
 
 #[test]
@@ -5463,9 +5504,9 @@ fn suspend_aggression_exiles_target_and_top_of_library() {
 #[test]
 fn wilt_in_the_heat_deals_five_to_creature_and_exiles_it() {
     // Printed: "deals 5 damage; if that creature would die this turn,
-    // exile it instead." 2/2 Grizzly Bears would die to 5 damage, so
-    // the death is redirected to exile (not graveyard) per the
-    // synchronous toughness-gate exile move.
+    // exile it instead." 2/2 Grizzly Bears dies to 5 damage, and the
+    // `ExileIfWouldDieThisTurn` death replacement redirects it to exile
+    // (not graveyard).
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
@@ -5523,6 +5564,67 @@ fn wilt_in_the_heat_leaves_high_toughness_creature_in_play() {
     assert!(
         !g.exile.iter().any(|c| c.id == beledros),
         "Beledros not exiled — toughness 6 > 5"
+    );
+}
+
+#[test]
+fn wilt_in_the_heat_exiles_creature_that_dies_later_this_turn() {
+    // The replacement lasts the whole turn, not just the spell's own
+    // damage: a 6/6 that survives the 5 but dies to a later source is
+    // still exiled rather than going to the graveyard.
+    let mut g = two_player_game();
+    let beledros = g.add_card_to_battlefield(1, catalog::beledros_witherbloom());
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(beledros)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("Wilt in the Heat castable");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(beledros).is_some(), "survives the 5 damage");
+
+    // Now it dies to another source later the same turn.
+    g.remove_to_graveyard_with_triggers(beledros);
+    drain_stack(&mut g);
+    assert!(
+        !g.players[1].graveyard.iter().any(|c| c.id == beledros),
+        "later death is redirected out of the graveyard"
+    );
+    assert!(
+        g.exile.iter().any(|c| c.id == beledros),
+        "lingering 'would die this turn' replacement exiles it"
+    );
+}
+
+#[test]
+fn wilt_in_the_heat_does_not_exile_indestructible_creature() {
+    // "If that creature would die this turn, exile it instead" only fires
+    // on an actual death. An indestructible creature doesn't die to the 5
+    // damage, so it stays in play — the death replacement never triggers.
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(bear)
+        .unwrap()
+        .add_counters(CounterType::Indestructible, 1);
+    let id = g.add_card_to_hand(0, catalog::wilt_in_the_heat());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Permanent(bear)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("Wilt in the Heat castable");
+    drain_stack(&mut g);
+
+    assert!(
+        g.battlefield_find(bear).is_some(),
+        "indestructible creature survives the 5 damage"
+    );
+    assert!(
+        !g.exile.iter().any(|c| c.id == bear),
+        "and is not exiled — it never died"
     );
 }
 
@@ -6198,6 +6300,59 @@ fn lorehold_the_historian_opp_upkeep_loots_with_scripted_yes() {
         "Hand size net unchanged: -1 discard + 1 draw = 0 net (after MayDo accepted)");
     assert_eq!(g.players[0].graveyard.len(), gy_before + 1,
         "P0's graveyard +1 from the discard");
+}
+
+#[test]
+fn lorehold_the_historian_grants_miracle_two_on_first_is_draw() {
+    // "Each instant and sorcery card in your hand has miracle {2}." The
+    // first IS card drawn this turn gains an until-end-of-turn may-play
+    // grant whose alt cost is {2}; the controller may cast it by paying
+    // {2} (not its full cost, not for free).
+    use crate::game::types::Target;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::lorehold_the_historian());
+    drain_stack(&mut g);
+    g.players[0].cards_drawn_this_turn = 0;
+    let bolt = g.next_id();
+    g.players[0].add_to_library_top(bolt, catalog::lightning_bolt());
+
+    // Draw the (first) card and dispatch the resulting CardDrawn trigger.
+    let mut events = Vec::new();
+    g.draw_one(0, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    let bolt_hand = g.players[0].hand.iter().find(|c| c.id == bolt)
+        .expect("Bolt drawn to hand");
+    assert!(bolt_hand.may_play_until.is_some(), "miracle may-play granted");
+    assert_eq!(
+        bolt_hand.granted_alt_cast_cost_eot.as_ref().map(|c| c.summary()),
+        Some("{2}".to_string()),
+        "miracle cost is {{2}}",
+    );
+
+    // Can't cast it without paying the {2}.
+    g.priority.player_with_priority = 0;
+    let unpaid = g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None });
+    assert!(unpaid.is_err(), "miracle cast requires paying its {{2}} cost");
+    assert!(
+        g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt stays in hand when the miracle cost can't be paid",
+    );
+
+    // With {2} available, the miracle cast goes through.
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None })
+        .expect("Bolt castable for its {2} miracle cost");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the {{2}} miracle cost was paid");
+    assert!(
+        !g.players[0].hand.iter().any(|c| c.id == bolt),
+        "Bolt left hand to the stack",
+    );
 }
 
 #[test]
@@ -7127,18 +7282,23 @@ fn resonating_lute_draw_succeeds_at_seven_in_hand() {
 
 #[test]
 fn resonating_lute_grants_lands_tap_for_any_color() {
-    // "Lands you control have '{T}: Add … mana of any one color'" — wired via
-    // StaticEffect::GrantActivatedAbility. A Forest (1 printed mana ability)
-    // gets the grant at index 1; tapping it adds one any-color mana.
+    // "Lands you control have '{T}: Add two mana of any one color. Spend
+    // this mana only to cast instant and sorcery spells.'" — wired via
+    // StaticEffect::GrantActivatedAbility. A Forest (1 printed mana
+    // ability) gets the grant at index 1; tapping it adds two restricted
+    // mana of one chosen color.
     let mut g = two_player_game();
     let _lute = g.add_card_to_battlefield(0, catalog::resonating_lute());
     let forest = g.add_card_to_battlefield(0, catalog::forest());
-    let before = g.players[0].mana_pool.total();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red)]));
+    let free_before = g.players[0].mana_pool.total();
     g.perform_action(GameAction::ActivateAbility {
         card_id: forest, ability_index: 1, target: None, x_value: None })
         .expect("Resonating Lute grants lands a tap-for-any-color ability at index 1");
-    assert_eq!(g.players[0].mana_pool.total() - before, 1,
-        "granted land ability adds one mana");
+    assert_eq!(g.players[0].mana_pool.total(), free_before,
+        "granted mana is restricted, so the free total is unchanged");
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 2,
+        "two mana of one color, spend-restricted to instants/sorceries");
     assert!(g.battlefield_find(forest).unwrap().tapped, "land tapped for the grant");
 }
 
@@ -9120,7 +9280,10 @@ fn great_hall_pay_one_life_taps_for_any_color() {
     .expect("Great Hall pay-1-life mana ability");
 
     assert_eq!(g.players[0].life, life_before - 1);
-    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
+    // "Spend this mana only to cast an instant or sorcery spell" — the
+    // chosen black mana enters restricted, not the free black bucket.
+    assert_eq!(g.players[0].mana_pool.amount(Color::Black), 0);
+    assert_eq!(g.players[0].mana_pool.restricted_total(), 1);
     assert!(g.battlefield.iter().find(|c| c.id == id).unwrap().tapped);
 }
 
@@ -11001,6 +11164,42 @@ fn choreographed_sparks_copies_target_instant_you_control() {
 }
 
 #[test]
+fn choreographed_sparks_cant_be_copied() {
+    // "This spell can't be copied." A second Choreographed Sparks aimed at
+    // the first is skipped by the CopySpell resolver, so only the first
+    // Sparks copies the Bolt: original Bolt + one copy = 6 damage to the
+    // opponent (a successful copy of the first Sparks would add a third
+    // Bolt for 9).
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let sparks1 = g.add_card_to_hand(0, catalog::choreographed_sparks());
+    let sparks2 = g.add_card_to_hand(0, catalog::choreographed_sparks());
+    g.players[0].mana_pool.add(Color::Red, 5);
+
+    // Bolt → P1, on the stack.
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Bolt castable for {R}");
+    // Sparks #1 copies the Bolt (mode 0).
+    g.perform_action(GameAction::CastSpell {
+        card_id: sparks1, target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Sparks #1 castable");
+    // Sparks #2 tries to copy Sparks #1 (an instant on the stack).
+    g.perform_action(GameAction::CastSpell {
+        card_id: sparks2, target: Some(Target::Permanent(sparks1)),
+        additional_targets: vec![], mode: Some(0), x_value: None,
+    }).expect("Sparks #2 castable");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[1].life, 14,
+        "Sparks #1 wasn't copied: original Bolt + one copy = 6 damage (not 9)",
+    );
+}
+
+#[test]
 fn choreographed_sparks_mode_one_copies_target_creature_spell() {
     // Push (modern_decks): mode 1 copies a creature spell on the stack;
     // the copy resolves as a token (CR 608.3f), so two bears land
@@ -11042,12 +11241,12 @@ fn choreographed_sparks_mode_one_copies_target_creature_spell() {
 }
 
 #[test]
-fn flashback_instant_grants_may_play_on_gy_is_card() {
-    // Push (modern_decks, batch 99): Flashback (the spell) now grants
-    // MayPlay { EndOfThisTurn, exile_after: true } on a target IS card
-    // in your graveyard, rather than bouncing it to hand. The card
-    // stays in gy with may-cast permission for the turn; resolved
-    // casts route to exile.
+fn flashback_instant_grants_flashback_on_gy_is_card() {
+    // The SOS "Flashback" instant grants until-end-of-turn flashback
+    // (cost = the card's own mana cost) to a target IS card in your
+    // graveyard. The card is then recastable via the normal flashback
+    // path — paying its mana cost — and is exiled on resolve.
+    use crate::game::types::Target;
     let mut g = two_player_game();
     let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
     let fb = g.add_card_to_hand(0, catalog::sos_flashback_instant());
@@ -11059,12 +11258,60 @@ fn flashback_instant_grants_may_play_on_gy_is_card() {
     .expect("Flashback (instant) castable for {R}");
     drain_stack(&mut g);
 
-    // Bolt stays in gy but has may_play_until stamped.
+    // Bolt stays in gy, now carrying an EOT flashback grant = its own cost.
     let bolt_gy = g.players[0].graveyard.iter().find(|c| c.id == bolt)
         .expect("Bolt still in graveyard");
-    let perm = bolt_gy.may_play_until.expect("may_play stamped by Flashback");
-    assert!(perm.exile_after, "exile-on-resolve rider set");
-    assert_eq!(perm.player, 0, "permission to the spell caster");
+    assert_eq!(
+        bolt_gy.granted_flashback_eot.as_ref().map(|c| c.summary()),
+        Some(catalog::lightning_bolt().cost.summary()),
+        "flashback cost equals Bolt's own mana cost",
+    );
+
+    // Recast Bolt from the graveyard via flashback, paying {R}, at player 1.
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFlashback {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Bolt recastable via granted flashback for {R}");
+    drain_stack(&mut g);
+
+    assert_eq!(g.players[1].life, 17, "recast Bolt dealt 3 to player 1");
+    assert!(
+        g.exile.iter().any(|c| c.id == bolt),
+        "flashback cast exiles Bolt on resolve (CR 702.34d)",
+    );
+    assert!(
+        !g.players[0].graveyard.iter().any(|c| c.id == bolt),
+        "Bolt left the graveyard",
+    );
+}
+
+#[test]
+fn granted_flashback_expires_at_end_of_turn() {
+    // The grant is "until end of turn" — a graveyard card's
+    // `granted_flashback_eot` is cleared at cleanup.
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_graveyard(0, catalog::lightning_bolt());
+    g.players[0]
+        .graveyard
+        .iter_mut()
+        .find(|c| c.id == bolt)
+        .unwrap()
+        .granted_flashback_eot = Some(catalog::lightning_bolt().cost);
+
+    g.do_cleanup();
+
+    assert!(
+        g.players[0]
+            .graveyard
+            .iter()
+            .find(|c| c.id == bolt)
+            .unwrap()
+            .granted_flashback_eot
+            .is_none(),
+        "EOT flashback grant cleared at cleanup",
+    );
 }
 
 #[test]
@@ -12245,6 +12492,81 @@ fn quandrix_the_proof_cascade_exiles_nonland_with_lower_mv() {
     assert!(
         exiled.may_play_until.is_some(),
         "Bolt has may_play permission stamped (cascade-free-cast permission)",
+    );
+}
+
+#[test]
+fn quandrix_the_proof_grants_cascade_to_your_is_spells_from_hand() {
+    // "Instant and sorcery spells you cast from your hand have cascade."
+    // With Quandrix on the battlefield, casting Divination (MV 3) cascades
+    // at its own mana value, exiling the top nonland with MV < 3 — a
+    // Lightning Bolt (MV 1) — with a free-cast permission.
+    use crate::card::CardInstance;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::quandrix_the_proof());
+    drain_stack(&mut g);
+
+    // Library top → bottom: Bolt (the cascade hit), then two Islands for
+    // Divination to draw after the cascade resolves.
+    let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    let bolt_id = bolt.id;
+    let mut top: Vec<CardInstance> = vec![
+        bolt,
+        CardInstance::new(g.next_id(), catalog::island(), 0),
+        CardInstance::new(g.next_id(), catalog::island(), 0),
+    ];
+    for c in top.iter_mut() { c.controller = 0; }
+    for c in top.into_iter().rev() { g.players[0].library.insert(0, c); }
+
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    // Accept the cascade's free cast so the Bolt leaves the library
+    // (declining would merely bottom it, indistinguishable from a no-op).
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: div, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Divination castable for {2}{U}");
+    drain_stack(&mut g);
+
+    // The granted cascade (cap = Divination's MV 3) hit the Bolt (MV 1)
+    // and cast it from exile — so it's no longer in the library or hand.
+    assert!(
+        !g.players[0].library.iter().any(|c| c.id == bolt_id)
+            && !g.players[0].hand.iter().any(|c| c.id == bolt_id),
+        "granted cascade found and cast the cheaper nonland",
+    );
+}
+
+#[test]
+fn quandrix_the_proof_does_not_cascade_your_creature_spells() {
+    // The grant is restricted to instants and sorceries — a creature spell
+    // you cast does not cascade.
+    use crate::card::CardInstance;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::quandrix_the_proof());
+    drain_stack(&mut g);
+
+    let mut bolt = CardInstance::new(g.next_id(), catalog::lightning_bolt(), 0);
+    bolt.controller = 0;
+    let bolt_id = bolt.id;
+    g.players[0].library.insert(0, bolt);
+
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Grizzly Bears castable for {1}{G}");
+    drain_stack(&mut g);
+
+    assert_eq!(
+        g.players[0].library.first().map(|c| c.id),
+        Some(bolt_id),
+        "no cascade off a creature spell — the Bolt stays on top of the library",
     );
 }
 

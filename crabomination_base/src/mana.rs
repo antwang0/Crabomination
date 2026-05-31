@@ -327,6 +327,50 @@ impl ManaCost {
     }
 }
 
+/// A "spend this mana only to …" restriction carried by certain mana
+/// sources (the Strixhaven school mana dorks/artifacts/lands: Abstract
+/// Paintmage, Tablet of Discovery, Hydro-Channeler, Great Hall of the
+/// Biblioplex, Resonating Lute). Mana tagged with a restriction lives in
+/// a separate pool bucket and can only pay for things the restriction
+/// permits — see [`ManaPool::pay_for_spell`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpendRestriction {
+    /// "Spend this mana only to cast instant and sorcery spells."
+    InstantSorceryOnly,
+}
+
+impl SpendRestriction {
+    /// True iff mana under this restriction may pay for a spell of `kind`.
+    pub fn allows(self, kind: SpellKind) -> bool {
+        match self {
+            SpendRestriction::InstantSorceryOnly => kind == SpellKind::InstantOrSorcery,
+        }
+    }
+}
+
+/// What a payment is funding, so spend-restricted mana can decide whether
+/// it is allowed to contribute. Only spell casts thread a `SpellKind`;
+/// ability activations and other costs pay via the unrestricted
+/// [`ManaPool::pay`], which never touches restricted mana.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum SpellKind {
+    /// Casting an instant or sorcery spell.
+    InstantOrSorcery,
+    /// Casting any other spell (creature, artifact, enchantment, …).
+    Other,
+}
+
+/// WUBRG index for a color — used to bucket restricted mana per color.
+const fn color_index(c: Color) -> usize {
+    match c {
+        Color::White => 0,
+        Color::Blue => 1,
+        Color::Black => 2,
+        Color::Red => 3,
+        Color::Green => 4,
+    }
+}
+
 /// Available mana in a player's pool during their turn.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ManaPool {
@@ -339,6 +383,14 @@ pub struct ManaPool {
     colorless: u32,
     /// How many mana in the pool came from snow sources.
     snow: u32,
+    /// Colored mana carrying a "spend only on …" restriction. Kept out of
+    /// the flat color buckets so the unrestricted [`pay`]/[`total`] paths
+    /// never see it; [`pay_for_spell`] folds in the entries whose
+    /// restriction permits the spell being cast (draining them ahead of
+    /// unrestricted mana of the same color). Empty for all but a handful
+    /// of Strixhaven sources, so the common path is unaffected.
+    #[serde(default)]
+    restricted: Vec<(Color, u32, SpendRestriction)>,
 }
 
 /// Side effects produced by paying a mana cost (e.g. Phyrexian mana life loss).
@@ -403,6 +455,33 @@ impl ManaPool {
     pub fn add_snow_colorless(&mut self, amount: u32) {
         self.colorless += amount;
         self.snow += amount;
+    }
+
+    /// Add `amount` mana of `color` carrying a spend `restriction`. The
+    /// mana is held apart from the flat color buckets and only becomes
+    /// spendable through [`pay_for_spell`] when the restriction permits
+    /// the spell being cast. Entries with the same (color, restriction)
+    /// coalesce so the vec stays short.
+    pub fn add_restricted(&mut self, color: Color, amount: u32, restriction: SpendRestriction) {
+        if amount == 0 {
+            return;
+        }
+        if let Some(entry) = self
+            .restricted
+            .iter_mut()
+            .find(|(c, _, r)| *c == color && *r == restriction)
+        {
+            entry.1 += amount;
+        } else {
+            self.restricted.push((color, amount, restriction));
+        }
+    }
+
+    /// Total spend-restricted mana floating in the pool (any color/
+    /// restriction). Exposed for UI/debug surfaces that show floated mana;
+    /// `total()` deliberately excludes it since it isn't freely spendable.
+    pub fn restricted_total(&self) -> u32 {
+        self.restricted.iter().map(|(_, n, _)| *n).sum()
     }
 
     pub fn amount(&self, color: Color) -> u32 {
@@ -629,6 +708,80 @@ impl ManaPool {
         tmp.snow = tmp.snow.min(tmp.total());
 
         *self = tmp;
+        Ok(side_effects)
+    }
+
+    /// Pay `cost` to cast a spell of `kind`, allowing spend-restricted
+    /// mana whose restriction permits `kind` to contribute. Restricted
+    /// mana of a color is drained ahead of unrestricted mana of that color
+    /// so it isn't wasted when the pool empties (CR 605 lets restricted
+    /// mana be applied freely; spending it first is always legal once the
+    /// full cost is covered). When the pool holds no usable restricted
+    /// mana — the overwhelmingly common case — this is exactly [`pay`].
+    ///
+    /// On failure the pool is left unchanged.
+    pub fn pay_for_spell(
+        &mut self,
+        cost: &ManaCost,
+        kind: SpellKind,
+    ) -> Result<PaymentSideEffects, ManaError> {
+        // How much restricted mana, per color, may fund a spell of `kind`?
+        let mut spendable = [0u32; 5];
+        for (c, n, r) in &self.restricted {
+            if r.allows(kind) {
+                spendable[color_index(*c)] += *n;
+            }
+        }
+        if spendable.iter().all(|n| *n == 0) {
+            // No usable restricted mana — identical to the plain path,
+            // which leaves the restricted bucket untouched.
+            return self.pay(cost);
+        }
+
+        // Fold the spendable restricted mana into a working clone's flat
+        // buckets and pay there. Within a color, restricted and
+        // unrestricted mana are fungible for payment, so the total spent
+        // per color is fixed by `pay`; we only have to split the drain
+        // afterward (restricted first).
+        let mut work = self.clone();
+        work.restricted.clear();
+        for c in Color::ALL {
+            work.add(c, spendable[color_index(c)]);
+        }
+        let side_effects = work.pay(cost)?;
+
+        // Settle each color: restricted drains before unrestricted.
+        let mut result = work.clone();
+        result.restricted = self.restricted.clone();
+        for c in Color::ALL {
+            let idx = color_index(c);
+            let before = self.amount(c) + spendable[idx];
+            let after = work.amount(c);
+            let spent = before - after;
+            let from_restricted = spent.min(spendable[idx]);
+            let from_unrestricted = spent - from_restricted;
+            // Flat bucket keeps the unspent unrestricted mana.
+            *result.slot_mut(c) = self.amount(c) - from_unrestricted;
+            // Drain `from_restricted` from this color's permitting entries.
+            let mut rem = from_restricted;
+            for entry in result.restricted.iter_mut() {
+                if rem == 0 {
+                    break;
+                }
+                if entry.0 == c && entry.2.allows(kind) {
+                    let d = rem.min(entry.1);
+                    entry.1 -= d;
+                    rem -= d;
+                }
+            }
+        }
+        result.restricted.retain(|(_, n, _)| *n > 0);
+        // Folding restricted mana into the flat buckets inflated `total()`
+        // for the snow clamp in `pay`; re-clamp against the real total now
+        // that the restricted remainder is back out of the buckets.
+        result.snow = result.snow.min(result.total());
+
+        *self = result;
         Ok(side_effects)
     }
 

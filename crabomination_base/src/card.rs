@@ -348,6 +348,10 @@ pub enum Keyword {
     Changeling,
     Storm,
     Inspired,
+    /// CR 707 — "This spell can't be copied." Carried by the spell card
+    /// (Choreographed Sparks); `Effect::CopySpell` skips a stack spell whose
+    /// definition lists this keyword.
+    CantBeCopied,
     /// "This creature can't block." A static restriction on the creature
     /// that holds the keyword (Postmortem Professor, Goblin Goon, etc.)
     /// or a transient grant from a pump spell (Duel Tactics, Volley
@@ -1116,6 +1120,21 @@ pub struct CardInstance {
     /// battlefield the engine returns this card to `ExileLink::return_to`.
     /// `None` for ordinary (permanent) exile.
     pub exiled_by: Option<ExileLink>,
+    /// Until-end-of-turn flashback granted to this card while it sits in a
+    /// graveyard — "target instant/sorcery card in your graveyard gains
+    /// flashback until end of turn; the flashback cost equals its mana
+    /// cost" (the SOS "Flashback" instant). Read by `cast_flashback` via
+    /// [`effective_flashback`]; cleared at cleanup (including graveyard
+    /// cards). Transient grant, so it shares `granted_keywords_eot`'s
+    /// lifetime; serialized for mid-turn snapshot consistency.
+    pub granted_flashback_eot: Option<crate::mana::ManaCost>,
+    /// Alternative cost the controller may pay to cast this card via its
+    /// `may_play_until` permission instead of casting it for free — the
+    /// "miracle {N}" cost granted by Lorehold, the Historian. Read by
+    /// `cast_from_zone_without_paying`; its lifetime tracks `may_play_until`
+    /// (cleared together by the expiry sweep and when a cast consumes the
+    /// permission). `None` for ordinary free may-play grants.
+    pub granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
 }
 
 impl CardInstance {
@@ -1156,6 +1175,8 @@ impl CardInstance {
             regeneration_shields: 0,
             skip_next_untap: false,
             exiled_by: None,
+            granted_flashback_eot: None,
+            granted_alt_cast_cost_eot: None,
         }
     }
 
@@ -1247,9 +1268,20 @@ impl CardInstance {
         self.used_loyalty_ability_this_turn = false;
         self.once_per_turn_used.clear();
         self.granted_keywords_eot.clear();
+        self.granted_flashback_eot = None;
+        self.granted_alt_cast_cost_eot = None;
         self.dealt_deathtouch_damage = false;
         // CR 701.15g — unused regeneration shields expire at end of turn.
         self.regeneration_shields = 0;
+    }
+
+    /// The flashback cost this card can currently be cast with from a
+    /// graveyard — its printed `Keyword::Flashback`, or an until-end-of-turn
+    /// grant (the SOS "Flashback" instant). `None` if neither applies.
+    pub fn effective_flashback(&self) -> Option<&ManaCost> {
+        self.definition
+            .has_flashback()
+            .or(self.granted_flashback_eot.as_ref())
     }
 }
 
@@ -1304,6 +1336,16 @@ struct CardInstanceWire {
     /// consistent restore. `#[serde(default)]` for back-compat.
     #[serde(default)]
     granted_keywords_eot: Vec<Keyword>,
+    /// Until-end-of-turn flashback grant (SOS "Flashback"). Shares the
+    /// transient lifetime of `granted_keywords_eot`; serialized so a
+    /// mid-turn snapshot restores it. `#[serde(default)]` for back-compat.
+    #[serde(default)]
+    granted_flashback_eot: Option<crate::mana::ManaCost>,
+    /// Until-end-of-turn alternative cast cost (Lorehold's miracle {N}).
+    /// Shares `may_play_until`'s lifetime. `#[serde(default)]` for
+    /// back-compat.
+    #[serde(default)]
+    granted_alt_cast_cost_eot: Option<crate::mana::ManaCost>,
 }
 
 impl serde::Serialize for CardInstance {
@@ -1336,6 +1378,8 @@ impl serde::Serialize for CardInstance {
                 .map(|(k, v)| (k.clone(), *v))
                 .collect(),
             granted_keywords_eot: self.granted_keywords_eot.clone(),
+            granted_flashback_eot: self.granted_flashback_eot.clone(),
+            granted_alt_cast_cost_eot: self.granted_alt_cast_cost_eot.clone(),
         };
         wire.serialize(ser)
     }
@@ -1368,6 +1412,8 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.may_play_until = wire.may_play_until;
         c.keyword_counters = wire.keyword_counters.into_iter().collect();
         c.granted_keywords_eot = wire.granted_keywords_eot;
+        c.granted_flashback_eot = wire.granted_flashback_eot;
+        c.granted_alt_cast_cost_eot = wire.granted_alt_cast_cost_eot;
         Ok(c)
     }
 }

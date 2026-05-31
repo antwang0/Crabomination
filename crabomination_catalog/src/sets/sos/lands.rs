@@ -128,11 +128,11 @@ pub fn spectacle_summit() -> CardDefinition {
 ///
 /// Wired (push XV):
 /// - `{T}: Add {C}` via the shared `tap_add_colorless` helper.
-/// - `{T}, Pay 1 life: Add one mana of any color.` Cost is approximated
-///   as `Effect::LoseLife(1)` chained with `Effect::AddMana(AnyOneColor 1)`
-///   — the engine has no first-class life-cost primitive on
-///   `ActivatedAbility` (tracked in TODO.md). The spend-only-on-IS
-///   restriction is omitted (no per-pip mana metadata yet).
+/// - `{T}, Pay 1 life: Add one mana of any color. Spend this mana only to
+///   cast an instant or sorcery spell.` The any-color mana is produced via
+///   `ManaPayload::Restricted(AnyOneColor, InstantSorceryOnly)`, so it can
+///   only fund I/S spells (enforced by `ManaPool::pay_for_spell`). The
+///   life cost uses the `ActivatedAbility::life_cost` slot.
 /// - `{5}: becomes 2/4 Wizard creature` clause is omitted (no
 ///   land-becomes-creature primitive — same gap as Mishra's Factory).
 ///   The vanilla mana-fixing role still slots into Strixhaven decks as
@@ -141,6 +141,7 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::Supertype;
     use crate::effect::{ActivatedAbility, ManaPayload};
+    use crate::mana::SpendRestriction;
     // Pure mana ability (`AddMana` only) → resolves immediately without
     // going on the stack. Life is paid up front; pre-flight rejects
     // activation if controller would drop to 0 life.
@@ -149,7 +150,10 @@ pub fn great_hall_of_the_biblioplex() -> CardDefinition {
         mana_cost: ManaCost::default(),
         effect: Effect::AddMana {
             who: PlayerRef::You,
-            pool: ManaPayload::AnyOneColor(Value::Const(1)),
+            pool: ManaPayload::Restricted(
+                Box::new(ManaPayload::AnyOneColor(Value::Const(1))),
+                SpendRestriction::InstantSorceryOnly,
+            ),
         },
         once_per_turn: false,
         sorcery_speed: false,

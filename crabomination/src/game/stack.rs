@@ -881,6 +881,14 @@ impl GameState {
         for card in &mut self.battlefield {
             card.clear_end_of_turn_effects();
         }
+        // Until-end-of-turn flashback grants (SOS "Flashback") live on
+        // graveyard cards, which `clear_end_of_turn_effects` above doesn't
+        // reach — expire them here so the window closes at end of turn.
+        for player in &mut self.players {
+            for card in &mut player.graveyard {
+                card.granted_flashback_eot = None;
+            }
+        }
         // Expire UntilEndOfTurn continuous effects from the layer system
         self.expire_end_of_turn_effects();
         // Clear all damage from creatures
@@ -894,6 +902,9 @@ impl GameState {
         // Clear transient granted triggers (Rabid Attack, Root
         // Manipulation EOT-duration grants).
         self.granted_triggers_eot.clear();
+        // Close the "if it would die this turn, exile it instead" window
+        // (Wilt in the Heat).
+        self.dies_to_exile_eot.clear();
         // Expire event-keyed "when [card] dies this turn" delayed triggers
         // that never fired (CR 603.4 — the "this turn" window closes).
         self.delayed_triggers.retain(|dt| {
@@ -959,6 +970,8 @@ impl GameState {
                 };
                 if expired {
                     c.may_play_until = None;
+                    // The miracle alt-cost shares the permission's lifetime.
+                    c.granted_alt_cast_cost_eot = None;
                 }
             }
         };
@@ -1440,13 +1453,13 @@ impl GameState {
             self.remove_effects_from_source(id);
             self.remove_from_combat(id);
             // CR 122.1h — Finality counters redirect Battlefield →
-            // Graveyard to Battlefield → Exile. We must check the
-            // dying card's counters here because the card has been
-            // removed from the battlefield before `resolve_zone_change`
-            // walks for it.
-            let initial_to = if card
-                .counter_count(crate::card::CounterType::Finality)
-                > 0
+            // Graveyard to Battlefield → Exile. Wilt in the Heat's "if
+            // that creature would die this turn, exile it instead" rides
+            // the same redirect via `dies_to_exile_eot`. We must check
+            // both here because the card has been removed from the
+            // battlefield before `resolve_zone_change` walks for it.
+            let initial_to = if card.counter_count(crate::card::CounterType::Finality) > 0
+                || self.dies_to_exile_eot.contains(&id)
             {
                 crate::card::Zone::Exile
             } else {

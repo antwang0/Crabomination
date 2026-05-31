@@ -285,7 +285,7 @@ impl crate::game::GameState {
 /// (Damping Sphere). Used by `play_land` to decide whether to downgrade
 /// multi-color/multi-mana lands to "{T}: Add {C}".
 pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> bool {
-    use crate::effect::{Effect, ManaPayload};
+    use crate::effect::Effect;
     // The Oracle says "tap to add more than one mana" — for our purposes:
     // any land with two or more separate mana abilities, OR any single
     // ability that produces an `AnyOneColor`/`AnyColors` payload (which
@@ -303,17 +303,26 @@ pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> boo
     if let Some(a) = mana_abilities.first()
         && let Effect::AddMana { pool, .. } = &a.effect
     {
-        return match pool {
-            ManaPayload::AnyOneColor(_)
-            | ManaPayload::AnyColors(_)
-            | ManaPayload::AnyColorOpponentCouldProduce => true,
-            ManaPayload::Colors(cs) => cs.len() > 1,
-            ManaPayload::OfColors(cs, _) => cs.len() > 1,
-            ManaPayload::OfColor(_, _) => false,
-            ManaPayload::Colorless(_) => false,
-        };
+        return payload_yields_multiple(pool);
     }
     false
+}
+
+/// True if a single `AddMana` payload could yield more than one mana (or a
+/// player-chosen color), used by `multi_mana_ability_count`. A spend
+/// restriction is transparent here — it wraps an inner payload whose shape
+/// is what matters.
+fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
+    use crate::effect::ManaPayload;
+    match pool {
+        ManaPayload::AnyOneColor(_)
+        | ManaPayload::AnyColors(_)
+        | ManaPayload::AnyColorOpponentCouldProduce => true,
+        ManaPayload::Colors(cs) => cs.len() > 1,
+        ManaPayload::OfColors(cs, _) => cs.len() > 1,
+        ManaPayload::OfColor(_, _) | ManaPayload::Colorless(_) => false,
+        ManaPayload::Restricted(inner, _) => payload_yields_multiple(inner),
+    }
 }
 
 /// Elesh Norn, Mother of Machines: count how many times an ETB trigger
@@ -566,6 +575,12 @@ fn effect_produces_color(effect: &Effect, color: ManaColor) -> bool {
             ManaPayload::OfColor(c, _) => *c == color,
             ManaPayload::OfColors(cs, _) => cs.contains(&color),
             ManaPayload::Colorless(_) => false,
+            // Spend-restricted sources are not auto-tapped: their mana can
+            // only fund some spells, so tapping one to "cover" a colored
+            // pip could strand an otherwise-payable cast. The controller
+            // activates them deliberately (or they float via a trigger),
+            // and `pay_for_spell` consumes the floated mana.
+            ManaPayload::Restricted(_, _) => false,
         },
         Effect::Seq(steps) => steps.iter().any(|s| effect_produces_color(s, color)),
         _ => false,
@@ -1021,7 +1036,19 @@ impl GameState {
         }
 
         let forced_only = self.players[p].wants_ui;
-        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only) {
+        // Spell kind gates spend-restricted mana ("spend only to cast
+        // instant and sorcery spells"). Only an I/S spell may draw on it.
+        let spell_kind = if card
+            .definition
+            .card_types
+            .iter()
+            .any(|t| matches!(t, CardType::Instant | CardType::Sorcery))
+        {
+            crate::mana::SpellKind::InstantOrSorcery
+        } else {
+            crate::mana::SpellKind::Other
+        };
+        let receipt = match self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, spell_kind) {
             Ok(r) => r,
             Err(e) => {
                 self.players[p].hand.push(card);
@@ -1530,10 +1557,10 @@ impl GameState {
 
         let card = self.players[p].graveyard[graveyard_pos].clone();
 
-        // The card must have Flashback.
+        // The card must have Flashback — printed, or granted until end of
+        // turn (the SOS "Flashback" instant).
         let flashback_cost = card
-            .definition
-            .has_flashback()
+            .effective_flashback()
             .ok_or(GameError::SorcerySpeedOnly)?
             .clone();
 
@@ -1828,8 +1855,9 @@ impl GameState {
         };
 
         // Clear any outstanding may-play permission — once the card is
-        // cast, the grant is consumed.
+        // cast, the grant (and its miracle alt-cost) is consumed.
         card.may_play_until = None;
+        card.granted_alt_cast_cost_eot = None;
         // Route to exile on resolve when the granting effect demands it
         // (Nita's "if would go to graveyard, exile instead").
         if exile_after {
@@ -1891,6 +1919,11 @@ impl GameState {
             .find_card_anywhere(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
         let is_instant = card_ref.definition.is_instant_speed();
+        // A "miracle {N}"-style grant attaches an alternative cast cost to
+        // the permission (Lorehold, the Historian). When present, the cast
+        // isn't free — the controller pays this cost instead of the card's
+        // full mana cost.
+        let alt_cast_cost = card_ref.granted_alt_cast_cost_eot.clone();
         // Two ways to invoke a free cast: a per-card `may_play_until`
         // permission (Discovery / Paradigm / etc.), or an Omniscience-style
         // standing static letting the controller free-cast their own hand
@@ -1918,6 +1951,16 @@ impl GameState {
         let must_be_sorcery_speed = !is_instant || self.player_locked_to_sorcery_timing(p);
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
+        }
+        // Pay the miracle alt-cost up front, if any. Failure leaves the
+        // permission intact so the controller can retry once they have the
+        // mana.
+        if let Some(cost) = alt_cast_cost {
+            let forced_only = self.players[p].wants_ui;
+            let receipt = self.try_pay_with_auto_tap_mode(p, &cost, forced_only)?;
+            if receipt.side_effects.life_lost > 0 {
+                self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
+            }
         }
         self.cast_card_for_free(
             p,
@@ -2535,6 +2578,22 @@ impl GameState {
             .filter(|c| c.lost_all_abilities)
             .map(|c| c.id)
             .collect();
+        // Whether the cast spell came from its caster's hand, read off the
+        // stack item. Stamped into the trigger context so
+        // `Predicate::CastFromHand` (Quandrix, the Proof) reflects the
+        // actual cast: cascade / flashback / exile casts read `false`,
+        // which stops "spells you cast from your hand have cascade" from
+        // re-triggering on the spells it cascades into.
+        let cast_from_hand = self
+            .stack
+            .iter()
+            .find_map(|item| match item {
+                crate::game::types::StackItem::Spell { card, .. } if card.id == cast_card => {
+                    Some(card.cast_from_hand)
+                }
+                _ => None,
+            })
+            .unwrap_or(true);
         // Walk every permanent on the battlefield — `YourControl` triggers
         // fire from the caster's permanents, while `OpponentControl` triggers
         // fire from non-caster permanents (Wandering Archaic etc.). The
@@ -2583,7 +2642,7 @@ impl GameState {
                     converged_value,
                     mana_spent,
                     source_name: None,
-                    cast_from_hand: true,
+                    cast_from_hand,
                     event_amount: 0,
                 };
                 if !self.evaluate_predicate(&filter, &ctx) {
@@ -2679,7 +2738,10 @@ impl GameState {
         forced_only: bool,
     ) -> Result<PaymentReceipt, GameError> {
         let snapshot = self.snapshot_payment_state(payer);
-        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only)
+        // The auto-tap wrappers fund non-spell costs (cycling, equip,
+        // ability activations, engine-driven pays). Restricted "cast only"
+        // mana never applies to these, so pay as `Other`.
+        self.try_pay_after_snapshot_mode(payer, cost, snapshot, forced_only, crate::mana::SpellKind::Other)
     }
 
     /// Pay `cost` for `payer`, auto-tapping mana sources as needed.
@@ -2707,14 +2769,15 @@ impl GameState {
         cost: &crate::mana::ManaCost,
         snapshot: PaymentSnapshot,
         forced_only: bool,
+        kind: crate::mana::SpellKind,
     ) -> Result<PaymentReceipt, GameError> {
         if forced_only {
             // Fast path: the player already has the mana floating — pay it.
-            if self.players[payer].mana_pool.clone().pay(cost).is_ok() {
+            if self.players[payer].mana_pool.clone().pay_for_spell(cost, kind).is_ok() {
                 let pool_before = self.players[payer].mana_pool.clone();
                 let side_effects = self.players[payer]
                     .mana_pool
-                    .pay(cost)
+                    .pay_for_spell(cost, kind)
                     .expect("pool covered the cost a line ago");
                 return Ok(PaymentReceipt { auto_events: vec![], side_effects, pool_before });
             }
@@ -2747,7 +2810,7 @@ impl GameState {
             let mut more = self.auto_tap_for_cost(payer, cost);
             events.append(&mut more);
             let pool_after_auto_tap = self.players[payer].mana_pool.clone();
-            return match self.players[payer].mana_pool.pay(cost) {
+            return match self.players[payer].mana_pool.pay_for_spell(cost, kind) {
                 Ok(side_effects) => {
                     Ok(PaymentReceipt { auto_events: events, side_effects, pool_before: pool_after_auto_tap })
                 }
@@ -2766,7 +2829,7 @@ impl GameState {
         // breaks Increment / Opus / converge payoffs that read the
         // difference. The original snapshot is still used for rollback.
         let pool_after_auto_tap = self.players[payer].mana_pool.clone();
-        match self.players[payer].mana_pool.pay(cost) {
+        match self.players[payer].mana_pool.pay_for_spell(cost, kind) {
             Ok(side_effects) => Ok(PaymentReceipt {
                 auto_events,
                 side_effects,
@@ -3542,8 +3605,15 @@ impl GameState {
         let mut auto_mana_events = Vec::new();
         if let Some(snapshot) = pre_snapshot {
             let forced_only = self.players[p].wants_ui;
-            let receipt =
-                self.try_pay_after_snapshot_mode(p, &effective_mana_cost, snapshot, forced_only)?;
+            // Activated-ability mana costs are not spell casts; restricted
+            // "cast only" mana can never pay them.
+            let receipt = self.try_pay_after_snapshot_mode(
+                p,
+                &effective_mana_cost,
+                snapshot,
+                forced_only,
+                crate::mana::SpellKind::Other,
+            )?;
             if receipt.side_effects.life_lost > 0 {
                 self.adjust_life(p, -(receipt.side_effects.life_lost as i32));
             }

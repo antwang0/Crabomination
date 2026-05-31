@@ -395,6 +395,15 @@ pub struct GameState {
     #[serde(default)]
     pub(crate) granted_triggers_eot:
         std::collections::HashMap<CardId, Vec<crate::card::TriggeredAbility>>,
+    /// Permanents whose death is replaced by exile for the rest of the
+    /// turn — "if that creature would die this turn, exile it instead"
+    /// (Wilt in the Heat). Checked in `remove_from_battlefield_to_graveyard`
+    /// alongside the Finality-counter redirect; cleared at cleanup. The
+    /// redirect lasts the whole turn, so it also catches deaths from later
+    /// combat / removal, not just the spell's own damage. `#[serde(default)]`
+    /// for snapshot back-compat.
+    #[serde(default)]
+    pub(crate) dies_to_exile_eot: std::collections::HashSet<CardId>,
 }
 
 /// Manual `Clone` impl so the bot can dry-run an action against a copy
@@ -448,6 +457,7 @@ impl Clone for GameState {
             died_card_snapshots: self.died_card_snapshots.clone(),
             permanents_gained_counter_this_turn: self.permanents_gained_counter_this_turn.clone(),
             granted_triggers_eot: self.granted_triggers_eot.clone(),
+            dies_to_exile_eot: self.dies_to_exile_eot.clone(),
         }
     }
 }
@@ -514,6 +524,7 @@ impl GameState {
             died_card_snapshots: HashMap::new(),
             permanents_gained_counter_this_turn: std::collections::HashSet::new(),
             granted_triggers_eot: std::collections::HashMap::new(),
+            dies_to_exile_eot: std::collections::HashSet::new(),
         }
     }
 
@@ -3241,13 +3252,16 @@ impl GameState {
                 self.execute_put_on_library(player, chosen, &mut events);
                 Ok(events)
             }
-            PendingEffectState::AnyOneColorPending { player, count } => {
+            PendingEffectState::AnyOneColorPending { player, count, restriction } => {
                 let DecisionAnswer::Color(c) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
                 let mut events = Vec::with_capacity(count as usize);
                 for _ in 0..count {
-                    self.players[player].mana_pool.add(*c, 1);
+                    match restriction {
+                        Some(r) => self.players[player].mana_pool.add_restricted(*c, 1, r),
+                        None => self.players[player].mana_pool.add(*c, 1),
+                    }
                     events.push(GameEvent::ManaAdded { player, color: *c });
                 }
                 Ok(events)

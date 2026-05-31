@@ -304,3 +304,84 @@ fn pay_hybrid_fails_atomically_when_unaffordable() {
         .is_err());
     assert_eq!(pool.amount(Color::Black), 1, "failed payment leaves the pool unchanged");
 }
+
+// ── Spend-restricted mana (Strixhaven school sources) ────────────────────────
+
+#[test]
+fn restricted_mana_kept_out_of_total_and_amount() {
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Red, 2, SpendRestriction::InstantSorceryOnly);
+    assert_eq!(pool.amount(Color::Red), 0, "restricted mana isn't in the color bucket");
+    assert_eq!(pool.total(), 0, "restricted mana isn't freely spendable");
+    assert_eq!(pool.restricted_total(), 2);
+}
+
+#[test]
+fn restricted_mana_pays_an_instant_or_sorcery() {
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
+    pool.pay_for_spell(&cost(&[r()]), SpellKind::InstantOrSorcery)
+        .expect("I/S spell may use instants-only mana");
+    assert_eq!(pool.restricted_total(), 0, "the restricted {{R}} was consumed");
+    assert_eq!(pool.total(), 0);
+}
+
+#[test]
+fn restricted_mana_cannot_pay_a_creature() {
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
+    assert!(
+        pool.pay_for_spell(&cost(&[r()]), SpellKind::Other).is_err(),
+        "instants-only mana can't fund a creature spell"
+    );
+    assert_eq!(pool.restricted_total(), 1, "failed pay leaves restricted mana untouched");
+}
+
+#[test]
+fn restricted_mana_drains_before_unrestricted_of_same_color() {
+    // 1 restricted R + 1 unrestricted R, pay {R} for an instant: the
+    // restricted copy should be spent first, leaving the free R floating.
+    let mut pool = ManaPool::new();
+    pool.add(Color::Red, 1);
+    pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
+    pool.pay_for_spell(&cost(&[r()]), SpellKind::InstantOrSorcery).unwrap();
+    assert_eq!(pool.restricted_total(), 0, "restricted R spent first");
+    assert_eq!(pool.amount(Color::Red), 1, "unrestricted R remains");
+}
+
+#[test]
+fn restricted_mana_funds_generic_pips_for_instants() {
+    // {1}{U} for an instant: restricted U pays {U}, restricted R pays {1}.
+    let mut pool = ManaPool::new();
+    pool.add_restricted(Color::Blue, 1, SpendRestriction::InstantSorceryOnly);
+    pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
+    pool.pay_for_spell(&cost(&[generic(1), u()]), SpellKind::InstantOrSorcery)
+        .expect("restricted mana covers colored + generic of an I/S spell");
+    assert_eq!(pool.restricted_total(), 0);
+}
+
+#[test]
+fn restricted_mana_falls_back_to_plain_pay_for_other_spells() {
+    // A creature paid entirely from unrestricted mana succeeds even with
+    // unrelated restricted mana floating, which stays untouched.
+    let mut pool = ManaPool::new();
+    pool.add(Color::Green, 1);
+    pool.add_restricted(Color::Red, 2, SpendRestriction::InstantSorceryOnly);
+    pool.pay_for_spell(&cost(&[g()]), SpellKind::Other).unwrap();
+    assert_eq!(pool.amount(Color::Green), 0);
+    assert_eq!(pool.restricted_total(), 2, "restricted mana not consumed by a non-I/S cast");
+}
+
+#[test]
+fn restricted_pay_is_atomic_on_failure() {
+    // {R}{R} for an instant with only 1 restricted R + 1 unrestricted U:
+    // unpayable, and nothing is consumed.
+    let mut pool = ManaPool::new();
+    pool.add(Color::Blue, 1);
+    pool.add_restricted(Color::Red, 1, SpendRestriction::InstantSorceryOnly);
+    assert!(pool
+        .pay_for_spell(&cost(&[r(), r()]), SpellKind::InstantOrSorcery)
+        .is_err());
+    assert_eq!(pool.amount(Color::Blue), 1);
+    assert_eq!(pool.restricted_total(), 1);
+}

@@ -388,8 +388,14 @@ pub enum PendingEffectState {
     PutOnLibraryPending { player: usize, count: usize },
     /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
     /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks
-    /// a color and the engine adds `count` mana of that color.
-    AnyOneColorPending { player: usize, count: u32 },
+    /// a color and the engine adds `count` mana of that color. When
+    /// `restriction` is set (Great Hall of the Biblioplex, Resonating
+    /// Lute), the added mana carries that spend restriction.
+    AnyOneColorPending {
+        player: usize,
+        count: u32,
+        restriction: Option<crate::mana::SpendRestriction>,
+    },
     /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
     /// the apply step removes them and graveyards them.

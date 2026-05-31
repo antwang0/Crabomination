@@ -38,14 +38,12 @@ sections, and one improvement each in engine / UI / server.
 
 ### Follow-ups noticed this run (not yet done)
 
-- **Enters-as-a-copy of a permanent (CR 707.x)** ✅ — `Effect::BecomeCopyOf`
-  (definition rewrite) + the `CardDefinition.enters_as_copy` ETB hook (applied
-  before the first SBA so a 0/0 copier never dies first) ship Clone, Phantasmal
-  Image, Mirror Image, Stunt Double, Spark Double; copied ETB triggers re-fire
-  (707.5). Token copies use `CreateTokenCopyOf` (Cackling Counterpart). Still
-  open: "becomes a copy" *continuous* layer-1 effects (Helm of the Host loop,
-  Mirrorform), copied enters-with-counters, Mockingbird's name-retention
-  exception, and a real copy-target picker (auto-picks highest power today).
+- **"Becomes a copy" continuous layer-1 effects** — the one-shot copiers
+  (Clone, Phantasmal Image, Mirror Image, Stunt Double, Spark Double) ship via
+  `Effect::BecomeCopyOf`. Still open: continuous layer-1 "becomes a copy"
+  effects (Helm of the Host loop, Mirrorform), copied enters-with-counters,
+  Mockingbird's name-retention exception, and a real copy-target picker
+  (auto-picks highest power today).
 - **Overload (CR 702.96)** — Cyclonic Rift's `{6}{U}` mode. Needs an
   alt-cost that rewrites "target X" → "each X" at cast time (the alt-cost
   model can't yet swap a selector's target into an each-selector).
@@ -53,15 +51,9 @@ sections, and one improvement each in engine / UI / server.
   returns the card directly rather than via a stack-based "when ~ leaves"
   trigger. Fine for observable behavior; only matters for response windows
   on the return (e.g. a board-wipe race).
-- **Emblem zone (CR 114)** ✅ — `Player.emblems` / `Effect::CreateEmblem`,
-  dispatched event-keyed (`emblem_event_matches`) and step-keyed
-  (`fire_step_triggers`). Wired Dellian Fel -6, Dakkon -6, Saheeli -7;
-  surfaced via `PlayerView.emblems`. Replaces the `dellian_fel_emblem` bool.
-- **Extra-turn spells (CR 500.7)** ✅ — `Player.extra_turns` /
-  `Effect::TakeExtraTurn`, consumed in `do_cleanup`. Time Walk, Time Warp,
-  Temporal Manipulation, Capture of Jingzhou, Nexus of Fate (`sets::xtra`,
-  registered). Follow-up: Nexus's shuffle-instead-of-graveyard replacement
-  once a leaves-graveyard replacement primitive exists.
+- **Nexus of Fate graveyard replacement** — needs a
+  shuffle-instead-of-graveyard replacement once a leaves-graveyard
+  replacement primitive exists (the rest of the extra-turn pipeline ships).
 - **Auto-target through step-keyed triggers** — `auto_target_for_effect`
   does not fill the target slot of a `Seq`-wrapped `CreateTokenCopyOf`
   source when the trigger fires from the command zone (emblem) or a
@@ -70,14 +62,9 @@ sections, and one improvement each in engine / UI / server.
   through the `fire_step_triggers` push path the way
   `dispatch_triggers_for_events` does (or surface `Decision::ChooseTarget`
   for bot/auto deciders there).
-- See `FEATURE_ROADMAP.md` Tier 1. DONE this run: additional cast costs
-  (`AdditionalCastCost::SacrificePermanent`/`Discard`), `GrantActivatedAbility`
-  static, "when target dies this turn" delayed trigger. Still open: choose-N
-  modes ("choose two").
-- **CR 702.15 Landwalk** ✅ — `Keyword::Landwalk(LandType)` enforced in
-  `declare_blockers`; Anger Mountainwalk, Filth swampwalk anthem wired.
-- **CR 701.12c Exchange life totals** ✅ — `Effect::ExchangeLifeTotals`;
-  Soul Conduit. **CR 510.1c** ✅ — `Decision::CombatDamageOrder`.
+- **Choose-N modes ("choose two")** — still open per `FEATURE_ROADMAP.md`
+  Tier 1 (additional cast costs, `GrantActivatedAbility` static, and "when
+  target dies this turn" delayed trigger already shipped).
 - **Echoing Truth same-name bounce** routes every copy to `OwnerOf(Target0)`;
   mixed-ownership same-named permanents would all go to the target's owner.
   Needs a per-moved-card owner destination to be fully correct.
@@ -3275,16 +3262,20 @@ Fiend Hunter are now handled by the dedicated
 primitives — see FEATURE_ROADMAP Tier-1 #4.) The former is smaller
 surface but introduces effect-side mutation of ctx.
 
-### Spend-Restricted Mana
+### Spend-Restricted Mana — ✅ DONE
 Strixhaven's "Spend this mana only to cast an instant or sorcery
 spell" (Hydro-Channeler, Tablet of Discovery's {T}: Add {R}{R}
-ability, Abstract Paintmage's PreCombatMain trigger, Resonating
-Lute's land-grant) needs per-pip metadata on the mana pool. Today
-mana is fungible — once it's in the pool, anything can spend it.
-Adding a `restriction: Option<SpellTypeFilter>` knob on each
-ManaPool entry (and consuming it during cost-pay) would honor the
-printed restriction. Wide-ranging change touching `ManaPool`,
-`pay()`, and the cost-pay-validation path.
+ability, Abstract Paintmage's PreCombatMain trigger, Great Hall of
+the Biblioplex, Resonating Lute's land-grant) is now wired. The mana
+pool holds a separate `restricted: Vec<(Color, u32, SpendRestriction)>`
+bucket (kept out of `total()`/`amount()`); `ManaPool::pay_for_spell(cost,
+kind)` folds in the entries whose restriction permits the spell's
+`SpellKind`, draining them ahead of unrestricted mana of the same
+color. The catalog tags mana via `ManaPayload::Restricted(inner,
+restriction)`; the spell-cast path threads the `SpellKind`. Covered by
+`crabomination_base::tests::mana::restricted_*` and
+`tests::sos::{tablet_restricted_mana_*, abstract_paintmage_*,
+great_hall_pay_one_life_*, resonating_lute_grants_lands_*}`.
 
 ### "Move at most one matching card" — `Selector::OneOf`
 Several SOS effects exile/move "a card" from a graveyard, hand, or
@@ -3322,26 +3313,6 @@ satisfies a `{S}` pip.
 Sagas need: ETB with 1 lore counter, trigger each chapter, advance at upkeep,
 sacrifice when the last chapter triggers.  No `SagaLore` counter type or
 upkeep-advance primitive exists.
-
-### Prepare Mechanic (SOS) — ✅ DONE
-Secrets of Strixhaven's per-permanent "prepared" flag is fully wired
-using existing primitives — no new engine surface was needed:
-- The flag is `CounterType::Prepared` (count-1), surfaced through
-  `PermanentView.counters`.
-- Toggle cards (Biblioplex Tomekeeper, Skycoach Waypoint) flip it via
-  `Effect::AddCounter` / `Effect::RemoveCounter`, gated to legal targets
-  by `SelectionRequirement::HasBackFace`.
-- Payoff cards read it via
-  `SelectionRequirement::WithCounter(CounterType::Prepared)` (static
-  anthems lower it to `AffectedPermanents::AllWithCounter`;
-  `Predicate::EntityMatches` / `SelectorExists` cover conditionals). The
-  first payoff is **Top of the Class** ({2}{W}: "Prepared creatures you
-  control get +1/+1 and have flying").
-
-The originally-planned `Effect::SetPrepared` / `Predicate::IsPrepared` /
-"Prepare {cost}:" helper turned out to be unnecessary — the counter
-primitives subsume them. Covered by `tests::sos::{top_of_the_class_*,
-prepared_counter_is_inert_*}`.
 
 ### Vehicle / Crew
 `CardType::Artifact` exists but there is no `CrewN` keyword or "becomes a
@@ -3555,8 +3526,9 @@ indicator + click target. Slims the 2-D chip strip.
 - Replay scrubber ⏳ — `GameSnapshot` recorder + Menu→Replay scrub UI.
 - Touch / controller input ⏳ — Bevy supports touch; `kb_cursor.rs` and
   input paths are mouse-centric.
-- Split `game_ui.rs` ✅ DONE — see `systems/game_ui/{mod,crest,player_stats,buttons,popups}.rs`.
-  Future: pull `sync_game_visuals` → `visual_sync.rs` (~1.1K lines),
+- Split `game_ui.rs` further ⏳ — the initial split into
+  `systems/game_ui/{mod,crest,player_stats,buttons,popups}.rs` shipped;
+  still to pull out: `sync_game_visuals` → `visual_sync.rs` (~1.1K lines),
   `handle_game_input` → `input.rs` (~800 lines).
 
 **Session follow-ups**
@@ -4220,23 +4192,29 @@ resolution time" in the Suggested next-up tasks section.
   `converged_value` onto the resulting `CardInstance` at spell-resolve
   time. Tracked separately.
 
-- ⏳ **Card — finish Wilt in the Heat's damage-replacement rider** —
-  the "if that creature would die this turn, exile it instead" half
-  is still ⏳ (no damage-replacement primitive). A `Effect::
-  ReplaceDamageWithExile { target, duration }` primitive would let
-  Wilt finish + future Vraska's Contempt / Path to Exile-style
-  "exile instead of destroy" cards.
+- ✅ **Card — Wilt in the Heat's death-replacement rider** — "if that
+  creature would die this turn, exile it instead" is now wired via
+  `Effect::ExileIfWouldDieThisTurn { what }`, which records affected
+  permanents in `GameState::dies_to_exile_eot` (cleared at cleanup). The
+  redirect rides the existing finality-counter path in
+  `remove_from_battlefield_to_graveyard` — the single choke point for all
+  deaths (SBA lethal / destroy / sacrifice) — so it correctly spares
+  indestructible creatures and catches deaths from later-this-turn combat
+  or removal. Covered by `tests::sos::wilt_in_the_heat_*`. (The same
+  primitive is reusable for future Path-to-Exile-style "exile instead of
+  destroy" cards.)
 
-- ⏳ **Card — Suspend Aggression / Ark of Hunger / Tablet of Discovery
-  "may play this turn" pipeline** — three SOS Lorehold cards exile/mill
-  cards then "may play that card this turn". All blocked on the same
-  cast-from-exile-with-timer primitive. Wire shape: `Effect::
-  ExileMayPlay { what: Selector, until: Duration }` + a side-list on
-  `Player` of `(CardId, Duration)` tuples; the cast pipeline checks
-  this list when casting from exile. Same primitive unblocks
-  Practiced Scrollsmith, Conspiracy Theorist's attack trigger,
-  Archaic's Agony, Echocasting Symposium's Paradigm rider, and the
-  SOS Improvisation Capstone (the catalog's lone ⏳).
+- 🟡 **Card — first-class "may play this turn" pipeline** — Suspend
+  Aggression / Ark of Hunger / Tablet of Discovery / Practiced
+  Scrollsmith / Improvisation Capstone all exile/mill cards then "may
+  play that card this turn". These are **already wired** via
+  `Effect::GrantMayPlay` + `Selector::LastMoved` (cast through
+  `GameAction::CastFromZoneWithoutPaying`) — and Improvisation Capstone
+  ships both clauses (exile + may-cast via `CastWithoutPayingImmediate`,
+  plus the Paradigm recurrence), so **the SOS catalog has no ⏳ cards
+  left**. The remaining nicety would be a dedicated `Effect::ExileMayPlay
+  { what, until }` + a `Player` side-list keyed by `(CardId, Duration)`
+  to replace the per-card `GrantMayPlay` chains with one primitive.
 
 ### Suggested next-up tasks (additions from batch 17)
 
@@ -4695,17 +4673,13 @@ resolution time" in the Suggested next-up tasks section.
   enters_with_counters, keywords, etc.). Promotes 4-5 partial cards
   from 🟡 → ✅ and is a prerequisite for CR 707's audit row promotion.
 
-- ⏳ **Spend-restricted mana primitive** (push modern_decks batch 41
-  re-raised): The "Add {X}. Spend this mana only to cast instant and
-  sorcery spells" rider on Hydro-Channeler, Great Hall of the
-  Biblioplex, Resonating Lute, Abstract Paintmage, and several SOS
-  Prismari mana sources. Currently approximated as plain `AddMana`
-  with no spend restriction tag — the mana correctly enters the pool
-  but can be spent on anything. Engine shape: extend `ManaPool` from
-  `HashMap<Color, u32>` to a structure that tracks per-source spend
-  restrictions (e.g., `Vec<(Color, u32, Option<SpendRestriction>)>`)
-  and have `pay_cost` walk restricted mana first when the spell
-  matches the restriction. Promotes ~10 SOS cards from 🟡 → ✅.
+- ✅ **Spend-restricted mana primitive** — DONE (see "Spend-Restricted
+  Mana — ✅ DONE" above). `ManaPool` gained a `restricted` bucket +
+  `pay_for_spell(cost, kind)`; mana is tagged via
+  `ManaPayload::Restricted`, and `pay_for_spell` walks restricted mana
+  first when the spell's `SpellKind` matches. Finished Hydro-Channeler,
+  Great Hall of the Biblioplex, Resonating Lute, Abstract Paintmage, and
+  Tablet of Discovery.
 
 - ⏳ **`Effect::FlipCoin` + `Decision::CoinFlip` primitive** (push
   modern_decks batch 41 re-raised — CR 705 audit standalone): The
@@ -4739,28 +4713,41 @@ resolution time" in the Suggested next-up tasks section.
 
 ### Suggested next-up tasks (additions from batch 42)
 
-- ⏳ **`Effect::PreventDamageThisTurn { source, amount }`** (push
-  modern_decks batch 42 surfaced): SOS Wilt in the Heat ("If that
-  creature would die this turn, exile it instead") and several
-  STX/SOS cards print damage-replacement riders that need a
-  prevent-or-replace primitive at the damage stack. Engine shape:
-  add `Effect::ReplaceDeathThisTurn { who: Selector, replacement:
-  Box<Effect> }` to allow "if a creature would die, exile instead"
-  shape via the existing replacement-effects framework (Phase H).
-  Promotes Wilt in the Heat, Light of Promise's lifegain triggers,
-  and any printed "would die, exile" rider.
+- ✅ **"If it would die this turn, exile it instead"** — DONE via
+  `Effect::ExileIfWouldDieThisTurn` (see the Wilt in the Heat entry
+  above). The death redirect is keyed on `GameState::dies_to_exile_eot`
+  in `remove_from_battlefield_to_graveyard`, the same path the finality
+  counter uses. (Note: the broader `Effect::PreventDamageThisTurn`
+  damage-*prevention* primitive — Impractical Joke's "damage can't be
+  prevented" no-op — is still ⏳; the death-replacement shape Wilt needed
+  is done.)
 
-- ⏳ **`StaticEffect::GrantMiracle { cost }`** (push modern_decks
-  batch 42 surfaced): Lorehold, the Historian's "Each instant and
-  sorcery card in your hand has miracle {2}" rider blocks the full
-  promotion to ✅. Engine shape: (a) static ability that adds a
-  miracle alt-cost to spell cards in the controller's hand;
-  (b) a "first card drawn this turn" cast-time check (the engine
-  tracks `cards_drawn_this_turn` per player), and (c) a Miracle
-  alt-cost pathway in `AlternativeCost` (similar to Flashback).
-  Promotes Lorehold, the Historian to ✅ + opens the door for the
-  Avacyn Restored miracle cycle (Bonfire of the Damned, Temporal
-  Mastery, Reforge the Soul).
+- ✅ **Miracle alt-cost** — DONE. Lorehold, the Historian's "Each instant
+  and sorcery card in your hand has miracle {2}" is wired via
+  `Effect::GrantMiracle { what, cost }`: a CardDrawn/YourControl trigger
+  gated on the first-IS-draw-this-turn stamps an until-end-of-turn
+  `may_play_until` permission **plus** a `CardInstance::granted_alt_cast_cost_eot`
+  of {2}. `cast_from_zone_without_paying` charges that alt-cost before the
+  cast. The same `granted_alt_cast_cost_eot` slot generalizes to the
+  Avacyn Restored miracle cycle. Covered by
+  `tests::sos::lorehold_the_historian_grants_miracle_two_on_first_is_draw`.
+
+- ✅ **Granted flashback (per-instance, EOT)** — DONE. The SOS "Flashback"
+  instant grants `CardInstance::granted_flashback_eot` (= the target's own
+  mana cost) via `Effect::GrantFlashbackThisTurn`; `cast_flashback` reads
+  it through `CardInstance::effective_flashback()`. Covered by
+  `tests::sos::flashback_instant_grants_flashback_on_gy_is_card`.
+
+- ✅ **Granted cascade + `Keyword::CantBeCopied`** — DONE. Quandrix, the
+  Proof's "instant and sorcery spells you cast from your hand have cascade"
+  is a SpellCast/YourControl trigger gated on `Predicate::CastFromHand`
+  (now stamped from the actual cast spell's flag, not the trigger default)
+  + an IS filter, firing `Effect::Cascade { max_mv:
+  ManaValueOf(TriggerSource) }`. Choreographed Sparks's "this spell can't
+  be copied" rider is `Keyword::CantBeCopied`, honored by
+  `Effect::CopySpell`. Covered by
+  `tests::sos::{quandrix_the_proof_grants_cascade_*,
+  quandrix_the_proof_does_not_cascade_*, choreographed_sparks_cant_be_copied}`.
 
 - ⏳ **More STX college expansions** (push modern_decks batch 42
   continuation): With the current Silverquill = 158 cards,
@@ -5481,11 +5468,10 @@ added a per-process duration histogram to MatchStats, and locked in
   prevented" rider is still ⏳. Same shape unblocks Furnace of
   Rath / Boil-style cards. Tracked alongside CR 614 damage
   replacement framework.
-- **Static-ability tooltip exposure for the client** — DONE: the
-  `static_ability_labels` field is now wired and the client tooltip
-  renders it. Future polish: a "click to expand" affordance for
-  long static descriptions on midrange/finisher creatures with
-  multi-clause statics.
+- **Static-ability tooltip "click to expand"** — the
+  `static_ability_labels` field is wired and the client tooltip renders
+  it; remaining polish is a "click to expand" affordance for long static
+  descriptions on midrange/finisher creatures with multi-clause statics.
 - **Bumping up SOS partial coverage** — the SOS catalog is 100%
   ✅; the next layer of SOS work is verifying cube/sealed-pool
   selectors for the new STX synthesised cards (`silverquill_*_b154`,
@@ -5777,18 +5763,6 @@ them.
   "Cast back face for {back cost}" when flipped, so players
   understand which cost will be charged. Today the tooltip still
   reflects the front face's cost.
-
-### Server
-
-- **Action telemetry: `CastSpellBack` audit log**. The new MDFC
-  back-face cast path emits the same `SpellCast` event as the front-
-  face path. The server's wire log doesn't distinguish "cast as front"
-  vs "cast as back" — both look identical from the spectator's view.
-  Add a `cast_face: CastFace::{Front,Back,Flashback}` payload on
-  `GameEventWire::SpellCast` so replays / spectator UIs can render
-  the right face name without round-tripping through the engine.
-  **DONE** in push XIV: `GameEvent::SpellCast.face` +
-  `GameEventWire::SpellCast.face` now carry the tag.
 
 ## New suggestions (added 2026-05-01 pushes XI–XIV)
 
@@ -6103,14 +6077,6 @@ listed here so the next pass can pick them up.
   single-mode ChooseMode. A `ChooseMultipleMode { modes: Vec<Effect>,
   count: usize }` variant would let the controller pick exactly N modes
   from the list, matching the printed "choose two" pattern.
-
-- **Hybrid mana**: ✅ DONE. `ManaSymbol::Hybrid(Color, Color)` is paid
-  from either half, with a forced-color-first assignment in both
-  `ManaPool::pay` (so {W/R}{W/G} from a {W,R} pool isn't mis-assigned)
-  and `auto_tap_for_cost` (so a {W/B} pip taps whichever color the board
-  can actually produce, and {W/B}{W/B} splits a Plains+Swamp). Mono-hybrid
-  `{n/C}` also handled. Tests: `mana::tests::pay_hybrid_*`,
-  `tests_sos::auto_tap_*`.
 
 - **Learn/Lesson sideboard**: Learn is collapsed to Draw 1 across ~12
   cards. A minimal Lesson sideboard (separate from the main deck, searched
